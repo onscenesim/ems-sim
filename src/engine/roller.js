@@ -1,6 +1,6 @@
 'use strict';
 
-const { CATEGORY_WEIGHTS, DIFFICULTY_POOL, MODIFIER_FIRE_RATES, CURVEBALL_WEIGHTS, HARD_MODE_DC_PENALTY, HISTORY_WINDOWS } = require('../data/config');
+const { CATEGORY_WEIGHTS, DIFFICULTY_POOL, MODIFIER_FIRE_RATES, CURVEBALL_WEIGHTS, HARD_MODE_DC_PENALTY, HISTORY_WINDOWS, NIGHT_HOURS } = require('../data/config');
 const { SCENARIO_POOLS } = require('../data/scenarios/index');
 const { CALLER_BEHAVIORS, WEATHER, TIME_OF_DAY, SPECIAL_CIRCUMSTANCES } = require('../data/modifiers');
 const { CREW } = require('../data/crew');
@@ -158,13 +158,15 @@ function rollCallerBehavior(category) {
 }
 
 function rollTimeOfDay() {
-  const r = Math.random();
   // Night hours (2200-0500) get 1.5x weight — 8 hours * 1.5 = 12 weighted, 16 remaining = 28 total
+  // Time entries are formatted '0000 — description' / '2200 — description'.
+  // Parse the first 2 characters for the 2-digit hour (0-23); using 4 chars gives
+  // 2200/0100 etc. which never match the hour array — a bug fixed here.
   const nightWeight = 1.5;
   const dayWeight = 1.0;
   return weightedRandom(TIME_OF_DAY, (entry) => {
-    const hour = parseInt(entry.text.substring(0, 4));
-    return [22, 23, 0, 1, 2, 3, 4, 5].includes(hour) ? nightWeight : dayWeight;
+    const hour = parseInt(entry.text.substring(0, 2), 10);
+    return NIGHT_HOURS.includes(hour) ? nightWeight : dayWeight;
   }).text;
 }
 
