@@ -393,7 +393,7 @@ function animateDiceRoll(procedureId, roll, dc, outcome) {
     diceOutcomeEl.textContent = '';
     diceOutcomeEl.className   = '';
     diceNumberEl.textContent  = '?';
-    diceSvgEl.className       = '';
+    diceSvgEl.setAttribute('class', '');
 
     // Show overlay + trigger spin animation
     diceOverlay.classList.add('visible');
@@ -411,7 +411,7 @@ function animateDiceRoll(procedureId, roll, dc, outcome) {
         clearInterval(ticker);
         // Land on the real result
         diceNumberEl.textContent = roll;
-        diceSvgEl.className = outcome;   // colours the number via CSS
+        diceSvgEl.setAttribute('class', outcome);   // colours the number via CSS
 
         // Reveal outcome label
         setTimeout(() => {
@@ -423,7 +423,7 @@ function animateDiceRoll(procedureId, roll, dc, outcome) {
             diceOverlay.classList.remove('visible');
             setTimeout(() => {
               diceOutcomeEl.className   = '';
-              diceSvgEl.className       = '';
+              diceSvgEl.setAttribute('class', '');
               diceNumberEl.textContent  = '?';
               resolve();
             }, FADE_MS);
