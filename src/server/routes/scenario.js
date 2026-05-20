@@ -6,6 +6,7 @@ const router  = express.Router();
 const { createSession, getSession } = require('../sessionStore');
 const {
   detectTier,
+  getClientIP,
   checkFreeLimit,
   incrementFreeUsage,
   getFreeUsageCount,
@@ -18,7 +19,7 @@ const {
 // ---------------------------------------------------------------------------
 router.get('/status', (req, res) => {
   const tier = detectTier(req);
-  const ip   = req.ip;
+  const ip   = getClientIP(req);
   res.json({
     tier,
     scenarios_used:      tier === 'free' ? getFreeUsageCount(ip) : null,
@@ -33,7 +34,7 @@ router.get('/status', (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/new', async (req, res) => {
   const tier = detectTier(req);
-  const ip   = req.ip;
+  const ip   = getClientIP(req);
 
   if (tier === 'free' && !checkFreeLimit(ip)) {
     return res.status(429).json({

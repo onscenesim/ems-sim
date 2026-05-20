@@ -38,11 +38,24 @@ function detectTier(req) {
 }
 
 // ---------------------------------------------------------------------------
+// IP extraction — Railway (and most cloud hosts) sit behind multiple proxy
+// hops. req.ip collapses to the internal load-balancer address so every user
+// looks like the same IP. Read X-Forwarded-For directly and take the leftmost
+// entry, which is the real client IP added by the outermost public proxy.
+// ---------------------------------------------------------------------------
+
+function getClientIP(req) {
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) return xff.split(',')[0].trim();
+  return req.ip || req.socket.remoteAddress || 'unknown';
+}
+
+// ---------------------------------------------------------------------------
 // Free-tier daily scenario limit (in-memory; resets on server restart).
 // In Session 4 this moves to Supabase.
 // ---------------------------------------------------------------------------
 
-const FREE_DAILY_LIMIT = 3;
+const FREE_DAILY_LIMIT = 20;
 
 // ip → { count: number, date: string }
 const freeUsage = new Map();
@@ -71,6 +84,7 @@ function getFreeUsageCount(ip) {
 
 module.exports = {
   detectTier,
+  getClientIP,
   checkFreeLimit,
   incrementFreeUsage,
   getFreeUsageCount,
