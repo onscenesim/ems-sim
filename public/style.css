@@ -154,9 +154,9 @@ html, body {
   height: 100%;
   background: transparent;
   border: none;
-  color: #00ee55;
+  color: #ffffff;
   font-family: var(--font-ui);
-  font-size: 15px;
+  font-size: 19px;
   font-weight: bold;
   letter-spacing: 0.1em;
   cursor: pointer;
