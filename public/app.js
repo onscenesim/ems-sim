@@ -203,7 +203,7 @@ async function startScenario() {
     startScreen.style.display = 'none';
     terminal.style.display    = 'flex';
 
-    print(`Scenario: ${data.category.toUpperCase()} — ${data.scenario_id}`, 'system');
+    print(`Scenario ID: ${data.scenario_id}`, 'system');
     print('');
     printHr();
     printReply(data.reply);
