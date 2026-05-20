@@ -158,6 +158,8 @@ function assembleSeedBlock(seed) {
   if (isCurveball) {
     lines.push('9. CURVEBALL: The surface presentation is what the user sees. The true diagnosis is hidden. Reveal it ONLY when the reveal_trigger condition is met by user action. If the user never triggers the reveal, they finish the scenario without knowing. Debrief reveals the true diagnosis.');
   }
+  lines.push('11. AMBIGUOUS SHORTHAND: EMS abbreviations can be genuinely ambiguous. If the user writes something like "apply a 4L" or "get a 4L" without clear context, do NOT assume O2 or monitor — ask one short clarifying question before acting: e.g. "4 liters O2 or 4-lead monitor?" Similarly, "4L NC" unambiguously means nasal cannula oxygen; "4-lead ECG" or "4L ECG" unambiguously means cardiac monitoring. When the meaning is clear from context, proceed without asking. Only clarify when the shorthand is genuinely ambiguous and the two interpretations would produce different clinical actions.');
+  lines.push('');
   lines.push('10. TRANSPORT REQUIRES EXPLICIT ORDER: Never move the ambulance or go en route without the user explicitly stating a destination and ordering transport. Packaging the patient and loading into the ambulance does NOT mean transport has begun — the unit is stationary until ordered otherwise. The user must say something like "let\'s go to [hospital]", "go en route to [destination]", "transport to [hospital]", or equivalent. Your partner will ask for a destination if the unit is loaded and none has been given, but will not move without one.');
   lines.push('');
   lines.push('=== END SEED ===');
