@@ -5,13 +5,13 @@
 :root {
   --body-bg:    #b8b8b8;
   --panel-bg:   #1e1e1e;
-  --hi:         #d8d8d8;   /* bevel highlight */
-  --lo:         #444444;   /* bevel shadow */
+  --hi:         #d8d8d8;
+  --lo:         #444444;
   --chrome-bg:  #d0cdc8;
   --chrome-mid: #c0bdb8;
   --font-ui:    Arial, Helvetica, sans-serif;
   --font-mono:  'Courier New', Courier, monospace;
-  --font-title: Impact, 'Arial Black', sans-serif;
+  --font-brand: Georgia, 'Times New Roman', serif;
   --green:      #00cc44;
   --cyan:       #22d3ee;
   --yellow:     #fbbf24;
@@ -35,12 +35,14 @@ html, body {
 
 #start-screen {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100vh;
+  gap: 22px;
 }
 
-/* The dark image-map panel — inward bevel (recessed into the page) */
+/* Inward-beveled dark panel */
 #start-card {
   background: var(--panel-bg);
   border: 4px solid;
@@ -50,7 +52,6 @@ html, body {
   max-width: 96vw;
 }
 
-/* 3-column image-map grid */
 .tile-grid {
   display: grid;
   grid-template-columns: 1fr 1.5fr 1fr;
@@ -58,7 +59,7 @@ html, body {
   gap: 4px;
 }
 
-/* ── All tiles share raised bevel ──────────────────────────────────────── */
+/* ── Tiles ─────────────────────────────────────────────────────────────── */
 
 .cfg-tile,
 .center-tile,
@@ -73,8 +74,6 @@ html, body {
   gap: 10px;
   min-height: 130px;
 }
-
-/* ── Config tile colours (posterized look) ─────────────────────────────── */
 
 .tile-difficulty { background: #1e1248; }
 .tile-provider   { background: #0c2444; }
@@ -118,14 +117,13 @@ html, body {
 }
 
 .brand {
-  font-family: var(--font-title);
-  font-size: 34px;
+  font-family: var(--font-brand);
+  font-size: 30px;
+  font-weight: bold;
+  font-style: italic;
   color: #ffffff;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   line-height: 1;
-  text-shadow:
-    3px 3px 0 #000000,
-    0 0 30px rgba(0, 204, 68, 0.35);
 }
 
 .brand-sub {
@@ -150,28 +148,18 @@ html, body {
   background: #1e401e;
   border: none;
   color: #00ee55;
-  font-family: var(--font-title);
-  font-size: 17px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: bold;
   letter-spacing: 0.1em;
   cursor: pointer;
-  text-shadow: 0 0 12px rgba(0, 238, 85, 0.6);
-  transition: background 0.1s, color 0.1s;
+  transition: background 0.1s;
   padding: 20px;
 }
 
-#start-btn:hover:not(:disabled) {
-  background: #2a5a2a;
-  color: #44ff88;
-}
-
-#start-btn:active:not(:disabled) {
-  background: #162e16;
-}
-
-#start-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
+#start-btn:hover:not(:disabled) { background: #2a5a2a; }
+#start-btn:active:not(:disabled) { background: #162e16; }
+#start-btn:disabled { opacity: 0.4; cursor: default; }
 
 /* ── Beta access tile ──────────────────────────────────────────────────── */
 
@@ -216,10 +204,7 @@ html, body {
   transition: background 0.1s;
 }
 
-#access-apply:hover {
-  background: #3a4e68;
-  color: #fff;
-}
+#access-apply:hover { background: #3a4e68; color: #fff; }
 
 #tier-msg {
   font-family: var(--font-ui);
@@ -231,7 +216,29 @@ html, body {
 
 #tier-msg.active {
   color: #00cc44;
-  text-shadow: 0 0 6px rgba(0, 204, 68, 0.45);
+}
+
+/* ── Company logo (below the panel) ───────────────────────────────────── */
+
+.company-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.magic-8-ball {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  width: 72px;
+  height: 72px;
+}
+
+.company-name {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: #444;
+  letter-spacing: 0.04em;
 }
 
 /* ── Terminal ─────────────────────────────────────────────────────────── */
@@ -242,7 +249,6 @@ html, body {
   height: 100vh;
 }
 
-/* 90s gray title bar */
 #header {
   flex-shrink: 0;
   background: linear-gradient(180deg, #dedad4 0%, var(--chrome-mid) 100%);
@@ -270,7 +276,6 @@ html, body {
   flex: 1;
 }
 
-/* Raised chip badges */
 .badge {
   background: var(--chrome-bg);
   border: 2px solid;
@@ -305,12 +310,9 @@ html, body {
 }
 
 #end-btn:hover:not(:disabled) { color: #cc0000; }
-#end-btn:active:not(:disabled) {
-  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
-}
+#end-btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 #end-btn:disabled { opacity: 0.35; cursor: default; }
 
-/* Terminal output — keep the dark screen */
 #output {
   flex: 1;
   overflow-y: auto;
@@ -339,7 +341,6 @@ html, body {
 .line.hr        { color: var(--border-term); user-select: none; }
 .line.blank     { height: 6px; }
 
-/* New scenario button */
 .new-scenario-btn {
   display: block;
   background: #1a2a1a;
@@ -356,11 +357,8 @@ html, body {
   transition: background 0.1s;
 }
 
-.new-scenario-btn:hover {
-  background: #253525;
-}
+.new-scenario-btn:hover { background: #253525; }
 
-/* 90s gray input row */
 #input-row {
   flex-shrink: 0;
   background: linear-gradient(0deg, #dedad4 0%, var(--chrome-mid) 100%);
@@ -411,17 +409,11 @@ html, body {
 }
 
 #send-btn:hover:not(:disabled) { background: #dedad4; }
-#send-btn:active:not(:disabled) {
-  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
-}
+#send-btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 #send-btn:disabled { opacity: 0.45; cursor: default; }
 
-/* Scrollbar */
 #output::-webkit-scrollbar       { width: 16px; }
-#output::-webkit-scrollbar-track {
-  background: #2a2a2a;
-  border-left: 1px solid #1a1a1a;
-}
+#output::-webkit-scrollbar-track { background: #2a2a2a; border-left: 1px solid #1a1a1a; }
 #output::-webkit-scrollbar-thumb {
   background: var(--chrome-bg);
   border: 2px solid;
@@ -431,10 +423,7 @@ html, body {
 /* ── Mobile ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 600px) {
-  .tile-grid {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto;
-  }
+  .tile-grid { grid-template-columns: 1fr 1fr; }
   .center-tile { grid-column: 1 / -1; min-height: 90px; }
   .start-tile  { grid-column: 1 / -1; }
   #header { flex-wrap: wrap; }
