@@ -541,7 +541,47 @@ html, body {
   .brand     { font-size: 22px; }
   .brand-sub { font-size: 8px; }
 
-  #header    { flex-wrap: wrap; gap: 8px; }
+  /* Terminal header: reorganize into 2 rows so END SCENARIO is always visible.
+     Row 1: [EMS TERMINAL ──────────] [END SCENARIO]
+     Row 2: [FREE] [NORMAL] [ALS] [SUBURBAN]          */
+  #header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 12px;
+  }
+
+  #hdr-title {
+    flex: 1;          /* grow to fill row 1, pushing end-btn to the right */
+    order: 1;
+  }
+
+  #end-btn {
+    order: 2;
+    margin-left: 0;   /* flex: 1 on title handles the push; no auto needed */
+    flex-shrink: 0;
+  }
+
+  #hdr-badges {
+    order: 3;
+    flex-basis: 100%; /* force onto its own second row */
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  /* End-of-scenario action buttons: stack vertically on small screens */
+  .end-actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .end-actions .new-scenario-btn,
+  .end-actions .export-btn {
+    width: 100%;
+    max-width: 280px;
+    text-align: center;
+  }
+
   #output    { padding: 12px 14px; }
   #input-row { padding: 8px 12px; }
 
