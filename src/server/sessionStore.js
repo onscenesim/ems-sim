@@ -35,8 +35,8 @@ function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_i
     history,
   });
 
-  const session = new Session(seed);
   const id = uuidv4();
+  const session = new Session(seed, id);   // pass id so session can reference itself in run logs
   store.set(id, { session, lastActive: Date.now(), userId, tier });
   return { id, seed };
 }

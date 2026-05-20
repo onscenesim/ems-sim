@@ -8,6 +8,7 @@ const path    = require('path');
 
 const { apiLimiter }   = require('./middleware/rateLimiter');
 const scenarioRouter   = require('./routes/scenario');
+const adminRouter      = require('./routes/admin');
 
 const app = express();
 
@@ -22,6 +23,9 @@ app.use(express.static(path.join(__dirname, '../../public')));
 // API — rate-limited
 app.use('/api', apiLimiter);
 app.use('/api/scenario', scenarioRouter);
+
+// Admin — no rate limit (internal use only, guarded by ADMIN_TOKEN)
+app.use('/admin', adminRouter);
 
 // Health check (used by ALB target group)
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

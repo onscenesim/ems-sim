@@ -4,6 +4,7 @@ const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { logEvent, closeScenario } = require('./logger');
 const { detectAllAndRoll } = require('./dice');
 const { sendTurn, sendDebrief } = require('./api');
+const { logRun, updateRunDebrief } = require('../server/adminLogger');
 
 // Phrases that close the scenario and trigger debrief offer
 const DEBRIEF_TRIGGERS = [
@@ -42,8 +43,9 @@ function buildContextFlags(seed) {
 }
 
 class Session {
-  constructor(seed) {
+  constructor(seed, sessionId = null) {
     this.seed = seed;
+    this.sessionId = sessionId;   // set by sessionStore after creation
     this.systemPrompt = assembleSeedBlock(seed);
     this.messages = [];
     this.sceneMinute = 0;
@@ -114,6 +116,7 @@ class Session {
     if (isDebriefTrigger(userText)) {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
+      logRun(this.sessionId, this.seed, this.messages);
       return { reply, rolls, closed: true };
     }
 
@@ -125,7 +128,9 @@ class Session {
    */
   async debrief() {
     const context = buildDebriefContext(this.seed, this.seed.events);
-    return sendDebrief(context, this.seed.provider_level);
+    const text = await sendDebrief(context, this.seed.provider_level);
+    updateRunDebrief(this.sessionId, text);
+    return text;
   }
 
   /**
@@ -135,6 +140,7 @@ class Session {
     if (!this.closed) {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
+      logRun(this.sessionId, this.seed, this.messages);
     }
   }
 }
