@@ -22,7 +22,11 @@ for (const proc of INTERVENTIONS) {
     const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // Word-boundary via lookbehind/lookahead — handles hyphens and acronyms
     const pattern = new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`, 'i');
-    DETECT_PATTERNS.push({ key, pattern, proc });
+    // Precompute specificity using the ORIGINAL raw string so uppercase acronyms
+    // (BGL, SpO2, IV, EtCO2, AED, etc.) are treated as specific and don't
+    // require an admin verb. After toLowerCase() they look like plain words.
+    const specific = isSpecificSynonym(raw.trim());
+    DETECT_PATTERNS.push({ key, pattern, proc, specific });
   };
   register(proc.id);
   for (const syn of proc.synonyms) register(syn);
@@ -63,14 +67,14 @@ function isSpecificSynonym(key) {
 function detectProcedure(userText) {
   const lower = userText.toLowerCase();
 
-  for (const { key, pattern, proc } of DETECT_PATTERNS) {
+  for (const { key, pattern, proc, specific } of DETECT_PATTERNS) {
     if (!pattern.test(lower)) continue;
 
     // Guard: single-word plain-English synonyms require an action verb so
     // that explanatory language ("they'll suction the air out") doesn't roll.
-    if (!isSpecificSynonym(key)) {
-      if (!ADMIN_VERB_RE.test(lower)) continue;
-    }
+    // Use the precomputed 'specific' flag (computed from the original-case raw
+    // synonym) so uppercase acronyms like BGL, SpO2, IV pass without a verb.
+    if (!specific && !ADMIN_VERB_RE.test(lower)) continue;
 
     return proc;
   }
@@ -215,10 +219,12 @@ function detectAllProcedures(userText) {
   for (let i = 0; i < 10; i++) {
     let bestMatch = null;
 
-    for (const { key, pattern, proc } of DETECT_PATTERNS) {
+    for (const { key, pattern, proc, specific } of DETECT_PATTERNS) {
       if (usedProcIds.has(proc.id)) continue;
       if (!pattern.test(remaining)) continue;
-      if (!isSpecificSynonym(key) && !ADMIN_VERB_RE.test(remaining)) continue;
+      // Use precomputed 'specific' flag so uppercase acronyms (BGL, SpO2, IV)
+      // don't require an admin verb.
+      if (!specific && !ADMIN_VERB_RE.test(remaining)) continue;
       bestMatch = { key, pattern, proc };
       break; // sorted longest-first, so first match is most specific
     }

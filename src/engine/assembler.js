@@ -201,6 +201,13 @@ function buildDebriefContext(seed, events) {
   if (!hasBGL && amsCategories.includes((seed.category || '').toLowerCase())) {
     lines.push('BGL_NOT_CHECKED: Blood glucose was never checked. In this category, hypoglycemia is always on the differential. Flag this as a missed critical assessment in debrief.');
   }
+  lines.push('');
+  lines.push('--- DEBRIEF CONSTRAINTS ---');
+  lines.push('You have access ONLY to the structured event log above — not the full conversation transcript.');
+  lines.push('NEVER fabricate specific facility or hospital names. Use "the receiving facility" if the destination is not in this log.');
+  lines.push('NEVER invent medication names, dosages, or procedures not present in this log.');
+  lines.push('NEVER assign specific timestamps (e.g. T+12) to events that are not in this log — use vague language ("early in the call", "during transport") instead.');
+  lines.push('If an event is in this log, reference it precisely. If it is not, acknowledge uncertainty rather than guessing.');
   lines.push('=== END LOG ===');
   return lines.join('\n');
 }
