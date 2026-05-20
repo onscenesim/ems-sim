@@ -7,6 +7,7 @@ const { CREW } = require('../data/crew');
 const { REGIONS } = require('../data/regions');
 const { COMORBIDITIES } = require('../data/comorbidities');
 const { AGE_GROUPS } = require('../data/ageGroups');
+const { rollPatientName } = require('../data/patientNames');
 
 function weightedRandom(items, weightFn) {
   const total = items.reduce((sum, item) => sum + weightFn(item), 0);
@@ -258,6 +259,7 @@ function rollScenario(opts = {}) {
   const ageGroup = rollAgeGroup(category, presentation);
   const age = rollAgeFromGroup(ageGroup);
   const sex = rollSex(presentation);
+  const patientName = rollPatientName(sex);
   const trajectory = category === 'doa' ? 'stable' : rollTrajectory(difficulty);
   const decompensationClock = category === 'doa' ? null : rollDecompensationClock(difficulty, trajectory);
   const complication = rollComplication(difficulty);
@@ -283,6 +285,7 @@ function rollScenario(opts = {}) {
     reveal_trigger: isCurveball ? presentation.reveal_trigger : null,
     hint: presentation.hint,
     special_flags: presentation.special_flags || null,
+    patient_name: patientName,
     patient_age: age,
     age_group: ageGroup,
     sex,

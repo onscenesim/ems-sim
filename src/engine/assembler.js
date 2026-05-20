@@ -45,6 +45,7 @@ function assembleSeedBlock(seed) {
 
   // --- Patient card ---
   lines.push('--- PATIENT CARD (hidden from user) ---');
+  lines.push(`Patient name: ${seed.patient_name}`);
   lines.push(`Age: ${seed.patient_age} (${seed.age_group.replace('_', ' ')})`);
   lines.push(`Sex: ${seed.sex}`);
   lines.push(`Category: ${seed.category}`);
