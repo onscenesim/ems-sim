@@ -61,6 +61,7 @@ router.post('/new', async (req, res) => {
       difficulty:          seed.difficulty,
       provider_level:      seed.provider_level,
       region:              seed.region,
+      patient:             seed.patient || null,
       tier,
       scenarios_used:      tier === 'free' ? getFreeUsageCount(ip) : null,
       scenarios_remaining: tier === 'free' ? Math.max(0, FREE_DAILY_LIMIT - getFreeUsageCount(ip)) : null,

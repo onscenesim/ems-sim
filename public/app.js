@@ -23,6 +23,7 @@ const badgeRgn     = document.getElementById('badge-rgn');
 let sessionId       = null;
 let isClosed        = false;
 let waitingDebrief  = false;
+let localTranscript = null;   // built client-side so export never hits the server
 
 // ── Input history (↑ / ↓ arrow keys) ───────────────────────────────────
 
@@ -188,6 +189,18 @@ async function startScenario() {
     sessionId      = data.session_id;
     isClosed       = false;
     waitingDebrief = false;
+    localTranscript = {
+      meta: {
+        scenario_id:    data.scenario_id,
+        category:       data.category,
+        difficulty:     data.difficulty,
+        provider_level: data.provider_level,
+        region:         data.region,
+        patient:        data.patient || null,
+      },
+      turns:      [],
+      debriefText: null,
+    };
     output.innerHTML = '';
 
     // Update header badges
@@ -248,6 +261,7 @@ async function sendTurn(msg) {
       print('[generating debrief...]', 'system');
       try {
         const data = await apiPost(`/api/scenario/${sessionId}/debrief`, {});
+        if (localTranscript) localTranscript.debriefText = data.debrief;
         printHr();
         print(data.debrief, 'debrief');
         printHr();
@@ -277,6 +291,11 @@ async function sendTurn(msg) {
     printHr();
     printReply(data.reply);
     printHr();
+
+    // Save turn client-side for transcript export
+    if (localTranscript) {
+      localTranscript.turns.push({ user: msg, assistant: data.reply, rolls: data.rolls || [] });
+    }
 
     if (data.closed) {
       isClosed       = true;
@@ -326,9 +345,10 @@ function showNewScenarioBtn() {
 }
 
 function resetToStart() {
-  sessionId      = null;
-  isClosed       = false;
-  waitingDebrief = false;
+  sessionId       = null;
+  isClosed        = false;
+  waitingDebrief  = false;
+  localTranscript = null;
   output.innerHTML = '';
 
   terminal.style.display    = 'none';
@@ -480,36 +500,28 @@ eightball.addEventListener('animationend', () => eightball.classList.remove('sha
 
 // ── Export transcript ─────────────────────────────────────────────────────
 
-async function exportTranscript() {
-  if (!sessionId) return;
-  try {
-    const res = await fetch(`/api/scenario/${sessionId}/transcript`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const text = formatTranscript(data);
-    const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    downloadFile(`ems-transcript-${ts}.txt`, text);
-  } catch (err) {
-    console.error('[exportTranscript]', err);
-    alert('Could not export transcript: ' + err.message);
-  }
+function exportTranscript() {
+  if (!localTranscript) return;
+  const text = formatTranscript(localTranscript);
+  const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  downloadFile(`ems-transcript-${ts}.txt`, text);
 }
 
-function formatTranscript(data) {
-  const { seed, messages, debriefText } = data;
+function formatTranscript(t) {
+  const { meta, turns, debriefText } = t;
   const lines = [];
 
   // ── Header ──────────────────────────────────────────────────────────────
   lines.push('EMS TERMINAL — SCENARIO TRANSCRIPT');
   lines.push('═'.repeat(60));
   lines.push('');
-  if (seed) {
-    lines.push(`Category:       ${(seed.category || '').toUpperCase()}`);
-    lines.push(`Difficulty:     ${seed.difficulty || ''}`);
-    lines.push(`Provider Level: ${seed.provider_level || ''}`);
-    lines.push(`Region:         ${(seed.region || {}).name || seed.region_id || ''}`);
-    if (seed.patient) {
-      const p = seed.patient;
+  if (meta) {
+    lines.push(`Category:       ${(meta.category || '').toUpperCase()}`);
+    lines.push(`Difficulty:     ${meta.difficulty || ''}`);
+    lines.push(`Provider Level: ${meta.provider_level || ''}`);
+    lines.push(`Region:         ${typeof meta.region === 'object' ? meta.region.name || '' : meta.region || ''}`);
+    if (meta.patient) {
+      const p = meta.patient;
       lines.push(`Patient:        ${p.age || ''}yo ${p.sex || ''}`);
       if (p.weight_kg) lines.push(`Weight:         ${p.weight_kg} kg`);
       if (p.chief_complaint) lines.push(`Chief Complaint: ${p.chief_complaint}`);
@@ -523,18 +535,14 @@ function formatTranscript(data) {
   lines.push('─'.repeat(60));
   lines.push('');
 
-  if (Array.isArray(messages)) {
-    for (const msg of messages) {
-      // Strip injected [SYSTEM ROLL: ...] blocks from user messages
-      const clean = (msg.content || '').replace(/\[SYSTEM ROLL:[^\]]*\]/g, '').trim();
-      if (!clean) continue;
-
-      if (msg.role === 'user') {
-        lines.push('> ' + clean.split('\n').join('\n  '));
-      } else {
-        lines.push(clean);
-      }
+  if (Array.isArray(turns)) {
+    for (const turn of turns) {
+      lines.push('> ' + (turn.user || '').split('\n').join('\n  '));
       lines.push('');
+      if (turn.assistant) {
+        lines.push(turn.assistant);
+        lines.push('');
+      }
     }
   }
 
