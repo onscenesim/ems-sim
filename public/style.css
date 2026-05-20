@@ -541,32 +541,24 @@ html, body {
   .brand     { font-size: 22px; }
   .brand-sub { font-size: 8px; }
 
-  /* Terminal header: reorganize into 2 rows so END SCENARIO is always visible.
+  /* Terminal header: use grid so layout is explicit, not wrap-dependent.
      Row 1: [EMS TERMINAL ──────────] [END SCENARIO]
      Row 2: [FREE] [NORMAL] [ALS] [SUBURBAN]          */
   #header {
-    flex-wrap: wrap;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "title  endbtn"
+      "badges badges";
+    gap: 4px 8px;
     padding: 6px 12px;
+    align-items: center;
   }
 
-  #hdr-title {
-    flex: 1;          /* grow to fill row 1, pushing end-btn to the right */
-    order: 1;
-  }
-
-  #end-btn {
-    order: 2;
-    margin-left: 0;   /* flex: 1 on title handles the push; no auto needed */
-    flex-shrink: 0;
-  }
-
-  #hdr-badges {
-    order: 3;
-    flex-basis: 100%; /* force onto its own second row */
-    flex-shrink: 0;
-    gap: 4px;
-  }
+  #hdr-title  { grid-area: title; }
+  #hdr-badges { grid-area: badges; }
+  #end-btn    { grid-area: endbtn; margin-left: 0; }
 
   /* End-of-scenario action buttons: stack vertically on small screens */
   .end-actions {
