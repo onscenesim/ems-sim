@@ -58,7 +58,7 @@ class Session {
    */
   async send(userText) {
     if (this.closed) {
-      return { reply: '[Scenario is closed. Start a new scenario.]', roll: null, closed: true };
+      return { reply: '[Scenario is closed. Start a new scenario.]', rolls: [], closed: true };
     }
 
     // Detect and roll ALL procedures mentioned in the user's message

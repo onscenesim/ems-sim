@@ -106,6 +106,13 @@ router.post('/:id/debrief', async (req, res) => {
     return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
   }
 
+  if (!session.closed) {
+    return res.status(400).json({
+      error: 'scenario_not_closed',
+      message: 'Scenario is still active. Use "end scenario" or transfer of care first.',
+    });
+  }
+
   try {
     const debrief = await session.debrief();
     return res.json({ debrief });

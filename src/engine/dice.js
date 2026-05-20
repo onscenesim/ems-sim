@@ -16,7 +16,6 @@ const DETECT_PATTERNS = [];      // [{ key, pattern, proc }]
 
 // Must be declared before the registration loop so isSpecificSynonym()
 // can safely reference SPECIFIC_EQUIPMENT during module initialization.
-const PLAIN_WORD_RE  = /^[a-z]+$/;          // all lowercase letters only
 const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exempt from verb check
   'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
   'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',

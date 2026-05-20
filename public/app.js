@@ -398,8 +398,9 @@ function animateDiceRoll(procedureId, roll, dc, outcome) {
 
     // Show overlay + trigger spin animation
     diceOverlay.classList.add('visible');
-    // Force reflow so animation restarts cleanly
-    void diceSvgEl.offsetWidth;
+    // Force reflow so animation restarts cleanly — offsetWidth is HTMLElement-only;
+    // getBoundingClientRect() is defined on SVGElement and triggers layout.
+    void diceSvgEl.getBoundingClientRect();
     diceSvgEl.classList.add('rolling');
 
     // Cycle through random numbers
