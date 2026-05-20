@@ -41,15 +41,34 @@ const ADMIN_VERB_RE = /\b(give|gave|giving|push(ed|ing)?|administer(ed|ing)?|inj
  * Uses word-boundary patterns; single-word medication synonyms require
  * an explicit administration verb.
  */
+// Single-word synonyms that are plain English words can produce false
+// positives when a user explains or discusses a concept rather than
+// performing it ("they'll suction the air out" → should not roll).
+// Equipment names, acronyms, and multi-word phrases are specific enough
+// to fire without a verb check.
+const PLAIN_WORD_RE  = /^[a-z]+$/;          // all lowercase letters only
+const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exempt from verb check
+  'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
+  'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
+]);
+
+function isSpecificSynonym(key) {
+  if (key.includes(' '))   return true;   // multi-word → specific
+  if (!/^[a-z]/.test(key)) return true;   // starts uppercase / acronym → specific
+  if (/[0-9\-]/.test(key)) return true;   // contains digits or hyphens → equipment
+  if (SPECIFIC_EQUIPMENT.has(key)) return true;
+  return false;
+}
+
 function detectProcedure(userText) {
   const lower = userText.toLowerCase();
 
   for (const { key, pattern, proc } of DETECT_PATTERNS) {
     if (!pattern.test(lower)) continue;
 
-    // Guard: single-word medication synonyms only fire when the user is
-    // actively administering, not just mentioning the drug name.
-    if (proc.id === 'medication_push' && !key.includes(' ')) {
+    // Guard: single-word plain-English synonyms require an action verb so
+    // that explanatory language ("they'll suction the air out") doesn't roll.
+    if (!isSpecificSynonym(key)) {
       if (!ADMIN_VERB_RE.test(lower)) continue;
     }
 
