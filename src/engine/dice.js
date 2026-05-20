@@ -14,6 +14,14 @@ const { HARD_MODE_DC_PENALTY } = require('../data/config');
 const SYNONYM_MAP = new Map();   // key → proc  (kept for rollProcedure lookups)
 const DETECT_PATTERNS = [];      // [{ key, pattern, proc }]
 
+// Must be declared before the registration loop so isSpecificSynonym()
+// can safely reference SPECIFIC_EQUIPMENT during module initialization.
+const PLAIN_WORD_RE  = /^[a-z]+$/;          // all lowercase letters only
+const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exempt from verb check
+  'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
+  'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
+]);
+
 for (const proc of INTERVENTIONS) {
   const register = (raw) => {
     const key = raw.toLowerCase().trim();
@@ -47,14 +55,10 @@ const ADMIN_VERB_RE = /\b(give|gave|giving|push(ed|ing)?|administer(ed|ing)?|inj
  */
 // Single-word synonyms that are plain English words can produce false
 // positives when a user explains or discusses a concept rather than
-// performing it ("they'll suction the air out" → should not roll).
+// performing it ("they'll suction the air out") → should not roll).
 // Equipment names, acronyms, and multi-word phrases are specific enough
 // to fire without a verb check.
-const PLAIN_WORD_RE  = /^[a-z]+$/;          // all lowercase letters only
-const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exempt from verb check
-  'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
-  'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
-]);
+// (PLAIN_WORD_RE and SPECIFIC_EQUIPMENT declared above the registration loop.)
 
 function isSpecificSynonym(key) {
   if (key.includes(' '))   return true;   // multi-word → specific
