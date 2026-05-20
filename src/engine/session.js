@@ -2,7 +2,7 @@
 
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { logEvent, closeScenario } = require('./logger');
-const { detectAndRoll } = require('./dice');
+const { detectAllAndRoll } = require('./dice');
 const { sendTurn, sendDebrief } = require('./api');
 
 // Phrases that close the scenario and trigger debrief offer
@@ -61,33 +61,39 @@ class Session {
       return { reply: '[Scenario is closed. Start a new scenario.]', roll: null, closed: true };
     }
 
-    // Detect and roll any procedure in the user's message
-    const roll = detectAndRoll(userText, this.contextFlags, this.seed.difficulty);
-    if (roll && !roll.no_roll) {
-      logEvent(this.seed, {
-        event_type: 'procedure',
-        procedure_id: roll.procedure_id,
-        dice_roll: roll.roll,
-        dc_value: Array.isArray(roll.dc) ? roll.dc[0] : roll.dc,
-        outcome: roll.outcome,
-      }, this.sceneMinute);
-    } else if (roll && roll.no_roll) {
-      logEvent(this.seed, {
-        event_type: 'procedure',
-        procedure_id: roll.procedure_id,
-        outcome: 'NO_ROLL',
-      }, this.sceneMinute);
+    // Detect and roll ALL procedures mentioned in the user's message
+    const rolls = detectAllAndRoll(userText, this.contextFlags, this.seed.difficulty);
+
+    for (const roll of rolls) {
+      if (!roll.no_roll) {
+        logEvent(this.seed, {
+          event_type: 'procedure',
+          procedure_id: roll.procedure_id,
+          dice_roll: roll.roll,
+          dc_value: Array.isArray(roll.dc) ? roll.dc[0] : roll.dc,
+          outcome: roll.outcome,
+        }, this.sceneMinute);
+      } else {
+        logEvent(this.seed, {
+          event_type: 'procedure',
+          procedure_id: roll.procedure_id,
+          outcome: 'NO_ROLL',
+        }, this.sceneMinute);
+      }
     }
 
-    // Inject roll result into user message so Claude knows the outcome
+    // Inject all real roll results into the user message so Claude knows every outcome.
+    // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
     let messageText = userText;
-    if (roll && !roll.no_roll) {
-      if (roll.multi_roll) {
-        const parts = roll.rolls.map((r, i) => `d20=${r.roll} vs DC ${r.dc} — ${r.outcome}`);
-        messageText += `\n\n[SYSTEM ROLL: ${roll.procedure_id} — ${parts.join(' | ')}]`;
-      } else {
-        messageText += `\n\n[SYSTEM ROLL: ${roll.procedure_id} — d20=${roll.roll} vs DC ${roll.dc} — ${roll.outcome}]`;
+    const rollLines = rolls.filter(r => !r.no_roll).map(r => {
+      if (r.multi_roll) {
+        const parts = r.rolls.map(x => `d20=${x.roll} vs DC ${x.dc} — ${x.outcome}`);
+        return `[SYSTEM ROLL: ${r.procedure_id} — ${parts.join(' | ')}]`;
       }
+      return `[SYSTEM ROLL: ${r.procedure_id} — d20=${r.roll} vs DC ${r.dc} — ${r.outcome}]`;
+    });
+    if (rollLines.length > 0) {
+      messageText += '\n\n' + rollLines.join('\n');
     }
 
     this.messages.push({ role: 'user', content: messageText });
@@ -108,10 +114,10 @@ class Session {
     if (isDebriefTrigger(userText)) {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
-      return { reply, roll, closed: true };
+      return { reply, rolls, closed: true };
     }
 
-    return { reply, roll, closed: false };
+    return { reply, rolls, closed: false };
   }
 
   /**

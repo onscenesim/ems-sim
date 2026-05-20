@@ -198,8 +198,49 @@ function detectAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
   return rollProcedure(proc, contextFlags, difficulty);
 }
 
+
+/**
+ * Detect ALL distinct procedures in a message and roll each one.
+ * Scans greedily (longest synonym first); once a procedure fires its
+ * matched text is consumed so shorter overlapping synonyms don't double-fire.
+ * A procedure can only roll once per message even if mentioned multiple times.
+ * Returns an array (may be empty).
+ */
+function detectAllProcedures(userText) {
+  let remaining = userText.toLowerCase();
+  const found = [];
+  const usedProcIds = new Set();
+
+  // Safety cap — no message should have more than 10 distinct procedures
+  for (let i = 0; i < 10; i++) {
+    let bestMatch = null;
+
+    for (const { key, pattern, proc } of DETECT_PATTERNS) {
+      if (usedProcIds.has(proc.id)) continue;
+      if (!pattern.test(remaining)) continue;
+      if (!isSpecificSynonym(key) && !ADMIN_VERB_RE.test(remaining)) continue;
+      bestMatch = { key, pattern, proc };
+      break; // sorted longest-first, so first match is most specific
+    }
+
+    if (!bestMatch) break;
+
+    found.push(bestMatch.proc);
+    usedProcIds.add(bestMatch.proc.id);
+    // Consume the matched text so shorter synonyms of the same region don't re-fire
+    remaining = remaining.replace(bestMatch.pattern, ' ');
+  }
+
+  return found;
+}
+
+function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
+  const procs = detectAllProcedures(userText);
+  return procs.map(proc => rollProcedure(proc, contextFlags, difficulty));
+}
+
 function getProcedure(id) {
   return INTERVENTIONS.find(p => p.id === id) || null;
 }
 
-module.exports = { detectProcedure, rollProcedure, detectAndRoll, getProcedure, calcOutcome, rollD20 };
+module.exports = { detectProcedure, detectAllProcedures, rollProcedure, detectAndRoll, detectAllAndRoll, getProcedure, calcOutcome, rollD20 };

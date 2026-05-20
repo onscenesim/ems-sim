@@ -208,7 +208,7 @@ async function startScenario() {
     printHr();
     printReply(data.reply);
     printHr();
-    if (data.roll) printRoll(data.roll);
+    for (const r of (data.rolls || [])) printRoll(r);
 
     setLoading(false);
     userInput.focus();
@@ -266,13 +266,14 @@ async function sendTurn(msg) {
   try {
     const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg });
 
-    // Animate single dice rolls; multi-rolls go straight to print
-    if (data.roll && !data.roll.no_roll && !data.roll.multi_roll) {
-      const dc = Array.isArray(data.roll.dc) ? data.roll.dc[0] : data.roll.dc;
-      await animateDiceRoll(data.roll.procedure_id, data.roll.roll, dc, data.roll.outcome);
+    // Animate each real single roll in sequence, then print all to the log
+    for (const r of (data.rolls || [])) {
+      if (!r.no_roll && !r.multi_roll) {
+        const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
+        await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+      }
     }
-
-    if (data.roll) printRoll(data.roll);
+    for (const r of (data.rolls || [])) printRoll(r);
     printHr();
     printReply(data.reply);
     printHr();

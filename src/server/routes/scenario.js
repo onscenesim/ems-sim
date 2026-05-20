@@ -65,7 +65,7 @@ router.post('/new', async (req, res) => {
       scenarios_used:      tier === 'free' ? getFreeUsageCount(ip) : null,
       scenarios_remaining: tier === 'free' ? Math.max(0, FREE_DAILY_LIMIT - getFreeUsageCount(ip)) : null,
       reply:               result.reply,
-      roll:                result.roll,
+      rolls:               result.rolls || [],
       closed:              result.closed,
     });
   } catch (err) {
@@ -90,7 +90,7 @@ router.post('/:id/turn', async (req, res) => {
 
   try {
     const result = await session.send(message.trim());
-    return res.json({ reply: result.reply, roll: result.roll, closed: result.closed });
+    return res.json({ reply: result.reply, rolls: result.rolls || [], closed: result.closed });
   } catch (err) {
     console.error('[scenario/turn]', err.message);
     return res.status(500).json({ error: 'api_error', message: err.message });
