@@ -122,4 +122,17 @@ router.post('/:id/debrief', async (req, res) => {
   }
 });
 
+
+// ---------------------------------------------------------------------------
+// GET /api/scenario/:id/transcript
+// Returns the full session data (seed, messages, debrief) for export.
+// ---------------------------------------------------------------------------
+router.get('/:id/transcript', (req, res) => {
+  const session = getSession(req.params.id);
+  if (!session) {
+    return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
+  }
+  return res.json(session.getTranscriptData());
+});
+
 module.exports = router;

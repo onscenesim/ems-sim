@@ -130,7 +130,19 @@ class Session {
     const context = buildDebriefContext(this.seed, this.seed.events);
     const text = await sendDebrief(context, this.seed.provider_level);
     updateRunDebrief(this.sessionId, text);
+    this.debriefText = text;   // kept for transcript export
     return text;
+  }
+
+  /**
+   * Return all data needed to render a downloadable transcript.
+   */
+  getTranscriptData() {
+    return {
+      seed:        this.seed,
+      messages:    this.messages,
+      debriefText: this.debriefText || null,
+    };
   }
 
   /**
