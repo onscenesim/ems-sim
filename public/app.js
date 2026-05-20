@@ -157,13 +157,13 @@ async function refreshStatus() {
     const s = await apiGet('/api/scenario/status');
     if (s.tier === 'paid') {
       tierMsg.textContent = '✓ Beta access active — unlimited scenarios';
-      tierMsg.style.color = 'var(--green)';
+      tierMsg.classList.add('active');
     } else if (s.scenarios_remaining !== null) {
       tierMsg.textContent =
         s.scenarios_remaining > 0
           ? `Free tier — ${s.scenarios_remaining} of ${s.free_daily_limit} scenarios remaining today`
           : `Free tier — daily limit reached`;
-      tierMsg.style.color = '';
+      tierMsg.classList.remove('active');
     }
   } catch (_) { /* ignore */ }
 }
