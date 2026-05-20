@@ -1,0 +1,25 @@
+{
+  "name": "ems-sim",
+  "version": "0.1.0",
+  "description": "EMS training simulation — data layer",
+  "main": "src/engine/roller.js",
+  "scripts": {
+    "test": "node test/test-roller.js",
+    "play": "node bin/play.js",
+    "play:easy": "node bin/play.js EASY",
+    "play:hard": "node bin/play.js HARD",
+    "start": "node bin/server.js",
+    "serve": "node bin/server.js",
+    "serve:hard": "node bin/server.js HARD"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.97.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "uuid": "^14.0.0"
+  }
+}
