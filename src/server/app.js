@@ -1,7 +1,7 @@
 'use strict';
 
-// dotenv only needed locally — Render/Railway inject env vars directly
-if (process.env.NODE_ENV !== 'production') require('dotenv').config();
+// Load .env locally — silently skipped in production where env vars are injected
+try { require('dotenv').config(); } catch (_) {}
 
 const express = require('express');
 const path    = require('path');
