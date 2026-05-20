@@ -2,13 +2,23 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Block Blueprint font ──────────────────────────────────────────────── */
+
+@font-face {
+  font-family: 'BlockBlueprint';
+  src: url('fonts/BlockBlueprint.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --body-bg:    #b8b8b8;
-  --panel-bg:   #1e1e1e;
+  --panel-bg:   #1a1a1a;
   --hi:         #d8d8d8;
   --lo:         #444444;
   --chrome-bg:  #d0cdc8;
   --chrome-mid: #c0bdb8;
+  --font-block: 'BlockBlueprint', 'Arial Black', sans-serif;
   --font-ui:    Arial, Helvetica, sans-serif;
   --font-mono:  'Courier New', Courier, monospace;
   --font-brand: Georgia, 'Times New Roman', serif;
@@ -43,7 +53,6 @@ html, body {
   gap: 22px;
 }
 
-/* Inward-beveled dark panel */
 #start-card {
   background-color: var(--panel-bg);
   background-image: var(--noise);
@@ -82,16 +91,16 @@ html, body {
   min-height: 130px;
 }
 
-.tile-difficulty { background-color: #1e1248; }
-.tile-provider   { background-color: #0c2444; }
-.tile-region     { background-color: #0c2818; }
+/* More varied, saturated tile colors */
+.tile-difficulty { background-color: #28085c; } /* vivid purple */
+.tile-provider   { background-color: #063858; } /* deep teal-navy */
+.tile-region     { background-color: #0a3818; } /* rich forest green */
 
 .tile-label {
-  font-size: 10px;
-  font-weight: bold;
-  font-family: var(--font-ui);
-  color: rgba(255,255,255,0.45);
-  letter-spacing: 0.12em;
+  font-family: var(--font-block);
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -100,8 +109,8 @@ html, body {
   border: 2px solid;
   border-color: var(--lo) var(--hi) var(--hi) var(--lo);
   color: #fff;
-  font-family: var(--font-mono);
-  font-size: 13px;
+  font-family: var(--font-block);
+  font-size: 12px;
   padding: 5px 8px;
   width: 100%;
   -webkit-appearance: none;
@@ -114,10 +123,10 @@ html, body {
   border-color: #888 #ccc #ccc #888;
 }
 
-/* ── Center logo tile ──────────────────────────────────────────────────── */
+/* ── Center tile ───────────────────────────────────────────────────────── */
 
 .center-tile {
-  background-color: #0a0a0a;
+  background-color: #080808;
   align-items: center;
   text-align: center;
   gap: 8px;
@@ -134,18 +143,18 @@ html, body {
 }
 
 .brand-sub {
-  font-family: var(--font-ui);
-  font-size: 9px;
+  font-family: var(--font-block);
+  font-size: 8px;
   color: rgba(255,255,255,0.35);
-  letter-spacing: 0.07em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 /* ── Begin Scenario tile ───────────────────────────────────────────────── */
 
 .start-tile {
-  background-color: #0e200e;
+  background-color: #3a0c0c; /* deep red — distinct from the greens */
   padding: 0;
 }
 
@@ -155,23 +164,22 @@ html, body {
   background: transparent;
   border: none;
   color: #ffffff;
-  font-family: var(--font-ui);
+  font-family: var(--font-block);
   font-size: 19px;
-  font-weight: bold;
   letter-spacing: 0.1em;
   cursor: pointer;
   transition: background 0.1s;
   padding: 20px;
 }
 
-#start-btn:hover:not(:disabled) { background: rgba(255,255,255,0.06); }
-#start-btn:active:not(:disabled) { background: rgba(0,0,0,0.2); }
+#start-btn:hover:not(:disabled) { background: rgba(255,255,255,0.08); }
+#start-btn:active:not(:disabled) { background: rgba(0,0,0,0.25); }
 #start-btn:disabled { opacity: 0.4; cursor: default; }
 
 /* ── Beta access tile ──────────────────────────────────────────────────── */
 
 .access-tile {
-  background-color: #0e1828;
+  background-color: #1a2838; /* steel blue-gray */
   justify-content: flex-start;
   gap: 8px;
 }
@@ -183,7 +191,7 @@ html, body {
 
 .access-row input {
   flex: 1;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.45);
   border: 2px solid;
   border-color: var(--lo) var(--hi) var(--hi) var(--lo);
   color: #fff;
@@ -202,9 +210,8 @@ html, body {
   border: 2px solid;
   border-color: var(--hi) var(--lo) var(--lo) var(--hi);
   color: #aac4dd;
-  font-family: var(--font-ui);
+  font-family: var(--font-block);
   font-size: 10px;
-  font-weight: bold;
   padding: 5px 9px;
   cursor: pointer;
   letter-spacing: 0.05em;
@@ -214,11 +221,12 @@ html, body {
 #access-apply:hover { background: #3a4e68; color: #fff; }
 
 #tier-msg {
-  font-family: var(--font-ui);
-  font-size: 10px;
+  font-family: var(--font-block);
+  font-size: 9px;
   color: rgba(255,255,255,0.35);
   min-height: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
+  letter-spacing: 0.05em;
 }
 
 #tier-msg.active { color: #00cc44; }
@@ -240,10 +248,10 @@ html, body {
 }
 
 .company-name {
-  font-family: var(--font-ui);
-  font-size: 12px;
+  font-family: var(--font-block);
+  font-size: 11px;
   color: #444;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
 
 /* ── Terminal ─────────────────────────────────────────────────────────── */
@@ -266,11 +274,10 @@ html, body {
 }
 
 #hdr-title {
-  font-family: var(--font-ui);
-  font-weight: bold;
-  font-size: 13px;
+  font-family: var(--font-block);
+  font-size: 14px;
   color: #111;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   flex-shrink: 0;
 }
 
@@ -286,10 +293,9 @@ html, body {
   border: 2px solid;
   border-color: var(--hi) var(--lo) var(--lo) var(--hi);
   color: #333;
-  font-family: var(--font-ui);
-  font-size: 10px;
-  font-weight: bold;
-  padding: 1px 7px;
+  font-family: var(--font-block);
+  font-size: 9px;
+  padding: 2px 7px;
   letter-spacing: 0.06em;
 }
 
@@ -302,12 +308,11 @@ html, body {
   border: 2px solid;
   border-color: var(--hi) var(--lo) var(--lo) var(--hi);
   color: #333;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: bold;
-  padding: 3px 12px;
+  font-family: var(--font-block);
+  font-size: 10px;
+  padding: 4px 12px;
   cursor: pointer;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   transition: color 0.1s;
 }
 
@@ -349,12 +354,11 @@ html, body {
   border: 2px solid;
   border-color: var(--hi) var(--lo) var(--lo) var(--hi);
   color: var(--green);
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: bold;
+  font-family: var(--font-block);
+  font-size: 11px;
   padding: 9px 28px;
   cursor: pointer;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   margin: 18px auto 0;
   transition: background 0.1s;
 }
@@ -401,12 +405,11 @@ html, body {
   border: 2px solid;
   border-color: var(--hi) var(--lo) var(--lo) var(--hi);
   color: #111;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: bold;
-  padding: 5px 16px;
+  font-family: var(--font-block);
+  font-size: 11px;
+  padding: 6px 16px;
   cursor: pointer;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   transition: background 0.08s;
 }
 
