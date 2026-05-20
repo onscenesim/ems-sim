@@ -11,27 +11,32 @@
   <!-- ── Start screen ──────────────────────────────────────────────────── -->
   <div id="start-screen">
     <div id="start-card">
-      <div class="brand">EMS TERMINAL</div>
-      <div class="brand-sub">Clinical Decision Training for EMS Providers</div>
+      <div class="tile-grid">
 
-      <div class="config-group">
-        <div class="config-row">
-          <span class="cfg-label">DIFFICULTY</span>
+        <div class="cfg-tile tile-difficulty">
+          <div class="tile-label">DIFFICULTY</div>
           <select id="cfg-difficulty">
             <option value="NORMAL" selected>NORMAL</option>
             <option value="EASY">EASY</option>
             <option value="HARD">HARD</option>
           </select>
         </div>
-        <div class="config-row">
-          <span class="cfg-label">PROVIDER</span>
+
+        <div class="center-tile">
+          <div class="brand">EMS TERMINAL</div>
+          <div class="brand-sub">Clinical Decision Training for EMS Providers</div>
+        </div>
+
+        <div class="cfg-tile tile-provider">
+          <div class="tile-label">PROVIDER</div>
           <select id="cfg-provider">
             <option value="ALS" selected>ALS — Paramedic</option>
             <option value="BLS">BLS — EMT</option>
           </select>
         </div>
-        <div class="config-row">
-          <span class="cfg-label">REGION</span>
+
+        <div class="cfg-tile tile-region">
+          <div class="tile-label">REGION</div>
           <select id="cfg-region">
             <option value="SUBURBAN" selected>Suburban</option>
             <option value="URBAN">Urban</option>
@@ -39,15 +44,21 @@
             <option value="WILDERNESS">Wilderness</option>
           </select>
         </div>
-      </div>
 
-      <button id="start-btn">BEGIN SCENARIO</button>
+        <div class="start-tile">
+          <button id="start-btn">BEGIN SCENARIO</button>
+        </div>
 
-      <div class="access-row">
-        <input id="access-code" type="text" placeholder="Beta access code" autocomplete="off" spellcheck="false">
-        <button id="access-apply">APPLY</button>
+        <div class="access-tile">
+          <div class="tile-label">BETA ACCESS</div>
+          <div class="access-row">
+            <input id="access-code" type="text" placeholder="access code" autocomplete="off" spellcheck="false">
+            <button id="access-apply">APPLY</button>
+          </div>
+          <div id="tier-msg"></div>
+        </div>
+
       </div>
-      <div id="tier-msg"></div>
     </div>
   </div>
 
