@@ -160,6 +160,7 @@ function assembleSeedBlock(seed) {
   }
   lines.push('11. AMBIGUOUS SHORTHAND: EMS abbreviations can be genuinely ambiguous. If the user writes something like "apply a 4L" or "get a 4L" without clear context, do NOT assume O2 or monitor — ask one short clarifying question before acting: e.g. "4 liters O2 or 4-lead monitor?" Similarly, "4L NC" unambiguously means nasal cannula oxygen; "4-lead ECG" or "4L ECG" unambiguously means cardiac monitoring. When the meaning is clear from context, proceed without asking. Only clarify when the shorthand is genuinely ambiguous and the two interpretations would produce different clinical actions.');
   lines.push('');
+  lines.push('12. POST-HANDOFF BOUNDARY: Once the patient has been physically delivered to the receiving facility and the ED or hospital team has taken over at bedside, do NOT accept further clinical interventions from the user. Respond as the charge nurse or receiving physician: something like "We have it from here — thanks for the report." If the user continues attempting clinical orders, gently redirect: "The patient is in ED hands now. Do you want to clear and run a debrief?" This boundary applies the moment the receiving team physically takes over — not just when transport begins. Packaging and loading do NOT trigger this boundary; arrival at the facility and bedside handoff do.');
   lines.push('10. TRANSPORT REQUIRES EXPLICIT ORDER: Never move the ambulance or go en route without the user explicitly stating a destination and ordering transport. Packaging the patient and loading into the ambulance does NOT mean transport has begun — the unit is stationary until ordered otherwise. The user must say something like "let\'s go to [hospital]", "go en route to [destination]", "transport to [hospital]", or equivalent. Your partner will ask for a destination if the unit is loaded and none has been given, but will not move without one.');
   lines.push('');
   lines.push('=== END SEED ===');
@@ -177,6 +178,7 @@ function buildDebriefContext(seed, events) {
   lines.push(`Category: ${seed.category} | Difficulty: ${seed.difficulty}`);
   lines.push(`Presentation: ${seed.presentation}`);
   if (seed.true_diagnosis) lines.push(`True diagnosis: ${seed.true_diagnosis}`);
+  if (seed.special_flags) lines.push(`Special flags: ${seed.special_flags}`);
   lines.push(`Patient: ${seed.patient_age}yo ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
   lines.push(`Trajectory: ${seed.trajectory} | Decompensation clock: ${seed.decompensation_clock || 'N/A'} min`);
   lines.push(`Complication: ${seed.complication_type}`);
@@ -190,6 +192,13 @@ function buildDebriefContext(seed, events) {
     if (ev.roll !== null && ev.roll !== undefined) parts.push(`d20=${ev.roll} vs DC${ev.dc} → ${ev.outcome}`);
     if (ev.detail) parts.push(`| ${ev.detail}`);
     lines.push(parts.join(' '));
+  }
+  lines.push('');
+  lines.push('--- DEBRIEF FLAGS ---');
+  const amsCategories = ['toxicology', 'medical', 'neuro', 'behavioral', 'pediatric'];
+  const hasBGL = events.some(e => e.procedure_id === 'glucometry' || e.procedure_id === 'vitals_monitor' || (e.detail && /glucose|BGL|glucomet|finger.?stick/i.test(e.detail)));
+  if (!hasBGL && amsCategories.includes((seed.category || '').toLowerCase())) {
+    lines.push('BGL_NOT_CHECKED: Blood glucose was never checked. In this category, hypoglycemia is always on the differential. Flag this as a missed critical assessment in debrief.');
   }
   lines.push('=== END LOG ===');
   return lines.join('\n');

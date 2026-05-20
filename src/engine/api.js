@@ -56,7 +56,9 @@ Rules:
 - Be specific. Reference actual procedures, timing, and findings from the log.
 - Calibrate to provider level: ${providerLevel}. Hold ALS to ALS standards.
 - If the provider performed well, say so clearly. Do not invent criticism.
-- If the provider made a potentially fatal error, name it as such.`;
+- If the provider made a potentially fatal error, name it as such.
+- DEBRIEF FLAGS: If the log contains a BGL_NOT_CHECKED flag, explicitly address it in WHAT MISSED THE MARK — call it out by name, explain why glucose is always on the differential in AMS and tox presentations, and note the consequence of missing hypoglycemia as a reversible cause.
+- FLUMAZENIL: If the user attempted to order flumazenil, note clearly in debrief that flumazenil is not an EMS medication in any system — it is not in the drug box. Do not treat this as a creative or advanced intervention. It is an error reflecting unfamiliarity with EMS formularies.`;
 
   const response = await client.messages.create({
     model: MODEL,

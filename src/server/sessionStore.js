@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const { Session }     = require('../engine/session');
 const { rollScenario } = require('../engine/roller');
 
-const TTL_MS = 30 * 60 * 1000; // 30 minutes of inactivity (free tier)
+const TTL_MS = 4 * 60 * 60 * 1000; // 4 hours of inactivity (free tier); paid/beta sessions never expire
 
 // id → { session: Session, lastActive: number, userId: string, tier: string }
 const store = new Map();
