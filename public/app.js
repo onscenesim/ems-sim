@@ -355,3 +355,33 @@ userInput.addEventListener('keydown', e => {
     sendTurn(msg);
   }
 });
+
+// ── Magic 8-ball easter egg ───────────────────────────────────────────────
+
+const EIGHT_BALL = [
+  'IT IS CERTAIN', 'IT IS DECIDEDLY SO', 'WITHOUT A DOUBT',
+  'YES DEFINITELY', 'YOU MAY RELY ON IT', 'AS I SEE IT, YES',
+  'MOST LIKELY', 'OUTLOOK GOOD', 'YES', 'SIGNS POINT TO YES',
+  'REPLY HAZY', 'ASK AGAIN LATER', 'BETTER NOT TELL YOU NOW',
+  'CANNOT PREDICT NOW', 'CONCENTRATE AND ASK AGAIN',
+  "DON'T COUNT ON IT", 'MY REPLY IS NO', 'MY SOURCES SAY NO',
+  'OUTLOOK NOT SO GOOD', 'VERY DOUBTFUL',
+];
+
+const eightball         = document.getElementById('eightball');
+const eightballResponse = document.getElementById('eightball-response');
+let   eightballTimer    = null;
+
+eightball.addEventListener('click', () => {
+  eightball.classList.remove('shaking');
+  void eightball.offsetWidth; // restart animation
+  eightball.classList.add('shaking');
+
+  eightballResponse.textContent = EIGHT_BALL[Math.floor(Math.random() * EIGHT_BALL.length)];
+  eightballResponse.classList.add('visible');
+
+  clearTimeout(eightballTimer);
+  eightballTimer = setTimeout(() => eightballResponse.classList.remove('visible'), 3000);
+});
+
+eightball.addEventListener('animationend', () => eightball.classList.remove('shaking'));
