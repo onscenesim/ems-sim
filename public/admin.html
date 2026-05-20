@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EMS TERMINAL — ADMIN</title>
+  <style>
+    :root {
+      --bg:          #0d0d0d;
+      --panel:       #151515;
+      --border:      #2a2a2a;
+      --hi:          #1e1e1e;
+      --text:        #d0d0d0;
+      --dim:         #666;
+      --green:       #5dbb63;
+      --yellow:      #e8a838;
+      --red:         #d94040;
+      --purple:      #c0389f;
+      --blue:        #7ab8d8;
+      --font:        'Courier New', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    #hdr {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    #hdr h1 {
+      font-size: 11px;
+      letter-spacing: .15em;
+      color: var(--dim);
+      white-space: nowrap;
+    }
+    #hdr h1 span { color: var(--green); }
+
+    #token-in {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 4px 8px;
+      width: 200px;
+    }
+    #connect-btn {
+      background: none;
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: var(--font);
+      font-size: 11px;
+      letter-spacing: .1em;
+      padding: 4px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #connect-btn:hover { background: var(--green); color: var(--bg); }
+    #connect-btn:disabled { opacity: .4; cursor: default; }
+
+    #status {
+      font-size: 11px;
+      color: var(--dim);
+      margin-left: auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 500px;
+    }
+
+    /* ── Main split ──────────────────────────────────────────── */
+    #main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Run list ────────────────────────────────────────────── */
+    #sidebar {
+      width: 270px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #sidebar-hdr {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    #sidebar-hdr span {
+      font-size: 10px;
+      letter-spacing: .1em;
+      color: var(--dim);
+      text-transform: uppercase;
+      flex: 1;
+    }
+    #cat-filter {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--dim);
+      font-family: var(--font);
+      font-size: 10px;
+      padding: 2px 4px;
+    }
+
+    #runs-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .run-row {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .1s;
+    }
+    .run-row:hover   { background: var(--hi); }
+    .run-row.active  { background: #0e1a0e; border-left: 2px solid var(--green); }
+
+    .run-cat {
+      font-size: 10px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .run-meta {
+      font-size: 10px;
+      color: var(--dim);
+      line-height: 1.55;
+    }
+
+    /* Category colours */
+    .c-toxicology   { color: var(--purple); }
+    .c-cardiac      { color: var(--red); }
+    .c-arrest       { color: var(--red); }
+    .c-trauma       { color: var(--yellow); }
+    .c-medical      { color: var(--blue); }
+    .c-behavioral   { color: #9b7fd4; }
+    .c-respiratory  { color: var(--green); }
+    .c-neuro        { color: #e89338; }
+    .c-pediatric    { color: #7ac8d8; }
+    .c-ob           { color: #d4a0c0; }
+    .c-doa          { color: var(--dim); }
+    .c-curveballs   { color: var(--purple); }
+
+    /* ── Detail panel ────────────────────────────────────────── */
+    #detail {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #detail-scroll {
+      overflow-y: auto;
+      flex: 1;
+      padding: 14px 18px;
+    }
+
+    .empty-state {
+      color: var(--dim);
+      font-size: 11px;
+      text-align: center;
+      padding: 60px 20px;
+      line-height: 2.2;
+    }
+
+    /* Meta header inside detail */
+    .detail-meta {
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      line-height: 1.65;
+    }
+    .detail-meta .label {
+      font-size: 10px;
+      letter-spacing: .1em;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .detail-meta .patient {
+      font-size: 13px;
+    }
+    .detail-meta .pres {
+      font-size: 11px;
+      color: var(--dim);
+    }
+    .detail-meta .flags {
+      font-size: 10px;
+      color: var(--yellow);
+      margin-top: 2px;
+    }
+    .detail-meta .stats {
+      font-size: 10px;
+      color: var(--dim);
+      margin-top: 3px;
+    }
+
+    /* Section labels */
+    .sec-label {
+      font-size: 9px;
+      letter-spacing: .15em;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin: 14px 0 6px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 3px;
+    }
+
+    /* Conversation lines */
+    .msg { line-height: 1.6; white-space: pre-wrap; margin-bottom: 2px; }
+    .user-text  { color: var(--blue); }
+    .assistant  { color: var(--text); }
+    .dispatch   { color: var(--green); }
+
+    .roll-line  { font-size: 11px; margin: 1px 0; }
+    .SUCCESS    { color: var(--green); }
+    .MARGINAL   { color: var(--yellow); }
+    .FAILURE    { color: var(--red); }
+    .COMPLICATION { color: var(--purple); }
+
+    .turn-break {
+      border: none;
+      border-top: 1px dashed var(--border);
+      margin: 8px 0;
+    }
+
+    /* Event log row */
+    .ev-row {
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    /* Debrief */
+    .debrief-body {
+      white-space: pre-wrap;
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 12px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #2a2a2a; }
+  </style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>EMS TERMINAL // <span>ADMIN</span></h1>
+  <input id="token-in" type="password" placeholder="admin token" autocomplete="off">
+  <button id="connect-btn">CONNECT</button>
+  <div id="status">not connected</div>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div id="sidebar-hdr">
+      <span id="list-label">RUNS</span>
+      <select id="cat-filter">
+        <option value="">all</option>
+        <option value="toxicology">toxicology</option>
+        <option value="cardiac">cardiac</option>
+        <option value="arrest">arrest</option>
+        <option value="trauma">trauma</option>
+        <option value="medical">medical</option>
+        <option value="behavioral">behavioral</option>
+        <option value="respiratory">respiratory</option>
+        <option value="neuro">neuro</option>
+        <option value="pediatric">pediatric</option>
+        <option value="ob">ob</option>
+        <option value="doa">doa</option>
+        <option value="curveballs">curveballs</option>
+      </select>
+    </div>
+    <div id="runs-list">
+      <div class="empty-state">enter token<br>and connect</div>
+    </div>
+  </div>
+
+  <div id="detail">
+    <div id="detail-scroll">
+      <div class="empty-state">select a run<br>to view transcript</div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const tokenIn   = document.getElementById('token-in');
+const connectBtn = document.getElementById('connect-btn');
+const statusEl  = document.getElementById('status');
+const listLabel = document.getElementById('list-label');
+const runsList  = document.getElementById('runs-list');
+const catFilter = document.getElementById('cat-filter');
+const detailScroll = document.getElementById('detail-scroll');
+
+let allRuns = [];
+let token   = '';
+
+// ── Restore saved token ───────────────────────────────────────
+tokenIn.value = localStorage.getItem('ems_admin_token') || '';
+
+// ── Connect ───────────────────────────────────────────────────
+async function connect() {
+  token = tokenIn.value.trim();
+  if (!token) return;
+  localStorage.setItem('ems_admin_token', token);
+  statusEl.textContent = 'connecting...';
+  connectBtn.disabled  = true;
+
+  try {
+    const [summary, runsData] = await Promise.all([
+      api('/admin/summary'),
+      api('/admin/runs?limit=200'),
+    ]);
+    allRuns = runsData.runs || [];
+    statusEl.textContent = [
+      `${summary.total_runs} runs`,
+      summary.avg_scene_mins != null ? `avg ${summary.avg_scene_mins}min` : null,
+      summary.avg_rolls      != null ? `${summary.avg_rolls} rolls/run`   : null,
+      summary.with_debrief   ? `${summary.with_debrief} debriefed` : null,
+    ].filter(Boolean).join(' · ');
+    renderList();
+  } catch (err) {
+    statusEl.textContent = 'error: ' + err.message;
+  }
+  connectBtn.disabled = false;
+}
+
+async function api(path) {
+  const res  = await fetch(path, { headers: { 'Authorization': 'Bearer ' + token } });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'HTTP ' + res.status);
+  return data;
+}
+
+connectBtn.addEventListener('click', connect);
+tokenIn.addEventListener('keydown', e => { if (e.key === 'Enter') connect(); });
+catFilter.addEventListener('change', renderList);
+
+// ── Run list ──────────────────────────────────────────────────
+function renderList() {
+  const cat      = catFilter.value;
+  const filtered = cat ? allRuns.filter(r => r.category === cat) : allRuns;
+  listLabel.textContent = filtered.length + ' RUNS';
+
+  if (!filtered.length) {
+    runsList.innerHTML = '<div class="empty-state">no runs</div>';
+    return;
+  }
+
+  runsList.innerHTML = '';
+  for (const run of filtered) {
+    const el   = document.createElement('div');
+    el.className = 'run-row';
+    el.dataset.id = run.session_id;
+
+    const age    = run.patient?.age ?? '?';
+    const sexCh  = (run.patient?.sex || '?')[0].toUpperCase();
+    const name   = run.patient?.name ?? 'Unknown';
+    const mins   = run.total_scene_minutes != null ? run.total_scene_minutes + 'min' : '?min';
+    const rolls  = (run.events || []).filter(e => e.event_type === 'procedure' && e.outcome !== 'NO_ROLL').length;
+    const hasDB  = !!run.debrief;
+    const ts     = timeAgo(run.logged_at || run.timestamp_start);
+
+    el.innerHTML =
+      `<div class="run-cat c-${run.category}">${run.category}${hasDB ? ' ★' : ''}</div>` +
+      `<div class="run-meta">` +
+        `${run.difficulty} · ${run.provider_level}<br>` +
+        `${name} · ${age}${sexCh}<br>` +
+        `${mins} · ${rolls} roll${rolls !== 1 ? 's' : ''} · ${ts}` +
+      `</div>`;
+
+    el.addEventListener('click', () => openRun(run.session_id, el));
+    runsList.appendChild(el);
+  }
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const d = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (d < 60)   return d + 's ago';
+  if (d < 3600) return Math.floor(d / 60) + 'm ago';
+  if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+  return Math.floor(d / 86400) + 'd ago';
+}
+
+// ── Open a run ────────────────────────────────────────────────
+async function openRun(id, el) {
+  document.querySelectorAll('.run-row').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  detailScroll.innerHTML = '<div class="empty-state">loading...</div>';
+
+  try {
+    const run = await api('/admin/runs/' + id);
+    renderDetail(run);
+  } catch (err) {
+    detailScroll.innerHTML = `<div class="empty-state">error: ${err.message}</div>`;
+  }
+}
+
+// ── Detail render ─────────────────────────────────────────────
+function renderDetail(run) {
+  detailScroll.innerHTML = '';
+
+  // ── Meta header ──
+  const cmb = (run.patient?.comorbidity && run.patient.comorbidity !== 'otherwise_healthy')
+    ? ' · ' + run.patient.comorbidity : '';
+
+  const meta = div('detail-meta');
+  meta.innerHTML =
+    `<div class="label">${run.category} · ${run.difficulty} · ${run.provider_level} · ${run.region || ''}</div>` +
+    `<div class="patient">${run.patient?.name ?? '?'} · ${run.patient?.age ?? '?'}yo ${run.patient?.sex ?? '?'}${cmb}</div>` +
+    `<div class="pres">${run.presentation || ''}${run.true_diagnosis ? ' → ' + run.true_diagnosis : ''}</div>` +
+    (run.special_flags ? `<div class="flags">⚑ ${run.special_flags}</div>` : '') +
+    `<div class="stats">` +
+      `${run.trajectory} · decompensation: ${run.decompensation_clock ?? 'none'} min · ` +
+      `complication: ${run.complication_type} · partner: ${run.crew_partner ?? '?'}<br>` +
+      `${run.total_scene_minutes ?? '?'} min total scene · ` +
+      (run.logged_at ? new Date(run.logged_at).toLocaleString() : '') +
+    `</div>`;
+  detailScroll.appendChild(meta);
+
+  // ── Conversation ──
+  detailScroll.appendChild(sectionLabel('CONVERSATION'));
+
+  const msgs = run.conversation || [];
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[i];
+    if (m.role === 'user') {
+      renderUser(m.content);
+    } else {
+      renderAssistant(m.content);
+    }
+    if (i < msgs.length - 1) {
+      const hr = document.createElement('hr');
+      hr.className = 'turn-break';
+      detailScroll.appendChild(hr);
+    }
+  }
+
+  // ── Event log ──
+  const rolled = (run.events || []).filter(e => e.event_type === 'procedure' && e.outcome !== 'NO_ROLL');
+  if (rolled.length) {
+    detailScroll.appendChild(sectionLabel(`ROLL LOG (${rolled.length})`));
+    for (const ev of rolled) {
+      const d = div('ev-row ' + ev.outcome);
+      d.textContent = `T+${ev.scene_minute}min  ${ev.procedure_id}  d20=${ev.dice_roll} vs DC${ev.dc_value} → ${ev.outcome}`;
+      detailScroll.appendChild(d);
+    }
+  }
+
+  // ── Debrief ──
+  if (run.debrief) {
+    detailScroll.appendChild(sectionLabel('DEBRIEF'));
+    const d = div('debrief-body');
+    d.textContent = run.debrief;
+    detailScroll.appendChild(d);
+  }
+
+  detailScroll.scrollTop = 0;
+}
+
+function renderUser(content) {
+  // Split user text from injected [SYSTEM ROLL: ...] lines
+  const parts     = content.split(/\n\n(?=\[SYSTEM ROLL:)/);
+  const userText  = parts[0].trim();
+  const rollLines = parts.slice(1).join('\n').split('\n').filter(Boolean);
+
+  const d = div('msg user-text');
+  d.textContent = '> ' + userText;
+  detailScroll.appendChild(d);
+
+  for (const line of rollLines) {
+    const outcome = /SUCCESS/.test(line)     ? 'SUCCESS'
+                  : /MARGINAL/.test(line)    ? 'MARGINAL'
+                  : /COMPLICATION/.test(line)? 'COMPLICATION'
+                  : /FAILURE/.test(line)     ? 'FAILURE' : '';
+    const rd = div('msg roll-line ' + outcome);
+    rd.textContent = line;
+    detailScroll.appendChild(rd);
+  }
+}
+
+function renderAssistant(content) {
+  for (const line of content.split('\n')) {
+    const d = div('msg ' + (line.startsWith('DISPATCH:') ? 'dispatch' : 'assistant'));
+    d.textContent = line || ' ';
+    detailScroll.appendChild(d);
+  }
+}
+
+function div(cls) {
+  const el = document.createElement('div');
+  if (cls) el.className = cls;
+  return el;
+}
+
+function sectionLabel(text) {
+  const el = div('sec-label');
+  el.textContent = text;
+  return el;
+}
+
+// Auto-connect if token is already saved
+if (tokenIn.value) connect();
+</script>
+</body>
+</html>
