@@ -266,6 +266,12 @@ async function sendTurn(msg) {
   try {
     const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg });
 
+    // Animate single dice rolls; multi-rolls go straight to print
+    if (data.roll && !data.roll.no_roll && !data.roll.multi_roll) {
+      const dc = Array.isArray(data.roll.dc) ? data.roll.dc[0] : data.roll.dc;
+      await animateDiceRoll(data.roll.procedure_id, data.roll.roll, dc, data.roll.outcome);
+    }
+
     if (data.roll) printRoll(data.roll);
     printHr();
     printReply(data.reply);
@@ -355,6 +361,78 @@ userInput.addEventListener('keydown', e => {
     sendTurn(msg);
   }
 });
+
+
+// ── Dice roll animation ───────────────────────────────────────────────────────
+
+const diceOverlay     = document.getElementById('dice-overlay');
+const diceProcEl      = document.getElementById('dice-proc');
+const diceSvgEl       = document.getElementById('dice-svg');
+const diceNumberEl    = document.getElementById('dice-number');
+const diceDCEl        = document.getElementById('dice-dc-label');
+const diceOutcomeEl   = document.getElementById('dice-outcome-label');
+
+/**
+ * Show a d20 roll animation, resolve when the overlay has faded out.
+ * @param {string} procedureId   e.g. 'peripheral_iv'
+ * @param {number} roll          the actual d20 result (1-20)
+ * @param {number|number[]} dc   DC value(s)
+ * @param {string} outcome       'SUCCESS' | 'MARGINAL' | 'FAILURE' | 'COMPLICATION'
+ */
+function animateDiceRoll(procedureId, roll, dc, outcome) {
+  return new Promise(resolve => {
+    const CYCLE_MS   = 48;   // time per random number during cycling
+    const CYCLES     = 13;   // how many random numbers flash before landing
+    const HOLD_MS    = 550;  // how long to show the result before fading
+    const FADE_MS    = 200;  // CSS transition duration (matches --transition in CSS)
+
+    // Populate static labels
+    diceProcEl.textContent    = procedureId.replace(/_/g, ' ').toUpperCase();
+    const dcLabel = Array.isArray(dc) ? dc.join(' / ') : dc;
+    diceDCEl.textContent      = `DC ${dcLabel}`;
+    diceOutcomeEl.textContent = '';
+    diceOutcomeEl.className   = '';
+    diceNumberEl.textContent  = '?';
+    diceSvgEl.className       = '';
+
+    // Show overlay + trigger spin animation
+    diceOverlay.classList.add('visible');
+    // Force reflow so animation restarts cleanly
+    void diceSvgEl.offsetWidth;
+    diceSvgEl.classList.add('rolling');
+
+    // Cycle through random numbers
+    let count = 0;
+    const ticker = setInterval(() => {
+      count++;
+      if (count < CYCLES) {
+        diceNumberEl.textContent = Math.floor(Math.random() * 20) + 1;
+      } else {
+        clearInterval(ticker);
+        // Land on the real result
+        diceNumberEl.textContent = roll;
+        diceSvgEl.className = outcome;   // colours the number via CSS
+
+        // Reveal outcome label
+        setTimeout(() => {
+          diceOutcomeEl.textContent = outcome;
+          diceOutcomeEl.className   = `visible ${outcome}`;
+
+          // Hold, then fade out
+          setTimeout(() => {
+            diceOverlay.classList.remove('visible');
+            setTimeout(() => {
+              diceOutcomeEl.className   = '';
+              diceSvgEl.className       = '';
+              diceNumberEl.textContent  = '?';
+              resolve();
+            }, FADE_MS);
+          }, HOLD_MS);
+        }, 80);
+      }
+    }, CYCLE_MS);
+  });
+}
 
 // ── Magic 8-ball easter egg ───────────────────────────────────────────────
 
