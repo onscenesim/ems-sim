@@ -4,16 +4,16 @@ const { v4: uuidv4 } = require('uuid');
 const { Session }     = require('../engine/session');
 const { rollScenario } = require('../engine/roller');
 
-const TTL_MS = 30 * 60 * 1000; // 30 minutes of inactivity
+const TTL_MS = 30 * 60 * 1000; // 30 minutes of inactivity (free tier)
 
-// id → { session: Session, lastActive: number, userId: string }
+// id → { session: Session, lastActive: number, userId: string, tier: string }
 const store = new Map();
 
-// Prune expired sessions every 5 minutes
+// Prune expired free-tier sessions every 5 minutes; paid sessions never expire.
 setInterval(() => {
   const cutoff = Date.now() - TTL_MS;
   for (const [id, entry] of store) {
-    if (entry.lastActive < cutoff) store.delete(id);
+    if (entry.tier !== 'paid' && entry.lastActive < cutoff) store.delete(id);
   }
 }, 5 * 60 * 1000);
 
@@ -21,7 +21,7 @@ setInterval(() => {
  * Roll a new scenario, wrap it in a Session, and persist it.
  * Returns { id, seed }.
  */
-function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN' } = {}, userId = 'anon') {
+function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN' } = {}, userId = 'anon', tier = 'free') {
   const history = {
     categories: [], presentations: [], crew: [],
     doa_positions: [], arrest_positions: [], total_count: 0,
@@ -37,7 +37,7 @@ function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_i
 
   const session = new Session(seed);
   const id = uuidv4();
-  store.set(id, { session, lastActive: Date.now(), userId });
+  store.set(id, { session, lastActive: Date.now(), userId, tier });
   return { id, seed };
 }
 

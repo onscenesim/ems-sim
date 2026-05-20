@@ -47,7 +47,7 @@ router.post('/new', async (req, res) => {
   const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN' } = req.body;
 
   try {
-    const { id, seed } = createSession({ difficulty, provider_level, region_id }, ip);
+    const { id, seed } = createSession({ difficulty, provider_level, region_id }, ip, tier);
     const session = getSession(id);
 
     // Fire the dispatch turn
