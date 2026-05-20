@@ -318,9 +318,55 @@ async function sendTurn(msg) {
 endBtn.addEventListener('click', () => {
   if (isClosed || waitingDebrief) return;
   if (confirm('End this scenario now and proceed to debrief?')) {
-    sendTurn('end scenario');
+    endCallAndDebrief();
   }
 });
+
+// Closes the scenario and immediately generates the debrief without a y/n prompt.
+async function endCallAndDebrief() {
+  if (!sessionId) return;
+  endBtn.disabled = true;
+  setLoading(true);
+
+  print('> end scenario', 'user');
+  addHistory('end scenario');
+
+  try {
+    // Step 1: close the scenario
+    const turnData = await apiPost(`/api/scenario/${sessionId}/turn`, { message: 'end scenario' });
+
+    for (const r of (turnData.rolls || [])) {
+      if (!r.no_roll && !r.multi_roll) {
+        const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
+        await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+      }
+    }
+    for (const r of (turnData.rolls || [])) printRoll(r);
+    printHr();
+    printReply(turnData.reply);
+    printHr();
+
+    if (localTranscript) {
+      localTranscript.turns.push({ user: 'end scenario', assistant: turnData.reply, rolls: turnData.rolls || [] });
+    }
+
+    // Step 2: auto-generate debrief
+    isClosed = true;
+    print('[generating debrief...]', 'system');
+    const debriefData = await apiPost(`/api/scenario/${sessionId}/debrief`, {});
+    if (localTranscript) localTranscript.debriefText = debriefData.debrief;
+    printHr();
+    print(debriefData.debrief, 'debrief');
+    printHr();
+
+  } catch (err) {
+    print(`[Error: ${err.message}]`, 'error');
+  }
+
+  showNewScenarioBtn();
+  setLoading(false);
+  setInputEnabled(false);
+}
 
 // ── New scenario button (appears inline in output) ────────────────────────
 
@@ -367,6 +413,7 @@ function resetToStart() {
 function setLoading(loading) {
   sendBtn.disabled   = loading;
   userInput.disabled = loading;
+  if (loading) endBtn.disabled = true;   // prevent double-click during any request
   sendBtn.textContent = loading ? '···' : 'SEND';
   if (!loading) userInput.focus();
 }
