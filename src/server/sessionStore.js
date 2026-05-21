@@ -34,6 +34,7 @@ function getOrInitHistory(userId) {
       crew:            [],
       doa_positions:   [],
       arrest_positions: [],
+      zoo_positions:    [],
       total_count:     0,
     });
   }
@@ -63,6 +64,7 @@ function updateHistory(userId, seed, tier) {
 
   if (seed.category === 'doa') h.doa_positions.push(h.total_count);
   if (seed.category === 'arrest') h.arrest_positions.push(h.total_count);
+  if (seed.special_flags && seed.special_flags.includes('zoo_scenario')) h.zoo_positions.push(h.total_count);
 
   h.total_count += 1;
 }

@@ -63,6 +63,8 @@ function pickPresentation(category, difficulty, history) {
 
   const diffPool = DIFFICULTY_POOL[difficulty];
   const recentPresentations = new Set((history.presentations || []).slice(-HISTORY_WINDOWS.presentation));
+  const totalScenarios = history.total_count || 0;
+  const lastZoo = (history.zoo_positions || []).slice(-1)[0];
 
   const eligible = pool.filter(entry => {
     const entryDiff = entry.difficulty || 'NORMAL';
@@ -70,6 +72,10 @@ function pickPresentation(category, difficulty, history) {
     const key = entry.presentation || entry.surface_presentation;
     if (recentPresentations.has(key)) return false;
     if (entry.special_flags && entry.special_flags.includes('hardmode_exclusive') && difficulty !== 'HARD') return false;
+    // Space zoo scenarios globally across all categories
+    if (entry.special_flags && entry.special_flags.includes('zoo_scenario')) {
+      if (lastZoo !== undefined && (totalScenarios - lastZoo) < HISTORY_WINDOWS.zoo_spacing) return false;
+    }
     return true;
   });
 

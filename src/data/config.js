@@ -51,6 +51,7 @@ const HISTORY_WINDOWS = {
   doa_spacing:  8,
   arrest_spacing: 5,
   ob_spacing:   10,
+  zoo_spacing:  12,  // zoo scenarios span categories — space them globally
 };
 
 const RATE_LIMITS = {
