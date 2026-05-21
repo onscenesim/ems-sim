@@ -48,12 +48,16 @@ function timestampToMinutes(t) {
  *   episodic w/ ts:     { BP: { value: '92/60', t: 'T+4:20', tMin: 4.33 }, ... }
  */
 function parseVitalsTag(reply) {
-  const re = /\s*\[VITALS:\s*([^\]]+)\]\s*$/i;
-  const m = reply.match(re);
-  if (!m) return { cleanedReply: reply, vitals: null };
+  // Permissive: match anywhere in the reply, not just at the end. If Claude
+  // emits multiple tags, the LAST one wins (it's the most current).
+  const re = /\s*\[VITALS:\s*([^\]]+)\]\s*/gi;
+  const matches = [...reply.matchAll(re)];
+  if (matches.length === 0) return { cleanedReply: reply, vitals: null };
 
-  const cleanedReply = reply.replace(re, '').trimEnd();
-  const inner = m[1].trim();
+  // Strip ALL occurrences of the tag from the user-facing reply.
+  const cleanedReply = reply.replace(re, ' ').replace(/\s+\n/g, '\n').replace(/\s{2,}/g, ' ').trim();
+  // Use the last tag's contents as the authoritative vitals snapshot.
+  const inner = matches[matches.length - 1][1].trim();
   const vitals = {};
 
   for (const tok of inner.split(/\s+/)) {

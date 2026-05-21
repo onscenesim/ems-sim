@@ -43,9 +43,15 @@ for (const proc of INTERVENTIONS) {
     const key = raw.toLowerCase().trim();
     if (SYNONYM_MAP.has(key)) return;
     SYNONYM_MAP.set(key, proc);
-    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Strip articles BEFORE pattern construction so they become optional in
+    // every position, even when the original synonym contains one. This makes
+    // "place an IV" match "place IV" / "place an IV" / "place the IV" equally.
+    const stripped = key.replace(/\s+(an?|the)\s+/g, ' ').replace(/\s+/g, ' ').trim();
+    const escaped = stripped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Each whitespace gap can optionally swallow an article
+    const flexible = escaped.replace(/\\? /g, '\\s+(?:an?\\s+|the\\s+)?');
     // Word-boundary via lookbehind/lookahead — handles hyphens and acronyms
-    const pattern = new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`, 'i');
+    const pattern = new RegExp(`(?<![a-z0-9])${flexible}(?![a-z0-9])`, 'i');
     // Precompute specificity using the ORIGINAL raw string so uppercase acronyms
     // (BGL, SpO2, IV, EtCO2, AED, etc.) are treated as specific and don't
     // require an admin verb. After toLowerCase() they look like plain words.
@@ -62,7 +68,7 @@ DETECT_PATTERNS.sort((a, b) => b.key.length - a.key.length);
 // fires a roll. Multi-word synonyms ("give epi", "push the epi") already
 // contain the verb, so they bypass this check.
 // ---------------------------------------------------------------------------
-const ADMIN_VERB_RE = /\b(give|gave|giving|push(ed|ing)?|administer(ed|ing)?|inject(ed|ing)?|hang(ing)?|start(ed|ing)?\s+the\s+\w+|dose|dosing|spray(ed|ing)?|running?\s+the|hang(ing)?\s+the|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving)\b/i;
+const ADMIN_VERB_RE = /\b(give|gave|giving|push(ed|ing)?|administer(ed|ing)?|inject(ed|ing)?|hang(ing)?|start(ed|ing)?\s+the\s+\w+|dose|dosing|spray(ed|ing)?|running?\s+the|hang(ing)?\s+the|attempt(ed|ing)?|tr(?:y|ied|ying)|plac(?:e|ed|ing)|obtain(ed|ing)?|establish(ed|ing)?|get(ting)?|got|do(?:ing)?|perform(ed|ing)?|set(ting)?\s+up|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving)\b/i;
 
 /**
  * Detect a procedure from user text.
