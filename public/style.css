@@ -805,7 +805,7 @@ html, body {
   right: 0;
   width: 290px;
   height: 100%;
-  background: #f2f1ef;          /* clean — no noise in panel */
+  background: #f2f1ef;
   border-left: 3px solid #888;
   display: flex;
   flex-direction: column;
@@ -865,7 +865,10 @@ html, body {
   flex: 1;
   overflow-y: auto;
   padding: 10px 10px 6px;
-  background: #f2f1ef;
+  background-color: #f2f1ef;
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  background-blend-mode: soft-light;
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -943,7 +946,10 @@ html, body {
   text-align: center;
   padding: 5px 10px;
   border-top: 1px solid #ccc;
-  background: #eae8e4;
+  background-color: #eae8e4;
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  background-blend-mode: soft-light;
   text-transform: uppercase;
 }
 
