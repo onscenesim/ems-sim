@@ -17,6 +17,11 @@ const DETECT_PATTERNS = [];      // [{ key, pattern, proc }]
 // Must be declared before the registration loop so isSpecificSynonym()
 // can safely reference SPECIFIC_EQUIPMENT during module initialization.
 const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exempt from verb check
+  // Procedure verbs — the word itself IS the order, no auxiliary verb needed.
+  // Word-boundary regex means these only fire on the exact infinitive
+  // ("intubate" yes, "intubated"/"intubating" no — protects against
+  // descriptive past-tense narration accidentally rolling).
+  'intubate', 'defibrillate', 'cardiovert', 'decompress', 'ventilate',
   // Equipment & devices
   'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
   'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
@@ -88,6 +93,35 @@ function isSpecificSynonym(key) {
   if (/[0-9\-]/.test(key)) return true;   // contains digits or hyphens → equipment
   if (SPECIFIC_EQUIPMENT.has(key)) return true;
   return false;
+}
+
+// Negation tokens that, when they immediately precede a procedure keyword,
+// indicate the user is talking about NOT doing it — suppress the roll.
+const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?)\b/i;
+
+/**
+ * Returns true when the procedure keyword at `matchStart` is preceded by a
+ * negation within the same sentence and within ~3 words.
+ *
+ * Sentence boundaries (.;!?\n) bound the scan, so a negation in a previous
+ * sentence does NOT suppress later orders:
+ *   "Morphine sulfate IVP 4mg. No intubation needed yet."
+ *   → morphine fires; intubation suppressed.
+ */
+function isNegated(text, matchStart) {
+  const before = text.slice(0, matchStart);
+  // Find the last sentence boundary in `before`
+  let sentenceStart = 0;
+  for (const ch of '.;!?\n') {
+    const idx = before.lastIndexOf(ch);
+    if (idx + 1 > sentenceStart) sentenceStart = idx + 1;
+  }
+  const sentenceTail = before.slice(sentenceStart).trim();
+  if (!sentenceTail) return false;
+  // Limit scope to the last 3 words immediately preceding the keyword
+  const words = sentenceTail.split(/\s+/).filter(Boolean);
+  const windowText = words.slice(-3).join(' ');
+  return NEGATION_RE.test(windowText);
 }
 
 function detectProcedure(userText) {
@@ -244,23 +278,36 @@ function detectAllProcedures(userText) {
   // Safety cap — no message should have more than 10 distinct procedures
   for (let i = 0; i < 10; i++) {
     let bestMatch = null;
+    let bestMatchIndex = -1;
 
     for (const { key, pattern, proc, specific } of DETECT_PATTERNS) {
       if (usedProcIds.has(proc.id)) continue;
-      if (!pattern.test(remaining)) continue;
+      const exec = pattern.exec(remaining);
+      if (!exec) continue;
       // Use precomputed 'specific' flag so uppercase acronyms (BGL, SpO2, IV)
       // don't require an admin verb.
       if (!specific && !ADMIN_VERB_RE.test(remaining)) continue;
       bestMatch = { key, pattern, proc };
+      bestMatchIndex = exec.index;
       break; // sorted longest-first, so first match is most specific
     }
 
     if (!bestMatch) break;
 
-    found.push({ proc: bestMatch.proc, matchedKey: bestMatch.key });
-    usedProcIds.add(bestMatch.proc.id);
-    // Consume the matched text so shorter synonyms of the same region don't re-fire
+    // Per-match negation guard: scoped to the keyword's sentence + last 3 words,
+    // so an order on a different sentence isn't accidentally suppressed.
+    // ("Morphine 4mg. No intubation needed yet." → morphine fires, intubation does not.)
+    const negated = isNegated(remaining, bestMatchIndex);
+
+    // Always consume the matched span so we don't loop on the same hit.
     remaining = remaining.replace(bestMatch.pattern, ' ');
+
+    if (!negated) {
+      found.push({ proc: bestMatch.proc, matchedKey: bestMatch.key });
+      usedProcIds.add(bestMatch.proc.id);
+    }
+    // If negated, leave proc.id eligible — a NON-negated mention later in the
+    // same message should still fire ("no IV yet, give morphine 4mg, then try IV").
   }
 
   return found;
