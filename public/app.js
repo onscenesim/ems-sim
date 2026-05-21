@@ -442,7 +442,11 @@ function resetToStart() {
 function setLoading(loading) {
   sendBtn.disabled   = loading;
   userInput.disabled = loading;
-  if (loading) endBtn.disabled = true;   // prevent double-click during any request
+  if (loading) {
+    endBtn.disabled = true;                          // disable during any request
+  } else if (!isClosed && !waitingDebrief) {
+    endBtn.disabled = false;                         // re-enable when scenario is still active
+  }
   sendBtn.textContent = loading ? '···' : 'SEND';
   if (!loading) userInput.focus();
 }
