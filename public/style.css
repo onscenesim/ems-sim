@@ -321,6 +321,29 @@ html, body {
 #end-btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 #end-btn:disabled { opacity: 0.35; cursor: default; }
 
+#crew-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 6px;
+  background: var(--chrome-bg);
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  color: #333;
+  font-family: var(--font-block);
+  font-size: 10px;
+  padding: 4px 12px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: color 0.1s;
+}
+#crew-btn:hover:not(:disabled) { color: #1a4870; }
+#crew-btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
+#crew-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* end-btn no longer needs auto-left because crew-btn now has it */
+#end-btn { margin-left: 0; }
+
+
 /* ── Scene clock ──────────────────────────────────────────────────────────── */
 
 #scene-clock {
@@ -589,6 +612,13 @@ html, body {
 
   #end-btn {
     margin-left: 0;
+    flex-shrink: 0;
+    font-size: 9px;
+    padding: 4px 8px;
+  }
+
+  #crew-btn {
+    margin-right: 4px;
     flex-shrink: 0;
     font-size: 9px;
     padding: 4px 8px;
@@ -972,4 +1002,174 @@ html, body {
 
   .drug-dose { font-size: 14px; }
   .drug-notes { font-size: 10px; }
+}
+
+
+/* ── Crew reference panel ───────────────────────────────────── */
+
+#crew-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 290px;
+  height: 100%;
+  background: #f2f1ef;
+  border-left: 3px solid #888;
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  pointer-events: none;
+}
+
+#crew-panel.open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+#crew-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px 8px;
+  flex-shrink: 0;
+  background: #1a2838;  /* steel blue — matches PROVIDER start-screen tile */
+}
+
+#crew-panel-title {
+  font-family: var(--font-block);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+#crew-panel-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: rgba(255,255,255,0.75);
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+#crew-panel-close:hover { color: #fff; }
+
+#crew-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 10px 6px;
+  background-color: #f2f1ef;
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  background-blend-mode: soft-light;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.crew-member {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-left: 4px solid #1a2838;
+  padding: 9px 11px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 2px;
+}
+
+.crew-role-tag {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  color: #1a4870;
+  text-transform: uppercase;
+}
+
+.crew-name {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: bold;
+  color: #111;
+  margin-top: 1px;
+}
+
+.crew-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  margin-top: 3px;
+  margin-bottom: 2px;
+}
+
+.crew-stat-label {
+  color: #666;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.crew-stat-value {
+  color: #111;
+  font-weight: bold;
+}
+
+.crew-stat-value.HIGH   { color: #1a6a1a; }
+.crew-stat-value.MEDIUM { color: #886600; }
+.crew-stat-value.LOW    { color: #a04040; }
+
+.crew-section-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  color: #666;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.crew-notes,
+.crew-triggers {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: #444;
+  line-height: 1.45;
+}
+
+#crew-panel-footer {
+  flex-shrink: 0;
+  font-family: var(--font-block);
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
+  color: #999;
+  text-align: center;
+  padding: 5px 10px;
+  border-top: 1px solid #ccc;
+  background-color: #eae8e4;
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  background-blend-mode: soft-light;
+  text-transform: uppercase;
+}
+
+@media (max-width: 600px) {
+  #crew-panel {
+    width: 100%;
+    height: auto;
+    max-height: 60%;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    transform: translateY(100%);
+    border-left: none;
+    border-top: 3px solid #888;
+  }
+  #crew-panel.open { transform: translateY(0); }
+  .crew-name { font-size: 13px; }
+  .crew-notes, .crew-triggers { font-size: 10px; }
 }

@@ -9,6 +9,7 @@ const userInput    = document.getElementById('user-input');
 const sendBtn      = document.getElementById('send-btn');
 const startBtn     = document.getElementById('start-btn');
 const endBtn       = document.getElementById('end-btn');
+const crewBtn      = document.getElementById('crew-btn');
 const tierMsg      = document.getElementById('tier-msg');
 const accessInput  = document.getElementById('access-code');
 const accessApply  = document.getElementById('access-apply');
@@ -240,6 +241,12 @@ async function startScenario() {
     printHr();
     for (const r of (data.rolls || [])) printRoll(r);
 
+    // Crew card pops at scenario start
+    if (data.crew) {
+      populateCrewPanel(data.crew);
+      showCrewPanel();
+    }
+
     setLoading(false);
     userInput.focus();
 
@@ -326,6 +333,7 @@ async function sendTurn(msg) {
       endBtn.disabled = true;
       print('');
       print('Scenario closed. Want the full debrief?  (y / n)', 'system');
+      showCrewPanel();   // re-surface crew at scenario end
       setLoading(false);
       return;
     }
@@ -432,6 +440,7 @@ function resetToStart() {
   sceneClock.textContent = '';
   sceneClock.className   = '';
   hideDrugPanel();
+  hideCrewPanel();
 
   terminal.style.display    = 'none';
   startScreen.style.display = 'flex';
@@ -557,6 +566,111 @@ function hideDrugPanel() {
 }
 
 drugPanelClose.addEventListener('click', hideDrugPanel);
+
+// ── Crew reference panel ─────────────────────────────────────────────────────
+
+const crewPanel       = document.getElementById('crew-panel');
+const crewPanelBody   = document.getElementById('crew-panel-body');
+const crewPanelClose  = document.getElementById('crew-panel-close');
+
+const ROLE_LABEL = {
+  partner:      'Partner — Paramedic',
+  captain:      'Captain — Paramedic',
+  partner_BLS:  'Partner — EMT-B',
+  captain_BLS:  'Captain — EMT-B',
+};
+
+function buildCrewMemberCard(member) {
+  const wrap = document.createElement('div');
+  wrap.className = 'crew-member';
+
+  const role = document.createElement('div');
+  role.className = 'crew-role-tag';
+  role.textContent = ROLE_LABEL[member.role] || member.role || 'Crew';
+  wrap.appendChild(role);
+
+  const name = document.createElement('div');
+  name.className = 'crew-name';
+  name.textContent = member.name;
+  wrap.appendChild(name);
+
+  // Stat grid: competency / enthusiasm / confrontation
+  const grid = document.createElement('div');
+  grid.className = 'crew-stats';
+  const STATS = [
+    ['Competency',    member.competency],
+    ['Enthusiasm',    member.enthusiasm],
+    ['Confrontation', member.confrontation],
+  ];
+  for (const [label, value] of STATS) {
+    if (!value) continue;
+    const l = document.createElement('span');
+    l.className = 'crew-stat-label';
+    l.textContent = label;
+    grid.appendChild(l);
+    const v = document.createElement('span');
+    v.className = 'crew-stat-value ' + value;
+    v.textContent = value;
+    grid.appendChild(v);
+  }
+  wrap.appendChild(grid);
+
+  if (member.personality_notes) {
+    const lbl = document.createElement('div');
+    lbl.className = 'crew-section-label';
+    lbl.textContent = 'Personality';
+    wrap.appendChild(lbl);
+    const txt = document.createElement('div');
+    txt.className = 'crew-notes';
+    txt.textContent = member.personality_notes;
+    wrap.appendChild(txt);
+  }
+
+  if (member.trigger_behaviors) {
+    const lbl = document.createElement('div');
+    lbl.className = 'crew-section-label';
+    lbl.textContent = 'On-scene tendencies';
+    wrap.appendChild(lbl);
+    const txt = document.createElement('div');
+    txt.className = 'crew-triggers';
+    txt.textContent = member.trigger_behaviors;
+    wrap.appendChild(txt);
+  }
+
+  return wrap;
+}
+
+let crewIsLoaded = false;
+
+function populateCrewPanel(crew) {
+  crewPanelBody.innerHTML = '';
+  if (!crew) { crewIsLoaded = false; return; }
+
+  if (crew.partner) crewPanelBody.appendChild(buildCrewMemberCard(crew.partner));
+  if (crew.captain) crewPanelBody.appendChild(buildCrewMemberCard(crew.captain));
+
+  crewIsLoaded = !!(crew.partner || crew.captain);
+}
+
+function showCrewPanel() {
+  if (!crewIsLoaded) return;
+  crewPanel.classList.add('open');
+}
+
+function hideCrewPanel() {
+  crewPanel.classList.remove('open');
+}
+
+crewPanelClose.addEventListener('click', hideCrewPanel);
+
+crewBtn.addEventListener('click', () => {
+  if (!crewIsLoaded) return;
+  if (crewPanel.classList.contains('open')) {
+    hideCrewPanel();
+  } else {
+    showCrewPanel();
+  }
+});
 
 /**
  * Show the incoming-dispatch overlay before the first reply prints.

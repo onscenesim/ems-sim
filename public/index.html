@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -95,6 +95,7 @@
         <span class="badge" id="badge-rgn">SUBURBAN</span>
       </span>
       <span id="scene-clock" aria-label="Scene elapsed time"></span>
+      <button id="crew-btn" title="View crew">CREW</button>
       <button id="end-btn" title="End current scenario">END SCENARIO</button>
     </div>
 
@@ -149,6 +150,16 @@
       </div>
       <div id="drug-panel-body"></div>
       <div id="drug-panel-footer">Follow local protocol</div>
+    </div>
+
+    <!-- Crew reference side panel — slides in at scenario start, on end, or via CREW button -->
+    <div id="crew-panel" aria-label="Crew reference" role="complementary">
+      <div id="crew-panel-header">
+        <span id="crew-panel-title">CREW</span>
+        <button id="crew-panel-close" title="Close">✕</button>
+      </div>
+      <div id="crew-panel-body"></div>
+      <div id="crew-panel-footer">Today&#x2019;s shift</div>
     </div>
 
     <div id="input-row">

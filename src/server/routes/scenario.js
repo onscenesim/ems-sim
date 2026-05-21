@@ -4,6 +4,12 @@ const express = require('express');
 const router  = express.Router();
 
 const { createSession, getSession } = require('../sessionStore');
+const { CREW } = require('../../data/crew');
+
+function crewRecord(name) {
+  if (!name) return null;
+  return CREW.find(c => c.name === name) || null;
+}
 const {
   detectTier,
   getClientIP,
@@ -62,6 +68,10 @@ router.post('/new', async (req, res) => {
       provider_level:      seed.provider_level,
       region:              seed.region,
       patient:             seed.patient || null,
+      crew: {
+        partner: crewRecord(seed.crew_partner),
+        captain: crewRecord(seed.crew_captain),
+      },
       tier,
       scenarios_used:      tier === 'free' ? getFreeUsageCount(ip) : null,
       scenarios_remaining: tier === 'free' ? Math.max(0, FREE_DAILY_LIMIT - getFreeUsageCount(ip)) : null,
