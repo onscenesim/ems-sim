@@ -51,10 +51,15 @@ router.post('/new', async (req, res) => {
 
   if (tier === 'free') incrementFreeUsage(ip);
 
-  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN' } = req.body;
+  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name } = req.body;
+
+  // Sanitize unit name — strip control chars, cap at 16, fall back to default.
+  const cleanUnitName = (typeof unit_name === 'string'
+    ? unit_name.replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, 16)
+    : '') || 'Medic 1';
 
   try {
-    const { id, seed } = createSession({ difficulty, provider_level, region_id }, ip, tier);
+    const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName }, ip, tier);
     const session = getSession(id);
 
     // Fire the dispatch turn
@@ -68,6 +73,7 @@ router.post('/new', async (req, res) => {
       provider_level:      seed.provider_level,
       region:              seed.region,
       patient:             seed.patient || null,
+      unit_name:           seed.unit_name,
       crew: {
         partner: crewRecord(seed.crew_partner),
         captain: crewRecord(seed.crew_captain),

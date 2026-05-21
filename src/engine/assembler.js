@@ -41,6 +41,7 @@ function assembleSeedBlock(seed) {
   lines.push(`Scenario ID: ${seed.scenario_id}`);
   lines.push(`Difficulty: ${seed.difficulty}`);
   lines.push(`Provider level: ${seed.provider_level}`);
+  lines.push(`User unit identifier: ${seed.unit_name || 'Medic 1'}`);
   lines.push('');
 
   // --- Patient card ---
@@ -261,7 +262,7 @@ function assembleSeedBlock(seed) {
   lines.push('4. CLINICAL NARRATION ONLY: All findings are revealed through clinical observations that the user requests. You never label diagnoses directly. Vital signs are numbers. Exam findings are physical descriptions. ECG is a waveform description. Let the user interpret.');
   lines.push('5. SCENE CLOCK: Track simulated scene time in minutes. Every action takes time. Simple assessments: 1 min. Full head-to-toe: 3 min. Procedures: 2-5 min depending on complexity. Packaging: 2 min. The decompensation clock runs against scene time.');
   lines.push('6. DEBRIEF TRIGGER: When the user says "transfer of care", "patient is in ED hands", "we\'re clear", "pronounce", or equivalent, close the scenario and ask if they want the debrief.');
-  lines.push('7. DISPATCH: Begin the scenario with a dispatch message in this format: "DISPATCH: [nature of call] — [address or location] — [any additional info from caller]. Your partner is [partner name]. Time: [time_of_day]."');
+  lines.push(`7. DISPATCH: Begin the scenario with a dispatch message in this format: "DISPATCH: ${seed.unit_name || 'Medic 1'}, respond to [nature of call] at [address or location] — [any additional info from caller]. Your partner is [partner name]. Time: [time_of_day]." Use the unit identifier exactly as given in radio traffic, follow-up dispatch updates, hospital notifications, and medical control patches throughout the scenario.`);
   lines.push('8. The hint above is for your internal narration quality only. Do not reveal it to the user in any form.');
   if (isCurveball) {
     lines.push('9. CURVEBALL: The surface presentation is what the user sees. The true diagnosis is hidden. Reveal it ONLY when the reveal_trigger condition is met by user action. If the user never triggers the reveal, they finish the scenario without knowing. Debrief reveals the true diagnosis.');

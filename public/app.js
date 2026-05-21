@@ -18,6 +18,9 @@ const badgeTier    = document.getElementById('badge-tier');
 const badgeDiff    = document.getElementById('badge-diff');
 const badgeProv    = document.getElementById('badge-prov');
 const badgeRgn     = document.getElementById('badge-rgn');
+const badgeUnit    = document.getElementById('badge-unit');
+const unitNameInput = document.getElementById('cfg-unit-name');
+const splashEl     = document.getElementById('splash');
 
 // ── State ────────────────────────────────────────────────────────────────
 
@@ -145,6 +148,29 @@ if (localStorage.getItem('ems_token')) {
   accessInput.value = localStorage.getItem('ems_token');
 }
 
+// ── Unit name (custom medic identifier) ──────────────────────────────────────
+
+const DEFAULT_UNIT_NAME = 'Medic 1';
+const savedUnit = localStorage.getItem('ems_unit_name');
+if (savedUnit) unitNameInput.value = savedUnit;
+
+// Persist on every change so the user never has to retype
+unitNameInput.addEventListener('input', () => {
+  const v = unitNameInput.value.trim();
+  if (v) localStorage.setItem('ems_unit_name', v);
+  else localStorage.removeItem('ems_unit_name');
+});
+
+function getUnitName() {
+  return (unitNameInput.value.trim() || DEFAULT_UNIT_NAME);
+}
+
+// ── Splash text (Minecraft-style, random per page load) ─────────────────────
+
+if (splashEl && typeof getRandomSplash === 'function') {
+  splashEl.textContent = getRandomSplash();
+}
+
 async function applyAccessCode() {
   const code = accessInput.value.trim();
   if (code) {
@@ -186,12 +212,13 @@ async function startScenario() {
   const difficulty    = document.getElementById('cfg-difficulty').value;
   const provider_level = document.getElementById('cfg-provider').value;
   const region_id     = document.getElementById('cfg-region').value;
+  const unit_name     = getUnitName();
 
   startBtn.disabled = true;
   startBtn.textContent = 'CONNECTING...';
 
   try {
-    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id });
+    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name });
 
     sessionId      = data.session_id;
     isClosed       = false;
@@ -216,6 +243,7 @@ async function startScenario() {
     badgeDiff.textContent = data.difficulty;
     badgeProv.textContent = data.provider_level;
     badgeRgn.textContent  = data.region || region_id;
+    badgeUnit.textContent = (data.unit_name || unit_name).toUpperCase();
 
     endBtn.disabled = false;
 

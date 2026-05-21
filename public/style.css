@@ -130,6 +130,7 @@ html, body {
   align-items: center;
   text-align: center;
   gap: 8px;
+  position: relative;   /* anchors the splash overlay */
 }
 
 .brand {
@@ -149,6 +150,63 @@ html, body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   line-height: 1.6;
+}
+
+/* Unit name input — sits below the brand on the start screen */
+.unit-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.unit-label {
+  font-family: var(--font-block);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+}
+#cfg-unit-name {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  width: 130px;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+#cfg-unit-name:focus { border-color: #ffd54a; background: #222; }
+#cfg-unit-name::placeholder { color: rgba(255,255,255,0.25); font-weight: normal; }
+
+/* Minecraft-style splash text — bright yellow, tilted, pulsing */
+.splash {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-family: var(--font-block);
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffff55;
+  text-shadow: 1px 1px 0 #3f3f00, 2px 2px 0 rgba(0,0,0,0.4);
+  transform: rotate(-15deg);
+  transform-origin: center;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: splashPulse 1s ease-in-out infinite;
+  max-width: 180px;
+  line-height: 1.1;
+  text-align: center;
+}
+@keyframes splashPulse {
+  0%, 100% { transform: rotate(-15deg) scale(1.0); }
+  50%      { transform: rotate(-15deg) scale(1.08); }
 }
 
 /* ── Begin Scenario tile ───────────────────────────────────────────────── */
@@ -302,6 +360,14 @@ html, body {
 }
 
 #badge-tier.paid { color: #005500; background: #c0e0c0; }
+
+/* User's unit identifier — distinct color so it reads as identity, not status */
+.badge.badge-unit {
+  background: #1a2838;   /* steel-blue, matches PROVIDER tile + crew header */
+  color: #d4e8ff;
+  border-color: #2a4060 #0a1422 #0a1422 #2a4060;
+  font-weight: bold;
+}
 
 #end-btn {
   flex-shrink: 0;

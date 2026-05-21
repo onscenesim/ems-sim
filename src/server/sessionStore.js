@@ -71,13 +71,14 @@ function updateHistory(userId, seed, tier) {
  * Roll a new scenario, wrap it in a Session, and persist it.
  * Returns { id, seed }.
  */
-function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN' } = {}, userId = 'anon', tier = 'free') {
+function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1' } = {}, userId = 'anon', tier = 'free') {
   const history = getOrInitHistory(userId);
 
   const seed = rollScenario({
     difficulty,
     provider_level,
     region_id,
+    unit_name,
     user_id: userId,
     history,
   });

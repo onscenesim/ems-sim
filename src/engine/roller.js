@@ -248,7 +248,7 @@ function pickCrew(regionId, history) {
  * @param {object} opts.history      { categories[], presentations[], crew[], doa_positions[], arrest_positions[], total_count }
  */
 function rollScenario(opts = {}) {
-  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', user_id = null, history = {} } = opts;
+  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', user_id = null, history = {} } = opts;
 
   const curveballWeight = CURVEBALL_WEIGHTS[difficulty];
   const category = pickCategory(difficulty, history, curveballWeight);
@@ -303,6 +303,7 @@ function rollScenario(opts = {}) {
     region: region_id,
     provider_level,
     difficulty,
+    unit_name,
     events: [],
   };
 }

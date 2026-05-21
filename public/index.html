@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -25,6 +25,11 @@
         <div class="center-tile">
           <div class="brand">EMS Terminal</div>
           <div class="brand-sub">Clinical Decision Training for EMS Providers</div>
+          <div class="unit-row">
+            <label class="unit-label" for="cfg-unit-name">YOUR UNIT</label>
+            <input id="cfg-unit-name" type="text" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Medic 1">
+          </div>
+          <div id="splash" class="splash" aria-hidden="true"></div>
         </div>
 
         <div class="cfg-tile tile-provider">
@@ -89,6 +94,7 @@
     <div id="header">
       <span id="hdr-title">EMS TERMINAL</span>
       <span id="hdr-badges">
+        <span class="badge badge-unit" id="badge-unit">MEDIC 1</span>
         <span class="badge" id="badge-tier">FREE</span>
         <span class="badge" id="badge-diff">NORMAL</span>
         <span class="badge" id="badge-prov">ALS</span>
@@ -209,6 +215,7 @@
   </div>
 
   <script src="drug-cards.js"></script>
-  <script src="app.js"></script>
+  <script src="splashes.js?v=1"></script>
+    <script src="app.js"></script>
 </body>
 </html>
