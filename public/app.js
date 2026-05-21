@@ -231,6 +231,7 @@ async function startScenario() {
     terminal.style.display    = 'flex';
 
     print(`Scenario ID: ${data.scenario_id}`, 'system');
+    print('Note: dice rolls may fire on unintended words — ignore any unexpected rolls and continue normally.', 'system');
     print('');
     printHr();
     // Show dispatch flash before the text appears
