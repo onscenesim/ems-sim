@@ -186,11 +186,8 @@ html, body {
 
 /* Minecraft-style splash text — bright yellow, tilted, pulsing */
 .splash {
-  position: absolute;
-  top: 6px;
-  right: 8px;
   font-family: var(--font-block);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: bold;
   color: #ffff55;
   text-shadow: 1px 1px 0 #3f3f00, 2px 2px 0 rgba(0,0,0,0.4);
@@ -200,9 +197,10 @@ html, body {
   text-transform: uppercase;
   pointer-events: none;
   animation: splashPulse 1s ease-in-out infinite;
-  max-width: 180px;
-  line-height: 1.1;
+  max-width: 200px;
+  line-height: 1.2;
   text-align: center;
+  margin-top: 2px;
 }
 @keyframes splashPulse {
   0%, 100% { transform: rotate(-15deg) scale(1.0); }
