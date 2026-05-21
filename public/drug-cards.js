@@ -16,6 +16,7 @@ const DRUG_CARDS = [
   // ── Epinephrine ────────────────────────────────────────────────────────
   {
     name: 'Epinephrine',
+    drugClass: 'cardiac',
     synonyms: [
       'epinephrine', '1mg epinephrine', 'give epi', 'push the epi',
       'push dose epi', 'push dose epinephrine', 'epinephrine drip', 'epipen', 'racemic epi', 'racemic epinephrine',
@@ -65,6 +66,7 @@ const DRUG_CARDS = [
   // ── Amiodarone ────────────────────────────────────────────────────────
   {
     name: 'Amiodarone',
+    drugClass: 'cardiac',
     synonyms: ['amiodarone', 'amio', 'give amiodarone', '300mg amiodarone'],
     doses: [
       { indication: 'Cardiac arrest (VF/pVT)', dose: '300 mg', route: 'IV/IO bolus', notes: '2nd dose 150 mg if refractory' },
@@ -76,6 +78,7 @@ const DRUG_CARDS = [
   // ── Adenosine ────────────────────────────────────────────────────────
   {
     name: 'Adenosine',
+    drugClass: 'cardiac',
     synonyms: ['adenosine', '6mg adenosine'],
     doses: [
       { indication: 'SVT (narrow complex, regular)', dose: '6 mg rapid IVP', route: 'IV — antecubital or above', notes: '2nd dose 12 mg; flush immediately with 20 mL NS; must be fast push' },
@@ -86,6 +89,7 @@ const DRUG_CARDS = [
   // ── Atropine ────────────────────────────────────────────────────────
   {
     name: 'Atropine',
+    drugClass: 'cardiac',
     synonyms: ['atropine', '0.5mg atropine'],
     doses: [
       { indication: 'Symptomatic bradycardia', dose: '0.5 mg', route: 'IV/IO', notes: 'q3–5 min; max 3 mg total' },
@@ -97,6 +101,7 @@ const DRUG_CARDS = [
   // ── Dopamine ─────────────────────────────────────────────────────────
   {
     name: 'Dopamine',
+    drugClass: 'vasopressor',
     synonyms: ['dopamine', 'dopamine drip'],
     doses: [
       {
@@ -124,6 +129,7 @@ const DRUG_CARDS = [
   // ── Norepinephrine (Levophed) ─────────────────────────────────────────
   {
     name: 'Norepinephrine (Levophed)',
+    drugClass: 'vasopressor',
     synonyms: ['norepinephrine', 'levophed', 'norepi', 'norepinephrine drip', 'levophed drip', 'norepi drip'],
     doses: [
       {
@@ -151,6 +157,7 @@ const DRUG_CARDS = [
   // ── Phenylephrine ────────────────────────────────────────────────────
   {
     name: 'Phenylephrine',
+    drugClass: 'vasopressor',
     synonyms: ['phenylephrine'],
     doses: [
       { indication: 'Hypotension (pure vasoconstriction)', dose: '100–200 mcg bolus', route: 'IV', notes: 'No chronotropy — preferred when tachycardia is present' },
@@ -161,6 +168,7 @@ const DRUG_CARDS = [
   // ── Vasopressin ────────────────────────────────────────────────────────
   {
     name: 'Vasopressin',
+    drugClass: 'vasopressor',
     synonyms: ['vasopressin'],
     doses: [
       { indication: 'Cardiac arrest (VF/PEA/Asystole)', dose: '40 units', route: 'IV/IO bolus (one-time)', notes: 'May replace 1st or 2nd epi dose per protocol' },
@@ -171,6 +179,7 @@ const DRUG_CARDS = [
   // ── Lidocaine ────────────────────────────────────────────────────────
   {
     name: 'Lidocaine',
+    drugClass: 'cardiac',
     synonyms: ['lidocaine'],
     doses: [
       { indication: 'VF/pVT (if amiodarone unavailable)', dose: '1–1.5 mg/kg', route: 'IV/IO', notes: 'Max 3 mg/kg; then 0.5–0.75 mg/kg q5–10 min' },
@@ -183,6 +192,7 @@ const DRUG_CARDS = [
   // ── Magnesium Sulfate ────────────────────────────────────────────────
   {
     name: 'Magnesium Sulfate',
+    drugClass: 'cardiac',
     synonyms: ['magnesium', 'mag sulfate'],
     doses: [
       { indication: 'Torsades de pointes', dose: '1–2 g', route: 'IV over 5–20 min', notes: 'Can push in arrest' },
@@ -195,6 +205,7 @@ const DRUG_CARDS = [
   // ── Sodium Bicarbonate ────────────────────────────────────────────────
   {
     name: 'Sodium Bicarbonate',
+    drugClass: 'reversal',
     synonyms: ['sodium bicarb'],
     doses: [
       { indication: 'Metabolic acidosis / TCA OD / hyperkalemia', dose: '1 mEq/kg', route: 'IV/IO', notes: 'TCA: titrate to QRS <100ms and hemodynamic stability; push for arrest' },
@@ -205,6 +216,7 @@ const DRUG_CARDS = [
   // ── Calcium Chloride ────────────────────────────────────────────────
   {
     name: 'Calcium Chloride',
+    drugClass: 'reversal',
     synonyms: ['calcium chloride'],
     doses: [
       { indication: 'Hyperkalemia / calcium-channel blocker OD / hypocalcemia', dose: '500 mg–1 g', route: 'IV slow push over 5–10 min', notes: 'Vesicant — confirm IV patency; causes pain in peripheral line' },
@@ -215,6 +227,7 @@ const DRUG_CARDS = [
   // ── Dextrose ────────────────────────────────────────────────────────
   {
     name: 'Dextrose',
+    drugClass: 'reversal',
     synonyms: ['dextrose', 'd50', 'd10'],
     doses: [
       { indication: 'Symptomatic hypoglycemia', dose: '25 g (D50) or 10 g (D10)', route: 'IV/IO', notes: 'D10 preferred — less tissue damage if extravasation; repeat BGL in 5 min' },
@@ -225,6 +238,7 @@ const DRUG_CARDS = [
   // ── Naloxone ────────────────────────────────────────────────────────
   {
     name: 'Naloxone',
+    drugClass: 'reversal',
     synonyms: ['naloxone', 'narcan', 'intranasal narcan'],
     doses: [
       { indication: 'Opioid OD (respiratory depression)', dose: '0.4–2 mg', route: 'IV/IO/IM/IN/SQ', notes: 'IN: 4 mg (2 mg per nare); titrate to ventilation — NOT full reversal; repeat q2–3 min PRN' },
@@ -235,6 +249,7 @@ const DRUG_CARDS = [
   // ── Nitroglycerin ────────────────────────────────────────────────────
   {
     name: 'Nitroglycerin',
+    drugClass: 'cardiac',
     synonyms: ['nitroglycerin', 'nitro', 'sl nitro'],
     doses: [
       { indication: 'ACS / chest pain / acute pulmonary edema', dose: '0.4 mg', route: 'SL (tablet or spray)', notes: 'q5 min × 3; hold if SBP <90 or inferior STEMI with RVI suspicion; hold if PDE-5 inhibitor in last 24–48h' },
@@ -245,6 +260,7 @@ const DRUG_CARDS = [
   // ── Aspirin ────────────────────────────────────────────────────────
   {
     name: 'Aspirin',
+    drugClass: 'cardiac',
     synonyms: ['aspirin', '324mg aspirin'],
     doses: [
       { indication: 'ACS (STEMI/NSTEMI suspicion)', dose: '324 mg', route: 'PO — chewed', notes: 'Chewing achieves faster absorption than swallowing whole' },
@@ -255,6 +271,7 @@ const DRUG_CARDS = [
   // ── Furosemide ────────────────────────────────────────────────────────
   {
     name: 'Furosemide',
+    drugClass: 'cardiac',
     synonyms: ['furosemide', 'lasix'],
     doses: [
       { indication: 'Acute pulmonary edema (CHF exacerbation)', dose: '40–80 mg (or match home dose)', route: 'IV slow push', notes: 'Venodilation precedes diuresis — onset 5–15 min IV' },
@@ -265,6 +282,7 @@ const DRUG_CARDS = [
   // ── Morphine ────────────────────────────────────────────────────────
   {
     name: 'Morphine',
+    drugClass: 'sedation',
     synonyms: ['morphine'],
     doses: [
       { indication: 'Moderate-severe pain', dose: '2–4 mg', route: 'IV (slow) / IM', notes: 'q5–10 min PRN; monitor for hypotension and respiratory depression' },
@@ -275,6 +293,7 @@ const DRUG_CARDS = [
   // ── Fentanyl ────────────────────────────────────────────────────────
   {
     name: 'Fentanyl',
+    drugClass: 'sedation',
     synonyms: ['fentanyl'],
     doses: [
       { indication: 'Pain management / RSI adjunct', dose: '1–2 mcg/kg', route: 'IV/IM/IN', notes: 'Max 200 mcg single dose; IN: 2 mcg/kg (1 mcg/kg per nare); rapid onset — monitor resp' },
@@ -286,6 +305,7 @@ const DRUG_CARDS = [
   // ── Ketamine ────────────────────────────────────────────────────────
   {
     name: 'Ketamine',
+    drugClass: 'sedation',
     synonyms: ['ketamine'],
     doses: [
       { indication: 'Dissociative sedation / RSI', dose: '1–2 mg/kg', route: 'IV (over 1 min)', notes: 'Onset <1 min; maintain airway reflexes; dysphoria possible' },
@@ -298,6 +318,7 @@ const DRUG_CARDS = [
   // ── Midazolam ────────────────────────────────────────────────────────
   {
     name: 'Midazolam',
+    drugClass: 'sedation',
     synonyms: ['midazolam', 'versed'],
     doses: [
       { indication: 'Seizures / sedation / RSI adjunct', dose: '0.1 mg/kg (IV) / 0.2 mg/kg (IM/IN)', route: 'IV/IM/IN', notes: 'Max 5 mg single dose; IN: divide between nares; monitor resp' },
@@ -308,6 +329,7 @@ const DRUG_CARDS = [
   // ── Lorazepam ────────────────────────────────────────────────────────
   {
     name: 'Lorazepam',
+    drugClass: 'sedation',
     synonyms: ['ativan', 'benzo'],
     doses: [
       { indication: 'Seizures / anxiety / sedation', dose: '1–2 mg', route: 'IV/IM', notes: 'q5–15 min PRN; monitor respiratory status; slower onset IM vs IV' },
@@ -318,6 +340,7 @@ const DRUG_CARDS = [
   // ── Ondansetron ────────────────────────────────────────────────────────
   {
     name: 'Ondansetron',
+    drugClass: 'gi',
     synonyms: ['ondansetron', 'zofran'],
     doses: [
       { indication: 'Nausea / vomiting', dose: '4 mg', route: 'IV (over 2–5 min) / IM / ODT', notes: 'May repeat × 1 after 15 min; QT prolongation risk — avoid if QTc >500ms' },
@@ -328,6 +351,7 @@ const DRUG_CARDS = [
   // ── Albuterol / DuoNeb ───────────────────────────────────────────────
   {
     name: 'Albuterol / DuoNeb',
+    drugClass: 'respiratory',
     synonyms: [
       'albuterol', 'albuterol neb', 'continuous albuterol', 'salbutamol',
       'duoneb', 'ipratropium', 'atrovent',
@@ -365,6 +389,7 @@ const DRUG_CARDS = [
   // ── Glucagon ────────────────────────────────────────────────────────
   {
     name: 'Glucagon',
+    drugClass: 'reversal',
     synonyms: ['glucagon', 'im glucagon'],
     doses: [
       { indication: 'Hypoglycemia (no IV access)', dose: '1 mg', route: 'IM / SQ', notes: 'Onset 5–15 min; may not work in chronic alcoholism or starvation (depleted glycogen stores)' },
@@ -376,6 +401,7 @@ const DRUG_CARDS = [
   // ── Oral Glucose ────────────────────────────────────────────────────
   {
     name: 'Oral Glucose',
+    drugClass: 'reversal',
     synonyms: ['oral glucose'],
     doses: [
       { indication: 'Mild-moderate hypoglycemia (conscious, intact gag)', dose: '15–24 g', route: 'PO', notes: 'Instaglucose gel (15g tube); recheck BGL in 15 min; must be able to swallow' },
@@ -386,6 +412,7 @@ const DRUG_CARDS = [
   // ── Thiamine ────────────────────────────────────────────────────────
   {
     name: 'Thiamine (B1)',
+    drugClass: 'reversal',
     synonyms: ['thiamine'],
     doses: [
       { indication: 'Wernicke encephalopathy prophylaxis / suspected thiamine deficiency', dose: '100 mg', route: 'IV/IM', notes: 'Give BEFORE dextrose in malnourished / alcoholic patients to prevent precipitating Wernicke encephalopathy' },
@@ -396,6 +423,7 @@ const DRUG_CARDS = [
   // ── Activated Charcoal ────────────────────────────────────────────────
   {
     name: 'Activated Charcoal',
+    drugClass: 'gi',
     synonyms: ['activated charcoal', 'charcoal', 'ac charcoal', 'actidose', 'charcoal slurry', '50g charcoal', '25g charcoal', 'give charcoal'],
     doses: [
       { indication: 'Oral toxic ingestion (within 2h, conscious, intact gag)', dose: 'Adult: 50 g / Peds: 1 g/kg (max 50 g)', route: 'PO', notes: 'CONTRAINDICATED: caustics, hydrocarbons, alcohols, unconscious/seizing, absent gag — partner must verbally confirm before administering' },

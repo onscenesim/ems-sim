@@ -783,17 +783,30 @@ html, body {
 
 /* ── Drug reference side panel ───────────────────────────────────────────── */
 
+/*
+ * Drug class accent colors
+ * cardiac     — red       vasopressor — orange
+ * sedation    — purple    respiratory — blue
+ * reversal    — amber     gi          — green
+ */
+:root {
+  --dc-cardiac:     #b91c1c;
+  --dc-vasopressor: #c2410c;
+  --dc-sedation:    #7c3aed;
+  --dc-respiratory: #0369a1;
+  --dc-reversal:    #b45309;
+  --dc-gi:          #15803d;
+  --dc-other:       #475569;
+}
+
 #drug-panel {
   position: absolute;
   top: 0;
   right: 0;
-  width: 280px;
+  width: 290px;
   height: 100%;
-  background: linear-gradient(180deg, #dedad4 0%, var(--chrome-mid) 100%);
-  background-image: var(--noise);
-  background-blend-mode: soft-light;
-  border-left: 3px solid;
-  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
+  background: #f2f1ef;          /* clean — no noise in panel */
+  border-left: 3px solid #888;
   display: flex;
   flex-direction: column;
   z-index: 50;
@@ -807,123 +820,150 @@ html, body {
   pointer-events: auto;
 }
 
+/* ── Header — colored by drug class ───────────────────────────── */
+
 #drug-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px 6px;
-  border-bottom: 2px solid;
-  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
-  background: #c8c4be;
+  padding: 9px 12px 8px;
   flex-shrink: 0;
+  background: var(--dc-other);   /* default; overridden below */
 }
+
+#drug-panel[data-drug-class="cardiac"]     #drug-panel-header { background: var(--dc-cardiac); }
+#drug-panel[data-drug-class="vasopressor"] #drug-panel-header { background: var(--dc-vasopressor); }
+#drug-panel[data-drug-class="sedation"]    #drug-panel-header { background: var(--dc-sedation); }
+#drug-panel[data-drug-class="respiratory"] #drug-panel-header { background: var(--dc-respiratory); }
+#drug-panel[data-drug-class="reversal"]    #drug-panel-header { background: var(--dc-reversal); }
+#drug-panel[data-drug-class="gi"]          #drug-panel-header { background: var(--dc-gi); }
 
 #drug-panel-name {
   font-family: var(--font-block);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: #111;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: #fff;
   text-transform: uppercase;
 }
 
 #drug-panel-close {
   background: none;
   border: none;
-  font-size: 14px;
-  color: #555;
+  font-size: 16px;
+  color: rgba(255,255,255,0.75);
   cursor: pointer;
   padding: 0 2px;
   line-height: 1;
   flex-shrink: 0;
 }
 
-#drug-panel-close:hover { color: #cc0000; }
+#drug-panel-close:hover { color: #fff; }
+
+/* ── Body ─────────────────────────────────────────────────────── */
 
 #drug-panel-body {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 12px;
+  padding: 10px 10px 6px;
+  background: #f2f1ef;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
 }
 
+/* Dose rows — white card with colored left accent */
 .drug-dose-row {
-  background: rgba(0,0,0,0.07);
-  border: 1px solid;
-  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
-  padding: 7px 9px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-left: 4px solid #aaa;  /* overridden by drug class */
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  border-radius: 2px;
 }
 
+#drug-panel[data-drug-class="cardiac"]     .drug-dose-row { border-left-color: var(--dc-cardiac); }
+#drug-panel[data-drug-class="vasopressor"] .drug-dose-row { border-left-color: var(--dc-vasopressor); }
+#drug-panel[data-drug-class="sedation"]    .drug-dose-row { border-left-color: var(--dc-sedation); }
+#drug-panel[data-drug-class="respiratory"] .drug-dose-row { border-left-color: var(--dc-respiratory); }
+#drug-panel[data-drug-class="reversal"]    .drug-dose-row { border-left-color: var(--dc-reversal); }
+#drug-panel[data-drug-class="gi"]          .drug-dose-row { border-left-color: var(--dc-gi); }
+
 .drug-indication {
-  font-family: var(--font-block);
-  font-size: 8px;
-  letter-spacing: 0.07em;
-  color: #555;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  color: #666;
   text-transform: uppercase;
 }
 
 .drug-dose {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: bold;
   color: #111;
+  margin-top: 1px;
 }
 
 .drug-route {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: #333;
+  color: #444;
 }
 
 .drug-notes {
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 11px;
   color: #555;
-  line-height: 1.4;
-  margin-top: 1px;
+  line-height: 1.45;
+  margin-top: 3px;
 }
 
 .drug-packaging {
+  background: #e8e6e2;
   font-family: var(--font-mono);
-  font-size: 9px;
-  color: #666;
-  border-top: 1px solid #bbb;
-  padding-top: 7px;
-  margin-top: 2px;
+  font-size: 10px;
+  color: #555;
+  padding: 7px 10px;
   white-space: pre-line;
+  border-top: 1px solid #ccc;
+  line-height: 1.5;
 }
+
+/* ── Footer ───────────────────────────────────────────────────── */
 
 #drug-panel-footer {
   flex-shrink: 0;
   font-family: var(--font-block);
   font-size: 7.5px;
   letter-spacing: 0.1em;
-  color: #888;
+  color: #999;
   text-align: center;
-  padding: 6px 10px;
-  border-top: 1px solid #bbb;
+  padding: 5px 10px;
+  border-top: 1px solid #ccc;
+  background: #eae8e4;
   text-transform: uppercase;
 }
 
-/* Mobile: full-width panel from bottom instead of right side */
+/* ── Mobile: slides up from bottom ───────────────────────────── */
+
 @media (max-width: 600px) {
   #drug-panel {
     width: 100%;
     height: auto;
-    max-height: 55%;
+    max-height: 60%;
     top: auto;
     bottom: 0;
     right: 0;
     transform: translateY(100%);
     border-left: none;
-    border-top: 3px solid;
+    border-top: 3px solid #888;
   }
 
-  #drug-panel.open {
-    transform: translateY(0);
-  }
+  #drug-panel.open { transform: translateY(0); }
+
+  .drug-dose { font-size: 14px; }
+  .drug-notes { font-size: 10px; }
 }

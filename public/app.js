@@ -508,6 +508,7 @@ function showDrugPanel(matchedKey) {
   if (!card) return;
 
   drugPanelName.textContent = card.name;
+  drugPanel.dataset.drugClass = card.drugClass || 'other';
   drugPanelBody.innerHTML = '';
 
   // Dose rows
