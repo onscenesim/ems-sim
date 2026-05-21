@@ -17,7 +17,136 @@ const INTERVENTIONS = [
   { id: "defibrillation", synonyms: ["defibrillate", "unsynchronized shock", "shock", "deliver shock", "AED shock", "defib", "defibrillation", "shock the patient", "CPR shock", "VF shock", "clear and shock", "charge the defib", "deliver the charge", "200 joules", "360 joules", "biphasic shock", "monophasic", "analyze rhythm", "AED analyze", "shock advised"], dc: [5,11], no_roll: false, dc_notes: "DC 5 equipment delivery. DC 11 clinical response — return of organized rhythm. Roll both. Failure of response does not mean failure of procedure — continue CPR and retry. Complication: skin burns, accidental shock to crew if clear not called.", scope: "ALS", notes: null },
   { id: "pacing", synonyms: ["pace the patient", "transcutaneous pacing", "TCP", "external pacing", "electrical pacing", "pace", "set the rate", "set the output", "capture", "transcutaneous cardiac pacing", "external pacer", "apply pacer pads", "initiate pacing"], dc: [8,13], no_roll: false, dc_notes: "DC 8 mechanical capture — pacing spike followed by QRS. DC 13 hemodynamic capture — BP improves with pacing. Both must succeed. Failure of mechanical capture: increase output. Failure of hemodynamic capture: underlying cause must be treated.", scope: "ALS - requires auth in some regions", notes: null },
   { id: "cpr", synonyms: ["start CPR", "begin compressions", "chest compressions", "CPR", "cardiopulmonary resuscitation", "start resuscitation", "compress the chest", "pump the chest", "work the code", "two inch compressions", "push hard and fast", "100 per minute", "30 to 2", "compression only CPR", "continuous compressions", "mechanical CPR"], dc: null, no_roll: true, dc_notes: "No dice roll for initiation. CPR quality is assessed via manual_cpr_quality_check. Complication engine may introduce crew fatigue or patient vomiting during CPR.", scope: "BLS", notes: null },
-  { id: "medication_push", synonyms: ["push the epi", "give epi", "epinephrine", "1mg epinephrine", "give amiodarone", "amio", "300mg amiodarone", "adenosine", "6mg adenosine", "atropine", "0.5mg atropine", "dopamine", "dopamine drip", "norepinephrine", "levophed", "norepi", "norepinephrine drip", "levophed drip", "norepi drip", "push dose epi", "push dose epinephrine", "epinephrine drip", "racemic epi", "racemic epinephrine", "epi drip", "epi infusion", "phenylephrine", "vasopressin", "lidocaine", "magnesium", "mag sulfate", "sodium bicarb", "calcium chloride", "dextrose", "D50", "D10", "narcan", "naloxone", "intranasal narcan", "nitroglycerin", "nitro", "SL nitro", "aspirin", "324mg aspirin", "heparin", "lasix", "furosemide", "morphine", "fentanyl", "ketamine", "versed", "midazolam", "ativan", "benzo", "ondansetron", "zofran", "albuterol", "albuterol neb", "continuous albuterol", "salbutamol", "duoneb", "ipratropium", "atrovent", "neb treatment", "breathing treatment", "glucagon", "IM glucagon", "oral glucose", "thiamine", "activated charcoal", "charcoal", "AC charcoal", "actidose", "charcoal slurry", "50g charcoal", "25g charcoal", "give charcoal", "administer charcoal"], dc: [7], no_roll: false, dc_notes: "DC 7 for administration. Clinical response DC varies by drug — narrate based on expected pharmacology and patient card. Complication: wrong dose, wrong drug, extravasation if IO not confirmed. AI evaluates clinical appropriateness of drug choice independently of dice result. ACTIVATED CHARCOAL: appropriate only within 2 hours of ingestion, patient must be conscious and cooperative with intact gag reflex, contraindicated in caustic ingestion, hydrocarbon ingestion, or absent airway protective reflexes — partner flags if any contraindication is present.", scope: "VARIABLE", notes: null },
+  { id: "medication_push", synonyms: [
+    // Epinephrine (all forms)
+    "push the epi", "give epi", "epinephrine", "1mg epinephrine", "epipen",
+    "push dose epi", "push dose epinephrine", "epinephrine drip", "epi drip", "epi infusion",
+    "racemic epi", "racemic epinephrine", "epi 1:1000", "epi 1:10000",
+    // Amiodarone
+    "amiodarone", "give amiodarone", "amio", "300mg amiodarone", "cordarone",
+    // Adenosine
+    "adenosine", "6mg adenosine", "adenocard",
+    // Atropine
+    "atropine", "atropine sulfate", "0.5mg atropine",
+    // Atropine + Pralidoxime (DuoDote)
+    "duodote", "atropine pralidoxime", "auto-injector antidote",
+    // Dopamine
+    "dopamine", "dopamine drip", "intropin",
+    // Norepinephrine
+    "norepinephrine", "levophed", "norepi", "norepinephrine drip", "levophed drip", "norepi drip",
+    // Phenylephrine / Vasopressin / Dobutamine
+    "phenylephrine", "vasopressin", "pitressin",
+    "dobutamine", "dobutrex", "dobutamine drip",
+    // Lidocaine
+    "lidocaine", "xylocaine", "lido",
+    // Procainamide
+    "procainamide", "procan",
+    // Propranolol
+    "propranolol", "inderal",
+    // Metoprolol
+    "metoprolol", "lopressor",
+    // Diltiazem
+    "diltiazem", "cardizem",
+    // Magnesium
+    "magnesium", "mag sulfate", "magnesium sulfate",
+    // Sodium Bicarbonate
+    "sodium bicarb", "sodium bicarbonate", "bicarb",
+    // Calcium
+    "calcium chloride", "calcium gluconate", "cal gluconate",
+    // Dextrose
+    "dextrose", "D50", "D10", "D25", "D5W", "dextrose 50", "dextrose 25", "dextrose 10",
+    // Naloxone
+    "narcan", "naloxone", "intranasal narcan",
+    // Flumazenil
+    "flumazenil", "romazicon",
+    // Nitroglycerin
+    "nitroglycerin", "nitro", "SL nitro", "nitroglycerin paste", "nitro paste", "nitrobid",
+    // Aspirin
+    "aspirin", "324mg aspirin", "asa",
+    // Heparin
+    "heparin", "high dose heparin",
+    // Furosemide
+    "lasix", "furosemide",
+    // Morphine
+    "morphine", "morphine sulfate", "ms contin",
+    // Fentanyl
+    "fentanyl", "fentanyl citrate", "sublimaze",
+    // Ketamine
+    "ketamine", "ketalar",
+    // Midazolam
+    "versed", "midazolam",
+    // Lorazepam
+    "ativan", "lorazepam", "benzo",
+    // Diazepam
+    "diazepam", "valium",
+    // Etomidate
+    "etomidate", "amidate",
+    // Nalbuphine
+    "nalbuphine", "nubain",
+    // Ondansetron
+    "ondansetron", "zofran",
+    // Prochlorperazine
+    "prochlorperazine", "compazine",
+    // Albuterol / DuoNeb / Levalbuterol / Terbutaline
+    "albuterol", "albuterol neb", "continuous albuterol", "salbutamol",
+    "duoneb", "ipratropium", "atrovent",
+    "neb treatment", "breathing treatment",
+    "levalbuterol", "xopenex",
+    "terbutaline", "brethine",
+    // Methylprednisolone
+    "methylprednisolone", "solu-medrol",
+    // Glucagon
+    "glucagon", "IM glucagon",
+    // Oral Glucose
+    "oral glucose",
+    // Thiamine / Pyridoxine
+    "thiamine", "thiamine b1", "pyridoxine", "vitamin b6",
+    // Activated Charcoal
+    "activated charcoal", "charcoal", "AC charcoal", "actidose", "charcoal slurry",
+    "50g charcoal", "25g charcoal", "give charcoal", "administer charcoal",
+    // Diphenhydramine
+    "diphenhydramine", "benadryl",
+    // Acetaminophen
+    "acetaminophen", "tylenol", "apap",
+    // Ibuprofen
+    "ibuprofen", "motrin",
+    // Hydroxocobalamin
+    "hydroxocobalamin", "cyanokit",
+    // Methylene Blue
+    "methylene blue",
+    // Amyl Nitrite
+    "amyl nitrite",
+    // Sodium Nitrite / Sodium Thiosulfate
+    "sodium nitrite", "sodium thiosulfate",
+    // Pralidoxime
+    "pralidoxime", "2-pam",
+    // Rocuronium / Succinylcholine / Vecuronium
+    "rocuronium", "zemuron", "roc",
+    "succinylcholine", "succs", "sux",
+    "vecuronium", "norcuron", "vec",
+    // Phenobarbital
+    "phenobarbital",
+    // Ziprasidone
+    "ziprasidone", "geodon",
+    // Nitrous Oxide
+    "nitrous oxide", "nitronox", "n2o",
+    // Oxytocin
+    "oxytocin", "pitocin",
+    // Oxymetazoline
+    "oxymetazoline", "afrin",
+    // Proparacaine
+    "proparacaine", "alcaine",
+    // Methylene Blue (alias)
+    // Labetalol
+    "labetalol",
+    // Furosemide already above
+    // Hydrocobalamin already above
+    // Acetaminophen already above
+    // Broad-spectrum antibiotics
+    "antibiotics", "ceftriaxone", "rocephin", "zosyn", "vancomycin", "metronidazole", "flagyl",
+    // Tranexamic Acid
+    "txa", "tranexamic acid", "tranexamic"
+  ], dc: [7], no_roll: false, dc_notes: "DC 7 for administration. Clinical response DC varies by drug — narrate based on expected pharmacology and patient card. Complication: wrong dose, wrong drug, extravasation if IO not confirmed. AI evaluates clinical appropriateness of drug choice independently of dice result. ACTIVATED CHARCOAL: appropriate only within 2 hours of ingestion, patient must be conscious and cooperative with intact gag reflex, contraindicated in caustic ingestion, hydrocarbon ingestion, or absent airway protective reflexes — partner flags if any contraindication is present.", scope: "VARIABLE", notes: null },
   { id: "fluid_bolus", synonyms: ["normal saline", "NS bolus", "saline bolus", "fluid bolus", "run in a liter", "open the line", "wide open", "500ml bolus", "250ml bolus", "pressure bag", "lactated ringers", "LR bolus", "blood products", "packed red blood cells", "pRBC", "whole blood", "permissive hypotension", "restrict fluids", "run fluids", "hang a bag", "squeeze the bag", "rapid infuser", "level one", "pressure infuser"], dc: null, no_roll: true, dc_notes: "No dice roll — deterministic if IV/IO confirmed. Physiological response determined by patient card trajectory. Complication engine may introduce fluid overload in CHF or pulmonary edema worsening.", scope: "ALS", notes: null },
   { id: "splinting", synonyms: ["splint the fracture", "immobilize", "traction splint", "sager", "hare traction", "femur splint", "long board", "backboard", "spinal immobilization", "c-collar", "cervical collar", "extrication collar", "KED", "kendrick extrication device", "vacuum splint", "air splint", "SAM splint", "extremity immobilization", "buddy tape"], dc: [6], no_roll: false, dc_notes: "DC 6. Failure: inadequate immobilization, traction splint not achieving traction. Complication: neurovascular compromise from improper application — check CSM before and after.", scope: "BLS", notes: null },
   { id: "bleeding_control", synonyms: ["tourniquet", "CAT tourniquet", "apply tourniquet", "control the bleeding", "direct pressure", "wound packing", "pack the wound", "hemostatic gauze", "quikclot", "celox", "combat gauze", "junctional tourniquet", "wound closure", "pressure dressing", "pressure bandage", "Israeli bandage", "emergency bandage"], dc: [7,12], no_roll: false, dc_notes: "DC 7 tourniquet application. DC 12 hemorrhage control achieved. Junctional hemorrhage DC 14 — difficult anatomy. Failure: tourniquet not tight enough, continued bleeding. Complication: tourniquet applied over joint, delayed time documentation.", scope: "BLS", notes: null },

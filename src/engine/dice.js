@@ -17,8 +17,25 @@ const DETECT_PATTERNS = [];      // [{ key, pattern, proc }]
 // Must be declared before the registration loop so isSpecificSynonym()
 // can safely reference SPECIFIC_EQUIPMENT during module initialization.
 const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exempt from verb check
+  // Equipment & devices
   'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
   'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
+  // Drug abbreviations — specific enough to fire without an admin verb
+  'txa',      // tranexamic acid
+  'sux',      // succinylcholine
+  'succs',    // succinylcholine (alternate)
+  'roc',      // rocuronium
+  'vec',      // vecuronium
+  'amio',     // amiodarone
+  'lido',     // lidocaine
+  'bicarb',   // sodium bicarbonate
+  'duoneb',   // albuterol + ipratropium
+  'versed',   // midazolam
+  'ativan',   // lorazepam
+  'adenocard',// adenosine
+  'lasix',    // furosemide
+  'pitocin',  // oxytocin
+  'cyanokit', // hydroxocobalamin
 ]);
 
 for (const proc of INTERVENTIONS) {

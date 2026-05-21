@@ -231,7 +231,7 @@ async function startScenario() {
     terminal.style.display    = 'flex';
 
     print(`Scenario ID: ${data.scenario_id}`, 'system');
-    print('Note: dice rolls may fire on unintended words — ignore any unexpected rolls and continue normally.', 'system');
+    print('ROLLS: Use action verbs for full drug names — "give morphine", "push adenosine", "hang dopamine", "administer rocuronium".\nAbbreviations auto-trigger without a verb: TXA, amio, sux, roc, vec, lido, bicarb, versed, ativan, duoneb, narcan.\nMulti-word orders also auto-trigger: "tranexamic acid", "push dose epi", "sodium bicarbonate", "activated charcoal".', 'system');
     print('');
     printHr();
     // Show dispatch flash before the text appears
