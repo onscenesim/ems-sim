@@ -94,14 +94,31 @@ const DRUG_CARDS = [
     packaging: '0.1 mg/mL (0.5 mg/5 mL) or 1 mg/mL vials',
   },
 
-  // ── Dopamine ────────────────────────────────────────────────────────
+  // ── Dopamine ─────────────────────────────────────────────────────────
   {
     name: 'Dopamine',
-    synonyms: ['dopamine', 'dopamine drip', 'vasopressor'],
+    synonyms: ['dopamine', 'dopamine drip'],
     doses: [
-      { indication: 'Cardiogenic shock / hypotension', dose: '2–20 mcg/kg/min', route: 'IV infusion', notes: 'Low dose (2–5): renal; mid (5–10): cardiac; high (10–20): vasopressor' },
+      {
+        indication: 'Symptomatic bradycardia (refractory to atropine)',
+        dose: '5–20 mcg/kg/min',
+        route: 'IV infusion',
+        notes: 'Chronotropic and inotropic. Bridge to pacing. Titrate up q5 min.',
+      },
+      {
+        indication: 'Cardiogenic shock / hypotension',
+        dose: '5–15 mcg/kg/min',
+        route: 'IV infusion',
+        notes: 'Inotropic range. If >10 mcg/kg/min needed, consider adding norepi.',
+      },
+      {
+        indication: 'High-dose vasopressor (last resort)',
+        dose: '15–20 mcg/kg/min',
+        route: 'IV infusion',
+        notes: 'Alpha-dominant vasoconstriction. Increases arrhythmia risk significantly at this range.',
+      },
     ],
-    packaging: '40 mg/mL — mix 400 mg in 250 mL NS → 1,600 mcg/mL',
+    packaging: '40 mg/mL — standard mix: 400 mg in 250 mL NS → 1,600 mcg/mL\nAlternate: 200 mg in 250 mL → 800 mcg/mL',
   },
 
   // ── Norepinephrine (Levophed) ─────────────────────────────────────────
