@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -141,6 +141,16 @@
 
     <div id="output" role="log" aria-live="polite" aria-label="Scenario output"></div>
 
+    <!-- Drug reference side panel — slides in from right on medication roll -->
+    <div id="drug-panel" aria-label="Medication reference" role="complementary">
+      <div id="drug-panel-header">
+        <span id="drug-panel-name"></span>
+        <button id="drug-panel-close" title="Close">✕</button>
+      </div>
+      <div id="drug-panel-body"></div>
+      <div id="drug-panel-footer">Follow local protocol</div>
+    </div>
+
     <div id="input-row">
       <span class="prompt">&gt;&nbsp;</span>
       <input
@@ -155,6 +165,7 @@
     </div>
   </div>
 
+  <script src="drug-cards.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

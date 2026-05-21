@@ -1,0 +1,320 @@
+'use strict';
+
+/**
+ * EMS Medication Reference
+ * Triggered when a medication_push dice roll fires.
+ * Doses reflect ACLS/AHA guidelines — always follow your local protocol.
+ *
+ * Each entry:
+ *   name        — display name
+ *   synonyms    — matched against roll.matched_drug (lowercase)
+ *   doses[]     — { indication, dose, route, notes? }
+ *   packaging?  — how it comes in the drug box
+ */
+const DRUG_CARDS = [
+
+  // ── Epinephrine ────────────────────────────────────────────────────────
+  {
+    name: 'Epinephrine',
+    synonyms: ['epinephrine', '1mg epinephrine', 'give epi', 'push the epi', 'push dose epi', 'epipen'],
+    doses: [
+      { indication: 'Cardiac arrest (VF/VT/PEA/Asystole)', dose: '1 mg', route: 'IV/IO', notes: 'q3–5 min; 1:10,000 (0.1 mg/mL)' },
+      { indication: 'Anaphylaxis / severe asthma', dose: '0.3 mg', route: 'IM — lateral thigh', notes: '1:1,000 (1 mg/mL); auto-injector OK' },
+      { indication: 'Push-dose (refractory hypotension)', dose: '10–20 mcg', route: 'IV (slow push)', notes: 'Dilute: 1 mg in 100 mL NS → 10 mcg/mL' },
+    ],
+    packaging: '1 mg/mL (1:1,000) — IM use\n0.1 mg/mL (1:10,000) — cardiac arrest',
+  },
+
+  // ── Amiodarone ────────────────────────────────────────────────────────
+  {
+    name: 'Amiodarone',
+    synonyms: ['amiodarone', 'amio', 'give amiodarone', '300mg amiodarone'],
+    doses: [
+      { indication: 'Cardiac arrest (VF/pVT)', dose: '300 mg', route: 'IV/IO bolus', notes: '2nd dose 150 mg if refractory' },
+      { indication: 'Stable VT (with pulse)', dose: '150 mg', route: 'IV over 10 min', notes: 'Followed by 1 mg/min drip x6h' },
+    ],
+    packaging: '50 mg/mL — draw 6 mL for 300 mg arrest dose',
+  },
+
+  // ── Adenosine ────────────────────────────────────────────────────────
+  {
+    name: 'Adenosine',
+    synonyms: ['adenosine', '6mg adenosine'],
+    doses: [
+      { indication: 'SVT (narrow complex, regular)', dose: '6 mg rapid IVP', route: 'IV — antecubital or above', notes: '2nd dose 12 mg; flush immediately with 20 mL NS; must be fast push' },
+    ],
+    packaging: '3 mg/mL — 2 mL vial (6 mg)',
+  },
+
+  // ── Atropine ────────────────────────────────────────────────────────
+  {
+    name: 'Atropine',
+    synonyms: ['atropine', '0.5mg atropine'],
+    doses: [
+      { indication: 'Symptomatic bradycardia', dose: '0.5 mg', route: 'IV/IO', notes: 'q3–5 min; max 3 mg total' },
+      { indication: 'Organophosphate / nerve agent', dose: '2–4 mg', route: 'IV/IO/IM', notes: 'Titrate to secretion control (drying); no max in toxidrome' },
+    ],
+    packaging: '0.1 mg/mL (0.5 mg/5 mL) or 1 mg/mL vials',
+  },
+
+  // ── Dopamine ────────────────────────────────────────────────────────
+  {
+    name: 'Dopamine',
+    synonyms: ['dopamine', 'dopamine drip', 'vasopressor'],
+    doses: [
+      { indication: 'Cardiogenic shock / hypotension', dose: '2–20 mcg/kg/min', route: 'IV infusion', notes: 'Low dose (2–5): renal; mid (5–10): cardiac; high (10–20): vasopressor' },
+    ],
+    packaging: '40 mg/mL — mix 400 mg in 250 mL NS → 1,600 mcg/mL',
+  },
+
+  // ── Norepinephrine ────────────────────────────────────────────────────
+  {
+    name: 'Norepinephrine',
+    synonyms: ['norepinephrine', 'levophed'],
+    doses: [
+      { indication: 'Septic / distributive shock', dose: '0.1–0.5 mcg/kg/min', route: 'IV infusion', notes: 'First-line vasopressor for septic shock; titrate to MAP >65' },
+    ],
+    packaging: '1 mg/mL — mix 4 mg in 250 mL D5W → 16 mcg/mL',
+  },
+
+  // ── Phenylephrine ────────────────────────────────────────────────────
+  {
+    name: 'Phenylephrine',
+    synonyms: ['phenylephrine'],
+    doses: [
+      { indication: 'Hypotension (pure vasoconstriction)', dose: '100–200 mcg bolus', route: 'IV', notes: 'No chronotropy — preferred when tachycardia is present' },
+    ],
+    packaging: '10 mg/mL — dilute before use',
+  },
+
+  // ── Vasopressin ────────────────────────────────────────────────────────
+  {
+    name: 'Vasopressin',
+    synonyms: ['vasopressin'],
+    doses: [
+      { indication: 'Cardiac arrest (VF/PEA/Asystole)', dose: '40 units', route: 'IV/IO bolus (one-time)', notes: 'May replace 1st or 2nd epi dose per protocol' },
+    ],
+    packaging: '20 units/mL — 2 mL (40 units)',
+  },
+
+  // ── Lidocaine ────────────────────────────────────────────────────────
+  {
+    name: 'Lidocaine',
+    synonyms: ['lidocaine'],
+    doses: [
+      { indication: 'VF/pVT (if amiodarone unavailable)', dose: '1–1.5 mg/kg', route: 'IV/IO', notes: 'Max 3 mg/kg; then 0.5–0.75 mg/kg q5–10 min' },
+      { indication: 'Maintenance (post-conversion)', dose: '1–4 mg/min', route: 'IV infusion', notes: '' },
+      { indication: 'RSI (laryngospasm / ICP protection)', dose: '1.5 mg/kg', route: 'IV 3 min before intubation', notes: 'Protocol-dependent' },
+    ],
+    packaging: '10 mg/mL (1%) or 20 mg/mL (2%)',
+  },
+
+  // ── Magnesium Sulfate ────────────────────────────────────────────────
+  {
+    name: 'Magnesium Sulfate',
+    synonyms: ['magnesium', 'mag sulfate'],
+    doses: [
+      { indication: 'Torsades de pointes', dose: '1–2 g', route: 'IV over 5–20 min', notes: 'Can push in arrest' },
+      { indication: 'Eclampsia / severe pre-eclampsia', dose: '4–6 g loading', route: 'IV over 15–20 min', notes: 'Maintenance 1–2 g/hr; monitor DTRs' },
+      { indication: 'Severe asthma (refractory)', dose: '2 g', route: 'IV over 20 min', notes: '' },
+    ],
+    packaging: '500 mg/mL (50%) — dilute to max 20% for IV use',
+  },
+
+  // ── Sodium Bicarbonate ────────────────────────────────────────────────
+  {
+    name: 'Sodium Bicarbonate',
+    synonyms: ['sodium bicarb'],
+    doses: [
+      { indication: 'Metabolic acidosis / TCA OD / hyperkalemia', dose: '1 mEq/kg', route: 'IV/IO', notes: 'TCA: titrate to QRS <100ms and hemodynamic stability; push for arrest' },
+    ],
+    packaging: '1 mEq/mL — 50 mEq (50 mL) prefilled syringe',
+  },
+
+  // ── Calcium Chloride ────────────────────────────────────────────────
+  {
+    name: 'Calcium Chloride',
+    synonyms: ['calcium chloride'],
+    doses: [
+      { indication: 'Hyperkalemia / calcium-channel blocker OD / hypocalcemia', dose: '500 mg–1 g', route: 'IV slow push over 5–10 min', notes: 'Vesicant — confirm IV patency; causes pain in peripheral line' },
+    ],
+    packaging: '100 mg/mL (10%) — 10 mL (1 g)',
+  },
+
+  // ── Dextrose ────────────────────────────────────────────────────────
+  {
+    name: 'Dextrose',
+    synonyms: ['dextrose', 'd50', 'd10'],
+    doses: [
+      { indication: 'Symptomatic hypoglycemia', dose: '25 g (D50) or 10 g (D10)', route: 'IV/IO', notes: 'D10 preferred — less tissue damage if extravasation; repeat BGL in 5 min' },
+    ],
+    packaging: 'D50: 500 mg/mL (50%) — 50 mL\nD10: 100 mg/mL (10%) — 100 mL',
+  },
+
+  // ── Naloxone ────────────────────────────────────────────────────────
+  {
+    name: 'Naloxone',
+    synonyms: ['naloxone', 'narcan', 'intranasal narcan'],
+    doses: [
+      { indication: 'Opioid OD (respiratory depression)', dose: '0.4–2 mg', route: 'IV/IO/IM/IN/SQ', notes: 'IN: 4 mg (2 mg per nare); titrate to ventilation — NOT full reversal; repeat q2–3 min PRN' },
+    ],
+    packaging: '0.4 mg/mL vials; 2 mg/2 mL intranasal device; 4 mg/0.1 mL nasal spray',
+  },
+
+  // ── Nitroglycerin ────────────────────────────────────────────────────
+  {
+    name: 'Nitroglycerin',
+    synonyms: ['nitroglycerin', 'nitro', 'sl nitro'],
+    doses: [
+      { indication: 'ACS / chest pain / acute pulmonary edema', dose: '0.4 mg', route: 'SL (tablet or spray)', notes: 'q5 min × 3; hold if SBP <90 or inferior STEMI with RVI suspicion; hold if PDE-5 inhibitor in last 24–48h' },
+    ],
+    packaging: '0.4 mg tablet or metered spray',
+  },
+
+  // ── Aspirin ────────────────────────────────────────────────────────
+  {
+    name: 'Aspirin',
+    synonyms: ['aspirin', '324mg aspirin'],
+    doses: [
+      { indication: 'ACS (STEMI/NSTEMI suspicion)', dose: '324 mg', route: 'PO — chewed', notes: 'Chewing achieves faster absorption than swallowing whole' },
+    ],
+    packaging: '81 mg baby aspirin × 4, or 325 mg tablet',
+  },
+
+  // ── Furosemide ────────────────────────────────────────────────────────
+  {
+    name: 'Furosemide',
+    synonyms: ['furosemide', 'lasix'],
+    doses: [
+      { indication: 'Acute pulmonary edema (CHF exacerbation)', dose: '40–80 mg (or match home dose)', route: 'IV slow push', notes: 'Venodilation precedes diuresis — onset 5–15 min IV' },
+    ],
+    packaging: '10 mg/mL — 4 mL (40 mg)',
+  },
+
+  // ── Morphine ────────────────────────────────────────────────────────
+  {
+    name: 'Morphine',
+    synonyms: ['morphine'],
+    doses: [
+      { indication: 'Moderate-severe pain', dose: '2–4 mg', route: 'IV (slow) / IM', notes: 'q5–10 min PRN; monitor for hypotension and respiratory depression' },
+    ],
+    packaging: '10 mg/mL — titrate from small doses',
+  },
+
+  // ── Fentanyl ────────────────────────────────────────────────────────
+  {
+    name: 'Fentanyl',
+    synonyms: ['fentanyl'],
+    doses: [
+      { indication: 'Pain management / RSI adjunct', dose: '1–2 mcg/kg', route: 'IV/IM/IN', notes: 'Max 200 mcg single dose; IN: 2 mcg/kg (1 mcg/kg per nare); rapid onset — monitor resp' },
+      { indication: 'Procedural sedation', dose: '1–2 mcg/kg', route: 'IV (slow)', notes: 'Often combined with ketamine or midazolam' },
+    ],
+    packaging: '50 mcg/mL — 2 mL (100 mcg) or 10 mL (500 mcg)',
+  },
+
+  // ── Ketamine ────────────────────────────────────────────────────────
+  {
+    name: 'Ketamine',
+    synonyms: ['ketamine'],
+    doses: [
+      { indication: 'Dissociative sedation / RSI', dose: '1–2 mg/kg', route: 'IV (over 1 min)', notes: 'Onset <1 min; maintain airway reflexes; dysphoria possible' },
+      { indication: 'IM sedation (combative patient)', dose: '4–5 mg/kg', route: 'IM', notes: 'Onset 3–5 min; good for pre-hospital chemical restraint' },
+      { indication: 'Sub-dissociative analgesia', dose: '0.1–0.3 mg/kg', route: 'IV (slow push)', notes: 'Effective for pain without full dissociation' },
+    ],
+    packaging: '500 mg/10 mL (50 mg/mL) or 200 mg/20 mL (10 mg/mL)',
+  },
+
+  // ── Midazolam ────────────────────────────────────────────────────────
+  {
+    name: 'Midazolam',
+    synonyms: ['midazolam', 'versed'],
+    doses: [
+      { indication: 'Seizures / sedation / RSI adjunct', dose: '0.1 mg/kg (IV) / 0.2 mg/kg (IM/IN)', route: 'IV/IM/IN', notes: 'Max 5 mg single dose; IN: divide between nares; monitor resp' },
+    ],
+    packaging: '1 mg/mL or 5 mg/mL vials',
+  },
+
+  // ── Lorazepam ────────────────────────────────────────────────────────
+  {
+    name: 'Lorazepam',
+    synonyms: ['ativan', 'benzo'],
+    doses: [
+      { indication: 'Seizures / anxiety / sedation', dose: '1–2 mg', route: 'IV/IM', notes: 'q5–15 min PRN; monitor respiratory status; slower onset IM vs IV' },
+    ],
+    packaging: '2 mg/mL or 4 mg/mL',
+  },
+
+  // ── Ondansetron ────────────────────────────────────────────────────────
+  {
+    name: 'Ondansetron',
+    synonyms: ['ondansetron', 'zofran'],
+    doses: [
+      { indication: 'Nausea / vomiting', dose: '4 mg', route: 'IV (over 2–5 min) / IM / ODT', notes: 'May repeat × 1 after 15 min; QT prolongation risk — avoid if QTc >500ms' },
+    ],
+    packaging: '2 mg/mL — 2 mL (4 mg); 4 mg ODT tablet',
+  },
+
+  // ── Albuterol ────────────────────────────────────────────────────────
+  {
+    name: 'Albuterol',
+    synonyms: ['albuterol', 'duoneb', 'nebulizer treatment', 'neb treatment', 'breathing treatment'],
+    doses: [
+      { indication: 'Bronchospasm (asthma / COPD / anaphylaxis)', dose: '2.5 mg in 3 mL NS', route: 'Nebulizer (continuous or q20 min)', notes: 'MDI: 4–8 puffs via spacer; DuoNeb adds ipratropium 0.5 mg' },
+    ],
+    packaging: '0.083% (2.5 mg/3 mL) unit-dose vials; MDI inhaler',
+  },
+
+  // ── Glucagon ────────────────────────────────────────────────────────
+  {
+    name: 'Glucagon',
+    synonyms: ['glucagon', 'im glucagon'],
+    doses: [
+      { indication: 'Hypoglycemia (no IV access)', dose: '1 mg', route: 'IM / SQ', notes: 'Onset 5–15 min; may not work in chronic alcoholism or starvation (depleted glycogen stores)' },
+      { indication: 'Beta-blocker OD', dose: '3–5 mg IV bolus', route: 'IV', notes: 'Then 1–5 mg/hr infusion; causes vomiting — have airway ready' },
+    ],
+    packaging: '1 mg lyophilized powder — reconstitute with provided diluent',
+  },
+
+  // ── Oral Glucose ────────────────────────────────────────────────────
+  {
+    name: 'Oral Glucose',
+    synonyms: ['oral glucose'],
+    doses: [
+      { indication: 'Mild-moderate hypoglycemia (conscious, intact gag)', dose: '15–24 g', route: 'PO', notes: 'Instaglucose gel (15g tube); recheck BGL in 15 min; must be able to swallow' },
+    ],
+    packaging: '15 g glucose gel tube',
+  },
+
+  // ── Thiamine ────────────────────────────────────────────────────────
+  {
+    name: 'Thiamine (B1)',
+    synonyms: ['thiamine'],
+    doses: [
+      { indication: 'Wernicke encephalopathy prophylaxis / suspected thiamine deficiency', dose: '100 mg', route: 'IV/IM', notes: 'Give BEFORE dextrose in malnourished / alcoholic patients to prevent precipitating Wernicke encephalopathy' },
+    ],
+    packaging: '100 mg/mL — 1 mL vial',
+  },
+
+  // ── Activated Charcoal ────────────────────────────────────────────────
+  {
+    name: 'Activated Charcoal',
+    synonyms: ['activated charcoal', 'charcoal', 'ac charcoal', 'actidose', 'charcoal slurry', '50g charcoal', '25g charcoal', 'give charcoal'],
+    doses: [
+      { indication: 'Oral toxic ingestion (within 2h, conscious, intact gag)', dose: 'Adult: 50 g / Peds: 1 g/kg (max 50 g)', route: 'PO', notes: 'CONTRAINDICATED: caustics, hydrocarbons, alcohols, unconscious/seizing, absent gag — partner must verbally confirm before administering' },
+    ],
+    packaging: '25 g or 50 g premixed aqueous suspension',
+  },
+
+];
+
+/**
+ * Look up a drug card by matched synonym (lowercase string from roll.matched_drug).
+ * Returns the matching DRUG_CARDS entry or null.
+ */
+function lookupDrug(matchedKey) {
+  if (!matchedKey) return null;
+  const key = matchedKey.toLowerCase().trim();
+  return DRUG_CARDS.find(card =>
+    card.synonyms.some(s => s.toLowerCase() === key)
+  ) || null;
+}

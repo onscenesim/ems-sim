@@ -305,6 +305,9 @@ async function sendTurn(msg) {
       if (!r.no_roll && !r.multi_roll) {
         const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
         await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+        if (r.procedure_id === 'medication_push' && r.matched_drug) {
+          showDrugPanel(r.matched_drug);
+        }
       }
     }
     for (const r of (data.rolls || [])) printRoll(r);
@@ -359,6 +362,9 @@ async function endCallAndDebrief() {
       if (!r.no_roll && !r.multi_roll) {
         const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
         await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+        if (r.procedure_id === 'medication_push' && r.matched_drug) {
+          showDrugPanel(r.matched_drug);
+        }
       }
     }
     if (turnData.decompensating) sceneClock.classList.add('decompensating');
@@ -425,6 +431,7 @@ function resetToStart() {
   scenarioStartTime = null;
   sceneClock.textContent = '';
   sceneClock.className   = '';
+  hideDrugPanel();
 
   terminal.style.display    = 'none';
   startScreen.style.display = 'flex';
@@ -480,11 +487,75 @@ userInput.addEventListener('keydown', e => {
 const dispatchOverlay = document.getElementById('dispatch-overlay');
 const diceOverlay     = document.getElementById('dice-overlay');
 const sceneClock      = document.getElementById('scene-clock');
+const drugPanel       = document.getElementById('drug-panel');
+const drugPanelName   = document.getElementById('drug-panel-name');
+const drugPanelBody   = document.getElementById('drug-panel-body');
+const drugPanelClose  = document.getElementById('drug-panel-close');
 const diceProcEl      = document.getElementById('dice-proc');
 const diceSvgEl       = document.getElementById('dice-svg');
 const diceNumberEl    = document.getElementById('dice-number');
 const diceDCEl        = document.getElementById('dice-dc-label');
 const diceOutcomeEl   = document.getElementById('dice-outcome-label');
+
+// ── Drug reference panel ─────────────────────────────────────────────────────
+
+/**
+ * Populate and slide in the drug reference panel.
+ * @param {string} matchedKey  roll.matched_drug from the server (lowercase synonym)
+ */
+function showDrugPanel(matchedKey) {
+  const card = lookupDrug(matchedKey);
+  if (!card) return;
+
+  drugPanelName.textContent = card.name;
+  drugPanelBody.innerHTML = '';
+
+  // Dose rows
+  for (const d of card.doses) {
+    const row = document.createElement('div');
+    row.className = 'drug-dose-row';
+
+    const ind = document.createElement('div');
+    ind.className = 'drug-indication';
+    ind.textContent = d.indication;
+    row.appendChild(ind);
+
+    const dose = document.createElement('div');
+    dose.className = 'drug-dose';
+    dose.textContent = d.dose;
+    row.appendChild(dose);
+
+    const route = document.createElement('div');
+    route.className = 'drug-route';
+    route.textContent = d.route;
+    row.appendChild(route);
+
+    if (d.notes) {
+      const notes = document.createElement('div');
+      notes.className = 'drug-notes';
+      notes.textContent = d.notes;
+      row.appendChild(notes);
+    }
+
+    drugPanelBody.appendChild(row);
+  }
+
+  // Packaging line
+  if (card.packaging) {
+    const pkg = document.createElement('div');
+    pkg.className = 'drug-packaging';
+    pkg.textContent = card.packaging;
+    drugPanelBody.appendChild(pkg);
+  }
+
+  drugPanel.classList.add('open');
+}
+
+function hideDrugPanel() {
+  drugPanel.classList.remove('open');
+}
+
+drugPanelClose.addEventListener('click', hideDrugPanel);
 
 /**
  * Show the incoming-dispatch overlay before the first reply prints.

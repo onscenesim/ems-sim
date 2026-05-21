@@ -234,7 +234,7 @@ function detectAllProcedures(userText) {
 
     if (!bestMatch) break;
 
-    found.push(bestMatch.proc);
+    found.push({ proc: bestMatch.proc, matchedKey: bestMatch.key });
     usedProcIds.add(bestMatch.proc.id);
     // Consume the matched text so shorter synonyms of the same region don't re-fire
     remaining = remaining.replace(bestMatch.pattern, ' ');
@@ -244,8 +244,14 @@ function detectAllProcedures(userText) {
 }
 
 function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
-  const procs = detectAllProcedures(userText);
-  return procs.map(proc => rollProcedure(proc, contextFlags, difficulty));
+  const entries = detectAllProcedures(userText);
+  return entries.map(({ proc, matchedKey }) => {
+    const result = rollProcedure(proc, contextFlags, difficulty);
+    if (proc.id === 'medication_push' && matchedKey) {
+      result.matched_drug = matchedKey;
+    }
+    return result;
+  });
 }
 
 function getProcedure(id) {
