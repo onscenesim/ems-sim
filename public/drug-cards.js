@@ -18,7 +18,7 @@ const DRUG_CARDS = [
     name: 'Epinephrine',
     synonyms: [
       'epinephrine', '1mg epinephrine', 'give epi', 'push the epi',
-      'push dose epi', 'epipen', 'racemic epi', 'racemic epinephrine',
+      'push dose epi', 'push dose epinephrine', 'epinephrine drip', 'epipen', 'racemic epi', 'racemic epinephrine',
       'epi drip', 'epi infusion',
     ],
     doses: [
