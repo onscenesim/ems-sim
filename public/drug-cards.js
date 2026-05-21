@@ -16,13 +16,50 @@ const DRUG_CARDS = [
   // ── Epinephrine ────────────────────────────────────────────────────────
   {
     name: 'Epinephrine',
-    synonyms: ['epinephrine', '1mg epinephrine', 'give epi', 'push the epi', 'push dose epi', 'epipen'],
-    doses: [
-      { indication: 'Cardiac arrest (VF/VT/PEA/Asystole)', dose: '1 mg', route: 'IV/IO', notes: 'q3–5 min; 1:10,000 (0.1 mg/mL)' },
-      { indication: 'Anaphylaxis / severe asthma', dose: '0.3 mg', route: 'IM — lateral thigh', notes: '1:1,000 (1 mg/mL); auto-injector OK' },
-      { indication: 'Push-dose (refractory hypotension)', dose: '10–20 mcg', route: 'IV (slow push)', notes: 'Dilute: 1 mg in 100 mL NS → 10 mcg/mL' },
+    synonyms: [
+      'epinephrine', '1mg epinephrine', 'give epi', 'push the epi',
+      'push dose epi', 'epipen', 'racemic epi', 'racemic epinephrine',
+      'epi drip', 'epi infusion',
     ],
-    packaging: '1 mg/mL (1:1,000) — IM use\n0.1 mg/mL (1:10,000) — cardiac arrest',
+    doses: [
+      {
+        indication: 'Cardiac arrest (VF / pVT / PEA / Asystole)',
+        dose: '1 mg',
+        route: 'IV/IO',
+        notes: 'q3–5 min. Use 1:10,000 (0.1 mg/mL). Pediatric: 0.01 mg/kg IV/IO (max 1 mg).',
+      },
+      {
+        indication: 'Anaphylaxis / severe allergic reaction',
+        dose: '0.3 mg adult  |  0.15 mg peds (<30 kg)',
+        route: 'IM — lateral thigh',
+        notes: 'Use 1:1,000 (1 mg/mL). EpiPen / draw up. Repeat q5–15 min PRN. Do NOT give IV 1:1,000.',
+      },
+      {
+        indication: 'Push-dose epi — peri-intubation / post-ROSC hypotension',
+        dose: '10–20 mcg per push',
+        route: 'IV slow push — q2–5 min PRN',
+        notes: 'DILUTION METHOD A: Draw 1 mL of 1:10,000 (0.1 mg/mL) → add 9 mL NS → 10 mcg/mL. Give 1–2 mL per dose.\nDILUTION METHOD B: Draw 0.1 mL of 1:1,000 (1 mg/mL) → add 9.9 mL NS → 10 mcg/mL. Give 1–2 mL per dose.\nTitrate to effect. Onset ~1 min IV.',
+      },
+      {
+        indication: 'Epinephrine infusion (refractory shock)',
+        dose: '0.1–0.5 mcg/kg/min',
+        route: 'IV infusion',
+        notes: 'Mix: 1 mg in 250 mL NS → 4 mcg/mL. Titrate to MAP >65. Use when dopamine/norepi failing.',
+      },
+      {
+        indication: 'Racemic epinephrine — croup / upper airway edema',
+        dose: '0.5 mL of 2.25% solution in 3 mL NS',
+        route: 'Nebulized',
+        notes: 'Rebound effect possible — observe ≥2h post-treatment. Also used for post-extubation stridor and anaphylaxis with stridor.',
+      },
+      {
+        indication: 'Severe asthma / bronchospasm (if neb albuterol inadequate)',
+        dose: '0.3 mg',
+        route: 'IM — lateral thigh',
+        notes: '1:1,000 (1 mg/mL). Reserve for impending respiratory failure.',
+      },
+    ],
+    packaging: '1 mg/mL (1:1,000 amp) — IM / racemic use\n0.1 mg/mL (1:10,000 syringe) — cardiac arrest\nRacemic: 2.25% solution (S&S Healthcare)',
   },
 
   // ── Amiodarone ────────────────────────────────────────────────────────
