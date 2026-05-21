@@ -590,6 +590,77 @@ html, body {
 }
 
 
+/* ── Dispatch incoming overlay ───────────────────────────────────────────── */
+
+#dispatch-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%) scale(0.85);
+  z-index: 101;                  /* above dice overlay */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--chrome-bg);
+  background-image: var(--noise);
+  background-blend-mode: soft-light;
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  padding: 1rem 2.2rem 0.9rem;
+  font-family: var(--font-block, monospace);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  min-width: 190px;
+  text-align: center;
+}
+
+#dispatch-overlay.visible {
+  opacity: 1;
+  transform: translate(-50%, -60%) scale(1);
+}
+
+#dispatch-header {
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 0.15rem;
+}
+
+#dispatch-svg {
+  width: 96px;
+  height: 86px;
+  color: #444;           /* tower structure: dark chrome */
+}
+
+#dispatch-label {
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  color: #1a1a1a;
+  margin-top: 0.1rem;
+}
+
+/* Signal arcs — sequential pulse outward from antenna tip */
+.signal-arc {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+  opacity: 0;
+}
+
+.signal-arc-1 { stroke: var(--cyan); animation: dispatch-signal 1.6s ease-in-out infinite 0.0s; }
+.signal-arc-2 { stroke: var(--cyan); animation: dispatch-signal 1.6s ease-in-out infinite 0.4s; }
+.signal-arc-3 { stroke: var(--cyan); animation: dispatch-signal 1.6s ease-in-out infinite 0.8s; }
+
+@keyframes dispatch-signal {
+  0%   { opacity: 0; }
+  15%  { opacity: 0.9; }
+  65%  { opacity: 0.7; }
+  100% { opacity: 0; }
+}
+
 /* ── Dice roll overlay ───────────────────────────────────────────────────── */
 
 #dice-overlay {

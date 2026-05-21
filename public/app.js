@@ -219,6 +219,8 @@ async function startScenario() {
     print(`Scenario ID: ${data.scenario_id}`, 'system');
     print('');
     printHr();
+    // Show dispatch flash before the text appears
+    if (/DISPATCH:/i.test(data.reply)) await animateDispatch();
     printReply(data.reply);
     printHr();
     for (const r of (data.rolls || [])) printRoll(r);
@@ -444,12 +446,31 @@ userInput.addEventListener('keydown', e => {
 
 // ── Dice roll animation ───────────────────────────────────────────────────────
 
+const dispatchOverlay = document.getElementById('dispatch-overlay');
 const diceOverlay     = document.getElementById('dice-overlay');
 const diceProcEl      = document.getElementById('dice-proc');
 const diceSvgEl       = document.getElementById('dice-svg');
 const diceNumberEl    = document.getElementById('dice-number');
 const diceDCEl        = document.getElementById('dice-dc-label');
 const diceOutcomeEl   = document.getElementById('dice-outcome-label');
+
+/**
+ * Show the incoming-dispatch overlay before the first reply prints.
+ * Resolves after the animation completes so the caller can await it.
+ */
+function animateDispatch() {
+  return new Promise(resolve => {
+    const HOLD_MS = 1700;   // how long the overlay stays fully visible
+    const FADE_MS = 200;    // must match CSS transition duration
+
+    dispatchOverlay.classList.add('visible');
+
+    setTimeout(() => {
+      dispatchOverlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
 
 /**
  * Show a d20 roll animation, resolve when the overlay has faded out.
