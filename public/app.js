@@ -120,8 +120,12 @@ function authHeaders() {
   return h;
 }
 
-async function apiPost(path, body) {
-  const res  = await fetch(path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+// Tracks the AbortController for the current in-flight turn or debrief request.
+// Allows the user to cancel a stuck request via the STOP button.
+let currentAbortController = null;
+
+async function apiPost(path, body, signal = null) {
+  const res  = await fetch(path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body), signal });
   const data = await res.json();
   if (!res.ok) throw Object.assign(new Error(data.message || `HTTP ${res.status}`), { code: data.error });
   return data;
@@ -287,14 +291,21 @@ async function sendTurn(msg) {
     if (msg.trim().toLowerCase().startsWith('y')) {
       waitingDebrief = false;
       print('[generating debrief...]', 'system');
+      currentAbortController = new AbortController();
       try {
-        const data = await apiPost(`/api/scenario/${sessionId}/debrief`, {});
+        const data = await apiPost(`/api/scenario/${sessionId}/debrief`, {}, currentAbortController.signal);
         if (localTranscript) localTranscript.debriefText = data.debrief;
         printHr();
         print(data.debrief, 'debrief');
         printHr();
       } catch (err) {
-        print(`[Debrief error: ${err.message}]`, 'error');
+        if (err.name === 'AbortError') {
+          print('[Debrief cancelled by user.]', 'system');
+        } else {
+          print(`[Debrief error: ${err.message}]`, 'error');
+        }
+      } finally {
+        currentAbortController = null;
       }
     } else {
       print('Scenario ended.', 'system');
@@ -305,8 +316,9 @@ async function sendTurn(msg) {
     return;
   }
 
+  currentAbortController = new AbortController();
   try {
-    const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg });
+    const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg }, currentAbortController.signal);
 
     // Trigger decompensation pulse on the scene clock if the server says the patient is going south
     if (data.decompensating) sceneClock.classList.add('decompensating');
@@ -343,10 +355,17 @@ async function sendTurn(msg) {
       print('Scenario closed. Want the full debrief?  (y / n)', 'system');
       showCrewPanel();   // re-surface crew at scenario end
       setLoading(false);
+      currentAbortController = null;
       return;
     }
   } catch (err) {
-    print(`[Error: ${err.message}]`, 'error');
+    if (err.name === 'AbortError') {
+      print('[Cancelled by user. The server may still finish the request in the background — if you re-send, your previous message may also have been processed.]', 'system');
+    } else {
+      print(`[Error: ${err.message}]`, 'error');
+    }
+  } finally {
+    currentAbortController = null;
   }
 
   setLoading(false);
@@ -465,14 +484,19 @@ function resetToStart() {
 // ── Input controls ────────────────────────────────────────────────────────
 
 function setLoading(loading) {
-  sendBtn.disabled   = loading;
+  // While loading, SEND morphs into STOP — clickable, aborts the in-flight request.
+  // (Input stays disabled so the user can't queue a second send mid-flight.)
+  sendBtn.disabled   = false;
   userInput.disabled = loading;
   if (loading) {
     endBtn.disabled = true;                          // disable during any request
-  } else if (!isClosed && !waitingDebrief) {
-    endBtn.disabled = false;                         // re-enable when scenario is still active
+    sendBtn.textContent = 'STOP';
+    sendBtn.classList.add('stop-mode');
+  } else {
+    if (!isClosed && !waitingDebrief) endBtn.disabled = false;
+    sendBtn.textContent = 'SEND';
+    sendBtn.classList.remove('stop-mode');
   }
-  sendBtn.textContent = loading ? '···' : 'SEND';
   if (!loading) userInput.focus();
 }
 
@@ -484,6 +508,11 @@ function setInputEnabled(enabled) {
 // ── Event handlers ────────────────────────────────────────────────────────
 
 sendBtn.addEventListener('click', () => {
+  // If a request is in flight, the SEND button is acting as STOP — abort it.
+  if (currentAbortController) {
+    currentAbortController.abort();
+    return;
+  }
   const msg = userInput.value.trim();
   if (!msg) return;
   userInput.value = '';

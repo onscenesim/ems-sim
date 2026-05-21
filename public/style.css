@@ -497,6 +497,19 @@ html, body {
 #send-btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 #send-btn:disabled { opacity: 0.45; cursor: default; }
 
+/* SEND morphs into STOP while a request is in flight — clickable, aborts. */
+#send-btn.stop-mode {
+  background: #4a0c0c;
+  color: #ffe0e0;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  animation: stopPulse 1.2s ease-in-out infinite;
+}
+#send-btn.stop-mode:hover { background: #6a1414; color: #fff; }
+@keyframes stopPulse {
+  0%, 100% { background: #4a0c0c; }
+  50%      { background: #5a1010; }
+}
+
 #output::-webkit-scrollbar       { width: 16px; }
 #output::-webkit-scrollbar-track { background: #2a2a2a; border-left: 1px solid #1a1a1a; }
 #output::-webkit-scrollbar-thumb {

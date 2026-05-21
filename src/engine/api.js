@@ -7,6 +7,12 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 1024;
 
+// Hard upstream timeout for any Claude call. Without this, a stuck request
+// could hang the user's turn indefinitely with no recovery path. 90s is well
+// above normal latency but short enough that the client's STOP button stays
+// useful as the primary cancel mechanism.
+const REQUEST_TIMEOUT_MS = 90_000;
+
 /**
  * Send a turn in an active scenario.
  *
@@ -26,7 +32,7 @@ async function sendTurn(systemPrompt, messages) {
       },
     ],
     messages,
-  });
+  }, { timeout: REQUEST_TIMEOUT_MS });
 
   return response.content[0].text;
 }
@@ -70,7 +76,7 @@ Rules:
         content: debriefContext,
       },
     ],
-  });
+  }, { timeout: REQUEST_TIMEOUT_MS });
 
   return response.content[0].text;
 }
