@@ -247,6 +247,10 @@ async function startScenario() {
       showCrewPanel();
     }
 
+    // Initial vitals (likely empty/sparse until equipment is placed)
+    if (typeof data.scene_minute === 'number') currentSceneMinute = data.scene_minute;
+    applyVitals(data.vitals || null);
+
     setLoading(false);
     userInput.focus();
 
@@ -321,6 +325,10 @@ async function sendTurn(msg) {
     printHr();
     printReply(data.reply);
     printHr();
+
+    // Vitals update on every turn
+    if (typeof data.scene_minute === 'number') currentSceneMinute = data.scene_minute;
+    applyVitals(data.vitals || null);
 
     // Save turn client-side for transcript export
     if (localTranscript) {
@@ -441,6 +449,7 @@ function resetToStart() {
   sceneClock.className   = '';
   hideDrugPanel();
   hideCrewPanel();
+  resetVitals();
 
   terminal.style.display    = 'none';
   startScreen.style.display = 'flex';
@@ -858,3 +867,123 @@ function downloadFile(filename, text) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// ── Vitals monitor strip ─────────────────────────────────────────────────────
+
+const vitalsBar       = document.getElementById('vitals-bar');
+const vitalsPanel     = document.getElementById('vitals-panel');
+const vitalsExpand    = document.getElementById('vitals-expand');
+
+// All possible field names we render from the [VITALS:] tag
+const VITAL_FIELDS = ['HR', 'BP', 'SpO2', 'ETCO2', 'RR', 'Rhythm', 'Temp', 'Glucose', 'GCS', 'Pain'];
+
+// Episodic fields carry a measurement timestamp and get staleness coloring
+const VITAL_EPISODIC = new Set(['BP', 'Temp', 'Glucose']);
+
+let currentVitals      = null;   // last parsed vitals object from server
+let currentSceneMinute = 0;      // most recent server scene_minute
+let stalenessInterval  = null;
+
+function formatVitalDisplay(name, raw) {
+  // raw is either a primitive (HR/SpO2/etc.) or { value, t, tMin } for episodic
+  const value = (raw && typeof raw === 'object' && 'value' in raw) ? raw.value : raw;
+  if (value === undefined || value === null || value === '') return null;
+  return String(value);
+}
+
+function formatStamp(raw) {
+  if (raw && typeof raw === 'object' && raw.t) return raw.t;
+  return '';
+}
+
+function vitalAgeMin(raw) {
+  if (!raw || typeof raw !== 'object' || typeof raw.tMin !== 'number') return null;
+  return Math.max(0, currentSceneMinute - raw.tMin);
+}
+
+function stalenessClass(ageMin) {
+  if (ageMin === null) return '';
+  if (ageMin > 10) return 'vital-stale-bad';
+  if (ageMin > 5)  return 'vital-stale-warn';
+  return '';
+}
+
+/**
+ * Update the bar + panel from a vitals object (or clear if null).
+ */
+function applyVitals(vitals) {
+  currentVitals = vitals || {};
+
+  for (const name of VITAL_FIELDS) {
+    const raw = currentVitals[name];
+    const display = formatVitalDisplay(name, raw);
+    const els = document.querySelectorAll(`[data-vital="${name}"]`);
+    for (const el of els) {
+      el.textContent = display !== null ? display : '\u2014\u2014';
+      // Strip prior staleness classes then re-apply if episodic
+      el.classList.remove('vital-stale-warn', 'vital-stale-bad');
+      if (display !== null && VITAL_EPISODIC.has(name)) {
+        const cls = stalenessClass(vitalAgeMin(raw));
+        if (cls) el.classList.add(cls);
+      }
+    }
+    // Timestamp footnote (BP under the value, Temp/Glucose in the panel row)
+    const stampEls = document.querySelectorAll(`[data-vital-stamp="${name}"]`);
+    for (const sEl of stampEls) {
+      sEl.textContent = display !== null ? formatStamp(raw) : '';
+    }
+  }
+}
+
+/**
+ * Re-evaluate staleness without a server round-trip — driven by the scene clock.
+ * BP age advances as real time advances; we approximate by bumping
+ * currentSceneMinute alongside the scene-clock interval.
+ */
+function tickStaleness() {
+  if (!currentVitals) return;
+  // Drift the scene minute forward in real time (~1:1) so BP ages visibly between turns.
+  if (scenarioStartTime) {
+    const elapsedRealMin = (Date.now() - scenarioStartTime) / 60000;
+    // Use whichever is larger — the server-reported scene minute, or real-time drift past it.
+    currentSceneMinute = Math.max(currentSceneMinute, elapsedRealMin);
+  }
+  // Only re-apply colors; don't touch text content
+  for (const name of VITAL_EPISODIC) {
+    const raw = currentVitals[name];
+    if (!raw) continue;
+    const cls = stalenessClass(vitalAgeMin(raw));
+    const els = document.querySelectorAll(`[data-vital="${name}"]`);
+    for (const el of els) {
+      el.classList.remove('vital-stale-warn', 'vital-stale-bad');
+      if (cls) el.classList.add(cls);
+    }
+  }
+}
+
+function resetVitals() {
+  currentVitals = null;
+  currentSceneMinute = 0;
+  for (const name of VITAL_FIELDS) {
+    for (const el of document.querySelectorAll(`[data-vital="${name}"]`)) {
+      el.textContent = '\u2014\u2014';
+      el.classList.remove('vital-stale-warn', 'vital-stale-bad');
+    }
+    for (const sEl of document.querySelectorAll(`[data-vital-stamp="${name}"]`)) {
+      sEl.textContent = '';
+    }
+  }
+  vitalsPanel.classList.remove('open');
+  vitalsExpand.classList.remove('open');
+  vitalsPanel.setAttribute('aria-hidden', 'true');
+}
+
+vitalsExpand.addEventListener('click', () => {
+  const willOpen = !vitalsPanel.classList.contains('open');
+  vitalsPanel.classList.toggle('open', willOpen);
+  vitalsExpand.classList.toggle('open', willOpen);
+  vitalsPanel.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+});
+
+// Tick staleness every 5s while the page is alive
+stalenessInterval = setInterval(tickStaleness, 5000);

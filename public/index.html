@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -97,6 +97,38 @@
       <span id="scene-clock" aria-label="Scene elapsed time"></span>
       <button id="crew-btn" title="View crew">CREW</button>
       <button id="end-btn" title="End current scenario">END SCENARIO</button>
+    </div>
+
+    <!-- Vitals monitor strip — LIFEPAK-style. Sits below header on all viewports. -->
+    <div id="vitals-bar" aria-label="Patient vitals monitor">
+      <div class="vital-cell vital-hr">
+        <div class="vital-label">HR</div>
+        <div class="vital-value" data-vital="HR">&mdash;&mdash;</div>
+      </div>
+      <div class="vital-cell vital-bp">
+        <div class="vital-label">BP</div>
+        <div class="vital-value" data-vital="BP">&mdash;&mdash;</div>
+        <div class="vital-stamp" data-vital-stamp="BP"></div>
+      </div>
+      <div class="vital-cell vital-spo2">
+        <div class="vital-label">SpO<sub>2</sub></div>
+        <div class="vital-value" data-vital="SpO2">&mdash;&mdash;</div>
+      </div>
+      <div class="vital-cell vital-etco2">
+        <div class="vital-label">EtCO<sub>2</sub></div>
+        <div class="vital-value" data-vital="ETCO2">&mdash;&mdash;</div>
+      </div>
+      <button id="vitals-expand" title="Show all vitals" aria-label="Expand vitals">&#x25BE;</button>
+    </div>
+
+    <!-- Expanded vitals panel — toggled by the chevron in #vitals-bar -->
+    <div id="vitals-panel" aria-hidden="true">
+      <div class="vital-row"><span class="vital-row-label">RR</span><span class="vital-row-value" data-vital="RR">&mdash;</span></div>
+      <div class="vital-row"><span class="vital-row-label">Rhythm</span><span class="vital-row-value" data-vital="Rhythm">&mdash;</span></div>
+      <div class="vital-row"><span class="vital-row-label">Temp</span><span class="vital-row-value" data-vital="Temp">&mdash;</span><span class="vital-row-stamp" data-vital-stamp="Temp"></span></div>
+      <div class="vital-row"><span class="vital-row-label">Glucose</span><span class="vital-row-value" data-vital="Glucose">&mdash;</span><span class="vital-row-stamp" data-vital-stamp="Glucose"></span></div>
+      <div class="vital-row"><span class="vital-row-label">GCS</span><span class="vital-row-value" data-vital="GCS">&mdash;</span></div>
+      <div class="vital-row"><span class="vital-row-label">Pain</span><span class="vital-row-value" data-vital="Pain">&mdash;</span></div>
     </div>
 
     <!-- Dispatch incoming animation overlay -->

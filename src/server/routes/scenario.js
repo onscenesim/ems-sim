@@ -77,6 +77,8 @@ router.post('/new', async (req, res) => {
       scenarios_remaining: tier === 'free' ? Math.max(0, FREE_DAILY_LIMIT - getFreeUsageCount(ip)) : null,
       reply:               result.reply,
       rolls:               result.rolls || [],
+      vitals:              result.vitals || null,
+      scene_minute:        session.sceneMinute,
       closed:              result.closed,
     });
   } catch (err) {
@@ -104,6 +106,7 @@ router.post('/:id/turn', async (req, res) => {
     return res.json({
       reply:          result.reply,
       rolls:          result.rolls || [],
+      vitals:         result.vitals || null,
       closed:         result.closed,
       scene_minute:   session.sceneMinute,
       decompensating: session.seed.decompensation_clock !== null &&

@@ -26,6 +26,66 @@ function isDebriefTrigger(text) {
   return DEBRIEF_TRIGGERS.some(t => lower.includes(t));
 }
 
+// Numeric fields in the VITALS tag (everything else is treated as a string token)
+const VITALS_NUMERIC = new Set(['HR', 'SpO2', 'ETCO2', 'RR', 'GCS', 'Pain', 'Glucose']);
+
+/**
+ * Convert "T+M:SS" → float minutes (e.g. "T+4:30" → 4.5). Returns null if malformed.
+ */
+function timestampToMinutes(t) {
+  const m = String(t).match(/^T\+(\d+):(\d{2})$/);
+  if (!m) return null;
+  return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+}
+
+/**
+ * Extract the trailing [VITALS: ...] tag from Claude's reply.
+ * Returns { cleanedReply, vitals }. If no tag is found, vitals is null and
+ * cleanedReply equals the input.
+ *
+ * Vitals object shape:
+ *   continuous fields:  { HR: 110, SpO2: 94, Rhythm: 'sinus', ... }
+ *   episodic w/ ts:     { BP: { value: '92/60', t: 'T+4:20', tMin: 4.33 }, ... }
+ */
+function parseVitalsTag(reply) {
+  const re = /\s*\[VITALS:\s*([^\]]+)\]\s*$/i;
+  const m = reply.match(re);
+  if (!m) return { cleanedReply: reply, vitals: null };
+
+  const cleanedReply = reply.replace(re, '').trimEnd();
+  const inner = m[1].trim();
+  const vitals = {};
+
+  for (const tok of inner.split(/\s+/)) {
+    const eqIdx = tok.indexOf('=');
+    if (eqIdx < 1) continue;
+    const key = tok.slice(0, eqIdx);
+    let rawValue = tok.slice(eqIdx + 1);
+
+    // Optional "@T+M:SS" timestamp suffix on episodic vitals (BP, Temp, Glucose)
+    let timestamp = null;
+    const atIdx = rawValue.indexOf('@T+');
+    if (atIdx >= 0) {
+      timestamp = rawValue.slice(atIdx + 1);
+      rawValue = rawValue.slice(0, atIdx);
+    }
+
+    let parsedValue = rawValue;
+    if (VITALS_NUMERIC.has(key)) {
+      const n = Number(rawValue);
+      parsedValue = Number.isFinite(n) ? n : rawValue;
+    }
+
+    if (timestamp) {
+      vitals[key] = { value: parsedValue, t: timestamp, tMin: timestampToMinutes(timestamp) };
+    } else {
+      vitals[key] = parsedValue;
+    }
+  }
+
+  return { cleanedReply, vitals };
+}
+
 /**
  * Build context flags from the current seed for context-aware DC selection.
  * Flags are static for the scenario — a future version could update these
@@ -51,6 +111,7 @@ class Session {
     this.sceneMinute = 0;
     this.closed = false;
     this.contextFlags = buildContextFlags(seed);
+    this.lastVitals = null;       // most-recent parsed [VITALS:] tag, or null if none yet
   }
 
   /**
@@ -100,9 +161,15 @@ class Session {
 
     this.messages.push({ role: 'user', content: messageText });
 
-    const reply = await sendTurn(this.systemPrompt, this.messages);
+    const rawReply = await sendTurn(this.systemPrompt, this.messages);
 
-    this.messages.push({ role: 'assistant', content: reply });
+    // Keep the raw reply (with [VITALS:] tag) in Claude's message history so it
+    // remembers what it last reported. Strip the tag from the user-facing copy.
+    this.messages.push({ role: 'assistant', content: rawReply });
+
+    const { cleanedReply, vitals } = parseVitalsTag(rawReply);
+    if (vitals) this.lastVitals = vitals;
+    const reply = cleanedReply;
 
     // Advance scene clock — crude estimate, Claude tracks it precisely internally
     this.sceneMinute += 2;
@@ -117,10 +184,10 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls, closed: true };
+      return { reply, rolls, vitals: this.lastVitals, closed: true };
     }
 
-    return { reply, rolls, closed: false };
+    return { reply, rolls, vitals: this.lastVitals, closed: false };
   }
 
   /**

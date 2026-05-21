@@ -1174,3 +1174,168 @@ html, body {
   .crew-name { font-size: 13px; }
   .crew-notes, .crew-triggers { font-size: 10px; }
 }
+
+
+/* ── Vitals monitor strip (LIFEPAK-style) ─────────────────────── */
+
+#vitals-bar {
+  flex-shrink: 0;
+  display: flex;
+  background: #000;
+  border-bottom: 2px solid #333;
+  padding: 4px 8px;
+  gap: 1px;
+  position: relative;
+  font-family: var(--font-mono);
+  align-items: stretch;
+}
+
+.vital-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  background: #000;
+  padding: 4px 6px 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.vital-label {
+  font-family: var(--font-block);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: #888;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.vital-label sub {
+  font-size: 7px;
+  vertical-align: baseline;
+}
+
+.vital-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: bold;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.vital-hr    .vital-value { color: #2ee76a; }   /* green */
+.vital-bp    .vital-value { color: #ffffff; }   /* white */
+.vital-spo2  .vital-value { color: #4ab8ff; }   /* blue */
+.vital-etco2 .vital-value { color: #ff9530; }   /* orange */
+
+/* Staleness states applied to .vital-bp .vital-value and to .vital-row-value */
+.vital-stale-warn { color: #ffd54a !important; }   /* 5–10 min old */
+.vital-stale-bad  { color: #ff4040 !important; }   /* >10 min old */
+
+.vital-stamp {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: #666;
+  line-height: 1;
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+}
+
+#vitals-expand {
+  flex-shrink: 0;
+  background: #000;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 6px;
+  align-self: stretch;
+  line-height: 1;
+  transition: color 0.1s, transform 0.2s;
+}
+#vitals-expand:hover { color: #fff; }
+#vitals-expand.open  { transform: rotate(180deg); color: #fff; }
+
+/* Expanded panel — slides down below the strip */
+#vitals-panel {
+  flex-shrink: 0;
+  background: #000;
+  color: #ccc;
+  border-bottom: 2px solid #333;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 0 12px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, padding 0.25s ease;
+}
+#vitals-panel.open {
+  max-height: 220px;
+  padding: 8px 12px 10px;
+}
+
+.vital-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px dashed #1a1a1a;
+}
+.vital-row:last-child { border-bottom: none; }
+
+.vital-row-label {
+  flex: 0 0 70px;
+  color: #888;
+  font-family: var(--font-block);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vital-row-value {
+  flex: 1 1 auto;
+  color: #eee;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.vital-row-stamp {
+  font-size: 9px;
+  color: #666;
+  font-family: var(--font-mono);
+}
+
+/* Mobile sizing — same layout, just tighter */
+@media (max-width: 600px) {
+  #vitals-bar {
+    padding: 3px 4px;
+    gap: 0;
+  }
+  .vital-cell {
+    padding: 3px 2px 4px;
+  }
+  .vital-label {
+    font-size: 8px;
+    margin-bottom: 1px;
+  }
+  .vital-value {
+    font-size: 17px;
+  }
+  .vital-stamp {
+    font-size: 7px;
+    margin-top: 1px;
+  }
+  #vitals-expand {
+    font-size: 12px;
+    padding: 0 4px;
+  }
+  #vitals-panel.open {
+    max-height: 200px;
+    padding: 6px 10px 8px;
+  }
+  .vital-row-label { flex: 0 0 60px; font-size: 8px; }
+  .vital-row-value { font-size: 12px; }
+}

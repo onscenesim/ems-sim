@@ -272,7 +272,33 @@ function assembleSeedBlock(seed) {
   lines.push('');
   lines.push('13. POST-HANDOFF BOUNDARY: Once the patient has been physically delivered to the receiving facility and the ED or hospital team has taken over at bedside, do NOT accept further clinical interventions from the user. Respond as the charge nurse or receiving physician: something like "We have it from here — thanks for the report." If the user continues attempting clinical orders, gently redirect: "The patient is in ED hands now. Do you want to clear and run a debrief?" This boundary applies the moment the receiving team physically takes over — not just when transport begins. Packaging and loading do NOT trigger this boundary; arrival at the facility and bedside handoff do.');
   lines.push('');
-  lines.push('=== END SEED ===');
+  lines.push('14. VITALS PROTOCOL — MANDATORY MACHINE-READABLE TAG:');
+  lines.push('  Every assistant reply MUST end with a single line in this exact format:');
+  lines.push('    [VITALS: HR=110 SpO2=94 ETCO2=38 RR=22 Rhythm=sinus BP=92/60@T+4:20 Temp=98.6@T+2:00 GCS=14 Pain=7]');
+  lines.push('  Rules:');
+  lines.push('  (a) The tag is the LAST thing in the reply. Nothing follows it.');
+  lines.push('  (b) Include ONLY fields whose equipment is currently in place on the patient OR which are user-assessable (GCS, Pain).');
+  lines.push('  (c) EQUIPMENT GATING — only emit a field after the user has placed that equipment in a previous turn:');
+  lines.push('      - HR + Rhythm     → cardiac monitor placed (4-lead or 12-lead)');
+  lines.push('      - SpO2            → pulse oximeter placed');
+  lines.push('      - BP              → NIBP cuff applied (manual or auto-cycle) AND a cycle has been taken');
+  lines.push('      - ETCO2 + RR      → capnography placed (inline ETT, nasal cannula ETCO2, or BVM adapter). RR can ALSO be reported if a manual respiratory count is performed.');
+  lines.push('      - Temp            → thermometer used (one-off measurement)');
+  lines.push('      - Glucose         → glucometer used');
+  lines.push('      - GCS, Pain       → always available (no equipment required); update when reassessed.');
+  lines.push('  (d) If equipment is NOT placed yet, OMIT that field entirely from the tag. Do not write "HR=--" or "HR=?".');
+  lines.push('  (e) CONTINUOUS vitals — HR, SpO2, ETCO2, RR-from-capno, Rhythm — update every turn while equipment remains placed. No timestamp.');
+  lines.push('  (f) EPISODIC vitals — BP, Temp, Glucose — each carries an "@T+M:SS" suffix indicating the scene-time when the measurement was taken (e.g. "BP=92/60@T+4:20"). The timestamp persists across turns until a new measurement happens. Use the current scene minute (track this internally — the server advances it ~2 min per turn).');
+  lines.push('  (g) BP CYCLE BEHAVIOR:');
+  lines.push('      - "cycle BP", "recheck BP", "manual BP", "another BP" → take one new BP measurement now. Update the BP timestamp.');
+  lines.push('      - "set NIBP to q5" / "every 5 minutes" / "auto-cycle q3" → from that turn forward, internally track the interval and update BP every N scene-minutes. Each auto-cycle gets a fresh timestamp.');
+  lines.push('      - If no fresh cycle has happened this turn, KEEP the previous BP value AND its original timestamp in the tag — staleness is rendered by the client.');
+  lines.push('  (h) Rhythm values (when monitor placed): sinus, sinus_tach, sinus_brad, AFib, AFlutter, SVT, VT, VF, asystole, PEA, paced, junctional, idioventricular, AV_block_1, AV_block_2_I, AV_block_2_II, AV_block_3. One word/token only, underscores for compound names.');
+  lines.push('  (i) Pain: 0-10. GCS: 3-15. SpO2: 0-100. ETCO2 in mmHg. Temp in °F. HR/RR in bpm/rpm. BP as systolic/diastolic.');
+  lines.push('  (j) If the user removes equipment (e.g., "pull the pulse-ox"), DROP that field from subsequent VITALS tags.');
+  lines.push('  (k) The VITALS tag is the ONLY structured tag you emit. Continue to narrate clinical findings in prose as usual — the tag is in ADDITION to your narrative, not a replacement for it. Do not invent other bracketed tags.');
+  lines.push('');
+  lines.push('=== END SEED ==='); 
 
   return lines.join('\n');
 }
