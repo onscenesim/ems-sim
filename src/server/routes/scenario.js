@@ -91,7 +91,14 @@ router.post('/:id/turn', async (req, res) => {
 
   try {
     const result = await session.send(message.trim());
-    return res.json({ reply: result.reply, rolls: result.rolls || [], closed: result.closed });
+    return res.json({
+      reply:          result.reply,
+      rolls:          result.rolls || [],
+      closed:         result.closed,
+      scene_minute:   session.sceneMinute,
+      decompensating: session.seed.decompensation_clock !== null &&
+                      session.sceneMinute >= session.seed.decompensation_clock,
+    });
   } catch (err) {
     console.error('[scenario/turn]', err.message);
     return res.status(500).json({ error: 'api_error', message: err.message });

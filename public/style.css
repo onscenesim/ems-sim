@@ -321,6 +321,34 @@ html, body {
 #end-btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 #end-btn:disabled { opacity: 0.35; cursor: default; }
 
+/* ── Scene clock ──────────────────────────────────────────────────────────── */
+
+#scene-clock {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #666;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  min-width: 46px;
+  text-align: right;
+  visibility: hidden;           /* occupies space but invisible until scenario starts */
+}
+
+#scene-clock.active {
+  visibility: visible;
+}
+
+#scene-clock.decompensating {
+  color: var(--red);
+  animation: clock-pulse 1.1s ease-in-out infinite;
+  font-weight: bold;
+}
+
+@keyframes clock-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
 #output {
   flex: 1;
   overflow-y: auto;
@@ -564,6 +592,11 @@ html, body {
     flex-shrink: 0;
     font-size: 9px;
     padding: 4px 8px;
+  }
+
+  #scene-clock {
+    font-size: 9px;
+    min-width: 36px;
   }
 
   /* End-of-scenario action buttons: stack vertically on small screens */

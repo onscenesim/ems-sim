@@ -24,6 +24,8 @@ let sessionId       = null;
 let isClosed        = false;
 let waitingDebrief  = false;
 let localTranscript = null;   // built client-side so export never hits the server
+let clockInterval   = null;   // setInterval handle for the scene clock
+let scenarioStartTime = null; // Date.now() when the current scenario started
 
 // ── Input history (↑ / ↓ arrow keys) ───────────────────────────────────
 
@@ -212,6 +214,18 @@ async function startScenario() {
 
     endBtn.disabled = false;
 
+    // Start scene clock
+    clearInterval(clockInterval);
+    scenarioStartTime = Date.now();
+    sceneClock.textContent = 'T+0:00';
+    sceneClock.className   = 'active';
+    clockInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - scenarioStartTime) / 1000);
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
+      sceneClock.textContent = `T+${m}:${String(s).padStart(2, '0')}`;
+    }, 1000);
+
     // Switch to terminal
     startScreen.style.display = 'none';
     terminal.style.display    = 'flex';
@@ -282,6 +296,9 @@ async function sendTurn(msg) {
   try {
     const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg });
 
+    // Trigger decompensation pulse on the scene clock if the server says the patient is going south
+    if (data.decompensating) sceneClock.classList.add('decompensating');
+
     // Animate each real single roll in sequence, then print all to the log
     for (const r of (data.rolls || [])) {
       if (!r.no_roll && !r.multi_roll) {
@@ -343,6 +360,8 @@ async function endCallAndDebrief() {
         await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
       }
     }
+    if (turnData.decompensating) sceneClock.classList.add('decompensating');
+
     for (const r of (turnData.rolls || [])) printRoll(r);
     printHr();
     printReply(turnData.reply);
@@ -399,6 +418,13 @@ function resetToStart() {
   localTranscript = null;
   output.innerHTML = '';
 
+  // Reset scene clock
+  clearInterval(clockInterval);
+  clockInterval     = null;
+  scenarioStartTime = null;
+  sceneClock.textContent = '';
+  sceneClock.className   = '';
+
   terminal.style.display    = 'none';
   startScreen.style.display = 'flex';
 
@@ -448,6 +474,7 @@ userInput.addEventListener('keydown', e => {
 
 const dispatchOverlay = document.getElementById('dispatch-overlay');
 const diceOverlay     = document.getElementById('dice-overlay');
+const sceneClock      = document.getElementById('scene-clock');
 const diceProcEl      = document.getElementById('dice-proc');
 const diceSvgEl       = document.getElementById('dice-svg');
 const diceNumberEl    = document.getElementById('dice-number');
