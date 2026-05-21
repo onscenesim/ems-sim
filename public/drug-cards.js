@@ -325,14 +325,41 @@ const DRUG_CARDS = [
     packaging: '2 mg/mL — 2 mL (4 mg); 4 mg ODT tablet',
   },
 
-  // ── Albuterol ────────────────────────────────────────────────────────
+  // ── Albuterol / DuoNeb ───────────────────────────────────────────────
   {
-    name: 'Albuterol',
-    synonyms: ['albuterol', 'duoneb', 'nebulizer treatment', 'neb treatment', 'breathing treatment'],
-    doses: [
-      { indication: 'Bronchospasm (asthma / COPD / anaphylaxis)', dose: '2.5 mg in 3 mL NS', route: 'Nebulizer (continuous or q20 min)', notes: 'MDI: 4–8 puffs via spacer; DuoNeb adds ipratropium 0.5 mg' },
+    name: 'Albuterol / DuoNeb',
+    synonyms: [
+      'albuterol', 'albuterol neb', 'continuous albuterol', 'salbutamol',
+      'duoneb', 'ipratropium', 'atrovent',
+      'neb treatment', 'breathing treatment',
     ],
-    packaging: '0.083% (2.5 mg/3 mL) unit-dose vials; MDI inhaler',
+    doses: [
+      {
+        indication: 'Bronchospasm — standard (asthma / COPD)',
+        dose: '2.5 mg albuterol in 3 mL NS',
+        route: 'Nebulizer — 6–8 L/min O₂',
+        notes: 'May repeat q20 min × 3. Back-to-back or continuous for severe attacks.',
+      },
+      {
+        indication: 'DuoNeb — moderate to severe bronchospasm',
+        dose: 'Albuterol 2.5 mg + Ipratropium 0.5 mg',
+        route: 'Nebulizer',
+        notes: 'Combo unit-dose vial — albuterol for immediate bronchodilation, ipratropium (anticholinergic) for sustained effect. Preferred for COPD exacerbation.',
+      },
+      {
+        indication: 'Continuous nebulization — severe / near-fatal asthma',
+        dose: '10–20 mg/hr (4–8 vials/hr)',
+        route: 'Continuous nebulizer',
+        notes: 'Use in-line with BVM or CPAP if needed. Silent chest = near-complete obstruction — consider epi IM if continuous neb not breaking it.',
+      },
+      {
+        indication: 'MDI (metered-dose inhaler)',
+        dose: '4–8 puffs',
+        route: 'MDI with spacer',
+        notes: 'Each puff = 90 mcg. Spacer is required for effective delivery.',
+      },
+    ],
+    packaging: 'Albuterol: 0.083% (2.5 mg/3 mL) unit-dose vials\nDuoNeb: albuterol 2.5 mg + ipratropium 0.5 mg/3 mL unit-dose\nMDI: 90 mcg/actuation',
   },
 
   // ── Glucagon ────────────────────────────────────────────────────────
