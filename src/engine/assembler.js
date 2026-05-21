@@ -305,44 +305,83 @@ function assembleSeedBlock(seed) {
 }
 
 /**
- * Build a compact scenario log summary for the debrief API call.
+ * Build a scenario context for the debrief API call.
+ * Includes both the structured event log and the full conversation transcript
+ * so the debrief model can evaluate performance from actual evidence.
+ *
+ * @param {object}  seed      Scenario seed
+ * @param {Array}   events    Logged events (procedure rolls, narrative snippets)
+ * @param {Array}   messages  Full conversation history [{ role, content }]
  */
-function buildDebriefContext(seed, events) {
+function buildDebriefContext(seed, events, messages = []) {
   const lines = [];
   lines.push('=== SCENARIO LOG FOR DEBRIEF ===');
   lines.push(`Scenario ID: ${seed.scenario_id}`);
   lines.push(`Category: ${seed.category} | Difficulty: ${seed.difficulty}`);
   lines.push(`Presentation: ${seed.presentation}`);
-  if (seed.true_diagnosis) lines.push(`True diagnosis: ${seed.true_diagnosis}`);
+  if (seed.true_diagnosis) lines.push(`True diagnosis (curveball reveal): ${seed.true_diagnosis}`);
   if (seed.special_flags) lines.push(`Special flags: ${seed.special_flags}`);
   lines.push(`Patient: ${seed.patient_age}yo ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
   lines.push(`Trajectory: ${seed.trajectory} | Decompensation clock: ${seed.decompensation_clock || 'N/A'} min`);
   lines.push(`Complication: ${seed.complication_type}`);
   lines.push(`Region: ${seed.region} | Provider: ${seed.provider_level}`);
-  lines.push(`Partner: ${seed.crew_partner} | Captain: ${seed.crew_captain}`);
   lines.push('');
-  lines.push('--- EVENT TIMELINE ---');
-  for (const ev of events) {
-    const parts = [`T+${ev.scene_minute}min`, `[${ev.event_type}]`];
-    if (ev.procedure_id) parts.push(ev.procedure_id);
-    if (ev.roll !== null && ev.roll !== undefined) parts.push(`d20=${ev.roll} vs DC${ev.dc} → ${ev.outcome}`);
-    if (ev.detail) parts.push(`| ${ev.detail}`);
-    lines.push(parts.join(' '));
+  lines.push('--- PROCEDURE ROLL LOG ---');
+  const procEvents = events.filter(e => e.event_type === 'procedure');
+  if (procEvents.length === 0) {
+    lines.push('(no procedure rolls logged)');
+  } else {
+    for (const ev of procEvents) {
+      const parts = [`T+${ev.scene_minute}min`, ev.procedure_id || ''];
+      if (ev.roll !== null && ev.roll !== undefined) parts.push(`d20=${ev.roll} vs DC${ev.dc} → ${ev.outcome}`);
+      else if (ev.outcome) parts.push(`→ ${ev.outcome}`);
+      lines.push(parts.join(' '));
+    }
   }
   lines.push('');
-  lines.push('--- DEBRIEF FLAGS ---');
-  const amsCategories = ['toxicology', 'medical', 'neuro', 'behavioral', 'pediatric'];
-  const hasBGL = events.some(e => e.procedure_id === 'glucometry' || e.procedure_id === 'vitals_monitor' || (e.detail && /glucose|BGL|glucomet|finger.?stick/i.test(e.detail)));
-  if (!hasBGL && amsCategories.includes((seed.category || '').toLowerCase())) {
-    lines.push('BGL_NOT_CHECKED: Blood glucose was never checked. In this category, hypoglycemia is always on the differential. Flag this as a missed critical assessment in debrief.');
+
+  // ── BGL flag: only fire when presentation actually involves AMS, altered
+  // cognition, seizure, syncope, weakness, or a tox/diabetic picture.
+  // Do NOT fire for patients with normal mentation and a clear non-glucose dx.
+  const bglIndicatedRE = /altered|mental.?status|confus|agitat|ams|disorient|unconsci|unrespons|seiz|syncop|collaps|letharg|obtund|delirium|overdose|intoxicat|diabet|hypoglyc|hyperglycemi|dka|hhs|glucose|blood.?sugar|weak(?:ness)?|dizzi/i;
+  const bglAlwaysCategories = ['toxicology'];
+  const hasBGL = events.some(e =>
+    e.procedure_id === 'glucometry' ||
+    (e.detail && /glucose|BGL|glucomet|finger.?stick/i.test(e.detail))
+  ) || messages.some(m =>
+    /blood.?glucose|blood.?sugar|finger.?stick|glucomet|check.*BGL|BGL.*check|glucose.*check|dextrose|D50|D10|oral glucose/i.test(m.content || '')
+  );
+  const bglIndicated = bglAlwaysCategories.includes(seed.category) ||
+    bglIndicatedRE.test(seed.presentation || '');
+  lines.push('--- FLAGS ---');
+  if (!hasBGL && bglIndicated) {
+    lines.push('BGL_NOT_CHECKED: Glucose was not checked despite a presentation where hypoglycemia is on the differential (AMS, seizure, syncope, weakness, or tox/diabetic context).');
   }
   lines.push('');
+
+  // ── Full conversation transcript ─────────────────────────────────────────
+  if (messages.length > 0) {
+    lines.push('--- CONVERSATION TRANSCRIPT ---');
+    lines.push('Use this to evaluate what the provider actually said and did.');
+    for (const msg of messages) {
+      const role = msg.role === 'user' ? 'PROVIDER' : 'SCENE';
+      // Strip machine tags that are irrelevant to clinical evaluation
+      const text = (msg.content || '')
+        .replace(/\[VITALS:[^\]]*\]/gi, '')
+        .replace(/\[SYSTEM ROLL:[^\]]*\]/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+      if (!text) continue;
+      const truncated = text.length > 700 ? text.slice(0, 700) + ' [...]' : text;
+      lines.push(`[${role}] ${truncated}`);
+    }
+    lines.push('');
+  }
+
   lines.push('--- DEBRIEF CONSTRAINTS ---');
-  lines.push('You have access ONLY to the structured event log above — not the full conversation transcript.');
-  lines.push('NEVER fabricate specific facility or hospital names. Use "the receiving facility" if the destination is not in this log.');
-  lines.push('NEVER invent medication names, dosages, or procedures not present in this log.');
-  lines.push('NEVER assign specific timestamps (e.g. T+12) to events that are not in this log — use vague language ("early in the call", "during transport") instead.');
-  lines.push('If an event is in this log, reference it precisely. If it is not, acknowledge uncertainty rather than guessing.');
+  lines.push('Base all critique on what is actually in the transcript above — do not reference events not evidenced by the record.');
+  lines.push('NEVER fabricate specific facility or hospital names. Use "the receiving facility."');
+  lines.push('NEVER invent medication names, dosages, or procedures not present in the transcript.');
   lines.push('=== END LOG ===');
   return lines.join('\n');
 }

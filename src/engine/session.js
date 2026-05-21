@@ -198,7 +198,7 @@ class Session {
    * Request the full debrief. Call after session is closed.
    */
   async debrief() {
-    const context = buildDebriefContext(this.seed, this.seed.events);
+    const context = buildDebriefContext(this.seed, this.seed.events, this.messages);
     const text = await sendDebrief(context, this.seed.provider_level);
     updateRunDebrief(this.sessionId, text);
     this.debriefText = text;   // kept for transcript export
