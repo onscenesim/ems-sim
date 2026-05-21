@@ -104,14 +104,31 @@ const DRUG_CARDS = [
     packaging: '40 mg/mL — mix 400 mg in 250 mL NS → 1,600 mcg/mL',
   },
 
-  // ── Norepinephrine ────────────────────────────────────────────────────
+  // ── Norepinephrine (Levophed) ─────────────────────────────────────────
   {
-    name: 'Norepinephrine',
-    synonyms: ['norepinephrine', 'levophed'],
+    name: 'Norepinephrine (Levophed)',
+    synonyms: ['norepinephrine', 'levophed', 'norepi', 'norepinephrine drip', 'levophed drip', 'norepi drip'],
     doses: [
-      { indication: 'Septic / distributive shock', dose: '0.1–0.5 mcg/kg/min', route: 'IV infusion', notes: 'First-line vasopressor for septic shock; titrate to MAP >65' },
+      {
+        indication: 'Septic / distributive shock',
+        dose: '0.1–0.5 mcg/kg/min — titrate to MAP >65',
+        route: 'IV infusion (central preferred; peripheral acceptable short-term)',
+        notes: 'First-line vasopressor for septic shock. Start 0.1–0.2 mcg/kg/min, up-titrate q5–10 min. Potent vasoconstrictor — monitor for limb ischemia on peripheral line.',
+      },
+      {
+        indication: 'Neurogenic shock (spinal cord injury)',
+        dose: '0.1–0.3 mcg/kg/min',
+        route: 'IV infusion',
+        notes: 'Provides both vasopressor and some inotropic effect. Target MAP 85–90 for cord perfusion per many protocols.',
+      },
+      {
+        indication: 'Post-ROSC hypotension',
+        dose: '0.1–0.5 mcg/kg/min',
+        route: 'IV infusion',
+        notes: 'Preferred vasopressor post-cardiac arrest. Avoid dopamine if tachyarrhythmia present.',
+      },
     ],
-    packaging: '1 mg/mL — mix 4 mg in 250 mL D5W → 16 mcg/mL',
+    packaging: '1 mg/mL — standard mix: 4 mg in 250 mL D5W or NS → 16 mcg/mL\nAlternate: 8 mg in 250 mL → 32 mcg/mL (fluid-restricted patient)',
   },
 
   // ── Phenylephrine ────────────────────────────────────────────────────
