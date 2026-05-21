@@ -261,6 +261,7 @@ html, body {
   flex-direction: column;
   height: 100vh;
   position: relative;
+  overflow: hidden;   /* clips translated-offscreen side panels (drug / crew) */
 }
 
 #header {
