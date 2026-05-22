@@ -308,6 +308,10 @@ function rollScenario(opts = {}) {
     crew_captain: crew.captain,
     crew_transport_driver: crew.captain || crew.partner,
     crew_in_back: crew.captain ? [crew.partner] : [],
+    backup_present_on_arrival:
+      category === 'arrest' ? Math.random() < 0.40 :
+      (presentation.special_flags && /two_patients|mci/i.test(presentation.special_flags)) ? true :
+      Math.random() < 0.08,
     region: region_id,
     provider_level,
     difficulty,

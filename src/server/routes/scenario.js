@@ -172,6 +172,8 @@ router.post('/new', async (req, res) => {
       reply:               result.reply,
       rolls:               result.rolls || [],
       vitals:              result.vitals || null,
+      backup:              result.backup     || null,
+      crewStatus:          result.crewStatus || null,
       scene_minute:        session.sceneMinute,
       closed:              result.closed,
       multi_patient:       multiPatient,
@@ -214,7 +216,8 @@ router.post('/:id/turn', async (req, res) => {
       departing:      result.enRoute  || false,
       rolls:          result.rolls || [],
       vitals:         result.vitals || null,
-      backup:         result.backup  || null,
+      backup:         result.backup     || null,
+      crewStatus:     result.crewStatus || null,
       closed:         result.closed,
       scene_minute:   session.sceneMinute,
       decompensating: session.seed.decompensation_clock !== null &&

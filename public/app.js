@@ -283,6 +283,10 @@ async function startScenario() {
     if (data.crew) {
       populateCrewPanel(data.crew);
       showCrewPanel();
+      applyCrewStatus({
+        partner: 'on_scene',
+        captain: data.crew.captain ? 'on_scene' : 'not_on_scene',
+      });
     }
 
     // Initial vitals (likely empty/sparse until equipment is placed)
@@ -293,7 +297,8 @@ async function startScenario() {
       setMultiPatientVitalsNotice(false);
       applyVitals(data.vitals || null);
     }
-    applyBackupStatus({ status: 'not_called', eta: null });
+    applyBackupStatus(data.backup || { status: 'not_called', eta: null });
+    if (data.crewStatus) applyCrewStatus(data.crewStatus);
 
     setLoading(false);
     userInput.focus();
@@ -362,6 +367,7 @@ async function sendTurn(msg) {
     if (typeof data.scene_minute === 'number') currentSceneMinute = data.scene_minute;
     if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
     if (data.backup) applyBackupStatus(data.backup);
+    if (data.crewStatus) applyCrewStatus(data.crewStatus);
 
     // Save turn client-side for transcript export
     if (localTranscript) {
@@ -574,6 +580,7 @@ function resetToStart() {
   hideCrewPanel();
   resetVitals();
   applyBackupStatus({ status: 'not_called', eta: null });
+  resetCrewStatus();
 
   setHeaderCollapsed(false);
   terminal.style.display    = 'none';
@@ -730,6 +737,14 @@ const ROLE_LABEL = {
 function buildCrewMemberCard(member) {
   const wrap = document.createElement('div');
   wrap.className = 'crew-member';
+
+  // Status badge (live-updated by applyCrewStatus)
+  const statusBadge = document.createElement('div');
+  const roleKey = (member.role && member.role.startsWith('captain')) ? 'captain' : 'partner';
+  statusBadge.id = 'crew-card-status-' + roleKey;
+  statusBadge.className = 'crew-status-badge crew-status-on-scene';
+  statusBadge.textContent = '● ON SCENE';
+  wrap.appendChild(statusBadge);
 
   const role = document.createElement('div');
   role.className = 'crew-role-tag';
@@ -1270,6 +1285,55 @@ function applyBackupStatus(backup) {
   badge.textContent = backup.eta ? `${label} ~${backup.eta}m` : label;
   badge.style.display = '';
   badge.className = 'badge badge-backup badge-backup-' + backup.status.replace('_', '-');
+}
+
+// ── Crew status ──────────────────────────────────────────────────────────────
+const CREW_STATUS_LABELS = {
+  on_scene:     'On Scene',
+  driving:      'Driving',
+  in_back:      'In the Back',
+  not_on_scene: 'Not on Scene',
+  en_route:     'En Route',
+};
+let currentCrewStatus = { partner: null, captain: null };
+
+function applyCrewStatus(status) {
+  if (status) {
+    if (status.partner != null) currentCrewStatus.partner = status.partner;
+    if (status.captain != null) currentCrewStatus.captain = status.captain;
+  }
+  for (const role of ['partner', 'captain']) {
+    const val = currentCrewStatus[role];
+    const label = CREW_STATUS_LABELS[val] || (val ? val.replace(/_/g, ' ') : '');
+    const cssKey = val ? val.replace(/_/g, '-') : 'on-scene';
+    // Header chip
+    const chipEl = document.querySelector(`[data-crew-role="${role}"]`);
+    if (chipEl) {
+      if (val && val !== 'not_on_scene') {
+        const prefix = role === 'partner' ? 'P: ' : 'C: ';
+        chipEl.textContent = prefix + label.toUpperCase();
+        chipEl.className = 'badge badge-crew badge-crew-' + cssKey;
+        chipEl.style.display = '';
+      } else {
+        chipEl.style.display = 'none';
+      }
+    }
+    // Crew-panel card badge
+    const cardBadge = document.getElementById('crew-card-status-' + role);
+    if (cardBadge) {
+      cardBadge.textContent = '● ' + label.toUpperCase();
+      cardBadge.className = 'crew-status-badge crew-status-' + cssKey;
+    }
+  }
+}
+
+function resetCrewStatus() {
+  currentCrewStatus = { partner: null, captain: null };
+  document.querySelectorAll('[data-crew-role]').forEach(el => { el.style.display = 'none'; });
+  document.querySelectorAll('.crew-status-badge').forEach(el => {
+    el.textContent = '';
+    el.className = 'crew-status-badge';
+  });
 }
 
 function resetVitals() {

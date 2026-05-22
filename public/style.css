@@ -1975,3 +1975,33 @@ html, body {
   display: block;
   color: rgba(255, 195, 0, 0.8);
 }
+
+/* ── Crew status badges (header chips) ─────────────────────────────────── */
+.badge-crew {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+.badge-crew-on-scene     { background: #0f2d0f; color: #4aff4a; border: 1px solid #2a6a2a; }
+.badge-crew-in-back      { background: #0a2525; color: #4affce; border: 1px solid #1a5a5a; }
+.badge-crew-driving      { background: #2a2000; color: #ffd700; border: 1px solid #554000; }
+.badge-crew-en-route     { background: #2a1500; color: #ff8c00; border: 1px solid #553000; }
+.badge-crew-not-on-scene { background: #1a1a1a; color: #555;    border: 1px solid #333;    }
+
+/* ── Crew panel card status badge ──────────────────────────────────────── */
+.crew-status-badge {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 3px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.crew-status-on-scene     { background: #0f2d0f; color: #4aff4a; }
+.crew-status-in-back      { background: #0a2525; color: #4affce; }
+.crew-status-driving      { background: #2a2000; color: #ffd700; }
+.crew-status-en-route     { background: #2a1500; color: #ff8c00; }
+.crew-status-not-on-scene { background: #1a1a1a; color: #555;    }

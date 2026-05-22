@@ -131,6 +131,29 @@ function parseBackupTag(reply) {
   };
 }
 
+/**
+ * Parse [CREW_STATUS: partner=X captain=Y] tag from the reply.
+ * Returns { cleanedReply, crewStatus } where crewStatus is null or { partner, captain }.
+ * Partner values: on_scene, driving, in_back
+ * Captain values: not_on_scene, en_route, on_scene, driving, in_back
+ */
+function parseCrewStatusTag(reply) {
+  const re = /\s*\[CREW_STATUS:\s*([^\]]+)\]\s*/gi;
+  const matches = [...reply.matchAll(re)];
+  if (matches.length === 0) return { cleanedReply: reply, crewStatus: null };
+  const cleanedReply = reply.replace(re, ' ').replace(/\s{2,}/g, ' ').trim();
+  const inner = matches[matches.length - 1][1].trim();
+  const partnerMatch = inner.match(/partner=(\w+)/i);
+  const captainMatch = inner.match(/captain=(\w+)/i);
+  return {
+    cleanedReply,
+    crewStatus: {
+      partner: partnerMatch ? partnerMatch[1].toLowerCase() : null,
+      captain: captainMatch ? captainMatch[1].toLowerCase() : null,
+    },
+  };
+}
+
 
 
 /**
@@ -161,6 +184,7 @@ class Session {
     this.lastVitals = null;       // most-recent parsed [VITALS:] tag, or null if none yet
     this.turns = [];
     this.backupStatus = null; // { status, eta } from [BACKUP:] tag
+    this.crewStatus = null;   // { partner, captain } from [CREW_STATUS:] tag
   }
 
   /**
@@ -226,8 +250,10 @@ class Session {
     const { cleanedReply: vitalsClean, vitals } = parseVitalsTag(rawReply);
     if (vitals) this.lastVitals = vitals;
     const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);
-    const { cleanedReply: reply, loading, enRoute } = parseEventTags(backupClean);
+    const { cleanedReply: crewClean, crewStatus } = parseCrewStatusTag(backupClean);
+    const { cleanedReply: reply, loading, enRoute } = parseEventTags(crewClean);
     if (backup) this.backupStatus = backup;
+    if (crewStatus) this.crewStatus = crewStatus;
 
     // Advance scene clock — crude estimate, Claude tracks it precisely internally
     this.sceneMinute += 2;
@@ -244,10 +270,10 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls, vitals: this.lastVitals, backup: this.backupStatus, closed: true };
+      return { reply, rolls, vitals: this.lastVitals, backup: this.backupStatus, crewStatus: this.crewStatus, closed: true };
     }
 
-    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, backup: this.backupStatus, closed: false };
+    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, backup: this.backupStatus, crewStatus: this.crewStatus, closed: false };
   }
 
   /**
