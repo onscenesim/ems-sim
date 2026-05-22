@@ -372,8 +372,28 @@ async function sendTurn(msg) {
 // ── Sign-off animation — plays when debrief generation starts ────────────────
 
 function showSignoffAnimation() {
-  const overlay = document.getElementById('signoff-overlay');
-  if (!overlay) return;
+  let overlay = document.getElementById('signoff-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'signoff-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = `
+      <div id="signoff-header">TRANSMISSION ENDED</div>
+      <svg id="signoff-svg" viewBox="0 0 100 90" xmlns="http://www.w3.org/2000/svg">
+        <line x1="26" y1="83" x2="74" y2="83" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="26" y1="83" x2="50" y2="54" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="74" y1="83" x2="50" y2="54" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="50" y1="54" x2="50" y2="36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="41" y1="47" x2="59" y2="47" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="50" y1="36" x2="50" y2="31" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="50" cy="29" r="2.5" fill="currentColor"/>
+        <path class="signoff-arc signoff-arc-3" d="M 23,29 A 27,27 0 0,1 77,29"/>
+        <path class="signoff-arc signoff-arc-2" d="M 32,29 A 18,18 0 0,1 68,29"/>
+        <path class="signoff-arc signoff-arc-1" d="M 40,29 A 10,10 0 0,1 60,29"/>
+      </svg>
+      <div id="signoff-label">CLEAR</div>`;
+    document.body.appendChild(overlay);
+  }
   overlay.classList.remove('fade-out');
   overlay.classList.add('visible');
   setTimeout(() => {
