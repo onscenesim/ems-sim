@@ -27,6 +27,8 @@ const splashEl     = document.getElementById('splash');
 let sessionId       = null;
 let isClosed        = false;
 let waitingDebrief  = false;
+let hasPlayedLoading = false;
+let hasPlayedDepart  = false;
 let localTranscript = null;   // built client-side so export never hits the server
 let clockInterval   = null;   // setInterval handle for the scene clock
 let scenarioStartTime = null; // Date.now() when the current scenario started
@@ -338,6 +340,17 @@ async function sendTurn(msg) {
     }
     for (const r of (data.rolls || [])) printRoll(r);
     printHr();
+
+    // Contextual animations — play before reply appears, one-shot per scenario
+    if (!hasPlayedLoading && /(load(ed|ing)?|wheel(ed|ing)?|mov(ed|ing)|brought?|slid|carr(ied|ying)|push(ed|ing)).{0,50}(truck|ambulance|unit|rig)|(onto|into).{0,30}(truck|ambulance|unit|rig)/i.test(data.reply)) {
+      hasPlayedLoading = true;
+      await animateLoading();
+    }
+    if (!hasPlayedDepart && /en.?route|unit.{0,30}(roll|move|pull|head|navig)\w*|navigate?s?.{0,20}(to|toward)/i.test(data.reply)) {
+      hasPlayedDepart = true;
+      await animateDepart();
+    }
+
     printReply(data.reply);
     printHr();
 
@@ -541,6 +554,8 @@ function resetToStart() {
   sessionId       = null;
   isClosed        = false;
   waitingDebrief  = false;
+  hasPlayedLoading = false;
+  hasPlayedDepart  = false;
   localTranscript = null;
   output.innerHTML = '';
 
@@ -809,6 +824,40 @@ function animateDispatch() {
       dispatchOverlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
     }, HOLD_MS);
+  });
+}
+
+
+function animateLoading() {
+  return new Promise(resolve => {
+    const HOLD_MS = 2600;
+    const FADE_MS = 220;
+    let overlay = document.getElementById('loading-overlay');
+    if (!overlay) { resolve(); return; }
+    overlay.classList.add('visible');
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateDepart() {
+  return new Promise(resolve => {
+    const DRIVE_DELAY = 700;
+    const DRIVE_MS    = 1100;
+    const FADE_MS     = 250;
+    let overlay = document.getElementById('depart-overlay');
+    if (!overlay) { resolve(); return; }
+    overlay.classList.add('visible');
+    setTimeout(() => {
+      overlay.classList.add('driving');
+    }, DRIVE_DELAY);
+    const total = DRIVE_DELAY + DRIVE_MS;
+    setTimeout(() => {
+      overlay.classList.remove('visible', 'driving');
+      setTimeout(resolve, FADE_MS);
+    }, total);
   });
 }
 

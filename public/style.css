@@ -740,6 +740,168 @@ html, body {
   padding: 0 0.5rem;
 }
 
+
+/* ── Patient loading overlay ─────────────────────────────────────────────── */
+
+#loading-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%) scale(0.85);
+  z-index: 103;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--chrome-bg);
+  background-image: var(--noise);
+  background-blend-mode: soft-light;
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  padding: 1rem 2.2rem 0.9rem;
+  font-family: var(--font-block, monospace);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  min-width: 190px;
+  text-align: center;
+}
+
+#loading-overlay.visible {
+  opacity: 1;
+  transform: translate(-50%, -60%) scale(1);
+}
+
+#loading-header {
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #0a3d52;
+  margin-bottom: 0.15rem;
+}
+
+#loading-svg {
+  width: 96px;
+  height: 86px;
+  color: #333;
+}
+
+#loading-label {
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  color: #1a1a1a;
+  margin-top: 0.1rem;
+}
+
+.load-dot {
+  opacity: 0.2;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+.load-dot-1 { animation: dot-pulse 1.1s ease-in-out infinite 0.0s; }
+.load-dot-2 { animation: dot-pulse 1.1s ease-in-out infinite 0.22s; }
+.load-dot-3 { animation: dot-pulse 1.1s ease-in-out infinite 0.44s; }
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 0.2; transform: translateY(0); }
+  45%       { opacity: 0.9; transform: translateY(-4px); }
+}
+
+/* ── Ambulance departure overlay ─────────────────────────────────────────── */
+
+#depart-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%) scale(0.85);
+  z-index: 103;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--chrome-bg);
+  background-image: var(--noise);
+  background-blend-mode: soft-light;
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  padding: 1rem 2.2rem 0.9rem;
+  font-family: var(--font-block, monospace);
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  min-width: 210px;
+  text-align: center;
+}
+
+#depart-overlay.visible {
+  opacity: 1;
+  transform: translate(-50%, -60%) scale(1);
+}
+
+#depart-header {
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #0a3d52;
+  margin-bottom: 0.15rem;
+}
+
+#depart-svg {
+  width: 108px;
+  height: 74px;
+  color: #333;
+}
+
+#depart-label {
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  color: #1a1a1a;
+  margin-top: 0.1rem;
+}
+
+/* Wheel spin */
+.wheel-group {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+#depart-overlay.visible .wheel-group {
+  animation: wheel-spin 0.38s linear infinite;
+}
+
+@keyframes wheel-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Speed lines pulse */
+.speed-line {
+  opacity: 0;
+}
+#depart-overlay.visible .speed-line-1 { animation: speed-flash 0.6s ease-out infinite 0.0s; }
+#depart-overlay.visible .speed-line-2 { animation: speed-flash 0.6s ease-out infinite 0.15s; }
+#depart-overlay.visible .speed-line-3 { animation: speed-flash 0.6s ease-out infinite 0.3s; }
+
+@keyframes speed-flash {
+  0%   { opacity: 0;   transform: translateX(4px); }
+  30%  { opacity: 0.8; transform: translateX(0); }
+  100% { opacity: 0;   transform: translateX(-3px); }
+}
+
+/* Drive-off: SVG wrapper slides right */
+#depart-svg-wrap {
+  overflow: hidden;
+}
+#depart-overlay.driving #depart-svg-wrap {
+  animation: depart-drive 1.1s ease-in forwards;
+}
+
+@keyframes depart-drive {
+  0%   { transform: translateX(0);     opacity: 1; }
+  70%  { transform: translateX(55px);  opacity: 0.7; }
+  100% { transform: translateX(110px); opacity: 0; }
+}
+
 /* ── Dispatch incoming overlay ───────────────────────────────────────────── */
 
 #dispatch-overlay {
