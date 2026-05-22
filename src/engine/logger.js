@@ -13,6 +13,7 @@ function logEvent(seed, event, sceneMin) {
     real_timestamp: new Date().toISOString(),
     event_type: event.event_type,
     procedure_id: event.procedure_id || null,
+    patient: event.patient || 'primary',
     dice_roll: event.dice_roll ?? null,
     dc_value: event.dc_value ?? null,
     outcome: event.outcome || null,

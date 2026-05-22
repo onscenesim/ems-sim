@@ -86,6 +86,7 @@ router.post('/new', async (req, res) => {
       vitals:              result.vitals || null,
       scene_minute:        session.sceneMinute,
       closed:              result.closed,
+      multi_patient:       seed.special_flags ? /two_patients/i.test(seed.special_flags) : false,
     });
   } catch (err) {
     console.error('[scenario/new]', err.message);

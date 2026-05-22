@@ -729,6 +729,17 @@ html, body {
 }
 
 
+/* ── Multi-patient vitals notice ────────────────────────────────────────── */
+
+#multi-patient-notice {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  opacity: 0.75;
+  padding: 0 0.5rem;
+}
+
 /* ── Dispatch incoming overlay ───────────────────────────────────────────── */
 
 #dispatch-overlay {

@@ -333,17 +333,30 @@ function buildDebriefContext(seed, events, messages = []) {
   lines.push(`Complication: ${seed.complication_type}`);
   lines.push(`Region: ${seed.region} | Provider: ${seed.provider_level}`);
   lines.push('');
-  lines.push('--- PROCEDURE ROLL LOG ---');
+  const isMultiPatient = seed.special_flags && /two_patients/i.test(seed.special_flags);
   const procEvents = events.filter(e => e.event_type === 'procedure');
-  if (procEvents.length === 0) {
-    lines.push('(no procedure rolls logged)');
+
+  const formatEvent = ev => {
+    const parts = [`T+${ev.scene_minute}min`, ev.procedure_id || ''];
+    if (ev.roll !== null && ev.roll !== undefined) parts.push(`d20=${ev.roll} vs DC${ev.dc} → ${ev.outcome}`);
+    else if (ev.outcome) parts.push(`→ ${ev.outcome}`);
+    return parts.join(' ');
+  };
+
+  if (isMultiPatient) {
+    const primary   = procEvents.filter(e => (e.patient || 'primary') === 'primary');
+    const secondary = procEvents.filter(e => e.patient === 'secondary');
+    lines.push('--- PROCEDURE ROLL LOG — PRIMARY PATIENT ---');
+    if (primary.length === 0) lines.push('(no procedures logged for primary patient)');
+    else primary.forEach(ev => lines.push(formatEvent(ev)));
+    lines.push('');
+    lines.push('--- PROCEDURE ROLL LOG — SECONDARY PATIENT (NEONATE/OTHER) ---');
+    if (secondary.length === 0) lines.push('(no procedures logged for secondary patient)');
+    else secondary.forEach(ev => lines.push(formatEvent(ev)));
   } else {
-    for (const ev of procEvents) {
-      const parts = [`T+${ev.scene_minute}min`, ev.procedure_id || ''];
-      if (ev.roll !== null && ev.roll !== undefined) parts.push(`d20=${ev.roll} vs DC${ev.dc} → ${ev.outcome}`);
-      else if (ev.outcome) parts.push(`→ ${ev.outcome}`);
-      lines.push(parts.join(' '));
-    }
+    lines.push('--- PROCEDURE ROLL LOG ---');
+    if (procEvents.length === 0) lines.push('(no procedure rolls logged)');
+    else procEvents.forEach(ev => lines.push(formatEvent(ev)));
   }
   lines.push('');
 

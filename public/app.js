@@ -281,7 +281,12 @@ async function startScenario() {
 
     // Initial vitals (likely empty/sparse until equipment is placed)
     if (typeof data.scene_minute === 'number') currentSceneMinute = data.scene_minute;
-    applyVitals(data.vitals || null);
+    if (data.multi_patient) {
+      setMultiPatientVitalsNotice(true);
+    } else {
+      setMultiPatientVitalsNotice(false);
+      applyVitals(data.vitals || null);
+    }
 
     setLoading(false);
     userInput.focus();
@@ -338,7 +343,7 @@ async function sendTurn(msg) {
 
     // Vitals update on every turn
     if (typeof data.scene_minute === 'number') currentSceneMinute = data.scene_minute;
-    applyVitals(data.vitals || null);
+    if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
 
     // Save turn client-side for transcript export
     if (localTranscript) {
@@ -1091,6 +1096,17 @@ vitalsExpand.addEventListener('click', () => {
   vitalsExpand.classList.toggle('open', willOpen);
   vitalsPanel.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
 });
+
+function setMultiPatientVitalsNotice(active) {
+  if (active) {
+    vitalsBar.dataset.multiPatient = '1';
+    vitalsBar.innerHTML = '<span id="multi-patient-notice">Multiple patients on scene — vitals unavailable</span>';
+    vitalsExpand.style.display = 'none';
+  } else {
+    delete vitalsBar.dataset.multiPatient;
+    vitalsExpand.style.display = '';
+  }
+}
 
 // Tick staleness every 5s while the page is alive
 stalenessInterval = setInterval(tickStaleness, 5000);

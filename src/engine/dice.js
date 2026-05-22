@@ -204,7 +204,7 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
   }
 
   if (proc.no_roll) {
-    return { procedure_id: proc.id, no_roll: true, outcome: 'SUCCESS', dc: null, roll: null };
+    return { procedure_id: proc.id, patient: proc.patient || 'primary', no_roll: true, outcome: 'SUCCESS', dc: null, roll: null };
   }
 
   let dc = selectDC(proc, contextFlags);
@@ -226,6 +226,7 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
       : 'MARGINAL';
     return {
       procedure_id: proc.id,
+      patient: proc.patient || 'primary',
       dc: rolls.map(r => r.dc),
       base_dc: rolls.map(r => r.base_dc),
       penalty_applied: penalty,
@@ -243,6 +244,7 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
 
   return {
     procedure_id: proc.id,
+    patient: proc.patient || 'primary',
     dc: adjustedDC,
     base_dc: dc,
     penalty_applied: penalty,

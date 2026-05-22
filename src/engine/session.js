@@ -136,6 +136,7 @@ class Session {
         logEvent(this.seed, {
           event_type: 'procedure',
           procedure_id: roll.procedure_id,
+          patient: roll.patient || 'primary',
           dice_roll: roll.roll,
           dc_value: Array.isArray(roll.dc) ? roll.dc[0] : roll.dc,
           outcome: roll.outcome,
@@ -144,6 +145,7 @@ class Session {
         logEvent(this.seed, {
           event_type: 'procedure',
           procedure_id: roll.procedure_id,
+          patient: roll.patient || 'primary',
           outcome: 'NO_ROLL',
         }, this.sceneMinute);
       }
