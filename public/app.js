@@ -569,8 +569,7 @@ function resetToStart() {
   hideDrugPanel();
   hideCrewPanel();
   resetVitals();
-  const backupBadge = document.getElementById('badge-backup');
-  if (backupBadge) { backupBadge.textContent = ''; backupBadge.style.display = 'none'; }
+  applyBackupStatus({ status: 'not_called', eta: null });
 
   terminal.style.display    = 'none';
   startScreen.style.display = 'flex';
@@ -1253,7 +1252,7 @@ function applyBackupStatus(backup) {
   const badge = document.getElementById('badge-backup');
   if (!badge) return;
   if (!backup || !backup.status) return;
-  const labels = { called: 'BACKUP: CALLED', en_route: 'BACKUP: EN ROUTE', on_scene: 'BACKUP: ON SCENE', cancelled: 'BACKUP: CANCELLED', not_called: null };
+  const labels = { called: 'BACKUP: CALLED', en_route: 'BACKUP: EN ROUTE', on_scene: 'BACKUP: ON SCENE', cancelled: 'BACKUP: CANCELLED', not_called: 'NO BACKUP EN ROUTE' };
   const label = labels[backup.status];
   if (!label) {
     badge.textContent = '';
