@@ -314,36 +314,6 @@ async function sendTurn(msg) {
   print(`> ${msg}`, 'user');
   setLoading(true);
 
-  // Post-close: waiting for y/n on debrief
-  if (waitingDebrief) {
-    if (msg.trim().toLowerCase().startsWith('y')) {
-      waitingDebrief = false;
-      print('[generating debrief...]', 'system');
-      currentAbortController = new AbortController();
-      try {
-        const data = await apiPost(`/api/scenario/${sessionId}/debrief`, {}, currentAbortController.signal);
-        if (localTranscript) localTranscript.debriefText = data.debrief;
-        printHr();
-        print(data.debrief, 'debrief');
-        printHr();
-      } catch (err) {
-        if (err.name === 'AbortError') {
-          print('[Debrief cancelled by user.]', 'system');
-        } else {
-          print(`[Debrief error: ${err.message}]`, 'error');
-        }
-      } finally {
-        currentAbortController = null;
-      }
-    } else {
-      print('Scenario ended.', 'system');
-    }
-    showNewScenarioBtn();
-    setLoading(false);
-    setInputEnabled(false);
-    return;
-  }
-
   currentAbortController = new AbortController();
   try {
     const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg }, currentAbortController.signal);
@@ -376,12 +346,10 @@ async function sendTurn(msg) {
     }
 
     if (data.closed) {
-      isClosed       = true;
-      waitingDebrief = true;
+      isClosed = true;
       endBtn.disabled = true;
-      print('');
-      print('Scenario closed. Want the full debrief?  (y / n)', 'system');
-      showCrewPanel();   // re-surface crew at scenario end
+      showCrewPanel();
+      showDebriefCTA();
       setLoading(false);
       currentAbortController = null;
       return;
@@ -401,11 +369,59 @@ async function sendTurn(msg) {
 
 // ── End scenario button ───────────────────────────────────────────────────
 
+// ── Debrief CTA — injected into output when scenario closes naturally ────────
+
+function showDebriefCTA() {
+  const cta = document.createElement('div');
+  cta.className = 'debrief-cta';
+  cta.id = 'debrief-cta';
+
+  const btn = document.createElement('button');
+  btn.id = 'gen-debrief-btn';
+  btn.textContent = 'GENERATE DEBRIEF';
+
+  const hint = document.createElement('span');
+  hint.className = 'debrief-cta-hint';
+  hint.textContent = 'Scenario complete. Run a full medical director debrief.';
+
+  cta.appendChild(btn);
+  cta.appendChild(hint);
+  output.appendChild(cta);
+  scrollBottom();
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'generating...';
+    hint.textContent = 'This takes a few seconds — reviewing the full call.';
+    setLoading(true);
+    currentAbortController = new AbortController();
+    try {
+      const data = await apiPost(`/api/scenario/${sessionId}/debrief`, {}, currentAbortController.signal);
+      if (localTranscript) localTranscript.debriefText = data.debrief;
+      cta.remove();
+      printHr();
+      print(data.debrief, 'debrief');
+      printHr();
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        btn.disabled = false;
+        btn.textContent = 'GENERATE DEBRIEF';
+        hint.textContent = 'Cancelled. Click to try again.';
+      } else {
+        hint.textContent = `Error: ${err.message}`;
+      }
+    } finally {
+      currentAbortController = null;
+      setLoading(false);
+    }
+    showNewScenarioBtn();
+    setInputEnabled(false);
+  });
+}
+
 endBtn.addEventListener('click', () => {
-  if (isClosed || waitingDebrief) return;
-  if (confirm('End this scenario now and proceed to debrief?')) {
-    endCallAndDebrief();
-  }
+  if (isClosed) return;
+  endCallAndDebrief();
 });
 
 // Closes the scenario and immediately generates the debrief without a y/n prompt.

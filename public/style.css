@@ -369,22 +369,22 @@ html, body {
 
 #end-btn {
   flex-shrink: 0;
-  margin-left: auto;
-  background: var(--chrome-bg);
+  background: #2a0a0a;
   border: 2px solid;
-  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
-  color: #333;
+  border-color: #883030 #3a0a0a #3a0a0a #883030;
+  color: #cc4444;
   font-family: var(--font-block);
   font-size: 10px;
-  padding: 4px 12px;
+  padding: 4px 10px;
   cursor: pointer;
   letter-spacing: 0.06em;
-  transition: color 0.1s;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
 }
 
-#end-btn:hover:not(:disabled) { color: #cc0000; }
-#end-btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
-#end-btn:disabled { opacity: 0.35; cursor: default; }
+#end-btn:hover:not(:disabled) { background: #3d1010; color: #ff6666; }
+#end-btn:active:not(:disabled) { border-color: #3a0a0a #883030 #883030 #3a0a0a; }
+#end-btn:disabled { opacity: 0.25; cursor: default; }
 
 #crew-btn {
   flex-shrink: 0;
@@ -405,8 +405,6 @@ html, body {
 #crew-btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 #crew-btn:disabled { opacity: 0.35; cursor: default; }
 
-/* end-btn no longer needs auto-left because crew-btn now has it */
-#end-btn { margin-left: 0; }
 
 
 /* ── Scene clock ──────────────────────────────────────────────────────────── */
@@ -1416,3 +1414,40 @@ html, body {
   .vital-row-label { flex: 0 0 60px; font-size: 8px; }
   .vital-row-value { font-size: 12px; }
 }
+
+/* ── Debrief CTA — injected into output when scenario closes naturally ─────── */
+
+.debrief-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 16px;
+  background: #0e1a0e;
+  border: 2px solid #2a5c2a;
+}
+
+.debrief-cta-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  text-align: center;
+}
+
+#gen-debrief-btn {
+  background: #0d2a0d;
+  border: 2px solid;
+  border-color: #4a8c4a #1a3a1a #1a3a1a #4a8c4a;
+  color: #66cc66;
+  font-family: var(--font-block);
+  font-size: 13px;
+  padding: 10px 28px;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  transition: background 0.15s, color 0.15s;
+}
+
+#gen-debrief-btn:hover { background: #163d16; color: #88ee88; }
+#gen-debrief-btn:active { border-color: #1a3a1a #4a8c4a #4a8c4a #1a3a1a; }
+#gen-debrief-btn:disabled { opacity: 0.45; cursor: default; }
