@@ -498,6 +498,7 @@ async function endCallAndDebrief() {
 
     // Step 2: auto-generate debrief
     isClosed = true;
+    showSignoffAnimation();
     print('[generating debrief...]', 'system');
     const debriefData = await apiPost(`/api/scenario/${sessionId}/debrief`, {});
     if (localTranscript) localTranscript.debriefText = debriefData.debrief;
