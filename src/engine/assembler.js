@@ -81,8 +81,8 @@ function assembleSeedBlock(seed) {
   lines.push('--- SCENARIO TRAJECTORY ---');
   lines.push(`Trajectory: ${seed.trajectory}`);
   if (seed.decompensation_clock !== null) {
-    lines.push(`Decompensation clock: ${seed.decompensation_clock} minutes from scene arrival`);
-    lines.push('INSTRUCTION: At decompensation_clock minutes of scene time, patient status worsens. If the user has not addressed the core problem by this time, initiate the appropriate clinical deterioration described by the trajectory. Be specific and clinical — do not vaguely say "patient looks worse."');
+    lines.push(`[INTERNAL — NEVER MENTION TO STUDENT] Deterioration threshold: ${seed.decompensation_clock} minutes of scene time`);
+    lines.push('INSTRUCTION: When scene time reaches the deterioration threshold, initiate the appropriate clinical changes described by the trajectory. Narrate the deterioration through observable clinical signs only — what the monitor shows, what you or your partner observe, what the patient does or says. NEVER say "decompensation clock", "deterioration threshold", "timer", "clock", or any reference to a timing mechanism. Just narrate the findings.');
   } else {
     lines.push('Patient is stable. No decompensation clock active.');
   }
@@ -262,7 +262,7 @@ function assembleSeedBlock(seed) {
   lines.push('2. DICE ROLLS — ABSOLUTE RULE: All procedure outcomes are determined by the server engine, not by you. The engine injects results into the conversation as [SYSTEM ROLL: procedure — d20=X vs DC Y — OUTCOME]. Your ONLY job is to narrate the clinical consequence of that pre-determined result. YOU MUST NEVER: (a) write any text containing "[SYSTEM ROLL" or "[ROLL" in square-bracket notation — that notation is reserved exclusively for server-injected content; (b) invent a dice number or DC value; (c) generate phrases like "d20 pending" or "roll pending" or "awaiting roll"; (d) decide success or failure for ANY procedure yourself, tracked or untracked. If the user attempts a procedure and NO [SYSTEM ROLL: ...] appears in their message, the action is untracked. Your only two options are: (a) routine/guaranteed action (pulse check, applying O2, listening to lung sounds) — narrate matter-of-factly; (b) skill that could succeed or fail — describe the attempt only, leave outcome open, do NOT use words like successfully, confirmed, patent, failed, secured, or in place. The user re-attempts next turn and the server will roll then. CRITICAL EXAMPLE OF WHAT NOT TO DO: do not write "[SYSTEM ROLL: defibrillation — d20 pending user action]" — this is fabricated notation and violates this rule.');
   lines.push('3. ZERO GUIDANCE POLICY: Do not suggest interventions, hint at the diagnosis, or volunteer clinical information the user has not asked for. Let errors have consequences. Errors do not trigger warnings — they produce outcomes.');
   lines.push('4. CLINICAL NARRATION ONLY: All findings are revealed through clinical observations that the user requests. You never label diagnoses directly. Vital signs are numbers. Exam findings are physical descriptions. ECG is a waveform description. Let the user interpret.');
-  lines.push('5. SCENE CLOCK: Track simulated scene time in minutes. Every action takes time. Simple assessments: 1 min. Full head-to-toe: 3 min. Procedures: 2-5 min depending on complexity. Packaging: 2 min. The decompensation clock runs against scene time.');
+  lines.push('5. SCENE CLOCK: Track simulated scene time in minutes. Every action takes time. Simple assessments: 1 min. Full head-to-toe: 3 min. Procedures: 2-5 min depending on complexity. Packaging: 2 min.');
   lines.push('6. SCENARIO CLOSE: When the user says "transfer of care", "patient is in ED hands", "we\'re clear", "pronounce", or equivalent, close the scenario with a brief, professional radio sign-off — unit number, brief patient summary, and clear. One to three sentences maximum. Do NOT offer a debrief, comment on their performance, ask how they did, or editorialize. The debrief is handled by a separate system the moment the scenario closes — your job is just to close the call cleanly.');
   lines.push(`7. DISPATCH: Begin the scenario with a dispatch message in this format: "DISPATCH: ${seed.unit_name || 'Medic 1'}, respond to [nature of call] at [address or location] — [any additional info from caller]. Your partner is [partner name]. Time: [time_of_day]." Use the unit identifier exactly as given in radio traffic, follow-up dispatch updates, and medical control patches throughout the scenario.`);
   lines.push('8. The hint above is for your internal narration quality only. Do not reveal it to the user in any form.');
@@ -357,7 +357,7 @@ function buildDebriefContext(seed, events, messages = []) {
   if (seed.true_diagnosis) lines.push(`True diagnosis (curveball reveal): ${seed.true_diagnosis}`);
   if (seed.special_flags) lines.push(`Special flags: ${seed.special_flags}`);
   lines.push(`Patient: ${seed.patient_age}yo ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
-  lines.push(`Trajectory: ${seed.trajectory} | Decompensation clock: ${seed.decompensation_clock || 'N/A'} min`);
+  lines.push(`Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
   lines.push(`Complication: ${seed.complication_type}`);
   lines.push(`Region: ${seed.region} | Provider: ${seed.provider_level}`);
   lines.push('');
