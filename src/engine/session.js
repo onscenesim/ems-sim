@@ -110,6 +110,30 @@ function parseEventTags(reply) {
 }
 
 /**
+ * Parse [BACKUP: status ETA=N] tag from the reply.
+ * Returns { cleanedReply, backup } where backup is null or { status, eta }.
+ * Status values: called, en_route, on_scene, not_called
+ */
+function parseBackupTag(reply) {
+  const re = /\s*\[BACKUP:\s*([^\]]+)\]\s*/gi;
+  const matches = [...reply.matchAll(re)];
+  if (matches.length === 0) return { cleanedReply: reply, backup: null };
+  const cleanedReply = reply.replace(re, ' ').replace(/\s{2,}/g, ' ').trim();
+  const inner = matches[matches.length - 1][1].trim();
+  const statusMatch = inner.match(/^(\w+)/);
+  const etaMatch = inner.match(/ETA=(\d+)/i);
+  return {
+    cleanedReply,
+    backup: {
+      status: statusMatch ? statusMatch[1].toLowerCase() : 'unknown',
+      eta:    etaMatch    ? parseInt(etaMatch[1], 10)    : null,
+    },
+  };
+}
+
+
+
+/**
  * Build context flags from the current seed for context-aware DC selection.
  * Flags are static for the scenario — a future version could update these
  * dynamically as findings are revealed.
@@ -136,6 +160,7 @@ class Session {
     this.contextFlags = buildContextFlags(seed);
     this.lastVitals = null;       // most-recent parsed [VITALS:] tag, or null if none yet
     this.turns = [];
+    this.backupStatus = null; // { status, eta } from [BACKUP:] tag
   }
 
   /**
@@ -174,6 +199,11 @@ class Session {
     // Inject all real roll results into the user message so Claude knows every outcome.
     // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
     let messageText = userText;
+    // Fast-path for NIBP cycle — keep Claude's reply brief to avoid jarring wall-of-text
+    const isNibpCycle = userText.trim() === 'Cycle NIBP';
+    if (isNibpCycle) {
+      messageText += '\n\n[SYSTEM NOTE: NIBP cycle only. Respond in ONE short sentence acknowledging the cuff is cycling and give the new reading when it completes. No extra exam findings, no additional narration, no partner dialogue. Just the BP result. Then update only the BP timestamp in the VITALS tag; all other vitals fields remain unchanged from the previous turn.]';
+    }
     const rollLines = rolls.filter(r => !r.no_roll).map(r => {
       if (r.multi_roll) {
         const parts = r.rolls.map(x => `d20=${x.roll} vs DC ${x.dc} — ${x.outcome}`);
@@ -195,7 +225,9 @@ class Session {
 
     const { cleanedReply: vitalsClean, vitals } = parseVitalsTag(rawReply);
     if (vitals) this.lastVitals = vitals;
-    const { cleanedReply: reply, loading, enRoute } = parseEventTags(vitalsClean);
+    const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);
+    const { cleanedReply: reply, loading, enRoute } = parseEventTags(backupClean);
+    if (backup) this.backupStatus = backup;
 
     // Advance scene clock — crude estimate, Claude tracks it precisely internally
     this.sceneMinute += 2;
@@ -212,10 +244,10 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls, vitals: this.lastVitals, closed: true };
+      return { reply, rolls, vitals: this.lastVitals, backup: this.backupStatus, closed: true };
     }
 
-    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, closed: false };
+    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, backup: this.backupStatus, closed: false };
   }
 
   /**

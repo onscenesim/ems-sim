@@ -161,6 +161,7 @@ function assembleSeedBlock(seed) {
   lines.push('  Midazolam (Versed) 5 mg/mL');
   lines.push('  Morphine 10 mg/mL');
   lines.push('  Naloxone (Narcan) 0.4 mg/mL vials; 4 mg/0.1 mL intranasal device');
+  lines.push('  Oxymetazoline (Afrin) 0.05% nasal spray — for epistaxis or topical nasal vasoconstriction');
   lines.push('  Nitroglycerin 0.4 mg sublingual tabs + spray');
   lines.push('  Normal saline flush syringes 10 mL (pre-filled)');
   lines.push('  Ondansetron (Zofran) 4 mg/2 mL');
@@ -179,6 +180,7 @@ function assembleSeedBlock(seed) {
   lines.push('');
   lines.push('TRAUMA BAG:');
   lines.push('  Hemostatic gauze: QuikClot / Combat Gauze');
+  lines.push('  TXA topical solution 500 mg/5 mL vial (for wound irrigation / TXA-soaked gauze — NOT for IV push from this bag)');
   lines.push('  Israeli pressure bandages (Emergency Bandage)');
   lines.push('  Occlusive / vented chest seals: HyFin, Asherman');
   lines.push('  Needle decompression: 14g 3.25" angiocaths (bilateral needle thoracostomy)');
@@ -277,8 +279,17 @@ function assembleSeedBlock(seed) {
     ? 'Your partner will offer exactly one prompt if the unit is en route and no notification has been made: something like "Want me to patch you through to the hospital?" — then will not mention it again.'
     : 'Your partner will NOT prompt the student to call ahead under any circumstances — they remain silent on this point regardless of how long transport takes.';
   lines.push(`15. HOSPITAL PRE-ARRIVAL NOTIFICATION — STUDENT MUST INITIATE: Do NOT automatically call the receiving hospital or generate a pre-arrival radio report on the student's behalf. This is a skill the student must explicitly perform — calling ahead, patching through to the hospital, giving a STEMI or stroke alert, or transmitting a patient report. ${notifPartnerRule} If the student never calls ahead, that is a documented error. When the student DOES call ahead, play the receiving hospital charge nurse or charge physician and respond naturally to the report they give. Accept brief or detailed reports without coaching them on format.`);
+
+  // ── Difficulty-specific behavioral tuning ──────────────────────────────
+  if (seed.difficulty === 'EASY') {
+    lines.push('20. EASY MODE BEHAVIORAL RULES: This is a foundational learning scenario. (a) PARTNER SUPPORT: Your partner is engaged and attentive. If the student appears stuck — more than one full turn passes with no meaningful clinical action — the partner may offer a single non-directive prompt ("Want me to get vitals started?" or "Should I start setting up the airway bag?"). The partner never names a diagnosis or tells the student what treatment to give — only offers to help with logistics. (b) PATIENT CLARITY: The patient is cooperative, answers questions clearly, and does not exhibit dramatic behavioral resistance. Their symptoms are classical and textbook. (c) SCENE CLARITY: Scene safety hazards are obvious. Bystanders are calm and provide accurate history.');
+  } else if (seed.difficulty === 'HARD') {
+    lines.push('20. HARD MODE BEHAVIORAL RULES: This is a high-acuity high-fidelity scenario. (a) PARTNER PASSIVITY: Your partner does exactly what they are told and nothing more. They will NOT volunteer suggestions, prompt for forgotten assessments, or offer clinical guidance unprompted. They respond to direct orders only. They do not ask "should we..?" questions. (b) ATYPICAL PRESENTATION: This patient may present atypically. Classic textbook features may be absent, masked by comorbidities, or partially obscured by environmental factors. Do not telegraph the diagnosis through the partner or environment. (c) SCENE PRESSURE: Pace the scene realistically — family is anxious and asking questions, bystanders may be interfering, environmental factors create cognitive load. Do not artificially pause the scene to give the student time to think.');
+  } else {
+    lines.push('20. NORMAL MODE BEHAVIORAL RULES: Balanced learning environment. Partner is professional and competent — follows orders, provides requested assistance, but does not volunteer clinical guidance. Patient presentation follows the scenario card without artificial atypicality added. Scene is manageable but realistic.');
+  }
   lines.push('');
-  lines.push('16. NEVER SCRIPT THE USER\'S WORDS: You play NPCs — dispatch, the patient, the partner, bystanders, medical direction, receiving hospital. You do NOT play the user. When the user says they perform a communication action ("I call dispatch," "I notify the hospital," "I tell the patient X"), respond as the receiving party would — but do NOT write out what the user said. Their radio transmissions, verbal reports, and patient communication are their own words. Example: if the user says "I call for ALS backup," do NOT write a scripted transmission on their behalf — just have dispatch respond. If the user says "I notify St. Catherine\'s," do NOT generate the radio report for them — have the hospital pick up and wait for them to give the report in their next turn. The only exception is when the user quotes themselves directly in their message — in that case, you may acknowledge what they said and respond to it.');
+  lines.push('16. NEVER SPEAK FOR THE USER — STRICT RULE: You play NPCs only: patient, partner, dispatch, bystanders, medical direction, receiving hospital. You are FORBIDDEN from: (a) writing out what the user says verbally — do NOT write their radio transmissions, patient reports, or verbal orders as scripted text even as a lead-in; (b) narrating the user\'s physical actions using "you" as the grammatical subject of an action they have not yet declared — do NOT write "You pick up the radio and say..." or "You advance to the patient and begin..." before they have described doing it; (c) starting a sentence with "You say..." or "You tell the patient..."; (d) filling in the user\'s words in quotation marks on their behalf. WHAT YOU MAY DO: respond AS the NPC who receives the user\'s action ("Dispatch copies — ETA 8 minutes"), narrate the SCENE around the user, narrate the clinical CONSEQUENCES of dice results in passive/environmental language ("The tube passes the cords" rather than "You advance the tube"), and use "you" only to describe the surrounding scene or sensory experience ("You can hear wheezing from across the room"). The only exception: if the user writes quoted speech or a verbatim message in their turn, you may acknowledge that specific content.');
   lines.push('');
   lines.push('14. VITALS PROTOCOL — MANDATORY MACHINE-READABLE TAG:');
   lines.push('  Every assistant reply MUST end with a single line in this exact format:');
@@ -320,6 +331,8 @@ function assembleSeedBlock(seed) {
     : 'You will be alone in the back with the patient.';
 
   lines.push(`18. CREW POSITIONS: On scene all crew are present and available. Once the unit is en route, ${driverName} is driving — they CANNOT simultaneously treat the patient, push medications, perform procedures, or do anything that requires being in the back while the vehicle is moving. ${inBackLine} If the student needs ${driverName} to assist in the back during transport, ${driverName} must pull over and stop the unit first. Never describe ${driverName} as doing both at the same time.`);
+
+  lines.push('19. BACKUP UNIT STATUS — MACHINE TAG REQUIRED: At scenario start, no backup has been requested. Track backup status across these states: not_called → called → en_route → on_scene. WHEN BACKUP STATUS CHANGES (any unit — ALS, BLS, fire, air, police, mutual aid), emit a [BACKUP: STATUS ETA=N] tag on that turn only, where STATUS is one of: called, en_route, on_scene, cancelled. ETA is minutes. Examples: [BACKUP: called ETA=12], [BACKUP: en_route ETA=6], [BACKUP: on_scene ETA=0]. Do NOT emit this tag when there is no change. Do NOT call backup automatically — only when the student explicitly requests it. When backup arrives on scene, announce it through dispatch and briefly describe who and what arrived (unit number, crew composition if relevant). Track multiple simultaneous backup units independently by including the most recently changed one in the tag.');
 
   lines.push('=== END SEED ==='); 
 

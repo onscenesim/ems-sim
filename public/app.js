@@ -326,8 +326,7 @@ async function sendTurn(msg) {
   try {
     const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg }, currentAbortController.signal);
 
-    // Trigger decompensation pulse on the scene clock if the server says the patient is going south
-    if (data.decompensating) sceneClock.classList.add('decompensating');
+    // decompensating flag intentionally not shown to student — Claude fires it internally
 
     // Animate each real single roll in sequence, then print all to the log
     for (const r of (data.rolls || [])) {
@@ -358,6 +357,7 @@ async function sendTurn(msg) {
     // Vitals update on every turn
     if (typeof data.scene_minute === 'number') currentSceneMinute = data.scene_minute;
     if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
+    if (data.backup) applyBackupStatus(data.backup);
 
     // Save turn client-side for transcript export
     if (localTranscript) {
@@ -499,7 +499,7 @@ async function endCallAndDebrief() {
         }
       }
     }
-    if (turnData.decompensating) sceneClock.classList.add('decompensating');
+    // decompensating flag intentionally not shown to student — Claude fires it internally
 
     for (const r of (turnData.rolls || [])) printRoll(r);
     printHr();
@@ -569,6 +569,8 @@ function resetToStart() {
   hideDrugPanel();
   hideCrewPanel();
   resetVitals();
+  const backupBadge = document.getElementById('badge-backup');
+  if (backupBadge) { backupBadge.textContent = ''; backupBadge.style.display = 'none'; }
 
   terminal.style.display    = 'none';
   startScreen.style.display = 'flex';
@@ -1207,7 +1209,9 @@ function applyVitals(vitals) {
       }
     }
     // Mark BP cell as active (tappable) once first reading exists
-    if (name === 'BP') {
+    // Only update the state when BP is explicitly present in THIS vitals update —
+    // if BP is absent from the update (Claude omitted it), keep whatever state we had.
+    if (name === 'BP' && vitals && Object.prototype.hasOwnProperty.call(vitals, 'BP')) {
       const nibpCell = document.getElementById('nibp-cell');
       if (nibpCell) nibpCell.classList.toggle('nibp-active', display !== null);
     }
@@ -1243,6 +1247,22 @@ function tickStaleness() {
       if (cls) el.classList.add(cls);
     }
   }
+}
+
+function applyBackupStatus(backup) {
+  const badge = document.getElementById('badge-backup');
+  if (!badge) return;
+  if (!backup || !backup.status) return;
+  const labels = { called: 'BACKUP: CALLED', en_route: 'BACKUP: EN ROUTE', on_scene: 'BACKUP: ON SCENE', cancelled: 'BACKUP: CANCELLED', not_called: null };
+  const label = labels[backup.status];
+  if (!label) {
+    badge.textContent = '';
+    badge.style.display = 'none';
+    return;
+  }
+  badge.textContent = backup.eta ? `${label} ~${backup.eta}m` : label;
+  badge.style.display = '';
+  badge.className = 'badge badge-backup badge-backup-' + backup.status.replace('_', '-');
 }
 
 function resetVitals() {

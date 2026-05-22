@@ -438,6 +438,22 @@ html, body {
   50%       { opacity: 0.25; }
 }
 
+/* ── Backup status badge ───────────────────────────────────────── */
+.badge-backup {
+  font-weight: bold;
+  letter-spacing: 0.06em;
+}
+.badge-backup-called    { color: #ffc300; border-color: #7a6000; }
+.badge-backup-en-route  { color: #55cc55; border-color: #2a5a2a; animation: backup-pulse 1.4s ease-in-out infinite; }
+.badge-backup-on-scene  { color: #55ff55; border-color: #2a7a2a; font-weight: bold; }
+.badge-backup-cancelled { color: #888; border-color: #444; }
+
+@keyframes backup-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+
 #output {
   flex: 1;
   overflow-y: auto;

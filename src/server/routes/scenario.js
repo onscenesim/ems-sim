@@ -214,6 +214,7 @@ router.post('/:id/turn', async (req, res) => {
       departing:      result.enRoute  || false,
       rolls:          result.rolls || [],
       vitals:         result.vitals || null,
+      backup:         result.backup  || null,
       closed:         result.closed,
       scene_minute:   session.sceneMinute,
       decompensating: session.seed.decompensation_clock !== null &&
