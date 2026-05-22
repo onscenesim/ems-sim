@@ -438,19 +438,41 @@ html, body {
   50%       { opacity: 0.25; }
 }
 
-/* ── Backup status badge ───────────────────────────────────────── */
+/* ── Backup status badge — dark-bg style matching .badge-unit ──── */
 .badge-backup {
   font-weight: bold;
   letter-spacing: 0.06em;
 }
-.badge-backup-called    { color: #ffc300; border-color: #7a6000; }
-.badge-backup-en-route  { color: #55cc55; border-color: #2a5a2a; animation: backup-pulse 1.4s ease-in-out infinite; }
-.badge-backup-on-scene  { color: #55ff55; border-color: #2a7a2a; font-weight: bold; }
-.badge-backup-cancelled { color: #888; border-color: #444; }
+/* CALLED — dark amber, matches a warning tone without screaming */
+.badge-backup-called {
+  background: #2a1800;
+  color: #c8902a;
+  border-color: #5a3800 #110a00 #110a00 #5a3800;
+}
+/* EN ROUTE — dark green, pulsing so it's noticed */
+.badge-backup-en-route {
+  background: #0a2010;
+  color: #4ca85e;
+  border-color: #1a5028 #04100a #04100a #1a5028;
+  animation: backup-pulse 1.4s ease-in-out infinite;
+}
+/* ON SCENE — slightly brighter green, solid */
+.badge-backup-on-scene {
+  background: #0d2a14;
+  color: #70d080;
+  border-color: #246030 #081408 #081408 #246030;
+}
+/* CANCELLED — muted, chrome default */
+.badge-backup-cancelled {
+  background: var(--chrome-bg);
+  color: #888;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  font-weight: normal;
+}
 
 @keyframes backup-pulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.5; }
+  50%       { opacity: 0.55; }
 }
 
 
