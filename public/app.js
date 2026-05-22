@@ -572,6 +572,7 @@ function resetToStart() {
   resetVitals();
   applyBackupStatus({ status: 'not_called', eta: null });
 
+  setHeaderCollapsed(false);
   terminal.style.display    = 'none';
   startScreen.style.display = 'flex';
 
@@ -1154,6 +1155,9 @@ async function resumeFromSnapshot(snap) {
 const vitalsBar       = document.getElementById('vitals-bar');
 const vitalsPanel     = document.getElementById('vitals-panel');
 const vitalsExpand    = document.getElementById('vitals-expand');
+const hdrCollapse     = document.getElementById('hdr-collapse');
+const headerReveal    = document.getElementById('header-reveal');
+const headerEl        = document.getElementById('header');
 
 // All possible field names we render from the [VITALS:] tag
 const VITAL_FIELDS = ['HR', 'BP', 'SpO2', 'ETCO2', 'RR', 'Rhythm', 'Temp', 'Glucose', 'GCS', 'Pain'];
@@ -1290,6 +1294,42 @@ vitalsExpand.addEventListener('click', () => {
   vitalsExpand.classList.toggle('open', willOpen);
   vitalsPanel.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
 });
+
+// ── Mobile: prevent iOS from scrolling the document when keyboard opens ────
+// iOS scrolls window to bring the focused input into view, which pushes the
+// header off the top of the screen. Locking scroll to 0,0 whenever the
+// terminal is active keeps the header pinned.
+function lockDocScroll() {
+  if (terminal && terminal.style.display !== 'none') {
+    window.scrollTo(0, 0);
+  }
+}
+window.addEventListener('scroll', lockDocScroll, { passive: true });
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', lockDocScroll);
+}
+
+// ── Mobile: collapsible header ──────────────────────────────────────────
+function setHeaderCollapsed(collapse) {
+  if (!headerEl) return;
+  headerEl.classList.toggle('hdr-collapsed', collapse);
+  vitalsBar.classList.toggle('hdr-collapsed', collapse);
+  if (headerReveal) headerReveal.classList.toggle('visible', collapse);
+  if (hdrCollapse) {
+    hdrCollapse.textContent = collapse ? '▼' : '▲';
+    hdrCollapse.setAttribute('aria-label', collapse ? 'Show header' : 'Hide header');
+    hdrCollapse.title = collapse ? 'Show header' : 'Hide header';
+  }
+}
+
+if (hdrCollapse) {
+  hdrCollapse.addEventListener('click', () => {
+    setHeaderCollapsed(!headerEl.classList.contains('hdr-collapsed'));
+  });
+}
+if (headerReveal) {
+  headerReveal.addEventListener('click', () => setHeaderCollapsed(false));
+}
 
 document.addEventListener('click', e => {
   const cell = e.target && e.target.closest('#nibp-cell');

@@ -408,6 +408,16 @@ html, body {
 #crew-btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 #crew-btn:disabled { opacity: 0.35; cursor: default; }
 
+/* Mobile header collapse button — hidden on desktop */
+#hdr-collapse {
+  display: none;
+}
+
+/* Mobile header-reveal strip — hidden by default */
+#header-reveal {
+  display: none;
+}
+
 
 
 /* ── Scene clock ──────────────────────────────────────────────────────────── */
@@ -767,6 +777,89 @@ html, body {
   #user-input       { font-size: 16px; }
   .access-row input { font-size: 16px; }
   .cfg-tile select  { font-size: 16px; }
+
+  /* Use dynamic viewport height so the layout reflows when the iOS keyboard
+     appears — prevents the terminal from overflowing the visible area */
+  #terminal {
+    height: 100svh; /* small viewport = most conservative, never clipped by browser UI */
+    height: 100dvh; /* dynamic = best, updates when keyboard shows/hides */
+  }
+
+  /* Collapse button — shown only on mobile, lives at right of header */
+  #hdr-collapse {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: var(--chrome-bg);
+    border: 2px solid;
+    border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+    color: #555;
+    font-size: 10px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    cursor: pointer;
+    line-height: 1;
+  }
+  #hdr-collapse:active {
+    border-color: var(--lo) var(--hi) var(--hi) var(--lo);
+    color: #222;
+  }
+
+  /* Collapsed state: header and vitals-bar slide to zero height */
+  #header.hdr-collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    border-bottom: none;
+  }
+  #vitals-bar.hdr-collapsed {
+    max-height: 0;
+    padding: 0;
+    overflow: hidden;
+    border-bottom: none;
+  }
+
+  /* Transition for smooth collapse/expand */
+  #header {
+    transition: max-height 0.2s ease, padding 0.2s ease;
+    max-height: 60px;
+    overflow: hidden;
+  }
+  #vitals-bar {
+    transition: max-height 0.2s ease, padding 0.2s ease;
+    max-height: 80px;
+    overflow: hidden;
+  }
+
+  /* Reveal strip — a thin tap target shown at top when header is collapsed */
+  #header-reveal {
+    display: none;
+    flex-shrink: 0;
+    background: #1c1c1e;
+    border-bottom: 1px solid #2a2a2a;
+    color: #555;
+    font-family: var(--font-block);
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    text-align: center;
+    padding: 4px 0;
+    cursor: pointer;
+    user-select: none;
+    text-transform: uppercase;
+  }
+  #header-reveal::after {
+    content: '  VITALS \25BC';
+  }
+  #header-reveal.visible {
+    display: block;
+  }
+  #header-reveal:active {
+    background: #2a2a2c;
+    color: #999;
+  }
 }
 
 
