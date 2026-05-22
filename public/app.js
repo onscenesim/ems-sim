@@ -1295,18 +1295,31 @@ vitalsExpand.addEventListener('click', () => {
   vitalsPanel.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
 });
 
-// ── Mobile: prevent iOS from scrolling the document when keyboard opens ────
-// iOS scrolls window to bring the focused input into view, which pushes the
-// header off the top of the screen. Locking scroll to 0,0 whenever the
-// terminal is active keeps the header pinned.
-function lockDocScroll() {
-  if (terminal && terminal.style.display !== 'none') {
-    window.scrollTo(0, 0);
-  }
+// ── Mobile: fix iOS keyboard covering the input field ─────────────────────
+// On iOS, opening the virtual keyboard shrinks the visual viewport but NOT
+// the CSS viewport (100vh/dvh can lag or be unsupported). We use the
+// visualViewport API to explicitly set the terminal height to the visible
+// area, keeping the input row above the keyboard at all times.
+// We also scroll the window back to 0,0 to prevent the header from being
+// pushed off screen.
+function adjustForViewport() {
+  if (!terminal || terminal.style.display === 'none') return;
+  const vvh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  terminal.style.height = vvh + 'px';
+  window.scrollTo(0, 0);
 }
-window.addEventListener('scroll', lockDocScroll, { passive: true });
+
+function resetTerminalHeight() {
+  if (terminal) terminal.style.height = '';
+}
+
+window.addEventListener('scroll', () => {
+  if (terminal && terminal.style.display !== 'none') window.scrollTo(0, 0);
+}, { passive: true });
+
 if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', lockDocScroll);
+  window.visualViewport.addEventListener('resize', adjustForViewport);
+  window.visualViewport.addEventListener('scroll', adjustForViewport);
 }
 
 // ── Mobile: collapsible header ──────────────────────────────────────────
