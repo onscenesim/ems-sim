@@ -205,6 +205,7 @@ async function refreshStatus() {
 }
 
 refreshStatus();
+checkResume();
 
 // ── Start scenario ────────────────────────────────────────────────────────
 
@@ -578,6 +579,7 @@ function resetToStart() {
   setLoading(false);
 
   refreshStatus();
+  checkResume();
 }
 
 // ── Input controls ────────────────────────────────────────────────────────
@@ -587,6 +589,8 @@ function setLoading(loading) {
   // (Input stays disabled so the user can't queue a second send mid-flight.)
   sendBtn.disabled   = false;
   userInput.disabled = loading;
+  const nibpCell = document.getElementById('nibp-cell');
+  if (nibpCell) nibpCell.classList.toggle('nibp-loading', loading);
   if (loading) {
     endBtn.disabled = true;                          // disable during any request
     sendBtn.textContent = 'STOP';
@@ -1030,6 +1034,119 @@ function downloadFile(filename, text) {
   URL.revokeObjectURL(url);
 }
 
+
+// ── Session resume ────────────────────────────────────────────────────────────
+
+async function checkResume() {
+  try {
+    const data = await apiGet('/api/scenario/resume');
+    updateResumeTile(data.session || null);
+  } catch (_) {
+    updateResumeTile(null);
+  }
+}
+
+function updateResumeTile(snap) {
+  const tile = document.getElementById('resume-tile');
+  const body = document.getElementById('resume-tile-body');
+  if (!tile || !body) return;
+
+  if (!snap) {
+    tile.classList.remove('resume-active');
+    tile.onclick = null;
+    body.textContent = '— NO RECENT RUN —';
+    return;
+  }
+
+  const m = snap.meta || {};
+  const minutesAgo = snap.savedAt ? Math.round((Date.now() - snap.savedAt) / 60000) : null;
+  const timeLabel = minutesAgo !== null
+    ? (minutesAgo < 2 ? 'just now' : minutesAgo < 60 ? `${minutesAgo}m ago` : `${Math.round(minutesAgo / 60)}h ago`)
+    : '';
+  const parts = [
+    m.category       ? m.category.toUpperCase() : null,
+    m.difficulty     || null,
+    m.provider_level || null,
+    snap.turns && snap.turns.length ? `${snap.turns.length} turns` : null,
+    timeLabel        || null,
+  ].filter(Boolean);
+
+  body.textContent = parts.join(' · ');
+  tile.classList.add('resume-active');
+  tile.onclick = () => resumeFromSnapshot(snap);
+}
+
+async function resumeFromSnapshot(snap) {
+  sessionId       = snap.session_id;
+  isClosed        = snap.closed || false;
+  waitingDebrief  = false;
+  hasPlayedLoading = false;
+  hasPlayedDepart  = false;
+
+  localTranscript = {
+    meta:        snap.meta || {},
+    turns:       (snap.turns || []).map(t => ({ user: t.user, assistant: t.assistant, rolls: t.rolls || [] })),
+    debriefText: null,
+  };
+
+  output.innerHTML = '';
+
+  const m = snap.meta || {};
+  badgeTier.textContent = snap.tier === 'paid' ? 'PAID' : 'FREE';
+  if (snap.tier === 'paid') badgeTier.classList.add('paid'); else badgeTier.classList.remove('paid');
+  badgeDiff.textContent = m.difficulty       || '';
+  badgeProv.textContent = m.provider_level   || '';
+  badgeRgn.textContent  = m.region           || '';
+  badgeUnit.textContent = (m.unit_name || 'Medic 1').toUpperCase();
+
+  endBtn.disabled = isClosed;
+
+  clearInterval(clockInterval);
+  scenarioStartTime = Date.now() - (snap.sceneMinute || 0) * 60 * 1000;
+  sceneClock.textContent = 'T+0:00';
+  sceneClock.className   = 'active';
+  if (!isClosed) {
+    clockInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - scenarioStartTime) / 1000);
+      const mn = Math.floor(elapsed / 60);
+      const s  = elapsed % 60;
+      sceneClock.textContent = `T+${mn}:${String(s).padStart(2, '0')}`;
+    }, 1000);
+  }
+
+  startScreen.style.display = 'none';
+  terminal.style.display    = 'flex';
+
+  print('[Session restored]', 'system');
+  if (m.scenario_id) print(`Scenario ID: ${m.scenario_id}`, 'system');
+  printHr();
+
+  for (const turn of (snap.turns || [])) {
+    print(`> ${turn.user}`, 'user');
+    for (const r of (turn.rolls || [])) printRoll(r);
+    if (turn.rolls && turn.rolls.length) printHr();
+    printReply(turn.assistant);
+    printHr();
+  }
+
+  if (snap.multi_patient) {
+    setMultiPatientVitalsNotice(true);
+  } else {
+    setMultiPatientVitalsNotice(false);
+    applyVitals(snap.lastVitals || null);
+  }
+
+  if (snap.crew) populateCrewPanel(snap.crew);
+
+  if (isClosed) {
+    setInputEnabled(false);
+    showDebriefCTA();
+  } else {
+    setLoading(false);
+    userInput.focus();
+  }
+}
+
 // ── Vitals monitor strip ─────────────────────────────────────────────────────
 
 const vitalsBar       = document.getElementById('vitals-bar');
@@ -1089,6 +1206,11 @@ function applyVitals(vitals) {
         if (cls) el.classList.add(cls);
       }
     }
+    // Mark BP cell as active (tappable) once first reading exists
+    if (name === 'BP') {
+      const nibpCell = document.getElementById('nibp-cell');
+      if (nibpCell) nibpCell.classList.toggle('nibp-active', display !== null);
+    }
     // Timestamp footnote (BP under the value, Temp/Glucose in the panel row)
     const stampEls = document.querySelectorAll(`[data-vital-stamp="${name}"]`);
     for (const sEl of stampEls) {
@@ -1138,6 +1260,8 @@ function resetVitals() {
   vitalsPanel.classList.remove('open');
   vitalsExpand.classList.remove('open');
   vitalsPanel.setAttribute('aria-hidden', 'true');
+  const nibpCell = document.getElementById('nibp-cell');
+  if (nibpCell) nibpCell.classList.remove('nibp-active', 'nibp-loading');
 }
 
 vitalsExpand.addEventListener('click', () => {
@@ -1145,6 +1269,14 @@ vitalsExpand.addEventListener('click', () => {
   vitalsPanel.classList.toggle('open', willOpen);
   vitalsExpand.classList.toggle('open', willOpen);
   vitalsPanel.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+});
+
+document.addEventListener('click', e => {
+  const cell = e.target && e.target.closest('#nibp-cell');
+  if (cell && cell.classList.contains('nibp-active') && !cell.classList.contains('nibp-loading')) {
+    if (!sessionId || isClosed) return;
+    sendTurn('Cycle NIBP');
+  }
 });
 
 function setMultiPatientVitalsNotice(active) {

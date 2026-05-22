@@ -109,4 +109,24 @@ function deleteSession(id) {
   store.delete(id);
 }
 
-module.exports = { createSession, getSession, deleteSession };
+/**
+ * Rebuild an in-memory session from a persisted snapshot (e.g., after server restart).
+ * Returns the hydrated Session object.
+ */
+function restoreSession(snapshot) {
+  const session = new Session(snapshot.seed, snapshot.id);
+  session.messages    = snapshot.messages    || [];
+  session.lastVitals  = snapshot.lastVitals  || null;
+  session.sceneMinute = snapshot.sceneMinute || 0;
+  session.closed      = snapshot.closed      || false;
+  session.turns       = snapshot.turns       || [];
+  store.set(snapshot.id, {
+    session,
+    lastActive: Date.now(),
+    userId: snapshot.userId || 'anon',
+    tier:   snapshot.tier   || 'free',
+  });
+  return session;
+}
+
+module.exports = { createSession, getSession, deleteSession, restoreSession };

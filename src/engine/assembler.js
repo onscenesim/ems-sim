@@ -307,6 +307,20 @@ function assembleSeedBlock(seed) {
   lines.push('  (k) The VITALS tag is the ONLY structured tag you emit. Continue to narrate clinical findings in prose as usual — the tag is in ADDITION to your narrative, not a replacement for it. Do not invent other bracketed tags.');
   lines.push('');
   lines.push('17. EVENT TAGS — MACHINE SIGNALS: In addition to the VITALS tag, you must emit one of these tags exactly once, at the end of the reply, when the described event first occurs. Do not emit them more than once per scenario. Do not invent other tags.\n  [LOADING] — emit this exactly once, on the turn when the patient is physically loaded into the ambulance/unit. This means the stretcher has entered the vehicle. Do not emit it for packaging, moving to the stretcher, or walking to the truck — only when they are inside.\n  [EN_ROUTE] — emit this exactly once, on the turn when the unit actually begins driving toward the hospital. Do not emit it when transport is ordered but not yet started — only when the vehicle is moving. If both happen in the same turn, emit both tags.');
+  lines.push('');
+
+  // ── Instruction 18: crew positions ──────────────────────────────────────────
+  const driverName = seed.crew_transport_driver || seed.crew_partner || 'your partner';
+  const inBackNames = (seed.crew_in_back && seed.crew_in_back.length > 0)
+    ? seed.crew_in_back.join(', ')
+    : null;
+
+  const inBackLine = inBackNames
+    ? `${inBackNames} will be in the back with you.`
+    : 'You will be alone in the back with the patient.';
+
+  lines.push(`18. CREW POSITIONS: On scene all crew are present and available. Once the unit is en route, ${driverName} is driving — they CANNOT simultaneously treat the patient, push medications, perform procedures, or do anything that requires being in the back while the vehicle is moving. ${inBackLine} If the student needs ${driverName} to assist in the back during transport, ${driverName} must pull over and stop the unit first. Never describe ${driverName} as doing both at the same time.`);
+
   lines.push('=== END SEED ==='); 
 
   return lines.join('\n');

@@ -49,8 +49,11 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 100vh;
+  overflow-y: auto;
   gap: 22px;
+  padding: 16px 0;
+  box-sizing: border-box;
 }
 
 #start-card {
@@ -1583,6 +1586,47 @@ html, body {
   letter-spacing: 0.04em;
 }
 
+/* BP cell becomes a pressable button once a reading is available */
+.vital-bp.nibp-active {
+  cursor: pointer;
+  border: 1px solid #2a4a2a;
+  transition: background 0.1s, border-color 0.1s;
+}
+.vital-bp.nibp-active:hover {
+  background: #061206;
+  border-color: #3a6a3a;
+}
+.vital-bp.nibp-active:active {
+  background: #0d1f0d;
+}
+.vital-bp.nibp-active.nibp-loading {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+.vital-bp.nibp-active .vital-label::after {
+  content: ' ↺';
+  color: #55aa55;
+  font-size: 9px;
+}
+
+#nibp-cycle-hint {
+  display: none;
+  font-family: var(--font-block);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: #3a7a3a;
+  margin-top: 3px;
+  line-height: 1;
+}
+.vital-bp.nibp-active #nibp-cycle-hint {
+  display: block;
+  color: #55aa55;
+}
+.vital-bp.nibp-active.nibp-loading #nibp-cycle-hint {
+  color: #2a4a2a;
+}
+
 #vitals-expand {
   flex-shrink: 0;
   background: #000;
@@ -1716,3 +1760,76 @@ html, body {
 #gen-debrief-btn:hover { background: #163d16; color: #88ee88; }
 #gen-debrief-btn:active { border-color: #1a3a1a #4a8c4a #4a8c4a #1a3a1a; }
 #gen-debrief-btn:disabled { opacity: 0.45; cursor: default; }
+
+/* ── Resume tile — sits below the tile-grid, inside #start-card ─────────── */
+
+#resume-tile {
+  margin-top: 4px;
+  background-color: #2a2000;
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  background-blend-mode: soft-light;
+  border: 3px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  padding: 11px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 46px;
+  cursor: default;
+  user-select: none;
+  transition: background-color 0.1s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.resume-tile-label {
+  font-family: var(--font-block);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: rgba(255, 195, 0, 0.45);
+  text-transform: uppercase;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+#resume-tile-body {
+  font-family: var(--font-block);
+  font-size: 11px;
+  color: rgba(255, 195, 0, 0.28);
+  letter-spacing: 0.06em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-tile-arrow {
+  font-size: 18px;
+  color: rgba(255, 195, 0, 0.3);
+  flex-shrink: 0;
+  line-height: 1;
+  display: none;
+}
+
+#resume-tile.resume-active {
+  cursor: pointer;
+  background-color: #332800;
+}
+#resume-tile.resume-active:hover {
+  background-color: #3d3000;
+}
+#resume-tile.resume-active:active {
+  background-color: #1e1a00;
+}
+#resume-tile.resume-active .resume-tile-label {
+  color: rgba(255, 195, 0, 0.7);
+}
+#resume-tile.resume-active #resume-tile-body {
+  color: #ffc300;
+}
+#resume-tile.resume-active .resume-tile-arrow {
+  display: block;
+  color: rgba(255, 195, 0, 0.8);
+}

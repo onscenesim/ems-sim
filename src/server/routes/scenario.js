@@ -3,8 +3,43 @@
 const express = require('express');
 const router  = express.Router();
 
-const { createSession, getSession } = require('../sessionStore');
+const { createSession, getSession, restoreSession } = require('../sessionStore');
+const persistence = require('../persistence');
 const { CREW } = require('../../data/crew');
+
+const COOKIE_NAME = 'ems_sid';
+const COOKIE_MAX_AGE = 30 * 24 * 3600; // 30 days in seconds
+
+function getCookie(req, name) {
+  const raw = req.headers.cookie || '';
+  for (const part of raw.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq < 1) continue;
+    if (part.slice(0, eq).trim() === name) return decodeURIComponent(part.slice(eq + 1).trim());
+  }
+  return null;
+}
+
+function setSessionCookie(res, id) {
+  res.setHeader('Set-Cookie', `${COOKIE_NAME}=${id}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${COOKIE_MAX_AGE}`);
+}
+
+function buildSnapshot(id, session, { userId, tier, meta, crew }) {
+  return {
+    id,
+    debriefed: false,
+    userId,
+    tier,
+    seed:        session.seed,
+    messages:    session.messages,
+    lastVitals:  session.lastVitals,
+    sceneMinute: session.sceneMinute,
+    closed:      session.closed,
+    turns:       session.turns,
+    meta,
+    crew,
+  };
+}
 
 function crewRecord(name) {
   if (!name) return null;
@@ -31,6 +66,37 @@ router.get('/status', (req, res) => {
     scenarios_used:      tier === 'free' ? getFreeUsageCount(ip) : null,
     scenarios_remaining: tier === 'free' ? Math.max(0, FREE_DAILY_LIMIT - getFreeUsageCount(ip)) : null,
     free_daily_limit:    FREE_DAILY_LIMIT,
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/scenario/resume
+// Returns the saved session for the browser's ems_sid cookie, if any.
+// ---------------------------------------------------------------------------
+router.get('/resume', (req, res) => {
+  const sid = getCookie(req, COOKIE_NAME);
+  if (!sid) return res.json({ session: null });
+
+  const snapshot = persistence.load(sid);
+  if (!snapshot || snapshot.debriefed) return res.json({ session: null });
+
+  // Restore in-memory session if server was restarted
+  if (!getSession(sid)) restoreSession(snapshot);
+
+  return res.json({
+    session: {
+      session_id:   sid,
+      savedAt:      snapshot.savedAt     || null,
+      meta:         snapshot.meta,
+      crew:         snapshot.crew,
+      tier:         snapshot.tier,
+      turns:        snapshot.turns       || [],
+      lastVitals:   snapshot.lastVitals  || null,
+      sceneMinute:  snapshot.sceneMinute || 0,
+      closed:       snapshot.closed      || false,
+      debriefed:    snapshot.debriefed   || false,
+      multi_patient: snapshot.meta ? (snapshot.meta.multi_patient || false) : false,
+    },
   });
 });
 
@@ -65,6 +131,28 @@ router.post('/new', async (req, res) => {
     // Fire the dispatch turn
     const result = await session.send('begin');
 
+    const partnerRec = crewRecord(seed.crew_partner);
+    const captainRec = crewRecord(seed.crew_captain);
+    const multiPatient = seed.special_flags ? /two_patients/i.test(seed.special_flags) : false;
+
+    // Persist session so it survives server restarts and tab closures
+    setSessionCookie(res, id);
+    persistence.save(buildSnapshot(id, session, {
+      userId: ip,
+      tier,
+      meta: {
+        scenario_id:    seed.scenario_id,
+        category:       seed.category,
+        difficulty:     seed.difficulty,
+        provider_level: seed.provider_level,
+        region:         seed.region,
+        patient:        seed.patient || null,
+        unit_name:      seed.unit_name,
+        multi_patient:  multiPatient,
+      },
+      crew: { partner: partnerRec, captain: captainRec },
+    }));
+
     return res.json({
       session_id:          id,
       scenario_id:         seed.scenario_id,
@@ -75,8 +163,8 @@ router.post('/new', async (req, res) => {
       patient:             seed.patient || null,
       unit_name:           seed.unit_name,
       crew: {
-        partner: crewRecord(seed.crew_partner),
-        captain: crewRecord(seed.crew_captain),
+        partner: partnerRec,
+        captain: captainRec,
       },
       tier,
       scenarios_used:      tier === 'free' ? getFreeUsageCount(ip) : null,
@@ -86,7 +174,7 @@ router.post('/new', async (req, res) => {
       vitals:              result.vitals || null,
       scene_minute:        session.sceneMinute,
       closed:              result.closed,
-      multi_patient:       seed.special_flags ? /two_patients/i.test(seed.special_flags) : false,
+      multi_patient:       multiPatient,
     });
   } catch (err) {
     console.error('[scenario/new]', err.message);
@@ -110,6 +198,16 @@ router.post('/:id/turn', async (req, res) => {
 
   try {
     const result = await session.send(message.trim());
+
+    // Update persisted snapshot after every turn
+    persistence.update(req.params.id, {
+      messages:    session.messages,
+      lastVitals:  session.lastVitals,
+      sceneMinute: session.sceneMinute,
+      closed:      session.closed,
+      turns:       session.turns,
+    });
+
     return res.json({
       reply:          result.reply,
       loading:        result.loading  || false,
@@ -145,6 +243,7 @@ router.post('/:id/debrief', async (req, res) => {
 
   try {
     const debrief = await session.debrief();
+    persistence.markDebriefed(req.params.id);
     return res.json({ debrief });
   } catch (err) {
     console.error('[scenario/debrief]', err.message);

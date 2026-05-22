@@ -135,6 +135,7 @@ class Session {
     this.closed = false;
     this.contextFlags = buildContextFlags(seed);
     this.lastVitals = null;       // most-recent parsed [VITALS:] tag, or null if none yet
+    this.turns = [];
   }
 
   /**
@@ -203,6 +204,8 @@ class Session {
       event_type: 'narrative',
       detail: reply.substring(0, 120),
     }, this.sceneMinute);
+
+    this.turns.push({ user: userText, assistant: reply, rolls });
 
     // Only close on explicit user signal — never on Claude's narration
     if (isDebriefTrigger(userText)) {

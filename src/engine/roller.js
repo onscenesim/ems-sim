@@ -306,6 +306,8 @@ function rollScenario(opts = {}) {
     special_circumstance: specialCircumstance,
     crew_partner: crew.partner,
     crew_captain: crew.captain,
+    crew_transport_driver: crew.captain || crew.partner,
+    crew_in_back: crew.captain ? [crew.partner] : [],
     region: region_id,
     provider_level,
     difficulty,

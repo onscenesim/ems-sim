@@ -69,6 +69,13 @@
         </div>
 
       </div>
+
+      <div id="resume-tile">
+        <span class="resume-tile-label">LAST RUN</span>
+        <span id="resume-tile-body">— NO RECENT RUN —</span>
+        <span class="resume-tile-arrow">&#x203A;</span>
+      </div>
+
     </div>
 
     <!-- Company logo — like the NASA meatball below the image map -->
@@ -110,10 +117,11 @@
         <div class="vital-label">HR</div>
         <div class="vital-value" data-vital="HR">&mdash;&mdash;</div>
       </div>
-      <div class="vital-cell vital-bp">
+      <div class="vital-cell vital-bp" id="nibp-cell" title="Tap to cycle NIBP">
         <div class="vital-label">BP</div>
         <div class="vital-value" data-vital="BP">&mdash;&mdash;</div>
         <div class="vital-stamp" data-vital-stamp="BP"></div>
+        <div id="nibp-cycle-hint">&#x21BA; CYCLE</div>
       </div>
       <div class="vital-cell vital-spo2">
         <div class="vital-label">SpO<sub>2</sub></div>
