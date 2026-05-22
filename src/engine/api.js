@@ -65,7 +65,8 @@ Rules:
 - Total length: aim for 250–400 words across all five sections combined. Do not pad.
 - BGL_NOT_CHECKED flag: if present in the log, evaluate whether glucose was actually indicated for this specific patient. A patient with normal mentation and a clear non-glucose diagnosis does not warrant calling out a missing BGL. Only flag it as a miss if the patient had altered mentation, seizure, syncope, weakness, or a toxicological or diabetic presentation.
 - FLUMAZENIL: if the provider attempted flumazenil, note it is not in the EMS formulary.
-- Do not refer to the "log" or "transcript" explicitly in your output — write as if you observed the call directly.`;
+- Do not refer to the "log" or "transcript" explicitly in your output — write as if you observed the call directly.
+- HOSPITAL PRE-ARRIVAL NOTIFICATION: Check whether the provider called ahead to the receiving hospital before or during transport. This is an expected skill at all provider levels — STEMI alerts, stroke alerts, trauma activations, and standard radio reports are all forms of this. If the provider transported without ever notifying the receiving facility, flag it in WHAT MISSED THE MARK. If they did call ahead, you may note it briefly in WHAT WENT WELL only if the report quality was notable. Do not flag it if the scenario did not involve transport (e.g., on-scene pronouncement, refusal of care).`;
 
   const response = await client.messages.create({
     model: MODEL,
