@@ -369,6 +369,19 @@ async function sendTurn(msg) {
 
 // ── End scenario button ───────────────────────────────────────────────────
 
+// ── Sign-off animation — plays when debrief generation starts ────────────────
+
+function showSignoffAnimation() {
+  const overlay = document.getElementById('signoff-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('fade-out');
+  overlay.classList.add('visible');
+  setTimeout(() => {
+    overlay.classList.add('fade-out');
+    setTimeout(() => overlay.classList.remove('visible', 'fade-out'), 350);
+  }, 2200);
+}
+
 // ── Debrief CTA — injected into output when scenario closes naturally ────────
 
 function showDebriefCTA() {
@@ -390,6 +403,7 @@ function showDebriefCTA() {
   scrollBottom();
 
   btn.addEventListener('click', async () => {
+    showSignoffAnimation();
     btn.disabled = true;
     btn.textContent = 'generating...';
     hint.textContent = 'This takes a few seconds — reviewing the full call.';

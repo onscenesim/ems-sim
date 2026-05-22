@@ -800,6 +800,97 @@ html, body {
   100% { opacity: 0; }
 }
 
+
+/* ── Transmission sign-off overlay ──────────────────────────────────────── */
+
+#signoff-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%) scale(0.85);
+  z-index: 102;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--chrome-bg);
+  background-image: var(--noise);
+  background-blend-mode: soft-light;
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  padding: 1rem 2.2rem 0.9rem;
+  font-family: var(--font-block, monospace);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  min-width: 190px;
+  text-align: center;
+}
+
+#signoff-overlay.visible {
+  opacity: 1;
+  transform: translate(-50%, -60%) scale(1);
+  animation: signoff-flicker 0.9s steps(1) forwards;
+}
+
+#signoff-overlay.fade-out {
+  opacity: 0;
+  transform: translate(-50%, -60%) scale(0.9);
+}
+
+@keyframes signoff-flicker {
+  0%   { opacity: 1; }
+  12%  { opacity: 0.3; }
+  18%  { opacity: 1; }
+  45%  { opacity: 1; }
+  50%  { opacity: 0.2; }
+  55%  { opacity: 0.9; }
+  82%  { opacity: 0.9; }
+  88%  { opacity: 0.15; }
+  94%  { opacity: 0.9; }
+  100% { opacity: 1; }
+}
+
+#signoff-header {
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #0a3d52;
+  margin-bottom: 0.15rem;
+}
+
+#signoff-svg {
+  width: 96px;
+  height: 86px;
+  color: #333;
+}
+
+#signoff-label {
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  color: #1a1a1a;
+  margin-top: 0.1rem;
+}
+
+/* Arcs drop out inward — outer first, then middle, then inner */
+.signoff-arc {
+  fill: none;
+  stroke: #0074a8;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+  opacity: 0;
+}
+
+#signoff-overlay.visible .signoff-arc-3 { animation: signoff-arc-drop 0.5s ease-out 0.1s forwards; }
+#signoff-overlay.visible .signoff-arc-2 { animation: signoff-arc-drop 0.5s ease-out 0.4s forwards; }
+#signoff-overlay.visible .signoff-arc-1 { animation: signoff-arc-drop 0.5s ease-out 0.7s forwards; }
+
+@keyframes signoff-arc-drop {
+  0%   { opacity: 0.85; }
+  60%  { opacity: 0.4; }
+  100% { opacity: 0; }
+}
+
 /* ── Dice roll overlay ───────────────────────────────────────────────────── */
 
 #dice-overlay {
