@@ -112,6 +112,8 @@ router.post('/:id/turn', async (req, res) => {
     const result = await session.send(message.trim());
     return res.json({
       reply:          result.reply,
+      loading:        result.loading  || false,
+      departing:      result.enRoute  || false,
       rolls:          result.rolls || [],
       vitals:         result.vitals || null,
       closed:         result.closed,

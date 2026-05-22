@@ -91,6 +91,25 @@ function parseVitalsTag(reply) {
 }
 
 /**
+ * Parse [LOADING] and [EN_ROUTE] event tags from the reply.
+ * Returns { cleanedReply, loading, enRoute }.
+ */
+function parseEventTags(reply) {
+  let loading = false;
+  let enRoute = false;
+  let cleaned = reply;
+  if (/\[LOADING\]/i.test(cleaned)) {
+    loading = true;
+    cleaned = cleaned.replace(/\s*\[LOADING\]\s*/gi, ' ');
+  }
+  if (/\[EN_ROUTE\]/i.test(cleaned)) {
+    enRoute = true;
+    cleaned = cleaned.replace(/\s*\[EN_ROUTE\]\s*/gi, ' ');
+  }
+  return { cleanedReply: cleaned.trim(), loading, enRoute };
+}
+
+/**
  * Build context flags from the current seed for context-aware DC selection.
  * Flags are static for the scenario — a future version could update these
  * dynamically as findings are revealed.
@@ -173,9 +192,9 @@ class Session {
     // remembers what it last reported. Strip the tag from the user-facing copy.
     this.messages.push({ role: 'assistant', content: rawReply });
 
-    const { cleanedReply, vitals } = parseVitalsTag(rawReply);
+    const { cleanedReply: vitalsClean, vitals } = parseVitalsTag(rawReply);
     if (vitals) this.lastVitals = vitals;
-    const reply = cleanedReply;
+    const { cleanedReply: reply, loading, enRoute } = parseEventTags(vitalsClean);
 
     // Advance scene clock — crude estimate, Claude tracks it precisely internally
     this.sceneMinute += 2;
@@ -193,7 +212,7 @@ class Session {
       return { reply, rolls, vitals: this.lastVitals, closed: true };
     }
 
-    return { reply, rolls, vitals: this.lastVitals, closed: false };
+    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, closed: false };
   }
 
   /**

@@ -306,6 +306,7 @@ function assembleSeedBlock(seed) {
   lines.push('  (j) If the user removes equipment (e.g., "pull the pulse-ox"), DROP that field from subsequent VITALS tags.');
   lines.push('  (k) The VITALS tag is the ONLY structured tag you emit. Continue to narrate clinical findings in prose as usual — the tag is in ADDITION to your narrative, not a replacement for it. Do not invent other bracketed tags.');
   lines.push('');
+  lines.push('17. EVENT TAGS — MACHINE SIGNALS: In addition to the VITALS tag, you must emit one of these tags exactly once, at the end of the reply, when the described event first occurs. Do not emit them more than once per scenario. Do not invent other tags.\n  [LOADING] — emit this exactly once, on the turn when the patient is physically loaded into the ambulance/unit. This means the stretcher has entered the vehicle. Do not emit it for packaging, moving to the stretcher, or walking to the truck — only when they are inside.\n  [EN_ROUTE] — emit this exactly once, on the turn when the unit actually begins driving toward the hospital. Do not emit it when transport is ordered but not yet started — only when the vehicle is moving. If both happen in the same turn, emit both tags.');
   lines.push('=== END SEED ==='); 
 
   return lines.join('\n');

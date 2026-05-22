@@ -341,12 +341,12 @@ async function sendTurn(msg) {
     for (const r of (data.rolls || [])) printRoll(r);
     printHr();
 
-    // Contextual animations — play before reply appears, one-shot per scenario
-    if (!hasPlayedLoading && /(load(ed|ing)?|wheel(ed|ing)?|mov(ed|ing)|brought?|slid|carr(ied|ying)|push(ed|ing)).{0,50}(truck|ambulance|unit|rig)|(onto|into).{0,30}(truck|ambulance|unit|rig)/i.test(data.reply)) {
+    // Contextual animations — server signals exactly when these events occur
+    if (!hasPlayedLoading && data.loading) {
       hasPlayedLoading = true;
       await animateLoading();
     }
-    if (!hasPlayedDepart && /en.?route|unit.{0,30}(roll|move|pull|head|navig)\w*|navigate?s?.{0,20}(to|toward)/i.test(data.reply)) {
+    if (!hasPlayedDepart && data.departing) {
       hasPlayedDepart = true;
       await animateDepart();
     }
