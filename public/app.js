@@ -290,6 +290,7 @@ async function startScenario() {
       setMultiPatientVitalsNotice(false);
       applyVitals(data.vitals || null);
     }
+    applyBackupStatus({ status: 'not_called', eta: null });
 
     setLoading(false);
     userInput.focus();
