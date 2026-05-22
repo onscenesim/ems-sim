@@ -44,11 +44,18 @@ const SPLASHES = [
   'Turn off that F***ing metronome!',
   'I\'ve fallen and I can\'t get up!',
   'Canceled on scene!',
+  'It’s like the Pitt!',
+  'Born to BLS!',
+  'Just because you nar-can…',
   'I am completely prepared to tell my driver to disembark and I will drive this thing in the Inner Harbor!',
   'I\'m tired, boss.',
+  'In honor of Micky Sullivan',
+  'And that’s how I lost my paramedic license!',
+  'Bold and Brash!',
   'Get your evidence off my truck!',
   'Hands on defibrillation? Its more likely than you think!',
   'CLEAR!',
+
 ];
 
 /**
