@@ -267,8 +267,11 @@ async function startScenario() {
     terminal.style.display    = 'flex';
 
     print(`Scenario ID: ${data.scenario_id}`, 'system');
-    print('TIP: Use an action verb when ordering meds or procedures — "give morphine," "push TXA," "hang dopamine," "intubate." That triggers the dice roll.', 'system');
-    print('');
+    print('TIPS FOR THIS SIMULATOR:', 'system');
+    print('  \u2022 MEDS & PROCEDURES: Use an action verb to trigger a dice roll \u2014 "give morphine," "push TXA," "hang a dopamine drip," "intubate," "establish an IO." Passive phrasing may not register.', 'system');
+    print('  \u2022 MOVING THE PATIENT: Say "move to the ambulance," "load the patient," or "take her to the rig" to package and load. No destination needed.', 'system');
+    print('  \u2022 GOING EN ROUTE: Say "go en route to [hospital]" or "transport to [hospital]" to start driving. Your partner will not move the unit until you name a destination.', 'system');
+    print('', 'system');
     printHr();
     // Show dispatch flash before the text appears
     if (/DISPATCH:/i.test(data.reply)) await animateDispatch();
