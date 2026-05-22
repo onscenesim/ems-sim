@@ -764,7 +764,7 @@ html, body {
   font-size: 0.5rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--cyan);
+  color: #0a3d52;
   margin-bottom: 0.15rem;
 }
 
@@ -789,9 +789,9 @@ html, body {
   opacity: 0;
 }
 
-.signal-arc-1 { stroke: var(--cyan); animation: dispatch-signal 1.6s ease-in-out infinite 0.0s; }
-.signal-arc-2 { stroke: var(--cyan); animation: dispatch-signal 1.6s ease-in-out infinite 0.4s; }
-.signal-arc-3 { stroke: var(--cyan); animation: dispatch-signal 1.6s ease-in-out infinite 0.8s; }
+.signal-arc-1 { stroke: #0074a8; animation: dispatch-signal 1.6s ease-in-out infinite 0.0s; }
+.signal-arc-2 { stroke: #0074a8; animation: dispatch-signal 1.6s ease-in-out infinite 0.4s; }
+.signal-arc-3 { stroke: #0074a8; animation: dispatch-signal 1.6s ease-in-out infinite 0.8s; }
 
 @keyframes dispatch-signal {
   0%   { opacity: 0; }
