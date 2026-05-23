@@ -2042,15 +2042,17 @@ html, body {
 /* ── Report button ──────────────────────────────────────────────────── */
 #report-btn {
   flex-shrink: 0;
+  display: inline-block;
   background: var(--chrome-bg);
   border: 2px solid;
   border-color: var(--hi) var(--lo) var(--lo) var(--hi);
-  color: #444;
+  color: #333;
   font-family: var(--font-block);
   font-size: 11px;
   padding: 6px 12px;
   cursor: pointer;
   letter-spacing: 0.08em;
+  white-space: nowrap;
   transition: background 0.08s, color 0.1s, border-color 0.1s;
 }
 #report-btn:hover { background: #dedad4; }
