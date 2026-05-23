@@ -352,17 +352,12 @@ async function startScenario() {
 
     endBtn.disabled = false;
 
-    // Start scene clock
+    // Start scene clock (in-game time — updates per turn, not per second)
     clearInterval(clockInterval);
-    scenarioStartTime = Date.now();
+    clockInterval = null;
+    scenarioStartTime = Date.now(); // kept for vitals staleness only
     sceneClock.textContent = 'T+0:00';
     sceneClock.className   = 'active';
-    clockInterval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - scenarioStartTime) / 1000);
-      const m = Math.floor(elapsed / 60);
-      const s = elapsed % 60;
-      sceneClock.textContent = `T+${m}:${String(s).padStart(2, '0')}`;
-    }, 1000);
 
     // Switch to terminal
     startScreen.style.display = 'none';
@@ -394,7 +389,10 @@ async function startScenario() {
     }
 
     // Initial vitals (likely empty/sparse until equipment is placed)
-    if (typeof data.scene_minute === 'number') currentSceneMinute = data.scene_minute;
+    if (typeof data.scene_minute === 'number') {
+      currentSceneMinute = data.scene_minute;
+      updateSceneClock(currentSceneMinute);
+    }
     if (data.multi_patient) {
       setMultiPatientVitalsNotice(true);
     } else {
@@ -480,11 +478,7 @@ async function sendTurn(msg) {
     // Vitals update on every turn
     if (typeof data.scene_minute === 'number') {
       currentSceneMinute = data.scene_minute;
-      // Re-anchor wall-clock start so the scene clock shows in-game time,
-      // not real elapsed time. T+N:SS now means N in-game minutes.
-      if (scenarioStartTime !== null) {
-        scenarioStartTime = Date.now() - currentSceneMinute * 60 * 1000;
-      }
+      updateSceneClock(currentSceneMinute);
     }
     if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
     // Fire startup sound when a primary vital (HR, SpO2, ETCO2, BP) first appears
@@ -732,6 +726,13 @@ function resetToStart() {
 }
 
 // ── Input controls ────────────────────────────────────────────────────────
+
+// ── Scene clock (in-game minutes, updated per server turn) ─────────────────
+function updateSceneClock(minutes) {
+  const m = Math.floor(minutes);
+  const s = Math.round((minutes - m) * 60);
+  sceneClock.textContent = `T+${m}:${String(s).padStart(2, '0')}`;
+}
 
 // ── Typing indicator (shows while waiting for AI response) ─────────────────
 let loadingDotsEl = null;
@@ -1277,12 +1278,8 @@ async function resumeFromSnapshot(snap) {
   sceneClock.textContent = 'T+0:00';
   sceneClock.className   = 'active';
   if (!isClosed) {
-    clockInterval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - scenarioStartTime) / 1000);
-      const mn = Math.floor(elapsed / 60);
-      const s  = elapsed % 60;
-      sceneClock.textContent = `T+${mn}:${String(s).padStart(2, '0')}`;
-    }, 1000);
+    updateSceneClock(snap.sceneMinute || 0);
+    clockInterval = null;
   }
 
   startScreen.style.display = 'none';
