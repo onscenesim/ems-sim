@@ -75,7 +75,7 @@ DETECT_PATTERNS.sort((a, b) => b.key.length - a.key.length);
 // ---------------------------------------------------------------------------
 // Past-tense forms (gave, pushed, administered …) are intentionally excluded —
 // they indicate reporting ('we gave epi') rather than ordering ('give epi').
-const ADMIN_VERB_RE = /\b(give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?\s+the\s+\w+|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving)\b/i;
+const ADMIN_VERB_RE = /\b(give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?\s+the\s+\w+|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|go(?:ing)?\s+for\s+(?:a|an|the)|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving)\b/i;
 
 /**
  * Detect a procedure from user text.
