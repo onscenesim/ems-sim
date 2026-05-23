@@ -61,7 +61,10 @@ const INTERVENTIONS = [
     "don't stop compressions", "don't stop CPR",
     // Resuming after pause
     "resume CPR", "resume compressions", "back on the chest", "back to compressions",
-    "back to work", "get back on the chest"
+    "back to work", "get back on the chest",
+    // Taking over from someone else
+    "take over CPR", "take over compressions", "taking over CPR", "taking over compressions",
+    "switch out", "switch out CPR", "switch out compressions", "I'll take over", "let me take over"
   ], dc: [6, 15], no_roll: false,
   dc_notes: "DC 12 on scene / stationary — fatiguing over time, quality degrades. DC 17 in a moving ambulance — provider cannot brace, compressions shallow and irregular. FAILURE: narrate poor depth, wrong rate, or provider fatigue. COMPLICATION: rib fracture, vomiting with aspiration risk, provider loses balance in moving unit. SUCCESS: good depth and rate confirmed by partner or ETCO2 rise. Always explain to the player why moving-ambulance CPR rolled a higher DC.", scope: "BLS", notes: null },
   { id: "medication_push", synonyms: [
