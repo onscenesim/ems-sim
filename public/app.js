@@ -36,6 +36,8 @@ const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression',
 // Subset that triggers the scalpel animation — excludes NCD (needle decompression)
 const SCALPEL_PROCS = new Set(['cricothyrotomy', 'finger_thoracostomy',
   'resuscitative_thoracotomy', 'perimortem_csection']);
+// Triggers the laryngoscope animation with pass/fail outcome
+const LARYNGOSCOPE_PROCS = new Set(['intubation', 'rsi']);
 function getProcedureSound(id, outcome) {
   if (id === 'defibrillation' || id === 'cardioversion') return 'defib';
   if (id === 'io_access') return 'io';
@@ -458,6 +460,7 @@ async function sendTurn(msg) {
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
+      if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -643,6 +646,7 @@ async function endCallAndDebrief() {
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
+      if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -1040,6 +1044,27 @@ function animateScalpel(procedureId) {
     overlay.classList.remove('visible');
     void overlay.offsetWidth;
     overlay.classList.add('visible');
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateLaryngoscope(procedureId, outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1500;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('laryngoscope-overlay');
+    const header  = document.getElementById('laryngoscope-header');
+    const label   = document.getElementById('laryngoscope-label');
+    if (!overlay) { resolve(); return; }
+    header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
+    label.textContent  = outcome;
+    // Reset all outcome classes and force animation restart
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible', `outcome-${outcome}`);
     setTimeout(() => {
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);

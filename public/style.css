@@ -2141,3 +2141,108 @@ html, body {
   85%  { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* ── Laryngoscope overlay — intubation outcomes ─────────────────────── */
+#laryngoscope-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 14, 0.82);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+#laryngoscope-overlay.visible { opacity: 1; }
+
+#laryngoscope-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+
+#laryngoscope-svg {
+  width: 130px;
+  height: auto;
+  color: rgba(180, 200, 220, 0.85);
+  filter: drop-shadow(0 1px 8px rgba(80, 140, 200, 0.25));
+  opacity: 0;
+}
+#laryngoscope-overlay.visible #laryngoscope-svg {
+  animation: lxSlideIn 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards;
+}
+@keyframes lxSlideIn {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+#laryngoscope-outcome-svg {
+  width: 56px;
+  height: 56px;
+}
+
+/* ── Outcome colours ─────── */
+#laryngoscope-overlay.outcome-SUCCESS   #laryngoscope-outcome-svg { color: #3dcc66; }
+#laryngoscope-overlay.outcome-MARGINAL  #laryngoscope-outcome-svg { color: #ccaa33; }
+#laryngoscope-overlay.outcome-FAILURE   #laryngoscope-outcome-svg { color: #cc4040; }
+#laryngoscope-overlay.outcome-COMPLICATION #laryngoscope-outcome-svg { color: #cc5522; }
+
+#laryngoscope-overlay.outcome-SUCCESS   #laryngoscope-label { color: #3dcc66; }
+#laryngoscope-overlay.outcome-MARGINAL  #laryngoscope-label { color: #ccaa33; }
+#laryngoscope-overlay.outcome-FAILURE   #laryngoscope-label { color: #cc4040; }
+#laryngoscope-overlay.outcome-COMPLICATION #laryngoscope-label { color: #cc5522; }
+
+/* ── Checkmark — draw in on success/marginal ── */
+#lx-check { display: none; }
+#laryngoscope-overlay.outcome-SUCCESS  #lx-check,
+#laryngoscope-overlay.outcome-MARGINAL #lx-check { display: block; }
+
+#laryngoscope-overlay.outcome-SUCCESS.visible  #lx-check,
+#laryngoscope-overlay.outcome-MARGINAL.visible #lx-check {
+  animation: drawCheck 0.55s ease-out 0.38s forwards;
+}
+@keyframes drawCheck {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ── X lines — draw in on failure/complication ── */
+#lx-x1, #lx-x2 { display: none; }
+#laryngoscope-overlay.outcome-FAILURE      #lx-x1,
+#laryngoscope-overlay.outcome-FAILURE      #lx-x2,
+#laryngoscope-overlay.outcome-COMPLICATION #lx-x1,
+#laryngoscope-overlay.outcome-COMPLICATION #lx-x2 { display: block; }
+
+#laryngoscope-overlay.outcome-FAILURE.visible      #lx-x1,
+#laryngoscope-overlay.outcome-COMPLICATION.visible #lx-x1 {
+  animation: drawX 0.3s ease-out 0.38s forwards;
+}
+#laryngoscope-overlay.outcome-FAILURE.visible      #lx-x2,
+#laryngoscope-overlay.outcome-COMPLICATION.visible #lx-x2 {
+  animation: drawX 0.3s ease-out 0.55s forwards;
+}
+@keyframes drawX {
+  to { stroke-dashoffset: 0; }
+}
+
+#laryngoscope-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0;
+}
+#laryngoscope-overlay.visible #laryngoscope-label {
+  animation: lxLabelFade 0.8s ease 0.42s forwards;
+}
+@keyframes lxLabelFade {
+  0%   { opacity: 0; }
+  40%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { opacity: 0; }
+}
