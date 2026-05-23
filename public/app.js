@@ -432,8 +432,8 @@ async function sendTurn(msg) {
       await animateDepart();
     }
 
-    // Radio crackle only when no procedure was rolled this turn
-    if (!(data.rolls || []).some(r => !r.no_roll)) playSound('radio');
+    // Radio crackle when the reply mentions the radio
+    if (/\bradio\b/i.test(data.reply)) playSound('radio');
     printReply(data.reply);
     printHr();
 
