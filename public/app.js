@@ -54,13 +54,15 @@ let audioUnlocked = false;
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
-  // One silent play activates the iOS audio session for all elements
-  const s = SOUNDS.radio;
-  s.volume = 0;
-  const p = s.play();
-  if (p) p.then(() => { s.pause(); s.currentTime = 0; s.volume = 1; })
-           .catch(() => { s.volume = 1; });
-  else { s.pause(); s.currentTime = 0; s.volume = 1; }
+  // iOS requires each Audio element to be played once inside a user gesture.
+  // Use muted=true (hardware-silent, no pops) rather than volume=0.
+  Object.values(SOUNDS).forEach(s => {
+    s.muted = true;
+    const p = s.play();
+    if (p) p.then(() => { s.pause(); s.currentTime = 0; s.muted = false; })
+             .catch(() => { s.muted = false; });
+    else { s.pause(); s.currentTime = 0; s.muted = false; }
+  });
 }
 document.addEventListener('click',      unlockAudio, { once: true });
 document.addEventListener('touchstart', unlockAudio, { once: true });

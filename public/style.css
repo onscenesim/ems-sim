@@ -771,7 +771,24 @@ html, body {
   }
 
   #output    { padding: 12px 14px; }
-  #input-row { padding: 8px 12px; }
+  /* Input row: REPORT wraps to its own full-width line above input+SEND+END */
+  #input-row {
+    flex-wrap: wrap;
+    padding: 6px 10px;
+    gap: 5px;
+  }
+  #report-btn {
+    order: -1;          /* float above the input row */
+    flex: 0 0 100%;     /* full width */
+    padding: 7px 12px;
+    font-size: 10px;
+  }
+  .prompt { display: none; } /* hide '> ' prompt on mobile to save space */
+  #send-btn, #end-btn {
+    padding: 5px 10px;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
 
   /* Prevent iOS auto-zoom on input focus (requires font-size >= 16px) */
   #user-input       { font-size: 16px; }
