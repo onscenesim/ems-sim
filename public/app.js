@@ -60,6 +60,7 @@ const userInput    = document.getElementById('user-input');
 const sendBtn      = document.getElementById('send-btn');
 const startBtn      = document.getElementById('start-btn');
 const soundToggleBtn = document.getElementById('sound-toggle');
+const reportBtn    = document.getElementById('report-btn');
 const endBtn       = document.getElementById('end-btn');
 const crewBtn      = document.getElementById('crew-btn');
 const tierMsg      = document.getElementById('tier-msg');
@@ -83,6 +84,7 @@ let hasPlayedLoading  = false;
 let hasPlayedDepart   = false;
 let firstVitalsPlayed = false;
 let soundEnabled      = localStorage.getItem('ems_sound') !== 'off';
+let reportMode        = false;  // true = next send is a report, skips dice
 let localTranscript = null;   // built client-side so export never hits the server
 let clockInterval   = null;   // setInterval handle for the scene clock
 let scenarioStartTime = null; // Date.now() when the current scenario started
@@ -259,6 +261,26 @@ async function refreshStatus() {
 }
 
 // ── Sound toggle ─────────────────────────────────────��────────────────────
+// ── Report mode toggle ──────────────────────────────────────────────────────
+function updateReportBtn() {
+  if (reportMode) {
+    reportBtn.textContent = '\u25cf  REPORTING';
+    reportBtn.classList.add('report-active');
+    document.getElementById('input-row').classList.add('report-mode');
+    userInput.placeholder = 'Give your radio report or handoff...';
+  } else {
+    reportBtn.textContent = 'REPORT';
+    reportBtn.classList.remove('report-active');
+    document.getElementById('input-row').classList.remove('report-mode');
+    userInput.placeholder = 'Type your action or order...';
+  }
+}
+reportBtn.addEventListener('click', () => {
+  reportMode = !reportMode;
+  updateReportBtn();
+});
+updateReportBtn();
+
 function updateSoundToggle() {
   soundToggleBtn.textContent = soundEnabled ? '\u25cf  SOUND: ON' : '\u25cb  SOUND: OFF';
   soundToggleBtn.classList.toggle('sound-off', !soundEnabled);
@@ -402,7 +424,9 @@ async function sendTurn(msg) {
 
   currentAbortController = new AbortController();
   try {
-    const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg }, currentAbortController.signal);
+    const isReport = reportMode;
+    if (reportMode) { reportMode = false; updateReportBtn(); }
+    const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg, report_mode: isReport }, currentAbortController.signal);
 
     // decompensating flag intentionally not shown to student — Claude fires it internally
 

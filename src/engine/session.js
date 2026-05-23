@@ -192,13 +192,14 @@ class Session {
    * Auto-detects procedures and logs dice rolls.
    * Returns { reply, roll, closed }
    */
-  async send(userText) {
+  async send(userText, reportMode = false) {
     if (this.closed) {
       return { reply: '[Scenario is closed. Start a new scenario.]', rolls: [], closed: true };
     }
 
-    // Detect and roll ALL procedures mentioned in the user's message
-    const rolls = detectAllAndRoll(userText, this.contextFlags, this.seed.difficulty);
+    // Detect and roll ALL procedures mentioned in the user's message.
+    // Skip entirely when the player is giving a radio report or handoff.
+    const rolls = reportMode ? [] : detectAllAndRoll(userText, this.contextFlags, this.seed.difficulty);
 
     for (const roll of rolls) {
       if (!roll.no_roll) {
@@ -223,6 +224,14 @@ class Session {
     // Inject all real roll results into the user message so Claude knows every outcome.
     // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
     let messageText = userText;
+    // In report mode, tell Claude this is a report/handoff turn — no procedure rolls.
+    if (reportMode) {
+      messageText += '\n\n[REPORT MODE: The player is giving a radio report or patient handoff. '
+        + 'No procedure rolls occurred this turn. Procedures mentioned are past events already completed. '
+        + 'Respond as the receiving party (hospital, medical control, or incoming crew). '
+        + 'Acknowledge the report, ask any clinically appropriate follow-up questions, '
+        + 'and confirm estimated time of arrival or transfer acceptance as appropriate.]';
+    }
     // Fast-path for NIBP cycle — keep Claude's reply brief to avoid jarring wall-of-text
     const isNibpCycle = userText.trim() === 'Cycle NIBP';
     if (isNibpCycle) {

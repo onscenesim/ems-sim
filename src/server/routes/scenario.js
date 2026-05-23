@@ -193,13 +193,13 @@ router.post('/:id/turn', async (req, res) => {
     return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired (30 min timeout).' });
   }
 
-  const { message } = req.body;
+  const { message, report_mode } = req.body;
   if (!message || typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ error: 'invalid_input', message: '`message` is required.' });
   }
 
   try {
-    const result = await session.send(message.trim());
+    const result = await session.send(message.trim(), report_mode === true);
 
     // Update persisted snapshot after every turn
     persistence.update(req.params.id, {
