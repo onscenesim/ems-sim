@@ -38,6 +38,8 @@ const SCALPEL_PROCS = new Set(['cricothyrotomy', 'finger_thoracostomy',
   'resuscitative_thoracotomy', 'perimortem_csection']);
 // Triggers the laryngoscope animation with pass/fail outcome
 const LARYNGOSCOPE_PROCS = new Set(['intubation', 'rsi']);
+// Triggers the defib/cardioversion animation
+const DEFIB_PROCS = new Set(['defibrillation', 'cardioversion']);
 function getProcedureSound(id, outcome) {
   if (id === 'defibrillation' || id === 'cardioversion') return 'defib';
   if (id === 'io_access') return 'io';
@@ -455,7 +457,11 @@ async function sendTurn(msg) {
       if (r.no_roll) continue;
       const procSound = getProcedureSound(r.procedure_id, r.outcome);
       console.log('[roll]', r.procedure_id, r.outcome, '→ sound:', procSound);
-      if (r.multi_roll) { playSound(procSound); continue; }
+      if (r.multi_roll) {
+        playSound(procSound);
+        if (DEFIB_PROCS.has(r.procedure_id)) await animateDefib(r.procedure_id, r.outcome);
+        continue;
+      }
       playSound(procSound);
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
@@ -641,7 +647,11 @@ async function endCallAndDebrief() {
     for (const r of (turnData.rolls || [])) {
       if (r.no_roll) continue;
       const procSound = getProcedureSound(r.procedure_id, r.outcome);
-      if (r.multi_roll) { playSound(procSound); continue; }
+      if (r.multi_roll) {
+        playSound(procSound);
+        if (DEFIB_PROCS.has(r.procedure_id)) await animateDefib(r.procedure_id, r.outcome);
+        continue;
+      }
       playSound(procSound);
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
@@ -1044,6 +1054,27 @@ function animateScalpel(procedureId) {
     overlay.classList.remove('visible');
     void overlay.offsetWidth;
     overlay.classList.add('visible');
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateDefib(procedureId, outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1550;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('defib-overlay');
+    const header  = document.getElementById('defib-header');
+    const label   = document.getElementById('defib-label');
+    if (!overlay) { resolve(); return; }
+    header.textContent = procedureId === 'cardioversion' ? 'CARDIOVERSION' : 'DEFIBRILLATION';
+    label.textContent  = outcome;
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible', `outcome-${outcome}`);
+    if (procedureId === 'cardioversion') overlay.classList.add('is-cardioversion');
     setTimeout(() => {
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);

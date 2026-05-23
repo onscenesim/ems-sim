@@ -2246,3 +2246,106 @@ html, body {
   85%  { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* ── Defibrillation / cardioversion overlay ─────────────────────────── */
+#defib-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(6, 2, 8, 0.82);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+#defib-overlay.visible { opacity: 1; }
+
+#defib-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(220, 200, 230, 0.75);
+  text-transform: uppercase;
+}
+
+#defib-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#defib-svg {
+  width: 88px;
+  height: 82px;
+  overflow: visible;
+}
+
+/* Heart — deep crimson, dims slightly between jolts */
+#defib-heart {
+  fill: #c02840;
+  filter: drop-shadow(0 0 6px rgba(200,40,60,0.5));
+}
+
+/* Bolt — hidden until animation fires */
+#defib-bolt {
+  fill: #ffe040;
+  opacity: 0;
+}
+
+/* Jolt: icon wrap squash-and-stretch on shock delivery */
+#defib-overlay.visible #defib-icon-wrap {
+  animation: defibJolt 0.72s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.22s both;
+}
+@keyframes defibJolt {
+  0%   { transform: scale(1,   1);    }
+  12%  { transform: scale(1.14,0.87); }
+  26%  { transform: scale(0.88,1.12); }
+  42%  { transform: scale(1.07,0.95); }
+  58%  { transform: scale(0.97,1.03); }
+  74%  { transform: scale(1.02,0.99); }
+  100% { transform: scale(1,   1);    }
+}
+
+/* Bolt flashes in on shock delivery */
+#defib-overlay.visible #defib-bolt {
+  animation: boltFlash 0.6s ease-out 0.22s forwards;
+}
+@keyframes boltFlash {
+  0%   { opacity: 0; filter: brightness(1);   }
+  18%  { opacity: 1; filter: brightness(3.5); }
+  45%  { opacity: 1; filter: brightness(1);   }
+  100% { opacity: 0.8; }
+}
+
+/* SYNC badge — only visible for cardioversion */
+#defib-sync {
+  font-family: var(--font-block, monospace);
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
+  color: #55bbff;
+  background: rgba(20, 80, 180, 0.28);
+  border: 1px solid rgba(85, 187, 255, 0.45);
+  padding: 2px 10px 1px;
+  border-radius: 2px;
+  display: none;
+}
+#defib-overlay.is-cardioversion #defib-sync { display: block; }
+
+/* Outcome label */
+#defib-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0;
+}
+#defib-overlay.visible #defib-label {
+  animation: lxLabelFade 0.9s ease 0.35s forwards;
+}
+#defib-overlay.outcome-SUCCESS     #defib-label { color: #3dcc66; }
+#defib-overlay.outcome-MARGINAL    #defib-label { color: #ccaa33; }
+#defib-overlay.outcome-FAILURE     #defib-label { color: #cc4040; }
+#defib-overlay.outcome-COMPLICATION #defib-label { color: #cc5522; }
