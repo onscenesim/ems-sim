@@ -34,6 +34,24 @@ function getProcedureSound(id, outcome) {
   return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'success' : 'fail';
 }
 
+// ── Mobile audio unlock ─────────────────────────────────────────────────────
+// iOS Safari blocks programmatic audio until a user gesture has played each
+// Audio element once. Silently play+pause every sound on the first interaction.
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  Object.values(SOUNDS).forEach(s => {
+    s.volume = 0;
+    const p = s.play();
+    if (p) p.then(() => { s.pause(); s.currentTime = 0; s.volume = 1; })
+             .catch(() => { s.volume = 1; });
+    else   { s.pause(); s.currentTime = 0; s.volume = 1; }
+  });
+}
+document.addEventListener('click',      unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: true });
+
 
 const startScreen  = document.getElementById('start-screen');
 const terminal     = document.getElementById('terminal');
@@ -413,7 +431,8 @@ async function sendTurn(msg) {
       await animateDepart();
     }
 
-    playSound('radio');
+    // Radio crackle only when no procedure was rolled this turn
+    if (!(data.rolls || []).some(r => !r.no_roll)) playSound('radio');
     printReply(data.reply);
     printHr();
 
