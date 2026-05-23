@@ -12,8 +12,14 @@ const SOUNDS = {
   lucas:    new Audio('/sounds/LUCAS.mp3'),
   lifepak:  new Audio('/sounds/LifepakStartup.mp3'),
   radio:    new Audio('/sounds/RadioCrackle.mp3'),
-  surgical: new Audio('/sounds/SurgicalIncision.mp3'),
-  dispatch: new Audio('/sounds/incident_assigned.mp3'),
+  surgical:         new Audio('/sounds/SurgicalIncision.mp3'),
+  dispatch:         new Audio('/sounds/incident_assigned.mp3'),
+  bvm_fail:         new Audio('/sounds/BVM_fail.mp3'),
+  bvm_success:      new Audio('/sounds/BVM_success.mp3'),
+  cpr_amb:          new Audio('/sounds/CPR_ambulance.mp3'),
+  cpr_outside:      new Audio('/sounds/CPR_outside.mp3'),
+  cpr_bls_amb:      new Audio('/sounds/CPR_bls_ambulance.mp3'),
+  cpr_bls_outside:  new Audio('/sounds/CPR_bls_outside.mp3'),
 };
 Object.values(SOUNDS).forEach(a => { a.preload = 'auto'; });
 function playSound(name) {
@@ -31,6 +37,13 @@ function getProcedureSound(id, outcome) {
   if (id === 'io_access') return 'io';
   if (id === 'lucas') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'lucas' : 'fail';
   if (SURGICAL_PROCS.has(id)) return 'surgical';
+  if (id === 'bvm') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'bvm_success' : 'bvm_fail';
+  if (id === 'cpr') {
+    const bls = localTranscript?.meta?.provider_level === 'BLS';
+    return window._isMoving
+      ? (bls ? 'cpr_bls_amb'     : 'cpr_amb')
+      : (bls ? 'cpr_bls_outside' : 'cpr_outside');
+  }
   return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'success' : 'fail';
 }
 
