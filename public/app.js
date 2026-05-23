@@ -31,7 +31,11 @@ function playSound(name) {
   s.play().catch(err => console.warn('[sound] play error:', name, err.message));
 }
 function playDefibSound() { playSound('defib'); } // legacy wrapper
-const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression', 'finger_thoracostomy', 'resuscitative_thoracotomy']);
+const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression',
+  'finger_thoracostomy', 'resuscitative_thoracotomy', 'perimortem_csection']);
+// Subset that triggers the scalpel animation — excludes NCD (needle decompression)
+const SCALPEL_PROCS = new Set(['cricothyrotomy', 'finger_thoracostomy',
+  'resuscitative_thoracotomy', 'perimortem_csection']);
 function getProcedureSound(id, outcome) {
   if (id === 'defibrillation' || id === 'cardioversion') return 'defib';
   if (id === 'io_access') return 'io';
@@ -453,6 +457,7 @@ async function sendTurn(msg) {
       playSound(procSound);
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+      if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -637,6 +642,7 @@ async function endCallAndDebrief() {
       playSound(procSound);
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+      if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -1014,6 +1020,25 @@ function animateLoading() {
     const FADE_MS = 220;
     let overlay = document.getElementById('loading-overlay');
     if (!overlay) { resolve(); return; }
+    overlay.classList.add('visible');
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateScalpel(procedureId) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1150;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('scalpel-overlay');
+    const label   = document.getElementById('scalpel-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
+    // Force CSS animation restart on repeated calls
+    overlay.classList.remove('visible');
+    void overlay.offsetWidth;
     overlay.classList.add('visible');
     setTimeout(() => {
       overlay.classList.remove('visible');
