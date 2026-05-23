@@ -342,6 +342,53 @@
       <div id="laryngoscope-label"></div>
     </div>
 
+    <!-- Precordial thump — Thor's hammer animation overlay -->
+    <div id="thump-overlay" aria-hidden="true">
+      <div id="thump-header">PRECORDIAL THUMP</div>
+      <svg id="thump-hammer-svg" viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+
+        <!-- Electric burst — radiates from hammerhead center on impact -->
+        <g id="thump-burst" stroke="#88ccff" fill="none">
+          <line x1="60" y1="34" x2="60" y2="4"   stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="60" y1="34" x2="92" y2="10"  stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="60" y1="34" x2="108" y2="34" stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="60" y1="34" x2="28" y2="10"  stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="60" y1="34" x2="12" y2="34"  stroke-width="2.2" stroke-linecap="round"/>
+          <polyline points="60,34 70,18 74,26 80,10"   stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="60,34 50,18 46,26 40,10"   stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="60" cy="34" r="7" fill="#88ccff" opacity="0.55"/>
+        </g>
+
+        <!-- Mjolnir hammerhead -->
+        <rect x="15" y="10" width="90" height="42" rx="5" fill="none" stroke="currentColor" stroke-width="2.5"/>
+        <!-- Head surface detail — center vertical and horizontal etch -->
+        <line x1="60" y1="16" x2="60" y2="46" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+        <line x1="22" y1="31" x2="98" y2="31" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+        <!-- Rune circle -->
+        <circle cx="60" cy="31" r="11" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+        <!-- Wing panel lines -->
+        <line x1="20" y1="19" x2="36" y2="19" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
+        <line x1="20" y1="43" x2="36" y2="43" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
+        <line x1="84" y1="19" x2="100" y2="19" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
+        <line x1="84" y1="43" x2="100" y2="43" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
+
+        <!-- Neck connector (narrowing between head and handle) -->
+        <rect x="50" y="52" width="20" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+
+        <!-- Handle (famously short — Mjolnir) -->
+        <rect x="52" y="60" width="16" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="2.5"/>
+        <!-- Leather grip wrapping (horizontal bands) -->
+        <line x1="55" y1="72" x2="67" y2="72" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+        <line x1="55" y1="82" x2="67" y2="82" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+        <line x1="55" y1="92" x2="67" y2="92" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+        <line x1="55" y1="102" x2="67" y2="102" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+        <!-- Handle pommel cap -->
+        <rect x="49" y="110" width="22" height="6" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+
+      </svg>
+      <div id="thump-label"></div>
+    </div>
+
     <!-- Ambulance departure animation overlay -->
     <div id="depart-overlay" aria-hidden="true">
       <div id="depart-header">TRANSPORTING</div>

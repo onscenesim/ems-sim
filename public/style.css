@@ -2247,6 +2247,85 @@ html, body {
   100% { opacity: 0; }
 }
 
+/* ── Precordial Thump — Thor's hammer overlay ───────────────────────── */
+#thump-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(4, 8, 14, 0.84);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+#thump-overlay.visible { opacity: 1; }
+
+#thump-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+
+#thump-hammer-svg {
+  width: 100px;
+  height: auto;
+  color: rgba(180, 200, 220, 0.90);
+  filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.30));
+  opacity: 0;
+}
+#thump-overlay.visible #thump-hammer-svg {
+  animation: hammerSlam 0.60s cubic-bezier(0.22, 0.61, 0.36, 1) 0.08s forwards;
+}
+@keyframes hammerSlam {
+  0%   { opacity: 0; transform: translateY(-55px) rotate(-18deg); }
+  22%  { opacity: 1; }
+  68%  { transform: translateY(0px)   rotate(4deg); }
+  76%  { transform: translateY(10px)  rotate(1deg); }
+  85%  { transform: translateY(4px)   rotate(3deg); }
+  100% { transform: translateY(6px)   rotate(2deg); opacity: 1; }
+}
+
+#thump-burst { opacity: 0; }
+#thump-overlay.visible #thump-burst {
+  animation: thumpBurst 0.55s ease-out 0.54s forwards;
+}
+@keyframes thumpBurst {
+  0%   { opacity: 0;   transform: scale(0.25); }
+  25%  { opacity: 1;   transform: scale(1.05); }
+  60%  { opacity: 0.7; transform: scale(1.0);  }
+  100% { opacity: 0;   transform: scale(1.35); }
+}
+
+#thump-overlay.visible {
+  animation: thumpBgFlash 0.70s ease-out forwards;
+}
+@keyframes thumpBgFlash {
+  0%, 62% { background: rgba(4,  8, 14, 0.84); }
+  72%      { background: rgba(18, 38, 80, 0.92); }
+  100%     { background: rgba(4,  8, 14, 0.84); }
+}
+
+#thump-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: rgba(180, 200, 220, 0.90);
+  text-transform: uppercase;
+  opacity: 0;
+}
+#thump-overlay.visible #thump-label {
+  animation: thumpLabelFade 0.25s ease-out 0.62s forwards;
+}
+@keyframes thumpLabelFade {
+  to { opacity: 1; }
+}
+
 /* ── Defibrillation / cardioversion overlay ─────────────────────────── */
 #defib-overlay {
   position: fixed;

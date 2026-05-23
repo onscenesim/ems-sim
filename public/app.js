@@ -20,6 +20,7 @@ const SOUNDS = {
   cpr_outside:      new Audio('/sounds/CPR_outside.mp3'),
   cpr_bls_amb:      new Audio('/sounds/CPR_bls_ambulance.mp3'),
   cpr_bls_outside:  new Audio('/sounds/CPR_bls_outside.mp3'),
+  thump:            new Audio('/sounds/PrecordialThumpSuccess.mp3'),
 };
 Object.values(SOUNDS).forEach(a => { a.preload = 'auto'; });
 function playSound(name) {
@@ -40,10 +41,12 @@ const SCALPEL_PROCS = new Set(['cricothyrotomy', 'finger_thoracostomy',
 const LARYNGOSCOPE_PROCS = new Set(['intubation', 'rsi']);
 // Triggers the defib/cardioversion animation
 const DEFIB_PROCS = new Set(['defibrillation', 'cardioversion']);
+const THUMP_PROCS  = new Set(['precordial_thump']);
 function getProcedureSound(id, outcome) {
   if (id === 'defibrillation' || id === 'cardioversion') return 'defib';
   if (id === 'io_access') return 'io';
   if (id === 'lucas') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'lucas' : 'fail';
+  if (id === 'precordial_thump') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'thump' : 'fail';
   if (SURGICAL_PROCS.has(id)) return 'surgical';
   if (id === 'bvm') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'bvm_success' : 'bvm_fail';
   if (id === 'cpr') {
@@ -467,6 +470,7 @@ async function sendTurn(msg) {
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
       if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
+      if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -657,6 +661,7 @@ async function endCallAndDebrief() {
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
       if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
+      if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -1075,6 +1080,24 @@ function animateDefib(procedureId, outcome) {
     void overlay.offsetWidth;
     overlay.classList.add('visible', `outcome-${outcome}`);
     if (procedureId === 'cardioversion') overlay.classList.add('is-cardioversion');
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateThorsHammer(outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1700;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('thump-overlay');
+    const label   = document.getElementById('thump-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = outcome;
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible');
     setTimeout(() => {
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
