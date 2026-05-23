@@ -41,13 +41,13 @@ let audioUnlocked = false;
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
-  Object.values(SOUNDS).forEach(s => {
-    s.volume = 0;
-    const p = s.play();
-    if (p) p.then(() => { s.pause(); s.currentTime = 0; s.volume = 1; })
-             .catch(() => { s.volume = 1; });
-    else   { s.pause(); s.currentTime = 0; s.volume = 1; }
-  });
+  // One silent play activates the iOS audio session for all elements
+  const s = SOUNDS.radio;
+  s.volume = 0;
+  const p = s.play();
+  if (p) p.then(() => { s.pause(); s.currentTime = 0; s.volume = 1; })
+           .catch(() => { s.volume = 1; });
+  else { s.pause(); s.currentTime = 0; s.volume = 1; }
 }
 document.addEventListener('click',      unlockAudio, { once: true });
 document.addEventListener('touchstart', unlockAudio, { once: true });
@@ -267,6 +267,7 @@ soundToggleBtn.addEventListener('click', () => {
   soundEnabled = !soundEnabled;
   localStorage.setItem('ems_sound', soundEnabled ? 'on' : 'off');
   updateSoundToggle();
+  if (soundEnabled) playSound('radio'); // confirmation crackle on enable
 });
 updateSoundToggle();
 
