@@ -454,6 +454,7 @@ async function sendTurn(msg) {
     }
     if (!hasPlayedDepart && data.departing) {
       hasPlayedDepart = true;
+      window._isMoving = true; // ambulance en route — CPR sound switches
       await animateDepart();
     }
 
