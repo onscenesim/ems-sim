@@ -93,7 +93,7 @@ function isSpecificSynonym(key) {
   if (key.includes(' '))   return true;   // multi-word → specific
   if (!/^[a-z]/.test(key)) return true;   // starts uppercase / acronym → specific
   if (/[0-9\-]/.test(key)) return true;   // contains digits or hyphens → equipment
-  if (SPECIFIC_EQUIPMENT.has(key)) return true;
+  if (SPECIFIC_EQUIPMENT.has(key.toLowerCase())) return true;
   return false;
 }
 
