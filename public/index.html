@@ -277,52 +277,50 @@
     <!-- Laryngoscope animation overlay — intubation outcomes -->
     <div id="laryngoscope-overlay" aria-hidden="true">
       <div id="laryngoscope-header"></div>
-      <svg id="laryngoscope-svg" viewBox="0 0 200 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <svg id="laryngoscope-svg" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!--
+          Everything inside one group so local +x = blade direction
+          and local +y = handle direction → blade is exactly 90° from handle.
+          translate(68,102): junction point in screen space.
+          rotate(-45): handle runs lower-right, blade runs upper-right.
+        -->
+        <g transform="translate(68,102) rotate(-45)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
 
-        <!-- MAC BLADE — drawn first so handle/ferrule overlaps at junction -->
-        <!-- Blade body fill (chrome mass) -->
-        <path d="M 88 61 Q 164 57 173 24 L 163 23 Q 155 47 78 50 Z"
-              fill="currentColor" opacity="0.10" stroke="none"/>
-        <!-- Outer (lower) blade edge -->
-        <path d="M 88 61 Q 164 57 173 24"
-              fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-        <!-- Inner (upper) blade edge -->
-        <path d="M 78 50 Q 155 47 163 23"
-              fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-        <!-- Blade tip end cap -->
-        <line x1="163" y1="23" x2="173" y2="24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-        <!-- Blade base diagonal face at ferrule -->
-        <line x1="78" y1="50" x2="88" y2="61" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-        <!-- Center rib / light channel -->
-        <path d="M 83 55 Q 160 51 168 24"
-              fill="none" stroke="currentColor" stroke-width="1" opacity="0.25"/>
-        <!-- Spatula tip hook -->
-        <path d="M 173 24 Q 178 19 180 13"
-              fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          <!-- ── BLADE (local +x → upper-right in screen) ── -->
+          <!-- Blade fill -->
+          <path d="M 2 -6  Q 50 -14  90 -20  L 90 -13  Q 50 -8  2 1 Z"
+                fill="currentColor" opacity="0.12" stroke="none"/>
+          <!-- Outer edge -->
+          <path d="M 2 -6  Q 50 -14  90 -20" stroke-width="2.2"/>
+          <!-- Inner edge -->
+          <path d="M 2  1  Q 50 -8   85 -13" stroke-width="2.2"/>
+          <!-- Root face -->
+          <line x1="2" y1="-6" x2="2" y2="1" stroke-width="2.2"/>
+          <!-- Tip cap -->
+          <path d="M 85 -13 Q 88 -17 90 -20" stroke-width="2.2"/>
+          <!-- Mac blade flange / light channel -->
+          <path d="M 10 -3  Q 52 -10  80 -16" stroke-width="0.9" opacity="0.45"/>
 
-        <!-- HANDLE + FERRULE — on top of blade -->
-        <!-- local +y runs along handle axis: upper-left cap → lower-right ferrule -->
-        <g transform="translate(24,10) rotate(-45)" fill="none" stroke="currentColor" stroke-linecap="round">
-          <!-- Battery cap -->
-          <rect x="-7" y="0" width="14" height="10" rx="5" stroke-width="2.2"/>
+          <!-- ── HANDLE (local +y → lower-right in screen) ── -->
+          <!-- Light housing at top (blade junction) -->
+          <rect x="-6" y="0" width="12" height="12" rx="4" stroke-width="2.2"/>
           <!-- Green marker rings -->
-          <line x1="-7" y1="12.5" x2="7" y2="12.5" stroke="#5ec96e" stroke-width="3.5" stroke-linecap="butt"/>
-          <line x1="-7" y1="17.5" x2="7" y2="17.5" stroke="#5ec96e" stroke-width="2"   stroke-linecap="butt"/>
+          <line x1="-7" y1="14" x2="7" y2="14" stroke="#5ec96e" stroke-width="3.5" stroke-linecap="butt"/>
+          <line x1="-7" y1="19" x2="7" y2="19" stroke="#5ec96e" stroke-width="2"   stroke-linecap="butt"/>
           <!-- Handle grip body -->
-          <rect x="-7" y="10" width="14" height="58" rx="1.5" stroke-width="2.2"/>
-          <!-- Grip grooves -->
-          <line x1="-6" y1="23" x2="6" y2="23" stroke-width="1.2" opacity="0.5"/>
-          <line x1="-6" y1="30" x2="6" y2="30" stroke-width="1.2" opacity="0.5"/>
-          <line x1="-6" y1="37" x2="6" y2="37" stroke-width="1.2" opacity="0.5"/>
-          <line x1="-6" y1="44" x2="6" y2="44" stroke-width="1.2" opacity="0.5"/>
-          <line x1="-6" y1="51" x2="6" y2="51" stroke-width="1.2" opacity="0.5"/>
-          <line x1="-6" y1="58" x2="6" y2="58" stroke-width="1.2" opacity="0.5"/>
-          <!-- Ferrule collar (wider, knurled) -->
-          <rect x="-10.5" y="68" width="21" height="12" rx="2.5" stroke-width="2.2"/>
-          <line x1="-9" y1="71.5" x2="9" y2="71.5" stroke-width="1" opacity="0.45"/>
-          <line x1="-9" y1="74.5" x2="9" y2="74.5" stroke-width="1" opacity="0.45"/>
-        </g>
+          <rect x="-5.5" y="12" width="11" height="55" rx="1.5" stroke-width="2.2"/>
+          <!-- Grip knurling -->
+          <line x1="-9" y1="24" x2="9" y2="24" stroke-width="1.2" opacity="0.5"/>
+          <line x1="-9" y1="32" x2="9" y2="32" stroke-width="1.2" opacity="0.5"/>
+          <line x1="-9" y1="40" x2="9" y2="40" stroke-width="1.2" opacity="0.5"/>
+          <line x1="-9" y1="48" x2="9" y2="48" stroke-width="1.2" opacity="0.5"/>
+          <line x1="-9" y1="56" x2="9" y2="56" stroke-width="1.2" opacity="0.5"/>
+          <!-- Pommel / battery cap -->
+          <rect x="-7" y="67" width="14" height="11" rx="3" stroke-width="2.2"/>
+          <line x1="-5" y1="70.5" x2="5" y2="70.5" stroke-width="1" opacity="0.4"/>
+          <line x1="-5" y1="73.5" x2="5" y2="73.5" stroke-width="1" opacity="0.4"/>
 
+        </g>
       </svg>
       <svg id="laryngoscope-outcome-svg" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <!-- Checkmark (success / marginal) -->
