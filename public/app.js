@@ -592,6 +592,7 @@ function showDebriefCTA() {
       if (localTranscript) localTranscript.debriefText = data.debrief;
       cta.remove();
       printHr();
+      print('Note: Debrief is experimental. Take what it says with a grain of salt.', 'system');
       print(data.debrief, 'debrief');
       printHr();
     } catch (err) {
@@ -658,6 +659,7 @@ async function endCallAndDebrief() {
     const debriefData = await apiPost(`/api/scenario/${sessionId}/debrief`, {});
     if (localTranscript) localTranscript.debriefText = debriefData.debrief;
     printHr();
+    print('Note: Debrief is experimental. Take what it says with a grain of salt.', 'system');
     print(debriefData.debrief, 'debrief');
     printHr();
 
