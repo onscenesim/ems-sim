@@ -185,6 +185,7 @@ class Session {
     this.turns = [];
     this.backupStatus = null; // { status, eta } from [BACKUP:] tag
     this.crewStatus = null;   // { partner, captain } from [CREW_STATUS:] tag
+    this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
   }
 
   /**
@@ -199,7 +200,8 @@ class Session {
 
     // Detect and roll ALL procedures mentioned in the user's message.
     // Skip entirely when the player is giving a radio report or handoff.
-    const rolls = reportMode ? [] : detectAllAndRoll(userText, this.contextFlags, this.seed.difficulty);
+    const rollContext = { ...this.contextFlags, moving: this.moving };
+    const rolls = reportMode ? [] : detectAllAndRoll(userText, rollContext, this.seed.difficulty);
 
     for (const roll of rolls) {
       if (!roll.no_roll) {
@@ -263,9 +265,26 @@ class Session {
     const { cleanedReply: reply, loading, enRoute } = parseEventTags(crewClean);
     if (backup) this.backupStatus = backup;
     if (crewStatus) this.crewStatus = crewStatus;
+    if (enRoute) this.moving = true; // ambulance is rolling — CPR DC increases
 
-    // Advance scene clock — crude estimate, Claude tracks it precisely internally
-    this.sceneMinute += 2;
+    // Advance scene clock — prefer vitals timestamps (Claude tracks precisely);
+    // fall back to +2 min per turn. Skip entirely on report turns.
+    if (!reportMode) {
+      let advancedFromVitals = false;
+      if (vitals) {
+        let maxTMin = null;
+        for (const v of Object.values(vitals)) {
+          if (v && typeof v.tMin === 'number' && (maxTMin === null || v.tMin > maxTMin)) {
+            maxTMin = v.tMin;
+          }
+        }
+        if (maxTMin !== null && maxTMin > this.sceneMinute) {
+          this.sceneMinute = maxTMin;
+          advancedFromVitals = true;
+        }
+      }
+      if (!advancedFromVitals) this.sceneMinute += 2;
+    }
 
     logEvent(this.seed, {
       event_type: 'narrative',

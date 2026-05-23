@@ -75,7 +75,7 @@ DETECT_PATTERNS.sort((a, b) => b.key.length - a.key.length);
 // ---------------------------------------------------------------------------
 // Past-tense forms (gave, pushed, administered …) are intentionally excluded —
 // they indicate reporting ('we gave epi') rather than ordering ('give epi').
-const ADMIN_VERB_RE = /\b(give|giving|push(ing)?|administer(ing)?|inject(ing)?|hang(ing)?|start(ing)?\s+the\s+\w+|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving)\b/i;
+const ADMIN_VERB_RE = /\b(give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?\s+the\s+\w+|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving)\b/i;
 
 /**
  * Detect a procedure from user text.
@@ -103,7 +103,7 @@ const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|l
 
 // Past-tense / reporting context words that indicate the player is describing
 // something already done rather than ordering it now.
-const PAST_CONTEXT_RE = /\b(gave|administered|was\s+given|had\s+received|received|already\s+(?:gave|given|pushed|administered|established|placed|started)|after\s+\d[\d.]*\s*(?:mg|ml|mcg|g|mEq))\b/i;
+const PAST_CONTEXT_RE = /\b(gave|administered|was\s+given|had\s+received|received|already\s+(?:gave|given|pushed|administered|established|placed|started)|after\s+\d[\d.]*\s*(?:mg|ml|mcg|g|mEq)|was\s+(?:doing|performing|in|on)|had\s+(?:been|started)|were\s+(?:doing|performing|on)|had\s+CPR|did\s+CPR|performed\s+CPR|did\s+compressions|were\s+doing\s+compressions)\b/i;
 
 /**
  * Returns true if the procedure match at matchStart is inside a sentence that
@@ -191,6 +191,10 @@ function selectDC(proc, contextFlags = {}) {
       return junctional ? 14 : dcs[0];
     case 'newborn_resuscitation':
       return contextFlags.resuscitative_steps ? dcs[1] : dcs[0];
+    case 'cpr':
+      // DC 17 in a moving ambulance — provider can't brace, compressions suffer.
+      // DC 12 on scene or stationary.
+      return contextFlags.moving ? dcs[1] : dcs[0];
     case 'medication_push':
       return dcs[0];
     default:

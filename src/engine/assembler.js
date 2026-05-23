@@ -341,6 +341,12 @@ function assembleSeedBlock(seed) {
 
   lines.push('20. REPORT MODE: When the user message contains [REPORT MODE: ...], the player is giving a radio report or patient handoff to a receiving party. For these turns: (a) NO procedure rolls occurred — do not reference or expect any [SYSTEM ROLL] results; (b) all procedures mentioned are past events already performed, not new orders; (c) respond in the role of the receiving party — hospital charge nurse, medical control physician, or incoming crew — acknowledging the report and asking any clinically relevant follow-up questions; (d) keep your response concise and professional, as a real radio exchange would be; (e) confirm ETA acknowledgment or transfer acceptance at the end of your reply; (f) continue to emit [VITALS:] and [CREW_STATUS:] tags as usual.');
 
+  lines.push('21. CPR QUALITY ROLLS: When the user starts or resumes CPR, a [SYSTEM ROLL] will determine quality. '
+    + 'DC 12 on scene or stationary. DC 17 in a moving ambulance — providers cannot brace, compressions become shallow and irregular. '
+    + 'When rolling CPR at DC 17, explicitly explain to the player that ambulance movement is degrading compression quality, '
+    + 'and narrate the clinical consequence (lower ETCO2, poor perfusion, partner struggling to maintain position). '
+    + 'FAILURE or COMPLICATION at DC 17: strongly encourage the player to consider pulling over briefly or deploying LUCAS.');
+
   lines.push('=== END SEED ==='); 
 
   return lines.join('\n');

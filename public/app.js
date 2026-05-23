@@ -421,6 +421,7 @@ async function sendTurn(msg) {
   addHistory(msg);
   print(`> ${msg}`, 'user');
   setLoading(true);
+  showLoadingDots();
 
   currentAbortController = new AbortController();
   try {
@@ -456,17 +457,32 @@ async function sendTurn(msg) {
       await animateDepart();
     }
 
+    hideLoadingDots();
     // Radio crackle when the reply mentions the radio
     if (/\bradio\b/i.test(data.reply)) playSound('radio');
     printReply(data.reply);
     printHr();
 
     // Vitals update on every turn
-    if (typeof data.scene_minute === 'number') currentSceneMinute = data.scene_minute;
+    if (typeof data.scene_minute === 'number') {
+      currentSceneMinute = data.scene_minute;
+      // Re-anchor wall-clock start so the scene clock shows in-game time,
+      // not real elapsed time. T+N:SS now means N in-game minutes.
+      if (scenarioStartTime !== null) {
+        scenarioStartTime = Date.now() - currentSceneMinute * 60 * 1000;
+      }
+    }
     if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
-    if (!firstVitalsPlayed && data.vitals) {
-      firstVitalsPlayed = true;
-      playSound(localTranscript?.meta?.provider_level === 'BLS' ? 'kitopen' : 'lifepak');
+    // Fire startup sound when a primary vital (HR, SpO2, ETCO2, BP) first appears
+    // OR when CPR begins (resuscitation = equipment on).
+    if (!firstVitalsPlayed) {
+      const KEY_VITALS = ['HR', 'SpO2', 'ETCO2', 'BP'];
+      const vitalsReady = data.vitals && KEY_VITALS.some(k => data.vitals[k] != null);
+      const cprStarted  = (data.rolls || []).some(r => r.procedure_id === 'cpr' && !r.no_roll);
+      if (vitalsReady || cprStarted) {
+        firstVitalsPlayed = true;
+        playSound(localTranscript?.meta?.provider_level === 'BLS' ? 'kitopen' : 'lifepak');
+      }
     }
     if (data.backup) applyBackupStatus(data.backup);
     if (data.crewStatus) applyCrewStatus(data.crewStatus);
@@ -486,6 +502,7 @@ async function sendTurn(msg) {
       return;
     }
   } catch (err) {
+    hideLoadingDots();
     if (err.name === 'AbortError') {
       print('[Cancelled by user. The server may still finish the request in the background — if you re-send, your previous message may also have been processed.]', 'system');
     } else {
@@ -701,6 +718,20 @@ function resetToStart() {
 }
 
 // ── Input controls ────────────────────────────────────────────────────────
+
+// ── Typing indicator (shows while waiting for AI response) ─────────────────
+let loadingDotsEl = null;
+function showLoadingDots() {
+  hideLoadingDots();
+  loadingDotsEl = document.createElement('div');
+  loadingDotsEl.className = 'loading-dots';
+  loadingDotsEl.innerHTML = '<span></span><span></span><span></span>';
+  output.appendChild(loadingDotsEl);
+  scrollBottom();
+}
+function hideLoadingDots() {
+  if (loadingDotsEl) { loadingDotsEl.remove(); loadingDotsEl = null; }
+}
 
 function setLoading(loading) {
   // While loading, SEND morphs into STOP — clickable, aborts the in-flight request.
