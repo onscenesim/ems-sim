@@ -283,7 +283,10 @@ class Session {
           advancedFromVitals = true;
         }
       }
-      if (!advancedFromVitals) this.sceneMinute += 2;
+      // Arrest calls advance at least 3 min/turn (one CPR cycle + analysis);
+      // all other calls fall back to 2 min/turn.
+      const fallbackMinutes = this.seed.category === 'arrest' ? 3 : 2;
+      if (!advancedFromVitals) this.sceneMinute += fallbackMinutes;
     }
 
     logEvent(this.seed, {

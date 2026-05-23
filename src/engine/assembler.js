@@ -424,6 +424,19 @@ function assembleSeedBlock(seed) {
     + 'and narrate the clinical consequence (lower ETCO2, poor perfusion, partner struggling to maintain position). '
     + 'FAILURE or COMPLICATION at DC 17: strongly encourage the player to consider pulling over briefly or deploying LUCAS.');
 
+  // Arrest-specific ACLS pacing rule
+  if (seed.category === 'arrest') {
+    lines.push(
+      '22. CARDIAC ARREST — MANDATORY ACLS TIMING: Real resuscitation has rigid timing. Enforce it as the simulation clock.\n'
+      + '    CPR CYCLES: Minimum 2 minutes of uninterrupted compressions before any rhythm check. If the student calls for a check before 2 minutes have elapsed, the partner interjects: "[name]: Hold — only [N] seconds in. Give it two full minutes." Do not allow early checks.\n'
+      + '    TURN SCOPE: Each student message during active resus = one action window: one 2-minute CPR cycle OR one analysis+shock sequence, not both. If a student chains CPR → rhythm check → shock → epi → CPR in one message, narrate the first step then pause and wait for the next order. Do not telescope a full ACLS loop into one reply.\n'
+      + '    EPINEPHRINE INTERVALS: Track scene-minute of every epi dose. Minimum interval: 3 minutes. If re-ordered under 3 minutes, partner states: "[name]: Epi was [N] min ago — too soon." Hold the dose; do not administer until re-ordered.\n'
+      + '    AMIODARONE: 300 mg after the 3rd shock. 150 mg after the 5th shock. Track shock count. Do not allow a second 300 mg dose.\n'
+      + '    PARTNER CLOCK CALLS: Every 2 minutes of active CPR, the partner calls time: "[name]: Two minutes — rotate?" This is standard resuscitation practice and grounds the simulation in real ACLS pacing.\n'
+      + '    TIMESTAMPS: Resus timestamps must reflect real tempo. Each CPR cycle = 2 min minimum. A full loop (CPR → rhythm check → shock → CPR) = at least 3–4 minutes. Never emit timestamps suggesting two full loops in under 3 minutes total.'
+    );
+  }
+  
   lines.push('=== END SEED ==='); 
 
   return lines.join('\n');
