@@ -18,12 +18,13 @@ const SOUNDS = {
 Object.values(SOUNDS).forEach(a => { a.preload = 'auto'; });
 function playSound(name) {
   const s = SOUNDS[name];
-  if (!s) return;
+  if (!s) { console.warn('[sound] unknown:', name); return; }
+  console.log('[sound] playing:', name);
   s.currentTime = 0;
-  s.play().catch(() => {});
+  s.play().catch(err => console.warn('[sound] play error:', name, err.message));
 }
 function playDefibSound() { playSound('defib'); } // legacy wrapper
-const SURGICAL_PROCS = new Set(['cricothyrotomy', 'finger_thoracostomy', 'resuscitative_thoracotomy']);
+const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression', 'finger_thoracostomy', 'resuscitative_thoracotomy']);
 function getProcedureSound(id, outcome) {
   if (id === 'defibrillation' || id === 'cardioversion') return 'defib';
   if (id === 'io_access') return 'io';
@@ -375,6 +376,7 @@ async function sendTurn(msg) {
     for (const r of (data.rolls || [])) {
       if (r.no_roll) continue;
       const procSound = getProcedureSound(r.procedure_id, r.outcome);
+      console.log('[roll]', r.procedure_id, r.outcome, '→ sound:', procSound);
       if (r.multi_roll) { playSound(procSound); continue; }
       playSound(procSound);
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
