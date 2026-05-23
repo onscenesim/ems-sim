@@ -132,6 +132,19 @@ function parseBackupTag(reply) {
 }
 
 /**
+ * Parse [TIME: M:SS] tag from Claude's reply.
+ * Returns { cleanedReply, timeMinutes }. timeMinutes is null if tag absent.
+ */
+function parseTimeTag(reply) {
+  const re = /\s*\[TIME:\s*(\d+):(\d{2})\]\s*/i;
+  const m = reply.match(re);
+  if (!m) return { cleanedReply: reply, timeMinutes: null };
+  const cleanedReply = reply.replace(re, ' ').replace(/\s{2,}/g, ' ').trim();
+  const timeMinutes = parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+  return { cleanedReply, timeMinutes };
+}
+
+/**
  * Parse [CREW_STATUS: partner=X captain=Y] tag from the reply.
  * Returns { cleanedReply, crewStatus } where crewStatus is null or { partner, captain }.
  * Partner values: on_scene, driving, in_back
@@ -183,7 +196,8 @@ class Session {
     this.contextFlags = buildContextFlags(seed);
     this.lastVitals = null;       // most-recent parsed [VITALS:] tag, or null if none yet
     this.turns = [];
-    this.backupStatus = null; // { status, eta } from [BACKUP:] tag
+    this.backupStatus = null;        // { status, eta } from [BACKUP:] tag
+    this.backupArrivalMinute = null; // scene minute when backup is expected on scene
     this.crewStatus = null;   // { partner, captain } from [CREW_STATUS:] tag
     this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
   }
@@ -250,6 +264,18 @@ class Session {
       messageText += '\n\n' + rollLines.join('\n');
     }
 
+    // Auto-trigger backup arrival when server-tracked ETA has elapsed
+    if (
+      this.backupStatus &&
+      this.backupStatus.status === 'en_route' &&
+      this.backupArrivalMinute !== null &&
+      this.sceneMinute >= this.backupArrivalMinute
+    ) {
+      messageText += '\n\n[SYSTEM NOTE: The backup unit\'s ETA has elapsed — they are on scene. '
+        + 'You MUST emit [BACKUP: on_scene ETA=0] in this response and announce the arrival '
+        + 'through dispatch, describing who arrived and what resources they brought.]';
+    }
+
     this.messages.push({ role: 'user', content: messageText });
 
     const rawReply = await sendTurn(this.systemPrompt, this.messages);
@@ -262,31 +288,47 @@ class Session {
     if (vitals) this.lastVitals = vitals;
     const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);
     const { cleanedReply: crewClean, crewStatus } = parseCrewStatusTag(backupClean);
-    const { cleanedReply: reply, loading, enRoute } = parseEventTags(crewClean);
-    if (backup) this.backupStatus = backup;
+    const { cleanedReply: timeClean, timeMinutes } = parseTimeTag(crewClean);
+    const { cleanedReply: reply, loading, enRoute } = parseEventTags(timeClean);
+    if (backup) {
+      // Track backup arrival minute when unit first goes en_route
+      if (backup.status === 'en_route' && backup.eta !== null && this.backupArrivalMinute === null) {
+        this.backupArrivalMinute = this.sceneMinute + backup.eta;
+      }
+      if (backup.status === 'on_scene' || backup.status === 'cancelled') {
+        this.backupArrivalMinute = null;
+      }
+      this.backupStatus = backup;
+    }
     if (crewStatus) this.crewStatus = crewStatus;
     if (enRoute) this.moving = true; // ambulance is rolling — CPR DC increases
 
-    // Advance scene clock — prefer vitals timestamps (Claude tracks precisely);
-    // fall back to +2 min per turn. Skip entirely on report turns.
+    // Advance scene clock.
+    // Primary:   [TIME: M:SS] tag — Claude's explicit, authoritative timestamp.
+    // Secondary: vitals @T+M:SS timestamps — used only if TIME tag absent.
+    // Fallback:  fixed increment per turn.
     if (!reportMode) {
-      let advancedFromVitals = false;
-      if (vitals) {
+      if (timeMinutes !== null && timeMinutes > this.sceneMinute) {
+        // [TIME] tag is the single source of truth
+        this.sceneMinute = timeMinutes;
+      } else {
+        // TIME tag absent or didn't advance — try vitals timestamps
         let maxTMin = null;
-        for (const v of Object.values(vitals)) {
-          if (v && typeof v.tMin === 'number' && (maxTMin === null || v.tMin > maxTMin)) {
-            maxTMin = v.tMin;
+        if (vitals) {
+          for (const v of Object.values(vitals)) {
+            if (v && typeof v.tMin === 'number' && (maxTMin === null || v.tMin > maxTMin)) {
+              maxTMin = v.tMin;
+            }
           }
         }
         if (maxTMin !== null && maxTMin > this.sceneMinute) {
           this.sceneMinute = maxTMin;
-          advancedFromVitals = true;
+        } else {
+          // Last resort: fixed increment
+          const fallback = this.seed.category === 'arrest' ? 3 : 2;
+          this.sceneMinute += fallback;
         }
       }
-      // Arrest calls advance at least 3 min/turn (one CPR cycle + analysis);
-      // all other calls fall back to 2 min/turn.
-      const fallbackMinutes = this.seed.category === 'arrest' ? 3 : 2;
-      if (!advancedFromVitals) this.sceneMinute += fallbackMinutes;
     }
 
     logEvent(this.seed, {
