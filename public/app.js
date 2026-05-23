@@ -481,11 +481,11 @@ async function sendTurn(msg) {
       updateSceneClock(currentSceneMinute);
     }
     if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
-    // Fire startup sound when a primary vital (HR, SpO2, ETCO2, BP) first appears
-    // OR when CPR begins (resuscitation = equipment on).
+    // Fire startup sound the first time ANY vital value is reported,
+    // or when CPR begins. Covers all scenario types: monitor readings,
+    // rhythm strips, GCS, skin signs, etc.
     if (!firstVitalsPlayed) {
-      const KEY_VITALS = ['HR', 'SpO2', 'ETCO2', 'BP'];
-      const vitalsReady = data.vitals && KEY_VITALS.some(k => data.vitals[k] != null);
+      const vitalsReady = data.vitals && Object.values(data.vitals).some(v => v != null);
       const cprStarted  = (data.rolls || []).some(r => r.procedure_id === 'cpr' && !r.no_roll);
       if (vitalsReady || cprStarted) {
         firstVitalsPlayed = true;
