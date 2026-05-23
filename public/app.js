@@ -2,11 +2,34 @@
 
 // ── DOM refs ────────────────────────────────────────────────────────────
 // ── Audio ──────────────────────────────────────────────────────────────
-const defibSound = new Audio('/sounds/lp15_defib_charge.mp3');
-defibSound.preload = 'auto';
-function playDefibSound() {
-  defibSound.currentTime = 0;
-  defibSound.play().catch(() => {}); // catch: browsers may block until first user gesture
+// ── Sound effects ─────────────────────────────────────────────────────────────────────────
+const SOUNDS = {
+  defib:    new Audio('/sounds/lp15_defib_charge.mp3'),
+  fail:     new Audio('/sounds/Diceroll_fail.mp3'),
+  success:  new Audio('/sounds/Diceroll_success.mp3'),
+  io:       new Audio('/sounds/IODrillSoundEffect.mp3'),
+  kitopen:  new Audio('/sounds/KitOpen.mp3'),
+  lucas:    new Audio('/sounds/LUCAS.mp3'),
+  lifepak:  new Audio('/sounds/LifepakStartup.mp3'),
+  radio:    new Audio('/sounds/RadioCrackle.mp3'),
+  surgical: new Audio('/sounds/SurgicalIncision.mp3'),
+  dispatch: new Audio('/sounds/incident_assigned.mp3'),
+};
+Object.values(SOUNDS).forEach(a => { a.preload = 'auto'; });
+function playSound(name) {
+  const s = SOUNDS[name];
+  if (!s) return;
+  s.currentTime = 0;
+  s.play().catch(() => {});
+}
+function playDefibSound() { playSound('defib'); } // legacy wrapper
+const SURGICAL_PROCS = new Set(['cricothyrotomy', 'finger_thoracostomy', 'resuscitative_thoracotomy']);
+function getProcedureSound(id, outcome) {
+  if (id === 'defibrillation' || id === 'cardioversion') return 'defib';
+  if (id === 'io_access') return 'io';
+  if (id === 'lucas') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'lucas' : 'fail';
+  if (SURGICAL_PROCS.has(id)) return 'surgical';
+  return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'success' : 'fail';
 }
 
 
@@ -35,8 +58,9 @@ const splashEl     = document.getElementById('splash');
 let sessionId       = null;
 let isClosed        = false;
 let waitingDebrief  = false;
-let hasPlayedLoading = false;
-let hasPlayedDepart  = false;
+let hasPlayedLoading  = false;
+let hasPlayedDepart   = false;
+let firstVitalsPlayed = false;
 let localTranscript = null;   // built client-side so export never hits the server
 let clockInterval   = null;   // setInterval handle for the scene clock
 let scenarioStartTime = null; // Date.now() when the current scenario started
@@ -274,6 +298,7 @@ async function startScenario() {
     startScreen.style.display = 'none';
     terminal.style.display    = 'flex';
 
+    playSound('dispatch');
     print(`Scenario ID: ${data.scenario_id}`, 'system');
     print('TIPS FOR THIS SIMULATOR:', 'system');
     print('  \u2022 MEDS & PROCEDURES: Use an action verb to trigger a dice roll \u2014 "give morphine," "push TXA," "hang a dopamine drip," "intubate," "establish an IO." Passive phrasing may not register.', 'system');
@@ -349,9 +374,9 @@ async function sendTurn(msg) {
     // Animate each real single roll in sequence, then print all to the log
     for (const r of (data.rolls || [])) {
       if (r.no_roll) continue;
-      const isShock = r.procedure_id === 'defibrillation' || r.procedure_id === 'cardioversion';
-      if (r.multi_roll) { if (isShock) playDefibSound(); continue; }
-      if (isShock) playDefibSound();
+      const procSound = getProcedureSound(r.procedure_id, r.outcome);
+      if (r.multi_roll) { playSound(procSound); continue; }
+      playSound(procSound);
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
@@ -371,12 +396,17 @@ async function sendTurn(msg) {
       await animateDepart();
     }
 
+    playSound('radio');
     printReply(data.reply);
     printHr();
 
     // Vitals update on every turn
     if (typeof data.scene_minute === 'number') currentSceneMinute = data.scene_minute;
     if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
+    if (!firstVitalsPlayed && data.vitals) {
+      firstVitalsPlayed = true;
+      playSound(localTranscript?.meta?.provider_level === 'BLS' ? 'kitopen' : 'lifepak');
+    }
     if (data.backup) applyBackupStatus(data.backup);
     if (data.crewStatus) applyCrewStatus(data.crewStatus);
 
@@ -513,9 +543,9 @@ async function endCallAndDebrief() {
 
     for (const r of (turnData.rolls || [])) {
       if (r.no_roll) continue;
-      const isShock = r.procedure_id === 'defibrillation' || r.procedure_id === 'cardioversion';
-      if (r.multi_roll) { if (isShock) playDefibSound(); continue; }
-      if (isShock) playDefibSound();
+      const procSound = getProcedureSound(r.procedure_id, r.outcome);
+      if (r.multi_roll) { playSound(procSound); continue; }
+      playSound(procSound);
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
@@ -578,9 +608,10 @@ function resetToStart() {
   sessionId       = null;
   isClosed        = false;
   waitingDebrief  = false;
-  hasPlayedLoading = false;
-  hasPlayedDepart  = false;
-  localTranscript = null;
+  hasPlayedLoading  = false;
+  hasPlayedDepart   = false;
+  firstVitalsPlayed = false;
+  localTranscript   = null;
   output.innerHTML = '';
 
   // Reset scene clock
