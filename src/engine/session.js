@@ -200,6 +200,7 @@ class Session {
     this.backupArrivalMinute = null; // scene minute when backup is expected on scene
     this.crewStatus = null;   // { partner, captain } from [CREW_STATUS:] tag
     this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
+    this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
   }
 
   /**
@@ -301,6 +302,12 @@ class Session {
       this.backupStatus = backup;
     }
     if (crewStatus) this.crewStatus = crewStatus;
+    // Safety net: if EN_ROUTE fires but LOADING was never emitted (Claude combined both into
+    // one turn without tagging loading), auto-inject loading so the animation fires correctly.
+    if (enRoute && !this.hasLoaded) {
+      loading = true;
+    }
+    if (loading) this.hasLoaded = true;
     if (enRoute) this.moving = true; // ambulance is rolling — CPR DC increases
 
     // Advance scene clock.
@@ -343,7 +350,7 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls, vitals: this.lastVitals, backup: this.backupStatus, crewStatus: this.crewStatus, closed: true };
+      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, backup: this.backupStatus, crewStatus: this.crewStatus, closed: true };
     }
 
     return { reply, rolls, vitals: this.lastVitals, loading, enRoute, backup: this.backupStatus, crewStatus: this.crewStatus, closed: false };
