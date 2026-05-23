@@ -1,6 +1,14 @@
 'use strict';
 
 // ── DOM refs ────────────────────────────────────────────────────────────
+// ── Audio ──────────────────────────────────────────────────────────────
+const defibSound = new Audio('/sounds/lp15_defib_charge.mp3');
+defibSound.preload = 'auto';
+function playDefibSound() {
+  defibSound.currentTime = 0;
+  defibSound.play().catch(() => {}); // catch: browsers may block until first user gesture
+}
+
 
 const startScreen  = document.getElementById('start-screen');
 const terminal     = document.getElementById('terminal');
@@ -339,12 +347,14 @@ async function sendTurn(msg) {
 
     // Animate each real single roll in sequence, then print all to the log
     for (const r of (data.rolls || [])) {
-      if (!r.no_roll && !r.multi_roll) {
-        const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
-        await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
-        if (r.procedure_id === 'medication_push' && r.matched_drug) {
-          showDrugPanel(r.matched_drug);
-        }
+      if (r.no_roll) continue;
+      const isShock = r.procedure_id === 'defibrillation' || r.procedure_id === 'cardioversion';
+      if (r.multi_roll) { if (isShock) playDefibSound(); continue; }
+      if (isShock) playDefibSound();
+      const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
+      await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+      if (r.procedure_id === 'medication_push' && r.matched_drug) {
+        showDrugPanel(r.matched_drug);
       }
     }
     for (const r of (data.rolls || [])) printRoll(r);
@@ -501,12 +511,14 @@ async function endCallAndDebrief() {
     const turnData = await apiPost(`/api/scenario/${sessionId}/turn`, { message: 'end scenario' });
 
     for (const r of (turnData.rolls || [])) {
-      if (!r.no_roll && !r.multi_roll) {
-        const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
-        await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
-        if (r.procedure_id === 'medication_push' && r.matched_drug) {
-          showDrugPanel(r.matched_drug);
-        }
+      if (r.no_roll) continue;
+      const isShock = r.procedure_id === 'defibrillation' || r.procedure_id === 'cardioversion';
+      if (r.multi_roll) { if (isShock) playDefibSound(); continue; }
+      if (isShock) playDefibSound();
+      const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
+      await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+      if (r.procedure_id === 'medication_push' && r.matched_drug) {
+        showDrugPanel(r.matched_drug);
       }
     }
     // decompensating flag intentionally not shown to student — Claude fires it internally
