@@ -4,7 +4,8 @@
 // ── Audio ──────────────────────────────────────────────────────────────
 // ── Sound effects ─────────────────────────────────────────────────────────────────────────
 const SOUNDS = {
-  defib:    new Audio('/sounds/lp15_defib_charge.mp3'),
+  defib_outside: new Audio('/sounds/Defiboutsideambulance.mp3'),
+  defib_amb:     new Audio('/sounds/Defibinambulance.mp3'),
   fail:     new Audio('/sounds/Diceroll_fail.mp3'),
   success:  new Audio('/sounds/Diceroll_success.mp3'),
   io:       new Audio('/sounds/IODrillSoundEffect.mp3'),
@@ -43,7 +44,8 @@ const LARYNGOSCOPE_PROCS = new Set(['intubation', 'rsi']);
 const DEFIB_PROCS = new Set(['defibrillation', 'cardioversion']);
 const THUMP_PROCS  = new Set(['precordial_thump']);
 function getProcedureSound(id, outcome) {
-  if (id === 'defibrillation' || id === 'cardioversion') return 'defib';
+  if (id === 'defibrillation' || id === 'cardioversion')
+    return window._isMoving ? 'defib_amb' : 'defib_outside';
   if (id === 'io_access') return 'io';
   if (id === 'lucas') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'lucas' : 'fail';
   if (id === 'precordial_thump') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'thump' : 'fail';
