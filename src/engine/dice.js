@@ -25,6 +25,7 @@ const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exem
   // Equipment & devices
   'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
   'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
+  'pacing', 'pacer',
   // Drug abbreviations — specific enough to fire without an admin verb
   'txa',      // tranexamic acid
   'sux',      // succinylcholine

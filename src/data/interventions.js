@@ -15,7 +15,24 @@ const INTERVENTIONS = [
   { id: "chest_seal", synonyms: ["chest seal", "occlusive dressing", "vented chest seal", "three sided dressing", "seal the wound", "treat the sucking chest wound", "flutter valve", "hyfin", "bolin", "asherman", "occlude the wound", "chest wound dressing", "seal chest wound"], dc: [6], no_roll: false, dc_notes: "DC 6. Failure: poor adhesion, seal not occlusive. Complication: seal converts open pneumo to tension — monitor closely after application.", scope: "BLS", notes: null },
   { id: "cardioversion", synonyms: ["cardiovert", "synchronized cardioversion", "sync cardioversion", "shock the patient", "electrical cardioversion", "DCCV", "sedate and cardiovert", "cardioversion", "synchronized shock", "attempt cardioversion", "electric shock for rhythm"], dc: [6,12], no_roll: false, dc_notes: "DC 6 equipment — pads apply and charge correctly. DC 12 clinical response — rhythm converts. Roll both separately. Failure of equipment: pad contact issue. Failure of response: rhythm does not convert, consider underlying cause.", scope: "ALS - requires auth in some regions", notes: null },
   { id: "defibrillation", synonyms: ["defibrillate", "unsynchronized shock", "shock", "deliver shock", "AED shock", "defib", "defibrillation", "shock the patient", "CPR shock", "VF shock", "clear and shock", "charge the defib", "deliver the charge", "200 joules", "360 joules", "biphasic shock", "monophasic", "analyze rhythm", "AED analyze", "shock advised"], dc: [5,11], no_roll: false, dc_notes: "DC 5 equipment delivery. DC 11 clinical response — return of organized rhythm. Roll both. Failure of response does not mean failure of procedure — continue CPR and retry. Complication: skin burns, accidental shock to crew if clear not called.", scope: "ALS", notes: null },
-  { id: "pacing", synonyms: ["pace the patient", "transcutaneous pacing", "TCP", "external pacing", "electrical pacing", "pace", "set the rate", "set the output", "capture", "transcutaneous cardiac pacing", "external pacer", "apply pacer pads", "initiate pacing"], dc: [8,13], no_roll: false, dc_notes: "DC 8 mechanical capture — pacing spike followed by QRS. DC 13 hemodynamic capture — BP improves with pacing. Both must succeed. Failure of mechanical capture: increase output. Failure of hemodynamic capture: underlying cause must be treated.", scope: "ALS - requires auth in some regions", notes: null },
+  { id: "pacing", synonyms: [
+    // Device + procedure names
+    "pacer", "pacing", "TCP", "transcutaneous pacing", "transcutaneous cardiac pacing",
+    "external pacing", "electrical pacing", "external pacer",
+    // Start / activate
+    "pace the patient", "initiate pacing", "start pacing", "begin pacing",
+    "activate the pacer", "turn on the pacer", "fire the pacer",
+    "pacer on", "pacing on", "run the pacer", "get the pacer going",
+    "pace him", "pace her", "pace them",
+    // Setup
+    "apply pacer pads", "place pacer pads", "attach pacer pads",
+    // Rate / output adjustments (still a roll — new capture attempt)
+    "set the rate", "set the output", "set the pacer",
+    "increase the output", "increase output", "turn up the output", "bump the output",
+    "set pacing rate", "adjust the pacer",
+    // Capture confirmation (player is checking their work)
+    "capture", "check for capture", "confirm capture", "looking for capture",
+  ], dc: [8,13], no_roll: false, dc_notes: "DC 8 mechanical capture — pacing spike followed by QRS. DC 13 hemodynamic capture — BP improves with pacing. Both must succeed. Failure of mechanical capture: increase output. Failure of hemodynamic capture: underlying cause must be treated.", scope: "ALS - requires auth in some regions", notes: null },
   { id: "cpr", synonyms: [
     // Active orders — verb + CPR
     "start CPR", "begin CPR", "do CPR", "initiate CPR", "perform CPR",
