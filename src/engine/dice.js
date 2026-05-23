@@ -73,7 +73,9 @@ DETECT_PATTERNS.sort((a, b) => b.key.length - a.key.length);
 // fires a roll. Multi-word synonyms ("give epi", "push the epi") already
 // contain the verb, so they bypass this check.
 // ---------------------------------------------------------------------------
-const ADMIN_VERB_RE = /\b(give|gave|giving|push(ed|ing)?|administer(ed|ing)?|inject(ed|ing)?|hang(ing)?|start(ed|ing)?\s+the\s+\w+|dose|dosing|spray(ed|ing)?|running?\s+the|hang(ing)?\s+the|attempt(ed|ing)?|tr(?:y|ied|ying)|plac(?:e|ed|ing)|obtain(ed|ing)?|establish(ed|ing)?|get(ting)?|got|do(?:ing)?|perform(ed|ing)?|set(ting)?\s+up|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving)\b/i;
+// Past-tense forms (gave, pushed, administered …) are intentionally excluded —
+// they indicate reporting ('we gave epi') rather than ordering ('give epi').
+const ADMIN_VERB_RE = /\b(give|giving|push(ing)?|administer(ing)?|inject(ing)?|hang(ing)?|start(ing)?\s+the\s+\w+|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving)\b/i;
 
 /**
  * Detect a procedure from user text.
@@ -98,6 +100,25 @@ function isSpecificSynonym(key) {
 // Negation tokens that, when they immediately precede a procedure keyword,
 // indicate the user is talking about NOT doing it — suppress the roll.
 const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?)\b/i;
+
+// Past-tense / reporting context words that indicate the player is describing
+// something already done rather than ordering it now.
+const PAST_CONTEXT_RE = /\b(gave|administered|was\s+given|had\s+received|received|already\s+(?:gave|given|pushed|administered|established|placed|started)|after\s+\d[\d.]*\s*(?:mg|ml|mcg|g|mEq))\b/i;
+
+/**
+ * Returns true if the procedure match at matchStart is inside a sentence that
+ * is clearly reporting past administration rather than ordering it.
+ * Used as an extra guard for multi-word synonyms (which bypass ADMIN_VERB_RE).
+ */
+function isPastContext(text, matchStart) {
+  const before = text.slice(0, matchStart);
+  let sentStart = 0;
+  for (const ch of '.;!?\n') {
+    const idx = before.lastIndexOf(ch);
+    if (idx + 1 > sentStart) sentStart = idx + 1;
+  }
+  return PAST_CONTEXT_RE.test(before.slice(sentStart));
+}
 
 /**
  * Returns true when the procedure keyword at `matchStart` is preceded by a
@@ -304,7 +325,7 @@ function detectAllProcedures(userText) {
     // Always consume the matched span so we don't loop on the same hit.
     remaining = remaining.replace(bestMatch.pattern, ' ');
 
-    if (!negated) {
+    if (!negated && !isPastContext(remaining, bestMatchIndex)) {
       found.push({ proc: bestMatch.proc, matchedKey: bestMatch.key });
       usedProcIds.add(bestMatch.proc.id);
     }
