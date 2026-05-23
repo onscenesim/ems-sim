@@ -17,6 +17,7 @@ const SOUNDS = {
 };
 Object.values(SOUNDS).forEach(a => { a.preload = 'auto'; });
 function playSound(name) {
+  if (!soundEnabled) return;
   const s = SOUNDS[name];
   if (!s) { console.warn('[sound] unknown:', name); return; }
   console.log('[sound] playing:', name);
@@ -39,7 +40,8 @@ const terminal     = document.getElementById('terminal');
 const output       = document.getElementById('output');
 const userInput    = document.getElementById('user-input');
 const sendBtn      = document.getElementById('send-btn');
-const startBtn     = document.getElementById('start-btn');
+const startBtn      = document.getElementById('start-btn');
+const soundToggleBtn = document.getElementById('sound-toggle');
 const endBtn       = document.getElementById('end-btn');
 const crewBtn      = document.getElementById('crew-btn');
 const tierMsg      = document.getElementById('tier-msg');
@@ -62,6 +64,7 @@ let waitingDebrief  = false;
 let hasPlayedLoading  = false;
 let hasPlayedDepart   = false;
 let firstVitalsPlayed = false;
+let soundEnabled      = localStorage.getItem('ems_sound') !== 'off';
 let localTranscript = null;   // built client-side so export never hits the server
 let clockInterval   = null;   // setInterval handle for the scene clock
 let scenarioStartTime = null; // Date.now() when the current scenario started
@@ -236,6 +239,18 @@ async function refreshStatus() {
     }
   } catch (_) { /* ignore */ }
 }
+
+// ── Sound toggle ─────────────────────────────────────��────────────────────
+function updateSoundToggle() {
+  soundToggleBtn.textContent = soundEnabled ? '\u25cf  SOUND: ON' : '\u25cb  SOUND: OFF';
+  soundToggleBtn.classList.toggle('sound-off', !soundEnabled);
+}
+soundToggleBtn.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('ems_sound', soundEnabled ? 'on' : 'off');
+  updateSoundToggle();
+});
+updateSoundToggle();
 
 refreshStatus();
 checkResume();

@@ -2005,3 +2005,33 @@ html, body {
 .crew-status-driving      { background: #2a2000; color: #ffd700; }
 .crew-status-en-route     { background: #2a1500; color: #ff8c00; }
 .crew-status-not-on-scene { background: #1a1a1a; color: #555;    }
+
+/* ── Sound toggle button ─────────────��──────────────────────────────────── */
+#sound-toggle {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.55);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+#sound-toggle:hover {
+  border-color: rgba(255,255,255,0.35);
+  color: rgba(255,255,255,0.85);
+}
+#sound-toggle.sound-off {
+  color: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.08);
+}
+#sound-toggle.sound-off:hover {
+  color: rgba(255,255,255,0.45);
+  border-color: rgba(255,255,255,0.22);
+}
