@@ -51,10 +51,10 @@ for (const proc of INTERVENTIONS) {
     // Strip articles BEFORE pattern construction so they become optional in
     // every position, even when the original synonym contains one. This makes
     // "place an IV" match "place IV" / "place an IV" / "place the IV" equally.
-    const stripped = key.replace(/\s+(an?|the)\s+/g, ' ').replace(/\s+/g, ' ').trim();
+    const stripped = key.replace(/\s+(an?|the|another|second|additional)\s+/g, ' ').replace(/\s+/g, ' ').trim();
     const escaped = stripped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // Each whitespace gap can optionally swallow an article
-    const flexible = escaped.replace(/\\? /g, '\\s+(?:an?\\s+|the\\s+)?');
+    const flexible = escaped.replace(/\\? /g, '\\s+(?:an?\\s+|the\\s+|another\\s+|second\\s+|additional\\s+)?');
     // Word-boundary via lookbehind/lookahead — handles hyphens and acronyms
     const pattern = new RegExp(`(?<![a-z0-9])${flexible}(?![a-z0-9])`, 'i');
     // Precompute specificity using the ORIGINAL raw string so uppercase acronyms
