@@ -132,6 +132,9 @@ function assembleSeedBlock(seed) {
   lines.push('  SAM splints (assorted), roller gauze (Kerlix), elastic bandages (Ace wraps), triangular bandages');
   lines.push('  Oral glucose gel (15 g), aspirin (324 mg chewable), activated charcoal (if protocol allows)');
   lines.push('  Disposable cold packs');
+  lines.push('  Chemical heat packs (HeatMax or equivalent) — patient warming, hypothermia, cold exposure');
+  lines.push('  Hemostatic gauze: QuikClot / Combat Gauze — 1–2 rolls in jump bag for immediate access (additional supply in trauma bag)');
+  lines.push('  Ring cutter (stainless steel, manual) — ring removal for swollen/injured fingers');
   lines.push('');
   lines.push('AIRWAY BAG:');
   lines.push('  Laryngoscope: direct (Mac 3/4, Miller 0–3) + video (GlideScope or equivalent)');
@@ -243,6 +246,7 @@ function assembleSeedBlock(seed) {
   lines.push('  Macro and micro drip tubing; saline locks; pressure infuser bags');
   lines.push('  Infusion pump tubing sets (compatible with on-unit medication pump)');
   lines.push('  Normal saline flush syringes 10 mL pre-filled');
+  lines.push('  Inline fluid warmer (Thermal Angel, Buddy-Lite, or equivalent) — warms IV/IO fluids to body temperature for hypothermic patients or large-volume resuscitation; connects between bag and IV line');
   lines.push('');
   lines.push('IO KIT (separate pouch):');
   lines.push('  EZ-IO drill + needles (15 mm Pink, 25 mm Blue, 45 mm Yellow)');
