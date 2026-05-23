@@ -999,55 +999,21 @@ html, body {
 }
 
 #depart-svg {
-  width: 130px;
-  height: 78px;
+  width: 148px;
+  height: 76px;
   color: #333;
   overflow: visible;
+}
+
+#depart-dots {
+  margin: 2px 0 0;
 }
 
 #depart-label {
   font-size: 0.95rem;
   letter-spacing: 0.14em;
   color: #1a1a1a;
-  margin-top: 0.1rem;
-}
-
-/* Wheel spin — offset dot makes rotation visible */
-.wheel-group {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-}
-#depart-overlay.visible .wheel-group {
-  animation: wheel-spin 0.32s linear infinite;
-}
-
-@keyframes wheel-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-/* Siren flash */
-.siren-group { transform-box: fill-box; }
-#depart-overlay.visible .siren-group {
-  animation: siren-flash 0.45s ease-in-out infinite;
-}
-@keyframes siren-flash {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.2; }
-}
-
-/* Speed lines pulse */
-.speed-line {
-  opacity: 0;
-}
-#depart-overlay.visible .speed-line-1 { animation: speed-flash 0.55s ease-out infinite 0.0s; }
-#depart-overlay.visible .speed-line-2 { animation: speed-flash 0.55s ease-out infinite 0.18s; }
-#depart-overlay.visible .speed-line-3 { animation: speed-flash 0.55s ease-out infinite 0.36s; }
-
-@keyframes speed-flash {
-  0%   { opacity: 0;   transform: translateX(5px); }
-  25%  { opacity: 0.9; transform: translateX(0); }
-  100% { opacity: 0;   transform: translateX(-4px); }
+  margin-top: 0.05rem;
 }
 
 /* Drive-off: ambulance slides right and fades */
