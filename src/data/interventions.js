@@ -17,17 +17,34 @@ const INTERVENTIONS = [
   { id: "defibrillation", synonyms: ["defibrillate", "unsynchronized shock", "shock", "deliver shock", "AED shock", "defib", "defibrillation", "shock the patient", "CPR shock", "VF shock", "clear and shock", "charge the defib", "deliver the charge", "200 joules", "360 joules", "biphasic shock", "monophasic", "analyze rhythm", "AED analyze", "shock advised"], dc: [5,11], no_roll: false, dc_notes: "DC 5 equipment delivery. DC 11 clinical response — return of organized rhythm. Roll both. Failure of response does not mean failure of procedure — continue CPR and retry. Complication: skin burns, accidental shock to crew if clear not called.", scope: "ALS", notes: null },
   { id: "pacing", synonyms: ["pace the patient", "transcutaneous pacing", "TCP", "external pacing", "electrical pacing", "pace", "set the rate", "set the output", "capture", "transcutaneous cardiac pacing", "external pacer", "apply pacer pads", "initiate pacing"], dc: [8,13], no_roll: false, dc_notes: "DC 8 mechanical capture — pacing spike followed by QRS. DC 13 hemodynamic capture — BP improves with pacing. Both must succeed. Failure of mechanical capture: increase output. Failure of hemodynamic capture: underlying cause must be treated.", scope: "ALS - requires auth in some regions", notes: null },
   { id: "cpr", synonyms: [
-    // Active orders
-    "start CPR", "begin CPR", "do CPR", "initiate CPR", "starting CPR",
-    "begin compressions", "start compressions", "do compressions", "chest compressions",
-    "compress the chest", "pump the chest", "work the code", "work em",
+    // Active orders — verb + CPR
+    "start CPR", "begin CPR", "do CPR", "initiate CPR", "perform CPR",
+    "starting CPR", "beginning CPR", "initiating CPR", "performing CPR",
+    // Active orders — verb + compressions
+    "begin compressions", "start compressions", "do compressions", "perform compressions",
+    "initiate compressions", "chest compressions",
+    // Physical action phrases
+    "compress the chest", "pump the chest",
+    "get on the chest", "get on his chest", "get on her chest",
+    "jump on the chest", "jump on him", "jump on her",
+    "hands on the chest",
+    // Code slang
+    "work the code", "run the code", "work em", "run em",
+    // Rate / quality descriptors (player is ordering technique, not narrating)
     "two inch compressions", "push hard and fast", "100 per minute", "30 to 2",
+    // Type
     "compression only CPR", "continuous compressions", "hands only CPR",
     "cardiopulmonary resuscitation",
-    // Mechanical CPR (always succeeds — use lucas or autopulse ID for dedicated roll)
+    // Mechanical CPR
     "mechanical CPR",
+    // Continuing / maintaining
+    "continue CPR", "continue compressions", "continuing compressions",
+    "maintain CPR", "maintain compressions", "maintaining compressions",
+    "keep doing CPR", "keep up compressions", "keep the compressions going",
+    "don't stop compressions", "don't stop CPR",
     // Resuming after pause
-    "resume CPR", "resume compressions", "back on the chest", "back to compressions"
+    "resume CPR", "resume compressions", "back on the chest", "back to compressions",
+    "back to work", "get back on the chest"
   ], dc: [6, 15], no_roll: false,
   dc_notes: "DC 12 on scene / stationary — fatiguing over time, quality degrades. DC 17 in a moving ambulance — provider cannot brace, compressions shallow and irregular. FAILURE: narrate poor depth, wrong rate, or provider fatigue. COMPLICATION: rib fracture, vomiting with aspiration risk, provider loses balance in moving unit. SUCCESS: good depth and rate confirmed by partner or ETCO2 rise. Always explain to the player why moving-ambulance CPR rolled a higher DC.", scope: "BLS", notes: null },
   { id: "medication_push", synonyms: [
