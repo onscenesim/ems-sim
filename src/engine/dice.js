@@ -99,7 +99,7 @@ function isSpecificSynonym(key) {
 
 // Negation tokens that, when they immediately precede a procedure keyword,
 // indicate the user is talking about NOT doing it — suppress the roll.
-const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?)\b/i;
+const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?|stage(?:d|s|ing)?|prep(?:ped|ping)?|staging|standby|stand-by)\b/i;
 
 // Past-tense / reporting context words that indicate the player is describing
 // something already done rather than ordering it now.
@@ -279,6 +279,20 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
   };
 }
 
+// Equipment staging nouns: if one of these immediately follows a matched keyword,
+// the player is staging/positioning equipment rather than deploying it.
+// e.g. "LUCAS backboard" → the physical backboard component, not a deploy order.
+const STAGING_NOUN_RE = /^\s+(?:backboard|board)\b/i;
+
+/**
+ * Returns true when the word(s) immediately after the matched keyword are
+ * equipment staging nouns — indicating preparation, not deployment.
+ * e.g. "LUCAS backboard" should not roll.
+ */
+function hasStagingPostContext(text, matchEnd) {
+  return STAGING_NOUN_RE.test(text.slice(matchEnd));
+}
+
 /**
  * Detect a procedure from text and roll if applicable.
  * Returns null if nothing detected.
@@ -314,7 +328,7 @@ function detectAllProcedures(userText) {
       // Use precomputed 'specific' flag so uppercase acronyms (BGL, SpO2, IV)
       // don't require an admin verb.
       if (!specific && !ADMIN_VERB_RE.test(remaining)) continue;
-      bestMatch = { key, pattern, proc };
+      bestMatch = { key, pattern, proc, matchLen: exec[0].length };
       bestMatchIndex = exec.index;
       break; // sorted longest-first, so first match is most specific
     }
@@ -326,10 +340,13 @@ function detectAllProcedures(userText) {
     // ("Morphine 4mg. No intubation needed yet." → morphine fires, intubation does not.)
     const negated = isNegated(remaining, bestMatchIndex);
 
+    // Post-match staging guard: e.g. "LUCAS backboard" should not roll.
+    const stagingPost = hasStagingPostContext(remaining, bestMatchIndex + bestMatch.matchLen);
+
     // Always consume the matched span so we don't loop on the same hit.
     remaining = remaining.replace(bestMatch.pattern, ' ');
 
-    if (!negated && !isPastContext(remaining, bestMatchIndex)) {
+    if (!negated && !stagingPost && !isPastContext(remaining, bestMatchIndex)) {
       found.push({ proc: bestMatch.proc, matchedKey: bestMatch.key });
       usedProcIds.add(bestMatch.proc.id);
     }
