@@ -22,8 +22,30 @@ const SOUNDS = {
   cpr_bls_amb:      new Audio('/sounds/CPR_bls_ambulance.mp3'),
   cpr_bls_outside:  new Audio('/sounds/CPR_bls_outside.mp3'),
   thump:            new Audio('/sounds/PrecordialThumpSuccess.mp3'),
+  // Regional dispatch tones
+  dispatch_dense:   new Audio('/sounds/DenseUrba.mp3'),
+  dispatch_sprawl:  new Audio('/sounds/UrbanSprawl.mp3'),
+  dispatch_sub:     new Audio('/sounds/Suburban.mp3'),
+  dispatch_rural:   new Audio('/sounds/Rural.mp3'),
+  dispatch_ca:      new Audio('/sounds/California.mp3'),
+  dispatch_intl:    new Audio('/sounds/International.mp3'),
 };
 Object.values(SOUNDS).forEach(a => { a.preload = 'auto'; });
+function getDispatchSound(regionId) {
+  const map = {
+    URBAN_DENSE:              'dispatch_dense',
+    URBAN_SPRAWL:             'dispatch_sprawl',
+    SUBURBAN:                 'dispatch_sub',
+    NORTHERN_URBAN:           'dispatch_sub',
+    RURAL_TEMPERATE:          'dispatch_rural',
+    RURAL_REMOTE:             'dispatch_rural',
+    CALIFORNIA_Urban:         'dispatch_ca',
+    TROPICAL_ISLAND:          'dispatch_ca',
+    INTERNATIONAL_DEVELOPING: 'dispatch_intl',
+  };
+  return map[regionId] || 'dispatch';
+}
+
 function playSound(name) {
   if (!soundEnabled) return;
   const s = SOUNDS[name];
@@ -378,7 +400,7 @@ async function startScenario() {
     startScreen.style.display = 'none';
     terminal.style.display    = 'flex';
 
-    playSound('dispatch');
+    playSound(getDispatchSound(data.region));
     print(`Scenario ID: ${data.scenario_id}`, 'system');
     print('TIPS FOR THIS SIMULATOR:', 'system');
     print('  \u2022 MEDS & PROCEDURES: Use an action verb to trigger a dice roll \u2014 "give morphine," "push TXA," "hang a dopamine drip," "intubate," "establish an IO." Passive phrasing may not register.', 'system');
