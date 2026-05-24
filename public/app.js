@@ -526,9 +526,13 @@ async function sendTurn(msg) {
     }
 
     // California base-hospital hold music
-    if (data.baseContact) {
-      playSound('base_contact');
-      setTimeout(() => { const s = SOUNDS.base_contact; if (s) { s.pause(); s.currentTime = 0; } }, 7000);
+    // Fires on [BASE_CONTACT] tag OR if Claude narrates the words "elevator music" (tag fallback)
+    if (data.baseContact || /elevator music/i.test(data.reply || '')) {
+      const _bc = SOUNDS.base_contact;
+      if (_bc && _bc.paused) {
+        playSound('base_contact');
+        setTimeout(() => { if (_bc) { _bc.pause(); _bc.currentTime = 0; } }, 7000);
+      }
     }
 
     hideLoadingDots();
