@@ -32,10 +32,10 @@ const SOUNDS = {
   // California base-hospital hold music
   base_contact:     new Audio('/sounds/CaliforniaElevatorMusic.mp3'),
   // Placeholder slots — drop in audio files to activate:
-  backup_arrive:    null,   // backup unit arrives on scene
-  sfx_loading_als:  null,   // stretcher + monitor loaded (ALS)
-  sfx_loading_bls:  null,   // stretcher loaded, simpler kit (BLS)
-  sfx_depart:       null,   // unit begins driving
+  backup_arrive:    new Audio('/sounds/BackupFINAL.mp3'),
+  sfx_loading_als:  new Audio('/sounds/ALSStretcher.mp3'),
+  sfx_loading_bls:  new Audio('/sounds/BLSStretcher.mp3'),
+  sfx_depart:       new Audio('/sounds/AmbulanceDeparting.mp3'),
 };
 Object.values(SOUNDS).forEach(a => { if (a) a.preload = 'auto'; });
 function getDispatchSound(regionId) {
