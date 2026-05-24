@@ -29,8 +29,14 @@ const SOUNDS = {
   dispatch_rural:   new Audio('/sounds/Rural.mp3'),
   dispatch_ca:      new Audio('/sounds/California.mp3'),
   dispatch_intl:    new Audio('/sounds/International.mp3'),
+  // California base-hospital hold music
+  base_contact:     new Audio('/sounds/CaliforniaElevatorMusic.mp3'),
+  // Placeholder slots — drop in audio files to activate:
+  backup_arrive:    null,   // backup unit arrives on scene
+  sfx_loading:      null,   // stretcher loaded into ambulance
+  sfx_depart:       null,   // unit begins driving
 };
-Object.values(SOUNDS).forEach(a => { a.preload = 'auto'; });
+Object.values(SOUNDS).forEach(a => { if (a) a.preload = 'auto'; });
 function getDispatchSound(regionId) {
   const map = {
     URBAN_DENSE:              'dispatch_dense',
@@ -49,7 +55,8 @@ function getDispatchSound(regionId) {
 function playSound(name) {
   if (!soundEnabled) return;
   const s = SOUNDS[name];
-  if (!s) { console.warn('[sound] unknown:', name); return; }
+  if (s === undefined) { console.warn('[sound] unknown:', name); return; }
+  if (s === null) return;  // known slot — file not yet assigned
   console.log('[sound] playing:', name);
   s.currentTime = 0;
   s.play().catch(err => console.warn('[sound] play error:', name, err.message));
@@ -132,6 +139,7 @@ let isClosed        = false;
 let waitingDebrief  = false;
 let hasPlayedLoading  = false;
 let hasPlayedDepart   = false;
+let prevBackupStatus  = null;   // tracks last backup status for arrival sound
 let firstVitalsPlayed = false;
 let soundEnabled      = localStorage.getItem('ems_sound') !== 'off';
 let reportMode        = false;  // true = next send is a report, skips dice
@@ -505,12 +513,20 @@ async function sendTurn(msg) {
     // Contextual animations — server signals exactly when these events occur
     if (!hasPlayedLoading && data.loading) {
       hasPlayedLoading = true;
+      playSound('sfx_loading');
       await animateLoading();
     }
     if (!hasPlayedDepart && data.departing) {
       hasPlayedDepart = true;
       window._isMoving = true; // ambulance en route — CPR sound switches
+      playSound('sfx_depart');
       await animateDepart();
+    }
+
+    // California base-hospital hold music
+    if (data.baseContact) {
+      playSound('base_contact');
+      setTimeout(() => { const s = SOUNDS.base_contact; if (s) { s.pause(); s.currentTime = 0; } }, 7000);
     }
 
     hideLoadingDots();
@@ -749,6 +765,7 @@ function resetToStart() {
   waitingDebrief  = false;
   hasPlayedLoading  = false;
   hasPlayedDepart   = false;
+  prevBackupStatus  = null;
   firstVitalsPlayed = false;
   localTranscript   = null;
   output.innerHTML = '';
@@ -1554,6 +1571,11 @@ function applyBackupStatus(backup) {
   const badge = document.getElementById('badge-backup');
   if (!badge) return;
   if (!backup || !backup.status) return;
+  // Play arrival sound on transition to on_scene
+  if (backup.status === 'on_scene' && prevBackupStatus !== 'on_scene') {
+    playSound('backup_arrive');
+  }
+  prevBackupStatus = backup.status;
   const labels = { called: 'BACKUP: CALLED', en_route: 'BACKUP: EN ROUTE', on_scene: 'BACKUP: ON SCENE', cancelled: 'BACKUP: CANCELLED', not_called: 'NO BACKUP EN ROUTE' };
   const label = labels[backup.status];
   if (!label) {

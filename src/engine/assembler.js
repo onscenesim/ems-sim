@@ -437,6 +437,19 @@ function assembleSeedBlock(seed) {
     );
   }
   
+  // California base-hospital contact rule
+  if (seed.region === 'CALIFORNIA_Urban') {
+    lines.push(
+      '23. CALIFORNIA BASE HOSPITAL CONTACT \u2014 MACHINE TAG REQUIRED: '
+      + 'This region requires base hospital authorization before initiating: cardioversion, transcutaneous pacing, or push-dose epinephrine. '
+      + 'When the student orders one of these interventions:\n'
+      + '  (a) Narrate the partner dialing base hospital. There is a realistic hold \u2014 base may be slow to answer, put you on hold, or transfer you to the charge physician. This takes time. Make it uncomfortable.\n'
+      + '  (b) Emit [BASE_CONTACT] exactly once, on the turn when you first narrate the call being placed or the hold occurring.\n'
+      + '  (c) The base physician may ask clarifying questions, request repeat vitals, or deny the order outright for borderline indications. Denial is realistic.\n'
+      + '  (d) Do NOT emit [BASE_CONTACT] on follow-up turns of the same exchange \u2014 only on the turn the call is first placed.'
+    );
+  }
+
   lines.push('=== END SEED ==='); 
 
   return lines.join('\n');

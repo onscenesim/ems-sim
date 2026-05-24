@@ -110,6 +110,16 @@ function parseEventTags(reply) {
 }
 
 /**
+ * Parse [BASE_CONTACT] tag — emitted by California scenarios when the
+ * unit calls the base hospital for orders. Triggers hold-music on client.
+ */
+function parseBaseContactTag(reply) {
+  if (!/\[BASE_CONTACT\]/i.test(reply)) return { cleanedReply: reply, baseContact: false };
+  const cleanedReply = reply.replace(/\s*\[BASE_CONTACT\]\s*/gi, ' ').replace(/\s{2,}/g, ' ').trim();
+  return { cleanedReply, baseContact: true };
+}
+
+/**
  * Parse [BACKUP: status ETA=N] tag from the reply.
  * Returns { cleanedReply, backup } where backup is null or { status, eta }.
  * Status values: called, en_route, on_scene, not_called
@@ -290,7 +300,8 @@ class Session {
     const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);
     const { cleanedReply: crewClean, crewStatus } = parseCrewStatusTag(backupClean);
     const { cleanedReply: timeClean, timeMinutes } = parseTimeTag(crewClean);
-    const { cleanedReply: reply, loading, enRoute } = parseEventTags(timeClean);
+    const { cleanedReply: eventClean, loading, enRoute } = parseEventTags(timeClean);
+    const { cleanedReply: reply, baseContact } = parseBaseContactTag(eventClean);
     if (backup) {
       // Track backup arrival minute when unit first goes en_route
       if (backup.status === 'en_route' && backup.eta !== null && this.backupArrivalMinute === null) {
@@ -350,10 +361,10 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, backup: this.backupStatus, crewStatus: this.crewStatus, closed: true };
+      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, closed: true };
     }
 
-    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, backup: this.backupStatus, crewStatus: this.crewStatus, closed: false };
+    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, closed: false };
   }
 
   /**
