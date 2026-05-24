@@ -33,7 +33,8 @@ const SOUNDS = {
   base_contact:     new Audio('/sounds/CaliforniaElevatorMusic.mp3'),
   // Placeholder slots — drop in audio files to activate:
   backup_arrive:    null,   // backup unit arrives on scene
-  sfx_loading:      null,   // stretcher loaded into ambulance
+  sfx_loading_als:  null,   // stretcher + monitor loaded (ALS)
+  sfx_loading_bls:  null,   // stretcher loaded, simpler kit (BLS)
   sfx_depart:       null,   // unit begins driving
 };
 Object.values(SOUNDS).forEach(a => { if (a) a.preload = 'auto'; });
@@ -513,7 +514,8 @@ async function sendTurn(msg) {
     // Contextual animations — server signals exactly when these events occur
     if (!hasPlayedLoading && data.loading) {
       hasPlayedLoading = true;
-      playSound('sfx_loading');
+      const _isALS = localTranscript?.meta?.provider_level !== 'BLS';
+      playSound(_isALS ? 'sfx_loading_als' : 'sfx_loading_bls');
       await animateLoading();
     }
     if (!hasPlayedDepart && data.departing) {
