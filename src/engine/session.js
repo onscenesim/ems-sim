@@ -267,9 +267,11 @@ class Session {
     const rollLines = rolls.filter(r => !r.no_roll).map(r => {
       if (r.multi_roll) {
         const parts = r.rolls.map(x => `d20=${x.roll} vs DC ${x.dc} — ${x.outcome}`);
-        return `[SYSTEM ROLL: ${r.procedure_id} — ${parts.join(' | ')}]`;
+        const mLabel = r.matched_drug ? ` (${r.matched_drug})` : '';
+        return `[SYSTEM ROLL: ${r.procedure_id}${mLabel} — ${parts.join(' | ')}]`;
       }
-      return `[SYSTEM ROLL: ${r.procedure_id} — d20=${r.roll} vs DC ${r.dc} — ${r.outcome}]`;
+      const drugLabel = r.matched_drug ? ` (${r.matched_drug})` : '';
+      return `[SYSTEM ROLL: ${r.procedure_id}${drugLabel} — d20=${r.roll} vs DC ${r.dc} — ${r.outcome}]`;
     });
     if (rollLines.length > 0) {
       messageText += '\n\n' + rollLines.join('\n');
