@@ -83,6 +83,17 @@ function assembleSeedBlock(seed) {
   if (seed.decompensation_clock !== null) {
     lines.push(`[INTERNAL — NEVER MENTION TO STUDENT] Deterioration threshold: ${seed.decompensation_clock} minutes of scene time`);
     lines.push('INSTRUCTION: When scene time reaches the deterioration threshold, initiate the appropriate clinical changes described by the trajectory. Narrate the deterioration through observable clinical signs only — what the monitor shows, what you or your partner observe, what the patient does or says. NEVER say "decompensation clock", "deterioration threshold", "timer", "clock", or any reference to a timing mechanism. Just narrate the findings.');
+
+    if (seed.special_flags && /extremely_high_mortality/i.test(seed.special_flags)) {
+      lines.push(`[INTERNAL — NEVER MENTION TO STUDENT] MORTALITY ESCALATION ACTIVE: This patient has a partially or fully unsalvageable disease process. Death is a legitimate and expected outcome even with competent care.`);
+      lines.push(`Escalation windows (measured from scene time, not from deterioration onset):`);
+      lines.push(`  Threshold to threshold+5 min: Student has a genuine response window. Correct, rapid interventions may stabilize — temporarily. Do not kill here.`);
+      lines.push(`  Threshold+5 to threshold+10 min: Pathology is outpacing treatment. If the patient remains critically ill despite appropriate interventions, begin a terminal trajectory. Vary this — a student doing everything right earns more time; a student fumbling does not.`);
+      lines.push(`  Threshold+10 to threshold+15 min: Death is probable. If the patient is still critical despite correct care, they should die within 1–2 turns. This is not a provider failure — the disease process was unsalvageable.`);
+      lines.push(`  Beyond threshold+15 min: A patient still alive at this point despite critical illness is on borrowed time. Death should occur within the next 1–2 turns regardless of interventions unless something dramatically changes the clinical picture (e.g. surgical airway that finally secured oxygenation).`);
+      lines.push(`VARIANCE RULE: Do not make death deterministic. Excellent, well-sequenced care meaningfully improves survival odds — a skilled provider should win more often than they lose, but not always. An unskilled provider should rarely save these patients. Use clinical judgment each turn.`);
+      lines.push(`DEATH NARRATION: Let it unfold through observable findings — agonal breathing, loss of pulse, asystole or PEA on the monitor, no response to stimulation. Do not announce death in one sentence; let it happen over 2–3 narrative beats the way it does in real life. After confirmation, allow the student to continue resuscitation if they choose.`);
+    }
   } else {
     lines.push('Patient is stable. No decompensation clock active.');
   }
