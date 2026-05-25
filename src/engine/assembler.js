@@ -118,88 +118,23 @@ function assembleSeedBlock(seed) {
 
   // --- Unit equipment ---
   lines.push('--- UNIT EQUIPMENT ---');
-  lines.push('The following is the complete and authoritative equipment manifest for this unit. Refer ONLY to items on this list. Never invent equipment names.');
-  lines.push('');
-  lines.push('CARRIED TO PATIENT (jump bag / first-in bag):');
-  lines.push('  BVMs: infant, pediatric, adult');
-  lines.push('  Airways: OPA set (sizes 0–5), NPA set (sizes 24–36Fr) with lube');
-  lines.push('  Oxygen delivery: nasal cannula, simple face mask, non-rebreather mask (NRB), partial rebreather mask');
-  lines.push('  Vitals: BP cuffs (pediatric, adult, large-adult), stethoscope, penlight');
-  lines.push('  Glucometer + test strips + lancets');
-  lines.push('  Pulse oximeter (standalone clip, also on monitor)');
-  lines.push('  Trauma shears, tape, exam gloves');
-  lines.push('  Tourniquets: 2× CAT (Combat Application Tourniquet)');
-  lines.push('  SAM splints (assorted), roller gauze (Kerlix), elastic bandages (Ace wraps), triangular bandages');
-  lines.push('  Oral glucose gel (15 g), aspirin (324 mg chewable), activated charcoal (if protocol allows)');
-  lines.push('  Disposable cold packs');
-  lines.push('  Chemical heat packs (HeatMax or equivalent) — patient warming, hypothermia, cold exposure');
-  lines.push('  Hemostatic gauze: QuikClot / Combat Gauze — 1–2 rolls in jump bag for immediate access (additional supply in trauma bag)');
-  lines.push('  Ring cutter (stainless steel, manual) — ring removal for swollen/injured fingers');
-  lines.push('');
-  lines.push('AIRWAY BAG:');
-  lines.push('  Laryngoscope: direct (Mac 3/4, Miller 0–3) + video (GlideScope or equivalent)');
-  lines.push('  ETT (cuffed, sizes 6.0–8.5 mm) + stylets + 10 mL syringes (cuff inflation)');
-  lines.push('  Supraglottic airways: King LT (sizes 3/4/5), i-Gel (sizes 3/4/5)');
-  lines.push('  Surgical cric kit (bougie-assisted or needle/surgical)');
-  lines.push('  CPAP mask + circuit + straps');
-  lines.push('  End-tidal CO₂ colorimetric detector + waveform capnography (inline, connects to monitor)');
-  lines.push('  Extra suction catheters (rigid Yankauer + soft), NG tubes');
-  lines.push('  PEEP valve — threshold PEEP valve + adjustable (2–20 cmH₂O); attaches inline to BVM exhalation port or ventilator circuit');
-  lines.push('');
-  lines.push('DRUG BAG (ALS): Full ALS formulary on board. Trust that providers know their scope — if a student requests a drug not carried, narrate realistically (partner cannot locate it, not on this unit). This is a learning moment, not a hard stop.');
-  lines.push('');
-  lines.push('IO KIT (separate pouch):');
-  lines.push('  EZ-IO drill + needles (15 mm Pink, 25 mm Blue, 45 mm Yellow)');
-  lines.push('  FAST1 sternal IO device');
-  lines.push('  IO extension set; NS flush');
-  lines.push('');
-  lines.push('TRAUMA BAG:');
-  lines.push('  Hemostatic gauze: QuikClot / Combat Gauze');
-  lines.push('  TXA topical solution 500 mg/5 mL vial (for wound irrigation / TXA-soaked gauze — NOT for IV push from this bag)');
-  lines.push('  Israeli pressure bandages (Emergency Bandage)');
-  lines.push('  Occlusive / vented chest seals: HyFin, Asherman');
-  lines.push('  Needle decompression: 14g 3.25" angiocaths (bilateral needle thoracostomy)');
-  lines.push('  Additional Kerlix, 4×4 gauze, Ace wraps, triangular bandages, tape');
-  lines.push('  Traction splint: Hare or Sager (1 per unit)');
-  lines.push('  Wire ladder splints, additional SAM splints');
-  lines.push('');
-  lines.push('OB KIT (pre-packaged sterile kit):');
-  lines.push('  Sterile gloves, sterile drapes');
-  lines.push('  2× cord clamps + bandage scissors');
-  lines.push('  Bulb syringe');
-  lines.push('  Sterile towels, infant blanket');
-  lines.push('  Neonatal BVM');
-  lines.push('  Placenta basin');
-  lines.push('');
-  lines.push('ON THE UNIT (not bagged):');
-  lines.push('  Cardiac monitor/defibrillator (LIFEPAK 15 or Zoll X-Series) — this is always called "the monitor." It is a standalone device with a handle, NEVER stored in or called a "monitor bag." It integrates: 12-lead ECG, pulse oximetry, waveform capnography, NIBP, pacing, cardioversion, and defibrillation.');
-  lines.push('  USER MONITOR ALIASES: If the user refers to the monitor by any brand or model name — LP, LP12, LP15, LP20, LifePak, LIFEPAK, Physio-Control, Zoll, Corpuls, Corpuls3, Schiller, Mindray, the defibrillator, the defib, the AED, the 12-lead machine — treat it as a reference to this unit\'s monitor and respond naturally. Do NOT correct the user\'s brand preference or tell them "we have a LIFEPAK, not a Corpuls." If they call it a Corpuls, it is their Corpuls. The distinction is terminology, not function.');  lines.push('  AMBULANCE ALIASES: "the box" = the ambulance/unit itself (NOT the monitor). Other ambulance terms: the rig, the unit, the truck, the bus, the ambo.');
-  lines.push('  Portable suction unit (V-VAC or similar)');
-  lines.push('  On-unit suction (wall-mounted)');
-  if (seed.provider_level === 'ALS') {
-    lines.push('  Mechanical CPR device — LUCAS (Stryker) or AutoPulse (Zoll), one per ALS rig. Battery-powered chest compression system, stabilization strap, carrying case, spare battery. Treat "LUCAS" and "AutoPulse" as interchangeable references to this unit\'s device.');
-    lines.push('  Transport ventilator (e.g., Impact EMV+, Zoll Z-Vent, Hamilton T1, or equivalent) — ALS only. Modes: volume control (VCV), pressure control (PCV), SIMV, CPAP/PEEP. Operator-adjustable: tidal volume (TV), respiratory rate (RR), FiO₂ (21–100%), PEEP (0–20 cmH₂O), I:E ratio, inspiratory pressure. Connects to ETT, supraglottic airway, or CPAP mask. Refer to it as "the vent" or "the ventilator."');
-    lines.push('  Infusion pump (IV medication pump) — ALS only. Programs drug infusions by rate (mL/hr) or weight-based dosing (mcg/kg/min). Used for vasopressors (dopamine, norepinephrine, phenylephrine, vasopressin), antiarrhythmic drips (amiodarone, lidocaine, procainamide), sedation drips (midazolam, ketamine, fentanyl, propofol if carried), insulin, oxytocin, and any other continuous infusion. Refer to it as "the pump" or "the infusion pump."');
+
+  if (seed.provider_level === 'BLS') {
+    lines.push('BLS UNIT. Standard equipment: BVMs (infant/ped/adult), OPA/NPA set, O2 delivery (NC, simple mask, NRB), BP cuffs, stethoscope, standalone pulse oximeter, glucometer, 2x CAT tourniquets, hemostatic gauze, pressure bandages, occlusive chest seals, needle decompression, splints, c-collars, LSB, scoop stretcher, stair chair, stretcher, soft restraints, OB kit.');
+    lines.push('BLS AIRWAYS: Supraglottic airways (King LT, i-Gel) only. NO intubation equipment. NO cric kit.');
+    lines.push('AED on board — for shockable arrest rhythms only. NO cardiac monitor: no 12-lead, no rhythm display, no waveform capnography, no ETCO2, no defibrillator controls, no cardioversion, no pacing.');
+    lines.push('NO drug bag. NO IO kit. NO LUCAS. NO transport ventilator. NO infusion pump.');
+    lines.push('BLS vitals: SpO2 (pulse ox), BP (manual cuff + stethoscope), RR (manual count), Glucose (glucometer), GCS, Pain. HR = manual pulse rate only — no monitor-derived values.');
+  } else {
+    lines.push('ALS UNIT. Full ALS equipment on board — trust providers to know their scope.');
+    lines.push('Bags: jump bag (BLS supplies + glucometer + pulse ox + hemostatic gauze), airway bag (direct + video laryngoscopy, ETTs 6.0–8.5mm, King LT/i-Gel, surgical cric kit, CPAP, waveform capnography, PEEP valve, Yankauer), drug bag (full ALS formulary), IO kit (EZ-IO + FAST1), trauma bag (hemorrhage control, chest seals, needle decompression, traction splint), OB kit.');
+    lines.push('Cardiac monitor/defibrillator — standalone device with a handle, not stored in any bag. Integrates: 12-lead ECG, SpO2, ETCO2/waveform capnography, NIBP, pacing, cardioversion, defibrillation. Call it "the monitor."');
+    lines.push('Monitor aliases: LP, LP12, LP15, LP20, LifePak, LIFEPAK, Physio-Control, Zoll, Corpuls, the defibrillator, the defib, the AED, the 12-lead machine — all mean the monitor. Accept any; never correct.');
+    lines.push('ALS-only: LUCAS/AutoPulse (mechanical CPR) = "the LUCAS"; transport ventilator = "the vent"; infusion pump = "the pump."');
   }
-  lines.push('  Main O₂ tank (on-unit, large M or H cylinder)');
-  lines.push('  Portable O₂ tank (D or E cylinder, goes to patient)');
-  lines.push('  Nebulizer kit (connects to O₂ tank)');
-  lines.push('  CPAP unit (if not in airway bag)');
-  lines.push('  Long spine board (LSB) + head blocks + straps');
-  lines.push('  Scoop stretcher (orthopedic stretcher)');
-  lines.push('  KED (Kendrick Extrication Device)');
-  lines.push('  Cervical collars: rigid, assorted sizes (Stifneck Select or equivalent)');
-  lines.push('  Stair chair');
-  lines.push('  Main cot/stretcher');
-  lines.push('  Soft restraints');
-  lines.push('  Reflective safety vests, helmets');
-  lines.push('');
-  lines.push('TERMINOLOGY RULES:');
-  lines.push('  - The cardiac monitor = "the monitor" or "the LP15" or "the Zoll" — NEVER "monitor bag"');
-  lines.push('  - Airway supplies come from the "airway bag" — NEVER the "monitor bag"');
-  lines.push('  - The portable suction is the "suction unit" or "portable suction" — not part of any bag');
-  lines.push('  - Medications come from the "drug bag" or "med bag"');
-  lines.push('  - General supplies come from the "jump bag" or "first-in bag"');
+
+  lines.push('Ambulance aliases: the box, the rig, the unit, the truck, the bus, the ambo — all mean the vehicle, NOT the monitor.');
+  lines.push('Off-manifest requests: narrate realistically (partner can\'t locate it). Teaching moment — never a hard stop.');
   lines.push('');
 
   // --- Region context ---
@@ -250,7 +185,7 @@ function assembleSeedBlock(seed) {
     lines.push('9. CURVEBALL: The surface presentation is what the user sees. The true diagnosis is hidden. Reveal it ONLY when the reveal_trigger condition is met by user action. If the user never triggers the reveal, they finish the scenario without knowing. Debrief reveals the true diagnosis.');
   }
   lines.push('10. TRANSPORT — TWO SEPARATE EVENTS: LOADING (load up, load the patient, take her to the rig) — partner executes on order, no destination needed. DRIVING — begins only when user names a destination. If loaded with no destination, partner asks once quietly then waits; never blocks loading, never repeats the question.');
-  lines.push('11. EQUIPMENT CANON: Narrate only equipment from the manifest. Accept any brand/regional alias the user uses without correcting them. Monitor = "the monitor" — never "monitor bag." Monitor and suction are standalone devices.');
+  lines.push('11. EQUIPMENT CANON: Narrate only equipment from the manifest. Accept any brand/regional alias the user uses without correcting them. Monitor = "the monitor." It is a standalone device, not a bag. Suction is also standalone.');
   lines.push('12. AMBIGUOUS SHORTHAND: If EMS shorthand could mean two clinically different things (e.g. "4L" = O2 or monitor?), ask one clarifying question. When context makes intent clear, proceed without asking.');
   lines.push('13. POST-HANDOFF BOUNDARY: Once the receiving team takes over at bedside, accept no further clinical orders. Respond as charge nurse: "We have it from here." Redirect to debrief if user persists. Triggers at bedside handoff, not at loading or transport start.');
   lines.push('14. VITALS TAG — MANDATORY EVERY REPLY:');
