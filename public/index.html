@@ -11,15 +11,16 @@
   <!-- ── Start screen ──────────────────────────────────────────────────── -->
   <div id="start-screen">
     <div id="start-card">
-      <!-- Hidden inputs preserve JS wiring -->
-      <input type="hidden" id="cfg-difficulty" value="NORMAL">
-      <input type="hidden" id="cfg-provider"   value="ALS">
-      <input type="hidden" id="cfg-region"     value="SUBURBAN">
-      <input type="hidden" id="access-code"    value="">
-      <button id="access-apply" style="display:none" aria-hidden="true"></button>
-      <div id="tier-msg" style="display:none"></div>
-
       <div class="tile-grid">
+
+        <div class="cfg-tile tile-difficulty">
+          <div class="tile-label">DIFFICULTY</div>
+          <select id="cfg-difficulty">
+            <option value="NORMAL" selected>NORMAL</option>
+            <option value="EASY">EASY</option>
+            <option value="HARD">HARD</option>
+          </select>
+        </div>
 
         <div class="center-tile">
           <div class="brand">EMS Terminal</div>
@@ -31,8 +32,40 @@
           <div id="splash" class="splash" aria-hidden="true"></div>
         </div>
 
+        <div class="cfg-tile tile-provider">
+          <div class="tile-label">PROVIDER</div>
+          <select id="cfg-provider">
+            <option value="ALS" selected>ALS — Paramedic</option>
+            <option value="BLS">BLS — EMT</option>
+          </select>
+        </div>
+
+        <div class="cfg-tile tile-region">
+          <div class="tile-label">REGION</div>
+          <select id="cfg-region">
+            <option value="SUBURBAN" selected>Suburban</option>
+            <option value="URBAN_DENSE">Urban — Dense City</option>
+            <option value="URBAN_SPRAWL">Urban — Sprawl</option>
+            <option value="RURAL_TEMPERATE">Rural — Temperate</option>
+            <option value="RURAL_REMOTE">Rural — Remote</option>
+            <option value="NORTHERN_URBAN">Northern Urban</option>
+            <option value="TROPICAL_ISLAND">Tropical Island</option>
+            <option value="CALIFORNIA_Urban">California Urban</option>
+            <option value="INTERNATIONAL_DEVELOPING">International</option>
+          </select>
+        </div>
+
         <div class="start-tile">
           <button id="start-btn">BEGIN SCENARIO</button>
+        </div>
+
+        <div class="access-tile">
+          <div class="tile-label">BETA ACCESS</div>
+          <div class="access-row">
+            <input id="access-code" type="text" placeholder="access code" autocomplete="off" spellcheck="false">
+            <button id="access-apply">APPLY</button>
+          </div>
+          <div id="tier-msg"></div>
         </div>
 
         <div class="cfg-tile tile-partner">
@@ -80,10 +113,6 @@
       <span id="hdr-title">EMS TERMINAL</span>
       <span id="hdr-badges">
         <span class="badge badge-unit" id="badge-unit">MEDIC 1</span>
-        <span class="badge" id="badge-tier">FREE</span>
-        <span class="badge" id="badge-diff">NORMAL</span>
-        <span class="badge" id="badge-prov">ALS</span>
-        <span class="badge" id="badge-rgn">SUBURBAN</span>
         <span class="badge badge-backup" id="badge-backup" style="display:none"></span>
       </span>
       <span id="scene-clock" aria-label="Scene elapsed time"></span>

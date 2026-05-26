@@ -133,10 +133,6 @@ const tierMsg      = document.getElementById('tier-msg');
 const accessInput  = document.getElementById('access-code');
 const accessApply  = document.getElementById('access-apply');
 
-const badgeTier    = document.getElementById('badge-tier');
-const badgeDiff    = document.getElementById('badge-diff');
-const badgeProv    = document.getElementById('badge-prov');
-const badgeRgn     = document.getElementById('badge-rgn');
 const badgeUnit    = document.getElementById('badge-unit');
 const unitNameInput = document.getElementById('cfg-unit-name');
 const splashEl     = document.getElementById('splash');
@@ -439,11 +435,6 @@ async function startScenario() {
     output.innerHTML = '';
 
     // Update header badges
-    badgeTier.textContent = data.tier === 'paid' ? 'PAID' : 'FREE';
-    if (data.tier === 'paid') badgeTier.classList.add('paid'); else badgeTier.classList.remove('paid');
-    badgeDiff.textContent = data.difficulty;
-    badgeProv.textContent = data.provider_level;
-    badgeRgn.textContent  = data.region || region_id;
     badgeUnit.textContent = (data.unit_name || unit_name).toUpperCase();
 
     endBtn.disabled = false;
@@ -1469,11 +1460,6 @@ async function resumeFromSnapshot(snap) {
   output.innerHTML = '';
 
   const m = snap.meta || {};
-  badgeTier.textContent = snap.tier === 'paid' ? 'PAID' : 'FREE';
-  if (snap.tier === 'paid') badgeTier.classList.add('paid'); else badgeTier.classList.remove('paid');
-  badgeDiff.textContent = m.difficulty       || '';
-  badgeProv.textContent = m.provider_level   || '';
-  badgeRgn.textContent  = m.region           || '';
   badgeUnit.textContent = (m.unit_name || 'Medic 1').toUpperCase();
 
   endBtn.disabled = isClosed;
