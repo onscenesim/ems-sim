@@ -565,7 +565,7 @@ async function sendTurn(msg) {
       window._isMoving = true; // ambulance en route — CPR sound switches
       playSound('sfx_depart');
       await animateDepart();
-      startTransportBar();
+      startTransportBar(data.transport_eta_min ?? null);
     }
 
     // California base-hospital hold music
@@ -881,10 +881,10 @@ function setInputEnabled(enabled) {
 }
 
 // ── Transport progress bar ───────────────────────────────────────────────────
-function startTransportBar() {
+function startTransportBar(serverEtaMin) {
   if (transportInterval) return;           // already running
   const regionId = localTranscript?.meta?.region || 'SUBURBAN';
-  const etaMin   = REGION_TRANSPORT_MIN[regionId] || 15;
+  const etaMin   = serverEtaMin ?? REGION_TRANSPORT_MIN[regionId] ?? 15;
   const etaMs    = etaMin * 60 * 1000;
   const started  = Date.now();
   transportLabel.textContent = `EN ROUTE  ·  ~${Math.round(etaMin)} min`;

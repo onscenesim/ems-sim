@@ -1,6 +1,7 @@
 'use strict';
 
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
+const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
 const { detectAllAndRoll } = require('./dice');
 const { sendTurn, sendDebrief } = require('./api');
@@ -91,22 +92,34 @@ function parseVitalsTag(reply) {
 }
 
 /**
- * Parse [LOADING] and [EN_ROUTE] event tags from the reply.
- * Returns { cleanedReply, loading, enRoute }.
+ * Parse [LOADING] and [EN_ROUTE:nearest|major] event tags from the reply.
+ * Returns { cleanedReply, loading, enRoute, transportDest }.
  */
+function parseHospitalEtaMin(str) {
+  // Extract all numbers from strings like "10-20 minutes" or "360-720 minutes, air medical primary"
+  const nums = (str || '').match(/\d+/g);
+  if (!nums || !nums.length) return null;
+  const vals = nums.map(Number);
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
 function parseEventTags(reply) {
-  let loading = false;
-  let enRoute = false;
+  let loading      = false;
+  let enRoute      = false;
+  let transportDest = null;   // 'nearest' | 'major'
   let cleaned = reply;
   if (/\[LOADING\]/i.test(cleaned)) {
     loading = true;
     cleaned = cleaned.replace(/\s*\[LOADING\]\s*/gi, ' ');
   }
-  if (/\[EN_ROUTE\]/i.test(cleaned)) {
+  // Accept [EN_ROUTE], [EN_ROUTE:nearest], [EN_ROUTE:major]
+  const routeMatch = cleaned.match(/\[EN_ROUTE(?::([a-z]+))?\]/i);
+  if (routeMatch) {
     enRoute = true;
-    cleaned = cleaned.replace(/\s*\[EN_ROUTE\]\s*/gi, ' ');
+    transportDest = routeMatch[1] ? routeMatch[1].toLowerCase() : 'nearest';
+    cleaned = cleaned.replace(/\s*\[EN_ROUTE(?::[a-z]+)?\]\s*/gi, ' ');
   }
-  return { cleanedReply: cleaned.trim(), loading, enRoute };
+  return { cleanedReply: cleaned.trim(), loading, enRoute, transportDest };
 }
 
 /**
@@ -210,6 +223,7 @@ class Session {
     this.backupArrivalMinute = null; // scene minute when backup is expected on scene
     this.crewStatus = null;   // { partner, captain } from [CREW_STATUS:] tag
     this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
+    this.transportEtaMin = null; // minutes to hospital, set when [EN_ROUTE] fires
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
   }
 
@@ -302,7 +316,7 @@ class Session {
     const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);
     const { cleanedReply: crewClean, crewStatus } = parseCrewStatusTag(backupClean);
     const { cleanedReply: timeClean, timeMinutes } = parseTimeTag(crewClean);
-    const { cleanedReply: eventClean, loading, enRoute } = parseEventTags(timeClean);
+    const { cleanedReply: eventClean, loading, enRoute, transportDest } = parseEventTags(timeClean);
     const { cleanedReply: reply, baseContact } = parseBaseContactTag(eventClean);
     if (backup) {
       // Track backup arrival minute when unit first goes en_route
@@ -317,6 +331,14 @@ class Session {
     if (crewStatus) this.crewStatus = crewStatus;
     // Safety net: if EN_ROUTE fires but LOADING was never emitted (Claude combined both into
     // one turn without tagging loading), auto-inject loading so the animation fires correctly.
+    if (enRoute) {
+      // Compute transport ETA from region data
+      const _reg = REGIONS.find(r => r.id === this.seed.region);
+      if (_reg) {
+        const _etaStr = transportDest === 'major' ? _reg.major_hospital_min : _reg.nearest_hospital_min;
+        this.transportEtaMin = parseHospitalEtaMin(_etaStr);
+      }
+    }
     if (enRoute && !this.hasLoaded) {
       loading = true;
     }
@@ -363,10 +385,10 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, closed: true };
+      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, closed: true };
     }
 
-    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, closed: false };
+    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, closed: false };
   }
 
   /**

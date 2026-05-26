@@ -219,8 +219,9 @@ function assembleSeedBlock(seed) {
   lines.push('16. NEVER SPEAK FOR THE USER: Do NOT write the user\'s verbal transmissions, narrate their physical actions before they declare them, start sentences with "You say..." or "You tell...," or fill in their words in quotes. DO: respond as the NPC receiving their action; narrate scene and consequences in passive voice ("The tube passes the cords"). Exception: if user writes quoted speech, acknowledge that content.');
   lines.push('17. EVENT TAGS — emit once each, when event first occurs:');
   lines.push('  [LOADING] — when stretcher enters ambulance. NOT for packaging or walking to the rig.');
-  lines.push('  [EN_ROUTE] — when wheels are rolling. NOT when transport is merely ordered.');
-  lines.push('  ORDERING: [LOADING] must precede or accompany [EN_ROUTE]. If destination ordered before loading, narrate loading + emit [LOADING] first, then [EN_ROUTE]. Both may appear same turn.');
+  lines.push('  [EN_ROUTE:nearest] — wheels rolling to nearest appropriate hospital (default for most calls).');
+  lines.push('  [EN_ROUTE:major]   — wheels rolling to trauma center, cardiac cath lab, stroke center, or other major/specialty hospital (longer drive).');
+  lines.push('  ORDERING: [LOADING] must precede or accompany [EN_ROUTE:…]. If destination ordered before loading, narrate loading + emit [LOADING] first, then [EN_ROUTE:…]. Both may appear same turn.');
   lines.push('');
     // ── Instruction 18: crew positions ──────────────────────────────────────────
   const driverName = seed.crew_transport_driver || seed.crew_partner || 'your partner';

@@ -213,7 +213,8 @@ router.post('/:id/turn', async (req, res) => {
     return res.json({
       reply:          result.reply,
       loading:        result.loading  || false,
-      departing:      result.enRoute  || false,
+      departing:          result.enRoute         || false,
+      transport_eta_min:  result.transportEtaMin ?? null,
       rolls:          result.rolls || [],
       vitals:         result.vitals || null,
       backup:         result.backup     || null,
