@@ -59,6 +59,7 @@ function playSound(name) {
   if (s === undefined) { console.warn('[sound] unknown:', name); return; }
   if (s === null) return;  // known slot — file not yet assigned
   console.log('[sound] playing:', name);
+  s.muted = false;  // ensure not silenced from unlock phase
   s.currentTime = 0;
   s.play().catch(err => console.warn('[sound] play error:', name, err.message));
 }
@@ -99,10 +100,10 @@ function unlockAudio() {
   audioUnlocked = true;  // set immediately so this only ever runs once
   Object.values(SOUNDS).forEach(s => {
     s.muted = true;
-    const p = s.play();
-    if (p) p.then(() => { s.pause(); s.currentTime = 0; s.muted = false; })
-             .catch(() => { s.muted = false; });
-    else { s.pause(); s.currentTime = 0; s.muted = false; }
+    // Fire-and-forget: just touching .play() during the gesture is enough to
+    // unlock the element for future calls. Don't pause in .then() — that races
+    // with real playSound calls and silences them. playSound() clears muted itself.
+    s.play().catch(() => {});
   });
 }
 // touchend (not touchstart) avoids the iOS native <select> picker false-trigger.
