@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=29">
+  <link rel="stylesheet" href="style.css?v=30">
 </head>
 <body>
 
@@ -154,6 +154,12 @@
       <div class="vital-row"><span class="vital-row-label">Glucose</span><span class="vital-row-value" data-vital="Glucose">&mdash;</span><span class="vital-row-stamp" data-vital-stamp="Glucose"></span></div>
       <div class="vital-row"><span class="vital-row-label">GCS</span><span class="vital-row-value" data-vital="GCS">&mdash;</span></div>
       <div class="vital-row"><span class="vital-row-label">Pain</span><span class="vital-row-value" data-vital="Pain">&mdash;</span></div>
+    </div>
+
+    <!-- Transport progress bar — visible while unit is en route to hospital -->
+    <div id="transport-bar">
+      <div id="transport-fill"></div>
+      <span id="transport-label"></span>
     </div>
 
     <!-- Dispatch incoming animation overlay -->
@@ -485,6 +491,6 @@
 
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=18"></script>
 </body>
 </html>

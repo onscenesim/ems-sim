@@ -38,6 +38,19 @@ const SOUNDS = {
   sfx_depart:       new Audio('/sounds/AmbulanceDeparting.m4a'),
 };
 Object.values(SOUNDS).forEach(a => { if (a) a.preload = 'auto'; });
+
+// Nearest-hospital transit time by region (minutes, midpoint of documented range)
+const REGION_TRANSPORT_MIN = {
+  URBAN_DENSE:              7.5,  // 5-10 min
+  URBAN_SPRAWL:             15,   // 10-20 min
+  SUBURBAN:                 12.5, // 10-15 min
+  RURAL_TEMPERATE:          40,   // 30-50 min
+  RURAL_REMOTE:             90,   // 60-120 min
+  NORTHERN_URBAN:           15,   // 10-20 min
+  TROPICAL_ISLAND:          27.5, // 15-40 min
+  INTERNATIONAL_DEVELOPING: 60,   // 30-90 min
+  CALIFORNIA_Urban:         11.5, // 8-15 min
+};
 function getDispatchSound(regionId) {
   const map = {
     URBAN_DENSE:              'dispatch_dense',
@@ -138,6 +151,7 @@ let isClosed        = false;
 let waitingDebrief  = false;
 let hasPlayedLoading  = false;
 let hasPlayedDepart   = false;
+let transportInterval = null;
 let prevBackupStatus  = null;   // tracks last backup status for arrival sound
 let firstVitalsPlayed = false;
 let soundEnabled      = localStorage.getItem('ems_sound') !== 'off';
@@ -551,6 +565,7 @@ async function sendTurn(msg) {
       window._isMoving = true; // ambulance en route — CPR sound switches
       playSound('sfx_depart');
       await animateDepart();
+      startTransportBar();
     }
 
     // California base-hospital hold music
@@ -596,6 +611,7 @@ async function sendTurn(msg) {
     if (data.closed) {
       isClosed = true;
       endBtn.disabled = true;
+      completeTransportBar();
       showCrewPanel();
       showDebriefCTA();
       setLoading(false);
@@ -804,6 +820,7 @@ function resetToStart() {
   output.innerHTML = '';
 
   scenarioStartTime = null;
+  resetTransportBar();
   hideDrugPanel();
   hideCrewPanel();
   resetVitals();
@@ -863,6 +880,46 @@ function setInputEnabled(enabled) {
   userInput.disabled = !enabled;
 }
 
+// ── Transport progress bar ───────────────────────────────────────────────────
+function startTransportBar() {
+  if (transportInterval) return;           // already running
+  const regionId = localTranscript?.meta?.region || 'SUBURBAN';
+  const etaMin   = REGION_TRANSPORT_MIN[regionId] || 15;
+  const etaMs    = etaMin * 60 * 1000;
+  const started  = Date.now();
+  transportLabel.textContent = `EN ROUTE  ·  ~${Math.round(etaMin)} min`;
+  transportFill.style.transition = 'none';
+  transportFill.style.width = '0%';
+  transportBar.style.display = '';
+  // Allow the 0% reset to paint before re-enabling transition
+  requestAnimationFrame(() => {
+    transportFill.style.transition = 'width 1s linear';
+    transportInterval = setInterval(() => {
+      const pct = Math.min((Date.now() - started) / etaMs * 100, 94);
+      transportFill.style.width = pct + '%';
+    }, 1000);
+  });
+}
+
+function completeTransportBar() {
+  clearInterval(transportInterval);
+  transportInterval = null;
+  transportFill.style.transition = 'width 0.6s ease-out';
+  transportFill.style.width = '100%';
+  transportLabel.textContent = 'ARRIVED';
+  setTimeout(() => {
+    transportBar.style.display = 'none';
+    transportFill.style.width = '0%';
+  }, 3000);
+}
+
+function resetTransportBar() {
+  clearInterval(transportInterval);
+  transportInterval = null;
+  transportBar.style.display = 'none';
+  transportFill.style.width = '0%';
+}
+
 // ── Event handlers ────────────────────────────────────────────────────────
 
 sendBtn.addEventListener('click', () => {
@@ -891,6 +948,9 @@ userInput.addEventListener('keydown', e => {
 
 const dispatchOverlay = document.getElementById('dispatch-overlay');
 const diceOverlay     = document.getElementById('dice-overlay');
+const transportBar    = document.getElementById('transport-bar');
+const transportFill   = document.getElementById('transport-fill');
+const transportLabel  = document.getElementById('transport-label');
 const drugPanel       = document.getElementById('drug-panel');
 const drugPanelName   = document.getElementById('drug-panel-name');
 const drugPanelBody   = document.getElementById('drug-panel-body');
