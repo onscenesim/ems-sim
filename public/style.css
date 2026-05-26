@@ -70,8 +70,8 @@ html, body {
 
 .tile-grid {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr;
-  grid-template-rows: 1fr 1fr auto;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto;
   gap: 4px;
 }
 
@@ -95,10 +95,7 @@ html, body {
 }
 
 /* More varied, saturated tile colors */
-.tile-difficulty { background-color: #28085c; } /* vivid purple */
-.tile-provider   { background-color: #063858; } /* deep teal-navy */
-.tile-region     { background-color: #0a3818; } /* rich forest green */
-.tile-partner    { background-color: #1a1a2e; grid-column: 1 / -1; } /* spans full width */
+.tile-partner    { background-color: #1a1a2e; }
 
 .tile-label {
   font-family: var(--font-block);
@@ -694,12 +691,8 @@ html, body {
   }
 
   .center-tile     { order: 0; min-height: 70px; padding: 12px 14px; }
-  .tile-difficulty { order: 1; }
-  .tile-provider   { order: 2; }
-  .tile-region     { order: 3; }
   .start-tile      { order: 4; }
-  .access-tile     { order: 5; }
-  .tile-partner    { order: 6; }
+  .tile-partner    { order: 2; }
 
   .cfg-tile,
   .access-tile {

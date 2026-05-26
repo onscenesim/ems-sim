@@ -4,23 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=27">
+  <link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 
   <!-- ── Start screen ──────────────────────────────────────────────────── -->
   <div id="start-screen">
     <div id="start-card">
-      <div class="tile-grid">
+      <!-- Hidden inputs preserve JS wiring -->
+      <input type="hidden" id="cfg-difficulty" value="NORMAL">
+      <input type="hidden" id="cfg-provider"   value="ALS">
+      <input type="hidden" id="cfg-region"     value="SUBURBAN">
+      <input type="hidden" id="access-code"    value="">
+      <button id="access-apply" style="display:none" aria-hidden="true"></button>
+      <div id="tier-msg" style="display:none"></div>
 
-        <div class="cfg-tile tile-difficulty">
-          <div class="tile-label">DIFFICULTY</div>
-          <select id="cfg-difficulty">
-            <option value="NORMAL" selected>NORMAL</option>
-            <option value="EASY">EASY</option>
-            <option value="HARD">HARD</option>
-          </select>
-        </div>
+      <div class="tile-grid">
 
         <div class="center-tile">
           <div class="brand">EMS Terminal</div>
@@ -32,40 +31,8 @@
           <div id="splash" class="splash" aria-hidden="true"></div>
         </div>
 
-        <div class="cfg-tile tile-provider">
-          <div class="tile-label">PROVIDER</div>
-          <select id="cfg-provider">
-            <option value="ALS" selected>ALS — Paramedic</option>
-            <option value="BLS">BLS — EMT</option>
-          </select>
-        </div>
-
-        <div class="cfg-tile tile-region">
-          <div class="tile-label">REGION</div>
-          <select id="cfg-region">
-            <option value="SUBURBAN" selected>Suburban</option>
-            <option value="URBAN_DENSE">Urban — Dense City</option>
-            <option value="URBAN_SPRAWL">Urban — Sprawl</option>
-            <option value="RURAL_TEMPERATE">Rural — Temperate</option>
-            <option value="RURAL_REMOTE">Rural — Remote</option>
-            <option value="NORTHERN_URBAN">Northern Urban</option>
-            <option value="TROPICAL_ISLAND">Tropical Island</option>
-            <option value="CALIFORNIA_Urban">California Urban</option>
-            <option value="INTERNATIONAL_DEVELOPING">International</option>
-          </select>
-        </div>
-
         <div class="start-tile">
           <button id="start-btn">BEGIN SCENARIO</button>
-        </div>
-
-        <div class="access-tile">
-          <div class="tile-label">BETA ACCESS</div>
-          <div class="access-row">
-            <input id="access-code" type="text" placeholder="access code" autocomplete="off" spellcheck="false">
-            <button id="access-apply">APPLY</button>
-          </div>
-          <div id="tier-msg"></div>
         </div>
 
         <div class="cfg-tile tile-partner">
@@ -490,6 +457,6 @@
 
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
 </body>
 </html>
