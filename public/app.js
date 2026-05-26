@@ -96,25 +96,18 @@ function getProcedureSound(id, outcome) {
 let audioUnlocked = false;
 function unlockAudio() {
   if (audioUnlocked) return;
-  // Don't set flag immediately -- only after at least one play() resolves,
-  // confirming iOS actually granted the audio gesture. A touchstart on a
-  // native <select> picker sets no real audio context and would false-confirm.
-  let pending = 0;
+  audioUnlocked = true;  // set immediately so this only ever runs once
   Object.values(SOUNDS).forEach(s => {
     s.muted = true;
     const p = s.play();
-    if (p) {
-      pending++;
-      p.then(() => { s.pause(); s.currentTime = 0; s.muted = false; pending--; if (pending <= 0) audioUnlocked = true; })
-       .catch(() => { s.muted = false; pending--; });
-    } else {
-      s.pause(); s.currentTime = 0; s.muted = false;
-    }
+    if (p) p.then(() => { s.pause(); s.currentTime = 0; s.muted = false; })
+             .catch(() => { s.muted = false; });
+    else { s.pause(); s.currentTime = 0; s.muted = false; }
   });
-  if (pending === 0) audioUnlocked = true;
 }
-// Keep listeners active (no { once: true }) -- a real button tap must always
-// get a chance to unlock even if an earlier select/scroll touch was a false start.
+// touchend (not touchstart) avoids the iOS native <select> picker false-trigger.
+// No { once: true } -- the flag does that job, and this way the start button
+// always gets a shot even if an earlier gesture was swallowed by a form control.
 document.addEventListener('click',    unlockAudio);
 document.addEventListener('touchend', unlockAudio);
 
