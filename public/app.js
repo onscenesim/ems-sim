@@ -296,7 +296,7 @@ const BLS_PARTNERS = [
 
 function rebuildPartnerOptions(providerLevel) {
   const saved = partnerSelect.value;
-  const list = providerLevel === 'BLS' ? BLS_PARTNERS : ALS_PARTNERS;
+  const list = providerLevel === 'BLS' ? BLS_PARTNERS : [...ALS_PARTNERS, ...BLS_PARTNERS];
   // Clear all options except Random
   while (partnerSelect.options.length > 1) partnerSelect.remove(1);
   list.forEach(name => {
