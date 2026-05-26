@@ -143,7 +143,6 @@ let firstVitalsPlayed = false;
 let soundEnabled      = localStorage.getItem('ems_sound') !== 'off';
 let reportMode        = false;  // true = next send is a report, skips dice
 let localTranscript = null;   // built client-side so export never hits the server
-let clockInterval   = null;   // setInterval handle for the scene clock
 let scenarioStartTime = null; // Date.now() when the current scenario started
 
 // ── Input history (↑ / ↓ arrow keys) ───────────────────────────────────
@@ -433,12 +432,7 @@ async function startScenario() {
 
     endBtn.disabled = false;
 
-    // Start scene clock (in-game time — updates per turn, not per second)
-    clearInterval(clockInterval);
-    clockInterval = null;
-    scenarioStartTime = Date.now(); // kept for vitals staleness only
-    sceneClock.textContent = 'T+0:00';
-    sceneClock.className   = 'active';
+    scenarioStartTime = Date.now(); // for vitals staleness
 
     // Switch to terminal
     startScreen.style.display = 'none';
@@ -472,7 +466,6 @@ async function startScenario() {
     // Initial vitals (likely empty/sparse until equipment is placed)
     if (typeof data.scene_minute === 'number') {
       currentSceneMinute = data.scene_minute;
-      updateSceneClock(currentSceneMinute);
     }
     if (data.multi_patient) {
       setMultiPatientVitalsNotice(true);
@@ -579,7 +572,6 @@ async function sendTurn(msg) {
     // Vitals update on every turn
     if (typeof data.scene_minute === 'number') {
       currentSceneMinute = data.scene_minute;
-      updateSceneClock(currentSceneMinute);
     }
     if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
     // Fire startup sound the first time ANY vital value is reported,
@@ -811,12 +803,7 @@ function resetToStart() {
   localTranscript   = null;
   output.innerHTML = '';
 
-  // Reset scene clock
-  clearInterval(clockInterval);
-  clockInterval     = null;
   scenarioStartTime = null;
-  sceneClock.textContent = '';
-  sceneClock.className   = '';
   hideDrugPanel();
   hideCrewPanel();
   resetVitals();
@@ -837,13 +824,6 @@ function resetToStart() {
 }
 
 // ── Input controls ────────────────────────────────────────────────────────
-
-// ── Scene clock (in-game minutes, updated per server turn) ─────────────────
-function updateSceneClock(minutes) {
-  const m = Math.floor(minutes);
-  const s = Math.round((minutes - m) * 60);
-  sceneClock.textContent = `T+${m}:${String(s).padStart(2, '0')}`;
-}
 
 // ── Typing indicator (shows while waiting for AI response) ─────────────────
 let loadingDotsEl = null;
@@ -911,7 +891,6 @@ userInput.addEventListener('keydown', e => {
 
 const dispatchOverlay = document.getElementById('dispatch-overlay');
 const diceOverlay     = document.getElementById('dice-overlay');
-const sceneClock      = document.getElementById('scene-clock');
 const drugPanel       = document.getElementById('drug-panel');
 const drugPanelName   = document.getElementById('drug-panel-name');
 const drugPanelBody   = document.getElementById('drug-panel-body');
@@ -1458,14 +1437,7 @@ async function resumeFromSnapshot(snap) {
 
   endBtn.disabled = isClosed;
 
-  clearInterval(clockInterval);
   scenarioStartTime = Date.now() - (snap.sceneMinute || 0) * 60 * 1000;
-  sceneClock.textContent = 'T+0:00';
-  sceneClock.className   = 'active';
-  if (!isClosed) {
-    updateSceneClock(snap.sceneMinute || 0);
-    clockInterval = null;
-  }
 
   startScreen.style.display = 'none';
   terminal.style.display    = 'flex';
@@ -1580,7 +1552,7 @@ function applyVitals(vitals) {
 /**
  * Re-evaluate staleness without a server round-trip — driven by the scene clock.
  * BP age advances as real time advances; we approximate by bumping
- * currentSceneMinute alongside the scene-clock interval.
+ * currentSceneMinute as real time advances.
  */
 function tickStaleness() {
   if (!currentVitals) return;
