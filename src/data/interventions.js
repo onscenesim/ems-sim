@@ -103,7 +103,7 @@ const INTERVENTIONS = [
     // Sodium Bicarbonate
     "sodium bicarb", "sodium bicarbonate", "bicarb",
     // Calcium
-    "calcium chloride", "calcium gluconate", "cal gluconate",
+    "calcium", "calcium chloride", "calcium gluconate", "cal gluconate",
     // Dextrose
     "dextrose", "D50", "D10", "D25", "D5W", "dextrose 50", "dextrose 25", "dextrose 10",
     // Naloxone
@@ -196,7 +196,13 @@ const INTERVENTIONS = [
     // Broad-spectrum antibiotics
     "antibiotics", "ceftriaxone", "rocephin", "zosyn", "vancomycin", "metronidazole", "flagyl",
     // Tranexamic Acid
-    "txa", "tranexamic acid", "tranexamic"
+    "txa", "tranexamic acid", "tranexamic",
+    // Alteplase (tPA) / Tenecteplase (TNK) / Thrombolytics
+    "alteplase", "tpa", "t-pa", "activase",
+    "tenecteplase", "tnk", "tnkase",
+    "thrombolytics", "thrombolytic", "lytics", "give lytics",
+    "tissue plasminogen activator", "100mg tpa", "50mg tpa", "tpa in arrest",
+    "alteplase for pe", "tpa for pe", "tnk for stemi"
   ], dc: [7], no_roll: false, dc_notes: "DC 7 for administration. Clinical response DC varies by drug — narrate based on expected pharmacology and patient card. Complication: wrong dose, wrong drug, extravasation if IO not confirmed. AI evaluates clinical appropriateness of drug choice independently of dice result. ACTIVATED CHARCOAL: appropriate only within 2 hours of ingestion, patient must be conscious and cooperative with intact gag reflex, contraindicated in caustic ingestion, hydrocarbon ingestion, or absent airway protective reflexes — partner flags if any contraindication is present.", scope: "VARIABLE", notes: null },
   { id: "fluid_bolus", synonyms: ["normal saline", "NS bolus", "saline bolus", "fluid bolus", "run in a liter", "open the line", "wide open", "500ml bolus", "250ml bolus", "pressure bag", "lactated ringers", "LR bolus", "blood products", "packed red blood cells", "pRBC", "whole blood", "permissive hypotension", "restrict fluids", "run fluids", "hang a bag", "squeeze the bag", "rapid infuser", "level one", "pressure infuser"], dc: null, no_roll: true, dc_notes: "No dice roll — deterministic if IV/IO confirmed. Physiological response determined by patient card trajectory. Complication engine may introduce fluid overload in CHF or pulmonary edema worsening.", scope: "ALS", notes: null },
   { id: "splinting", synonyms: ["splint the fracture", "immobilize", "traction splint", "sager", "hare traction", "femur splint", "long board", "backboard", "spinal immobilization", "c-collar", "cervical collar", "extrication collar", "KED", "kendrick extrication device", "vacuum splint", "air splint", "SAM splint", "extremity immobilization", "buddy tape"], dc: [6], no_roll: false, dc_notes: "DC 6. Failure: inadequate immobilization, traction splint not achieving traction. Complication: neurovascular compromise from improper application — check CSM before and after.", scope: "BLS", notes: null },

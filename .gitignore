@@ -1,5 +1,5 @@
-.env
 node_modules/
-EMS-Terminal/
-
-sessions/
+.env
+*.log
+data/
+.DS_Store

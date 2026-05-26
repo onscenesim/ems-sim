@@ -282,6 +282,42 @@ function getUnitName() {
   return (unitNameInput.value.trim() || DEFAULT_UNIT_NAME);
 }
 
+// -- Partner selection -------------------------------------------------------
+const partnerSelect  = document.getElementById('cfg-partner');
+const providerSelect = document.getElementById('cfg-provider');
+
+function filterPartnerOptions(providerLevel) {
+  const alsGroup = partnerSelect.querySelector('.partner-als');
+  const blsGroup = partnerSelect.querySelector('.partner-bls');
+  const isALS = providerLevel !== 'BLS';
+  if (alsGroup) alsGroup.style.display = isALS ? '' : 'none';
+  if (blsGroup) blsGroup.style.display = isALS ? 'none' : '';
+  const selected = partnerSelect.value;
+  if (selected) {
+    const opt = partnerSelect.querySelector('option[value="' + selected + '"]');
+    if (opt) {
+      const group = opt.closest('optgroup');
+      if (group && group.style.display === 'none') partnerSelect.value = '';
+    }
+  }
+}
+
+const savedPartner = localStorage.getItem('ems_partner');
+if (savedPartner) {
+  const opt = partnerSelect.querySelector('option[value="' + savedPartner + '"]');
+  if (opt) partnerSelect.value = savedPartner;
+}
+
+filterPartnerOptions(providerSelect.value);
+
+providerSelect.addEventListener('change', () => filterPartnerOptions(providerSelect.value));
+
+partnerSelect.addEventListener('change', () => {
+  const v = partnerSelect.value;
+  if (v) localStorage.setItem('ems_partner', v);
+  else localStorage.removeItem('ems_partner');
+});
+
 // ── Splash text (Minecraft-style, random per page load) ─────────────────────
 
 if (splashEl && typeof getRandomSplash === 'function') {
@@ -369,7 +405,8 @@ async function startScenario() {
   startBtn.textContent = 'CONNECTING...';
 
   try {
-    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name });
+    const partner_name = partnerSelect ? (partnerSelect.value || null) : null;
+    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name, partner_name });
 
     sessionId      = data.session_id;
     isClosed       = false;

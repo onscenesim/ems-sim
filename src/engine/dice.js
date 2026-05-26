@@ -41,7 +41,9 @@ const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exem
   'adenocard',// adenosine
   'lasix',    // furosemide
   'pitocin',  // oxytocin
-  'cyanokit', // hydroxocobalamin
+  'cyanokit',  // hydroxocobalamin
+  'albuterol',  // nebulizer -- specific enough to fire without verb
+  'calcium',    // calcium chloride/gluconate -- bare order should fire
 ]);
 
 for (const proc of INTERVENTIONS) {

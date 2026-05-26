@@ -71,7 +71,7 @@ html, body {
 .tile-grid {
   display: grid;
   grid-template-columns: 1fr 1.5fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 1fr 1fr auto;
   gap: 4px;
 }
 
@@ -98,6 +98,7 @@ html, body {
 .tile-difficulty { background-color: #28085c; } /* vivid purple */
 .tile-provider   { background-color: #063858; } /* deep teal-navy */
 .tile-region     { background-color: #0a3818; } /* rich forest green */
+.tile-partner    { background-color: #1a1a2e; grid-column: 1 / -1; } /* spans full width */
 
 .tile-label {
   font-family: var(--font-block);
@@ -698,6 +699,7 @@ html, body {
   .tile-region     { order: 3; }
   .start-tile      { order: 4; }
   .access-tile     { order: 5; }
+  .tile-partner    { order: 6; }
 
   .cfg-tile,
   .access-tile {

@@ -145,7 +145,7 @@ function assembleSeedBlock(seed) {
   }
 
   lines.push('Ambulance aliases: the box, the rig, the unit, the truck, the bus, the ambo — all mean the vehicle, NOT the monitor.');
-  lines.push('Off-manifest requests: narrate realistically (partner can\'t locate it). Teaching moment — never a hard stop.');
+  lines.push('Off-manifest equipment: if a device truly does not exist on a standard unit, narrate realistically (partner can\'t locate it) — teaching moment, never a hard stop. ALS DRUGS: never refuse a medication on stocking grounds. ALS carries a full formulary — 3% saline, hypertonic saline, TXA, ketamine, push-dose epi, mag, calcium, bicarb, alteplase — all available. If the drug is unusual, administer it and address the clinical context; never tell the student their drug is not on board. CALCIUM DEFAULT: if the provider orders "calcium" without specifying the salt, treat it as calcium chloride -- the standard prehospital formulation.');
   lines.push('');
 
   // --- Region context ---
@@ -198,6 +198,7 @@ function assembleSeedBlock(seed) {
   }
   lines.push('10. TRANSPORT — TWO SEPARATE EVENTS: LOADING (load up, load the patient, take her to the rig) — partner executes on order, no destination needed. DRIVING — begins only when user names a destination. If loaded with no destination, partner asks once quietly then waits; never blocks loading, never repeats the question.');
   lines.push('11. EQUIPMENT CANON: Narrate only equipment from the manifest. Accept any brand/regional alias the user uses without correcting them. Monitor = "the monitor." It is a standalone device, not a bag. Suction is also standalone.');
+  lines.push('BACKBOARD REMOVAL: The long spine board (LSB/backboard) is a transfer and extrication device, not a spinal immobilization device. Once a patient is loaded and secured on the stretcher, removing the backboard is standard correct modern EMS practice — it reduces pressure injury and discomfort. "Remove the backboard," "slide the board out," "pull the board," or any equivalent after the patient is on the stretcher = always correct, no dice roll, always succeeds. Never flag this as contraindicated. The patient remains immobilized by stretcher straps, c-collar (if applied), and head blocks. Backboard removal is the expected default step in packaging, not an optional deviation.');
   lines.push('12. AMBIGUOUS SHORTHAND: If EMS shorthand could mean two clinically different things (e.g. "4L" = O2 or monitor?), ask one clarifying question. When context makes intent clear, proceed without asking.');
   lines.push('13. POST-HANDOFF BOUNDARY: Once the receiving team takes over at bedside, accept no further clinical orders. Respond as charge nurse: "We have it from here." Redirect to debrief if user persists. Triggers at bedside handoff, not at loading or transport start.');
   lines.push('14. VITALS TAG — MANDATORY EVERY REPLY:');
