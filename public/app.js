@@ -96,19 +96,27 @@ function getProcedureSound(id, outcome) {
 let audioUnlocked = false;
 function unlockAudio() {
   if (audioUnlocked) return;
-  audioUnlocked = true;
-  // iOS requires each Audio element to be played once inside a user gesture.
-  // Use muted=true (hardware-silent, no pops) rather than volume=0.
+  // Don't set flag immediately -- only after at least one play() resolves,
+  // confirming iOS actually granted the audio gesture. A touchstart on a
+  // native <select> picker sets no real audio context and would false-confirm.
+  let pending = 0;
   Object.values(SOUNDS).forEach(s => {
     s.muted = true;
     const p = s.play();
-    if (p) p.then(() => { s.pause(); s.currentTime = 0; s.muted = false; })
-             .catch(() => { s.muted = false; });
-    else { s.pause(); s.currentTime = 0; s.muted = false; }
+    if (p) {
+      pending++;
+      p.then(() => { s.pause(); s.currentTime = 0; s.muted = false; pending--; if (pending <= 0) audioUnlocked = true; })
+       .catch(() => { s.muted = false; pending--; });
+    } else {
+      s.pause(); s.currentTime = 0; s.muted = false;
+    }
   });
+  if (pending === 0) audioUnlocked = true;
 }
-document.addEventListener('click',      unlockAudio, { once: true });
-document.addEventListener('touchstart', unlockAudio, { once: true });
+// Keep listeners active (no { once: true }) -- a real button tap must always
+// get a chance to unlock even if an earlier select/scroll touch was a false start.
+document.addEventListener('click',    unlockAudio);
+document.addEventListener('touchend', unlockAudio);
 
 
 const startScreen  = document.getElementById('start-screen');
