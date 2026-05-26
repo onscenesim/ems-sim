@@ -286,31 +286,36 @@ function getUnitName() {
 const partnerSelect  = document.getElementById('cfg-partner');
 const providerSelect = document.getElementById('cfg-provider');
 
-function filterPartnerOptions(providerLevel) {
-  const alsGroup = partnerSelect.querySelector('.partner-als');
-  const blsGroup = partnerSelect.querySelector('.partner-bls');
-  const isALS = providerLevel !== 'BLS';
-  if (alsGroup) alsGroup.style.display = isALS ? '' : 'none';
-  if (blsGroup) blsGroup.style.display = isALS ? 'none' : '';
-  const selected = partnerSelect.value;
-  if (selected) {
-    const opt = partnerSelect.querySelector('option[value="' + selected + '"]');
-    if (opt) {
-      const group = opt.closest('optgroup');
-      if (group && group.style.display === 'none') partnerSelect.value = '';
-    }
-  }
+const ALS_PARTNERS = [
+  'Marcus Webb', 'Destiny Okafor', 'Ray Kowalski', 'Priya Nair', 'Darnell Hughes',
+  'Brianna Solis', 'Tyler Beaumont', 'Amara Diallo', 'Jorge Medina', 'Quinn Abernathy'
+];
+const BLS_PARTNERS = [
+  'Danny Kowalczyk', 'Keisha Tremblay', 'Walt Garside', 'Fatima Al-Rashid', 'Bo Hendricks'
+];
+
+function rebuildPartnerOptions(providerLevel) {
+  const saved = partnerSelect.value;
+  const list = providerLevel === 'BLS' ? BLS_PARTNERS : ALS_PARTNERS;
+  // Clear all options except Random
+  while (partnerSelect.options.length > 1) partnerSelect.remove(1);
+  list.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    partnerSelect.appendChild(opt);
+  });
+  // Restore saved if still valid for this provider level
+  if (list.includes(saved)) partnerSelect.value = saved;
+  else partnerSelect.value = '';
 }
 
 const savedPartner = localStorage.getItem('ems_partner');
-if (savedPartner) {
-  const opt = partnerSelect.querySelector('option[value="' + savedPartner + '"]');
-  if (opt) partnerSelect.value = savedPartner;
-}
+if (savedPartner) partnerSelect.value = savedPartner;
 
-filterPartnerOptions(providerSelect.value);
+rebuildPartnerOptions(providerSelect.value);
 
-providerSelect.addEventListener('change', () => filterPartnerOptions(providerSelect.value));
+providerSelect.addEventListener('change', () => rebuildPartnerOptions(providerSelect.value));
 
 partnerSelect.addEventListener('change', () => {
   const v = partnerSelect.value;
