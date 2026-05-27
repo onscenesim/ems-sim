@@ -132,6 +132,9 @@ const output       = document.getElementById('output');
 const userInput    = document.getElementById('user-input');
 const sendBtn      = document.getElementById('send-btn');
 const startBtn      = document.getElementById('start-btn');
+// Apply saved theme immediately — before any rendering
+if (localStorage.getItem('ems_theme') === 'light') document.body.classList.add('light-mode');
+
 const soundToggleBtn = document.getElementById('sound-toggle');
 const reportBtn    = document.getElementById('report-btn');
 const endBtn       = document.getElementById('end-btn');
@@ -155,6 +158,7 @@ let transportInterval = null;
 let prevBackupStatus  = null;   // tracks last backup status for arrival sound
 let firstVitalsPlayed = false;
 let soundEnabled      = localStorage.getItem('ems_sound') !== 'off';
+let lightMode         = localStorage.getItem('ems_theme') === 'light';
 let reportMode        = false;  // true = next send is a report, skips dice
 let localTranscript = null;   // built client-side so export never hits the server
 let scenarioStartTime = null; // Date.now() when the current scenario started
@@ -403,6 +407,29 @@ soundToggleBtn.addEventListener('click', () => {
   if (soundEnabled) playSound('radio'); // confirmation crackle on enable
 });
 updateSoundToggle();
+
+// ── Theme (light / dark) toggle ──────────────────────────────────────────
+const themeToggleHdr   = document.getElementById('theme-toggle-hdr');
+const themeToggleStart = document.getElementById('theme-toggle-start');
+
+function applyTheme() {
+  const isLight = document.body.classList.contains('light-mode');
+  const label = isLight ? '☽ DARK MODE' : '☀ LIGHT MODE';
+  const hdrLabel = isLight ? '☽' : '☀';
+  if (themeToggleHdr)   themeToggleHdr.textContent   = hdrLabel;
+  if (themeToggleStart) themeToggleStart.textContent  = label;
+}
+
+function toggleTheme() {
+  lightMode = !lightMode;
+  document.body.classList.toggle('light-mode', lightMode);
+  localStorage.setItem('ems_theme', lightMode ? 'light' : 'dark');
+  applyTheme();
+}
+
+if (themeToggleHdr)   themeToggleHdr.addEventListener('click',   toggleTheme);
+if (themeToggleStart) themeToggleStart.addEventListener('click', toggleTheme);
+applyTheme();
 
 refreshStatus();
 checkResume();

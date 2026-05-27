@@ -2427,3 +2427,109 @@ html, body {
 #defib-overlay.outcome-MARGINAL    #defib-label { color: #ccaa33; }
 #defib-overlay.outcome-FAILURE     #defib-label { color: #cc4040; }
 #defib-overlay.outcome-COMPLICATION #defib-label { color: #cc5522; }
+
+
+/* ── Theme toggle buttons ───────────────────────────────────────────────── */
+#theme-toggle-hdr {
+  flex-shrink: 0;
+  background: var(--chrome-bg);
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  color: #555;
+  font-size: 13px;
+  padding: 3px 8px;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.1s;
+}
+#theme-toggle-hdr:hover { background: #dedad4; }
+
+.theme-row {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 2px;
+}
+#theme-toggle-start {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.35);
+  font-family: var(--font-block);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  padding: 4px 10px;
+  transition: color 0.15s;
+}
+#theme-toggle-start:hover { color: rgba(255,255,255,0.7); }
+
+/* ── Light mode overrides ───────────────────────────────────────────────── */
+/* Applied via body.light-mode class; toggled by JS and persisted in localStorage */
+
+body.light-mode {
+  background-color: #ddd8d0;
+}
+
+/* Start screen — lighter tile backgrounds */
+body.light-mode #start-card {
+  background-color: #f0ede8;
+  background-image: none;
+}
+body.light-mode .tile-difficulty { background-color: #4a1a8a; }
+body.light-mode .tile-provider   { background-color: #0e5a80; }
+body.light-mode .tile-region     { background-color: #165c28; }
+body.light-mode .tile-partner    { background-color: #2a2a48; }
+body.light-mode .start-tile      { background-color: #6a1010; }
+
+body.light-mode #theme-toggle-start { color: rgba(255,255,255,0.55); }
+body.light-mode #theme-toggle-start:hover { color: #fff; }
+
+/* Terminal output — the most important surface */
+body.light-mode #output {
+  background: #f7f4ef;
+}
+body.light-mode .line.narrative { color: #1a1a2a; }
+body.light-mode .line.dispatch  { color: #004e99; }
+body.light-mode .line.roll      { color: #7a4a00; }
+body.light-mode .line.user      { color: #005c18; }
+body.light-mode .line.system    { color: #555555; }
+body.light-mode .line.error     { color: #bb1111; }
+body.light-mode .line.debrief   { color: #1a1a2a; }
+body.light-mode .line.hr        { color: #c0bbb4; }
+
+/* Scrollbar */
+body.light-mode #output::-webkit-scrollbar-track { background: #e0ddd8; border-left: 1px solid #ccc; }
+body.light-mode #output::-webkit-scrollbar-thumb { background: #b8b4ae; }
+
+/* Terminal header — slightly lighter chrome */
+body.light-mode #header {
+  background: linear-gradient(180deg, #eeebe6 0%, #e0ddd8 100%);
+}
+body.light-mode #theme-toggle-hdr { background: #e0ddd8; color: #333; }
+body.light-mode #theme-toggle-hdr:hover { background: #d0cdc8; }
+
+/* Transport bar — light green instead of very dark */
+body.light-mode #transport-bar {
+  background: #eaf4ea;
+  border-bottom-color: #c0dcc0;
+}
+body.light-mode #transport-fill {
+  background: linear-gradient(90deg, #b8ddb8 0%, #6ab86a 100%);
+}
+body.light-mode #transport-label { color: #2a6a2a; }
+
+/* End-of-scenario action buttons */
+body.light-mode .new-scenario-btn {
+  background: #d4ead4;
+  color: #1a4a1a;
+  border-color: #fff #999 #999 #fff;
+}
+body.light-mode .new-scenario-btn:hover { background: #c4dac4; }
+body.light-mode .export-btn {
+  background: #d4dff0;
+  color: #1a3060;
+  border-color: #fff #999 #999 #fff;
+}
+body.light-mode .export-btn:hover { background: #c4d0e4; }
+
+/* Header reveal strip (mobile) */
+body.light-mode #header-reveal { background: #e8e5e0; border-color: #c8c5c0; }
