@@ -917,7 +917,7 @@ function startTransportBar(serverEtaMin) {
   transportLabel.textContent = `EN ROUTE  ·  ~${Math.round(etaMin)} min`;
   transportFill.style.transition = 'none';
   transportFill.style.width = '0%';
-  transportBar.style.display = '';
+  transportBar.style.display = 'block';
   // Allow the 0% reset to paint before re-enabling transition
   requestAnimationFrame(() => {
     transportFill.style.transition = 'width 1s linear';
