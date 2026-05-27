@@ -71,7 +71,7 @@ function pickPresentation(category, difficulty, history) {
     if (!diffPool[entryDiff]) return false;
     const key = entry.presentation || entry.surface_presentation;
     if (recentPresentations.has(key)) return false;
-    if (entry.special_flags && entry.special_flags.includes('hardmode_exclusive') && difficulty !== 'HARD') return false;
+    if (entry.special_flags && entry.special_flags.includes('hardmode_exclusive') && difficulty !== 'HARD' && difficulty !== 'BLACK_CLOUD') return false;
     // Space zoo scenarios globally across all categories
     if (entry.special_flags && entry.special_flags.includes('zoo_scenario')) {
       if (lastZoo !== undefined && (totalScenarios - lastZoo) < HISTORY_WINDOWS.zoo_spacing) return false;
@@ -116,6 +116,7 @@ function rollSex(presentationEntry) {
 }
 
 function rollTrajectory(difficulty) {
+  if (difficulty === 'BLACK_CLOUD') return 'rapidly_deteriorating'; // always
   const r = Math.random();
   if (difficulty === 'EASY') {
     return r < 0.7 ? 'stable' : 'slowly_deteriorating';
@@ -132,6 +133,7 @@ function rollTrajectory(difficulty) {
 
 function rollDecompensationClock(difficulty, trajectory) {
   if (trajectory === 'stable') return null;
+  if (difficulty === 'BLACK_CLOUD') return Math.floor(Math.random() * 4) + 1; // 1-4 min
   if (difficulty === 'EASY') return Math.floor(Math.random() * 6) + 15;   // 15-20 min
   if (difficulty === 'NORMAL') return Math.floor(Math.random() * 10) + 8;  // 8-17 min
   return Math.floor(Math.random() * 8) + 4;                                // 4-11 min
@@ -139,6 +141,10 @@ function rollDecompensationClock(difficulty, trajectory) {
 
 function rollComplication(difficulty) {
   if (difficulty === 'EASY') return { roll: null, type: 'none' };
+  // BLACK_CLOUD: all three complications fire simultaneously
+  if (difficulty === 'BLACK_CLOUD') {
+    return { roll: 6, type: 'all', types: ['equipment_failure', 'unreliable_bystander', 'clinical_curveball'] };
+  }
   const roll = d6();
   const thresholds = {
     NORMAL: { equipment_failure: [5, 6], unreliable_bystander: [5, 6], clinical_curveball: [6] },

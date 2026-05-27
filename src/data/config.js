@@ -18,7 +18,8 @@ const CATEGORY_WEIGHTS = {
 const DIFFICULTY_POOL = {
   EASY:   { EASY: true,  NORMAL: false, HARD: false },
   NORMAL: { EASY: true,  NORMAL: true,  HARD: false },
-  HARD:   { EASY: true,  NORMAL: true,  HARD: true  },
+  HARD:        { EASY: true,  NORMAL: true,  HARD: true  },
+  BLACK_CLOUD:  { EASY: true,  NORMAL: true,  HARD: true  },
 };
 
 const MODIFIER_FIRE_RATES = {
@@ -31,6 +32,9 @@ const MODIFIER_FIRE_RATES = {
   HARD: {
     caller_behavior: 1.0, time_of_day: 1.0, weather: 0.50, special_circumstances: 1/3,  comorbidity_gate: 0.85,
   },
+  BLACK_CLOUD: {
+    caller_behavior: 1.0, time_of_day: 1.0, weather: 1.0,  special_circumstances: 0.5,  comorbidity_gate: 1.0,
+  },
 };
 
 const COMPLICATION_THRESHOLDS = {
@@ -39,7 +43,8 @@ const COMPLICATION_THRESHOLDS = {
   HARD:   { enabled: true, equipment_failure: [4,5,6], unreliable_bystander: [4,5,6], clinical_curveball: [5,6] },
 };
 
-const HARD_MODE_DC_PENALTY = 2;
+const HARD_MODE_DC_PENALTY    = 2;
+const BLACK_CLOUD_DC_PENALTY  = 5;  // universe is working against you
 
 const CURVEBALL_WEIGHTS = { EASY: 0, NORMAL: 6, HARD: 9 };
 
@@ -81,6 +86,7 @@ module.exports = {
   MODIFIER_FIRE_RATES,
   COMPLICATION_THRESHOLDS,
   HARD_MODE_DC_PENALTY,
+  BLACK_CLOUD_DC_PENALTY,
   CURVEBALL_WEIGHTS,
   HISTORY_WINDOWS,
   RATE_LIMITS,

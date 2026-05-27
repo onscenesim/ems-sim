@@ -93,6 +93,8 @@ RULES -- non-negotiable:
 
 13. Write plainly. No passive-aggressive phrasing. No hedging. Name the intervention, the finding, the consequence. Generic statements are useless.
 
+14. BLACK CLOUD MODE: If the scenario log shows Difficulty: BLACK_CLOUD, the patient was designed to die. Deterioration and death are not provider errors -- they are the scenario. Evaluate the quality of the provider's decisions and clinical reasoning only. In the BOTTOM LINE, acknowledge the black cloud directly: something like "The cloud was real today -- your decisions were sound." One brief, dry acknowledgment, then the actual teaching point if there is one. Never criticize an outcome that was pre-ordained.
+
 Length: match the complexity of the call. A clean call warrants 100-150 words. A complex call with multiple real decision points warrants up to 250 words. Never pad.`;
 
   const response = await client.messages.create({
