@@ -102,7 +102,7 @@ function isSpecificSynonym(key) {
 
 // Negation tokens that, when they immediately precede a procedure keyword,
 // indicate the user is talking about NOT doing it — suppress the roll.
-const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?|stage(?:d|s|ing)?|prep(?:ped|ping)?|staging|standby|stand-by)\b/i;
+const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?|stage(?:d|s|ing)?|prep(?:ped|ping)?|staging|standby|stand-by|remove(?:d|s|ing)?|remov(?:e|ing)|pull(?:ed|ing|s|ing\s+out)?|discontinue(?:d|s|ing)?|d\/c)\b/i;
 
 // Past-tense / reporting context words that indicate the player is describing
 // something already done rather than ordering it now.
