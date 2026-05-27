@@ -72,6 +72,7 @@ const INTERVENTIONS = [
     // Epinephrine (all forms)
     "push the epi", "give epi", "epinephrine", "1mg epinephrine", "epipen",
     "push dose epi", "push dose epinephrine", "epinephrine drip", "epi drip", "epi infusion",
+    "bump of epi", "give a bump", "bump of epinephrine", "bump of pressors", "bump of push dose",
     "racemic epi", "racemic epinephrine", "epi 1:1000", "epi 1:10000",
     // Amiodarone
     "amiodarone", "give amiodarone", "amio", "300mg amiodarone", "cordarone",
