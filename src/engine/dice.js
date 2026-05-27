@@ -353,7 +353,11 @@ function detectAllProcedures(userText) {
 
     if (!negated && !stagingPost && !isPastContext(remaining, bestMatchIndex)) {
       found.push({ proc: bestMatch.proc, matchedKey: bestMatch.key });
-      usedProcIds.add(bestMatch.proc.id);
+      // medication_push can fire multiple times in one message (once per drug).
+      // Text consumption already prevents the same drug from re-matching.
+      if (bestMatch.proc.id !== 'medication_push') {
+        usedProcIds.add(bestMatch.proc.id);
+      }
     }
     // If negated, leave proc.id eligible — a NON-negated mention later in the
     // same message should still fire ("no IV yet, give morphine 4mg, then try IV").
