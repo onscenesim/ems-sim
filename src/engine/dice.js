@@ -104,6 +104,10 @@ function isSpecificSynonym(key) {
 // indicate the user is talking about NOT doing it — suppress the roll.
 const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?|stage(?:d|s|ing)?|prep(?:ped|ping)?|staging|standby|stand-by|remove(?:d|s|ing)?|remov(?:e|ing)|pull(?:ed|ing|s|ing\s+out)?|discontinue(?:d|s|ing)?|d\/c)\b/i;
 
+// Route qualifier prepositions: when immediately preceding a device/access synonym,
+// the user is specifying an admin route ("push epi through the IO"), not placing new access.
+const ROUTE_QUALIFIER_RE = /\b(?:through|via|into|from|out\s+of)\s*(?:the\s+|an?\s+|my\s+)?$/i;
+
 // Past-tense / reporting context words that indicate the player is describing
 // something already done rather than ordering it now.
 const PAST_CONTEXT_RE = /\b(gave|administered|was\s+given|had\s+received|received|already\s+(?:gave|given|pushed|administered|established|placed|started)|after\s+\d[\d.]*\s*(?:mg|ml|mcg|g|mEq)|was\s+(?:doing|performing|in|on)|had\s+(?:been|started)|were\s+(?:doing|performing|on)|had\s+CPR|did\s+CPR|performed\s+CPR|did\s+compressions|were\s+doing\s+compressions)\b/i;
@@ -146,6 +150,17 @@ function isNegated(text, matchStart) {
   const words = sentenceTail.split(/\s+/).filter(Boolean);
   const windowText = words.slice(-3).join(' ');
   return NEGATION_RE.test(windowText);
+}
+
+/**
+ * Returns true when the matched keyword is immediately preceded by a route
+ * preposition ("through the IO", "via the IV", "into the line") — meaning the
+ * user is specifying an administration route, not placing new access.
+ */
+function isRouteQualifier(text, matchStart) {
+  // Look at up to 30 chars before the match for a route preposition
+  const tail = text.slice(Math.max(0, matchStart - 30), matchStart);
+  return ROUTE_QUALIFIER_RE.test(tail);
 }
 
 function detectProcedure(userText) {
@@ -345,13 +360,17 @@ function detectAllProcedures(userText) {
     // ("Morphine 4mg. No intubation needed yet." → morphine fires, intubation does not.)
     const negated = isNegated(remaining, bestMatchIndex);
 
+    // Route qualifier guard: "push epi through the IO" → IO synonym is a route,
+    // not a new procedure order. Suppress access/device rolls in this context.
+    const routeQual = isRouteQualifier(remaining, bestMatchIndex);
+
     // Post-match staging guard: e.g. "LUCAS backboard" should not roll.
     const stagingPost = hasStagingPostContext(remaining, bestMatchIndex + bestMatch.matchLen);
 
     // Always consume the matched span so we don't loop on the same hit.
     remaining = remaining.replace(bestMatch.pattern, ' ');
 
-    if (!negated && !stagingPost && !isPastContext(remaining, bestMatchIndex)) {
+    if (!negated && !routeQual && !stagingPost && !isPastContext(remaining, bestMatchIndex)) {
       found.push({ proc: bestMatch.proc, matchedKey: bestMatch.key });
       // medication_push can fire multiple times in one message (once per drug).
       // Text consumption already prevents the same drug from re-matching.
