@@ -187,11 +187,15 @@ function rollWeather(difficulty, region) {
   const rates = MODIFIER_FIRE_RATES[difficulty];
   if (Math.random() > rates.weather) return null;
   const regionExcludes = region ? region.toLowerCase() : '';
+  const isCA = regionExcludes.includes('california');
   const eligible = WEATHER.filter(w => {
     if (!w.requires) return true;
     const exc = w.requires.toLowerCase();
     if (exc.includes('not in southern us') && regionExcludes.includes('tropical')) return false;
     if (exc.includes('not in desert southwest') && regionExcludes.includes('sprawl')) return false;
+    // Wildfire smoke is primarily a California/mountain-west phenomenon.
+    // Outside CA, allow it only ~10% of the time to keep it occasional but rare.
+    if (!isCA && w.text.toLowerCase().includes('wildfire') && Math.random() > 0.10) return false;
     return true;
   });
   return eligible.length > 0 ? pickRandom(eligible).text : null;
