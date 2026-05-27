@@ -196,6 +196,8 @@ function rollWeather(difficulty, region) {
     // Wildfire smoke is primarily a California/mountain-west phenomenon.
     // Outside CA, allow it only ~10% of the time to keep it occasional but rare.
     if (!isCA && w.text.toLowerCase().includes('wildfire') && Math.random() > 0.10) return false;
+    // Tornadoes are rare in most regions; keep them as an occasional surprise (10%).
+    if (w.text.toLowerCase().includes('tornado') && Math.random() > 0.10) return false;
     return true;
   });
   return eligible.length > 0 ? pickRandom(eligible).text : null;
