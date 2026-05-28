@@ -234,11 +234,22 @@ function printReply(text) {
 
 function printRoll(roll) {
   if (!roll || roll.no_roll) return;
+  const disSuffix = roll.disadvantage ? ' (dis)' : '';
+  function fmtRoll(r) {
+    if (r.both_rolls && r.both_rolls.length === 2) {
+      return `d20=${r.both_rolls[0]}↓${r.both_rolls[1]}=${r.roll} vs DC ${r.dc} → ${r.outcome}`;
+    }
+    return `d20=${r.roll} vs DC ${r.dc} → ${r.outcome}`;
+  }
   if (roll.multi_roll) {
-    const parts = roll.rolls.map(r => `d20=${r.roll} vs DC ${r.dc} → ${r.outcome}`);
-    print(`[ROLL: ${roll.procedure_id} — ${parts.join(' | ')}]`, 'roll');
+    const parts = roll.rolls.map(r => fmtRoll(r));
+    print(`[ROLL: ${roll.procedure_id}${disSuffix} — ${parts.join(' | ')}]`, 'roll');
   } else {
-    print(`[ROLL: ${roll.procedure_id} — d20=${roll.roll} vs DC ${roll.dc} → ${roll.outcome}]`, 'roll');
+    const both = roll.both_rolls;
+    const rollStr = (both && both.length === 2)
+      ? `d20=${both[0]}↓${both[1]}=${roll.roll}`
+      : `d20=${roll.roll}`;
+    print(`[ROLL: ${roll.procedure_id}${disSuffix} — ${rollStr} vs DC ${roll.dc} → ${roll.outcome}]`, 'roll');
   }
 }
 

@@ -20,6 +20,7 @@ const DIFFICULTY_POOL = {
   NORMAL: { EASY: true,  NORMAL: true,  HARD: false },
   HARD:        { EASY: true,  NORMAL: true,  HARD: true  },
   BLACK_CLOUD:  { EASY: true,  NORMAL: true,  HARD: true  },
+  MURPHY:       { EASY: true,  NORMAL: true,  HARD: true  },
 };
 
 const MODIFIER_FIRE_RATES = {
@@ -35,6 +36,9 @@ const MODIFIER_FIRE_RATES = {
   BLACK_CLOUD: {
     caller_behavior: 1.0, time_of_day: 1.0, weather: 1.0,  special_circumstances: 0.5,  comorbidity_gate: 1.0,
   },
+  MURPHY: {
+    caller_behavior: 1.0, time_of_day: 1.0, weather: 0.50, special_circumstances: 1/3,  comorbidity_gate: 0.85,
+  },
 };
 
 const COMPLICATION_THRESHOLDS = {
@@ -45,6 +49,7 @@ const COMPLICATION_THRESHOLDS = {
 
 const HARD_MODE_DC_PENALTY    = 2;
 const BLACK_CLOUD_DC_PENALTY  = 5;  // universe is working against you
+const MURPHY_DC_PENALTY       = 0;  // disadvantage is the mechanic, not a flat DC bump
 
 const CURVEBALL_WEIGHTS = { EASY: 0, NORMAL: 6, HARD: 9 };
 
@@ -87,6 +92,7 @@ module.exports = {
   COMPLICATION_THRESHOLDS,
   HARD_MODE_DC_PENALTY,
   BLACK_CLOUD_DC_PENALTY,
+  MURPHY_DC_PENALTY,
   CURVEBALL_WEIGHTS,
   HISTORY_WINDOWS,
   RATE_LIMITS,

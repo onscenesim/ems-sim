@@ -1,7 +1,7 @@
 'use strict';
 
 const { INTERVENTIONS } = require('../data/interventions');
-const { HARD_MODE_DC_PENALTY, BLACK_CLOUD_DC_PENALTY } = require('../data/config');
+const { HARD_MODE_DC_PENALTY, BLACK_CLOUD_DC_PENALTY, MURPHY_DC_PENALTY } = require('../data/config');
 
 // ---------------------------------------------------------------------------
 // Build detection index at startup.
@@ -224,6 +224,13 @@ function rollD20() {
   return Math.floor(Math.random() * 20) + 1;
 }
 
+/** Roll twice, return the lower result (disadvantage). */
+function rollD20Disadvantage() {
+  const r1 = rollD20();
+  const r2 = rollD20();
+  return { result: Math.min(r1, r2), both: [r1, r2] };
+}
+
 /**
  * Outcomes: nat-1 = COMPLICATION | ≥DC = SUCCESS | ≥DC-3 = MARGINAL | else FAILURE
  */
@@ -255,14 +262,18 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
 
   const penalty = difficulty === 'BLACK_CLOUD' ? BLACK_CLOUD_DC_PENALTY
                 : difficulty === 'HARD'        ? HARD_MODE_DC_PENALTY
+                : difficulty === 'MURPHY'      ? MURPHY_DC_PENALTY
                 : 0;
+  const useDis = difficulty === 'MURPHY';
 
   // Multi-DC procedures (cardioversion, defibrillation, pacing)
   if (Array.isArray(dc)) {
     const rolls = dc.map(d => {
       const adj = d + penalty;
-      const r = rollD20();
-      return { dc: adj, base_dc: d, roll: r, outcome: calcOutcome(r, adj) };
+      let r, bothRolls;
+      if (useDis) { const d2 = rollD20Disadvantage(); r = d2.result; bothRolls = d2.both; }
+      else        { r = rollD20(); }
+      return { dc: adj, base_dc: d, roll: r, both_rolls: bothRolls || null, outcome: calcOutcome(r, adj) };
     });
     const outcomes = rolls.map(r => r.outcome);
     const summary = outcomes.includes('COMPLICATION') ? 'COMPLICATION'
@@ -280,11 +291,14 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
       outcome: summary,
       no_roll: false,
       multi_roll: true,
+      disadvantage: useDis,
     };
   }
 
   const adjustedDC = dc + penalty;
-  const roll = rollD20();
+  let roll, bothRolls;
+  if (useDis) { const d2 = rollD20Disadvantage(); roll = d2.result; bothRolls = d2.both; }
+  else        { roll = rollD20(); }
   const outcome = calcOutcome(roll, adjustedDC);
 
   return {
@@ -293,6 +307,8 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
     dc: adjustedDC,
     base_dc: dc,
     penalty_applied: penalty,
+    both_rolls: bothRolls || null,
+    disadvantage: useDis,
     roll,
     outcome,
     no_roll: false,
