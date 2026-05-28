@@ -497,6 +497,7 @@ async function startScenario() {
     print('  \u2022 MOVING THE PATIENT: Say "move to the ambulance," "load the patient," or "take her to the rig" to package and load. No destination needed.', 'system');
     print('  \u2022 GOING EN ROUTE: Say "go en route to [hospital]" or "transport to [hospital]" to start driving. Your partner will not move the unit until you name a destination.', 'system');
     print('  • RADIO REPORTS: When giving a pre-arrival or handoff, use past tense for procedures already done — "we cardioverted," "patient was intubated" — so the system does not re-roll them.', 'system');
+    print('  • IF THE AI GETS STUCK: Click the STOP button to cancel the request and try again.', 'system');
     print('', 'system');
     printHr();
     // Show dispatch flash before the text appears
