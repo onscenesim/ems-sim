@@ -51,7 +51,11 @@ async function sendDebrief(debriefContext, providerLevel) {
 FORMAT -- three sections, nothing else:
 
 OVERVIEW
-One sentence: patient, problem, disposition.
+2-4 sentences. Cover all of the following:
+  (1) Patient: age, sex, chief complaint or mechanism.
+  (2) What happened: the actual clinical picture — true diagnosis (state it plainly here even if it was hidden during the scenario), how the patient's condition evolved, any complications or unexpected findings.
+  (3) Disposition and outcome: how the call ended, patient status on handoff or at scene close.
+This section is the objective record. The provider may not have known everything in real time — tell them now.
 
 PERFORMANCE
 2-5 bullets. Each covers one specific clinical decision or action from this call. Mark each bullet:
