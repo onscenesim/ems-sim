@@ -451,6 +451,19 @@ html, body {
   white-space: nowrap;
 }
 
+
+#input-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #3a3a3a;
+  padding: 2px 10px 4px;
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+#input-hint strong { color: #556655; }
+body.light-mode #input-hint { color: #aaa; }
+body.light-mode #input-hint strong { color: #777; }
+
 /* ── Backup status badge — dark-bg style matching .badge-unit ──── */
 .badge-backup {
   font-weight: bold;
