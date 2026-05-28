@@ -45,6 +45,7 @@ const INTERVENTIONS = [
     "compress the chest", "pump the chest",
     "get on the chest", "get on his chest", "get on her chest",
     "jump on the chest", "jump on him", "jump on her",
+    "hop on the chest", "hop on him", "hop on her",
     "hands on the chest",
     // Code slang
     "work the code", "run the code", "work em", "run em",
