@@ -922,22 +922,27 @@ function setInputEnabled(enabled) {
 // ── Transport progress bar ───────────────────────────────────────────────────
 function startTransportBar(serverEtaMin) {
   if (transportInterval) return;           // already running
-  const regionId = localTranscript?.meta?.region || 'SUBURBAN';
-  const etaMin   = serverEtaMin ?? REGION_TRANSPORT_MIN[regionId] ?? 15;
-  const etaMs    = etaMin * 60 * 1000;
-  const started  = Date.now();
+  const regionId  = localTranscript?.meta?.region || 'SUBURBAN';
+  const etaMin    = (serverEtaMin != null && serverEtaMin > 0)
+                      ? serverEtaMin
+                      : (REGION_TRANSPORT_MIN[regionId] || 15);
+  const etaMs     = etaMin * 60 * 1000;
+  // Cap visual fill at 8 min — long ETAs (rural) would otherwise look frozen
+  const visualMs  = Math.min(etaMs, 8 * 60 * 1000);
+  const started   = Date.now();
   transportLabel.textContent = `EN ROUTE  ·  ~${Math.round(etaMin)} min`;
   transportFill.style.transition = 'none';
   transportFill.style.width = '0%';
   transportBar.style.display = 'block';
-  // Allow the 0% reset to paint before re-enabling transition
-  requestAnimationFrame(() => {
-    transportFill.style.transition = 'width 1s linear';
+  // Set sentinel immediately so a second call during the setTimeout is blocked
+  transportInterval = -1;
+  setTimeout(() => {
+    transportFill.style.transition = 'width 0.5s linear';
     transportInterval = setInterval(() => {
-      const pct = Math.min((Date.now() - started) / etaMs * 100, 94);
+      const pct = Math.min((Date.now() - started) / visualMs * 100, 94);
       transportFill.style.width = pct + '%';
-    }, 1000);
-  });
+    }, 500);
+  }, 50);
 }
 
 function completeTransportBar() {
