@@ -1690,13 +1690,17 @@ const CREW_STATUS_LABELS = {
   in_back:      'In the Back',
   not_on_scene: 'Not on Scene',
   en_route:     'En Route',
+  anonymous:    'Non-Roster Driver',
 };
-let currentCrewStatus = { partner: null, captain: null };
+let currentCrewStatus = { partner: null, captain: null, driver: null };
 
 function applyCrewStatus(status) {
   if (status) {
     if (status.partner != null) currentCrewStatus.partner = status.partner;
     if (status.captain != null) currentCrewStatus.captain = status.captain;
+    if (status.driver  != null) currentCrewStatus.driver  = status.driver;
+    // Clear anonymous driver once no longer driving
+    if (status.driver === null && status.partner === 'driving') currentCrewStatus.driver = null;
   }
   for (const role of ['partner', 'captain']) {
     const val = currentCrewStatus[role];
@@ -1721,10 +1725,22 @@ function applyCrewStatus(status) {
       cardBadge.className = 'crew-status-badge crew-status-' + cssKey;
     }
   }
+  // Anonymous driver chip
+  const driverChip = document.querySelector('[data-crew-role="driver"]');
+  if (driverChip) {
+    const driverVal = currentCrewStatus.driver;
+    if (driverVal === 'anonymous') {
+      driverChip.textContent = 'DRV: NON-ROSTER';
+      driverChip.className = 'badge badge-crew badge-crew-driving';
+      driverChip.style.display = '';
+    } else {
+      driverChip.style.display = 'none';
+    }
+  }
 }
 
 function resetCrewStatus() {
-  currentCrewStatus = { partner: null, captain: null };
+  currentCrewStatus = { partner: null, captain: null, driver: null };
   document.querySelectorAll('[data-crew-role]').forEach(el => { el.style.display = 'none'; });
   document.querySelectorAll('.crew-status-badge').forEach(el => {
     el.textContent = '';

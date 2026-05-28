@@ -181,11 +181,13 @@ function parseCrewStatusTag(reply) {
   const inner = matches[matches.length - 1][1].trim();
   const partnerMatch = inner.match(/partner=(\w+)/i);
   const captainMatch = inner.match(/captain=(\w+)/i);
+  const driverMatch  = inner.match(/driver=(\w+)/i);
   return {
     cleanedReply,
     crewStatus: {
       partner: partnerMatch ? partnerMatch[1].toLowerCase() : null,
       captain: captainMatch ? captainMatch[1].toLowerCase() : null,
+      driver:  driverMatch  ? driverMatch[1].toLowerCase()  : null,
     },
   };
 }
