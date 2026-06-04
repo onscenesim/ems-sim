@@ -633,13 +633,12 @@ async function sendTurn(msg) {
       currentSceneMinute = data.scene_minute;
     }
     if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
-    // Fire startup sound the first time ANY vital value is reported,
-    // or when CPR begins. Covers all scenario types: monitor readings,
-    // rhythm strips, GCS, skin signs, etc.
+    // Fire startup sound the first time the player asks for vitals,
+    // or when CPR begins.
     if (!firstVitalsPlayed) {
-      const vitalsReady = data.vitals && Object.values(data.vitals).some(v => v != null);
-      const cprStarted  = (data.rolls || []).some(r => r.procedure_id === 'cpr' && !r.no_roll);
-      if (vitalsReady || cprStarted) {
+      const askedForVitals = /\bvitals?\b/i.test(msg);
+      const cprStarted     = (data.rolls || []).some(r => r.procedure_id === 'cpr' && !r.no_roll);
+      if (askedForVitals || cprStarted) {
         firstVitalsPlayed = true;
         playSound(localTranscript?.meta?.provider_level === 'BLS' ? 'kitopen' : 'lifepak');
       }
