@@ -511,6 +511,7 @@ html, body {
 
 .line.narrative { color: var(--text-term); }
 .line.dispatch  { color: var(--cyan); }
+.line.dialogue  { color: #a5b4fc; }
 .line.roll      { color: var(--yellow); font-style: italic; }
 .line.user      { color: var(--green); }
 .line.system    { color: var(--dim-term); font-style: italic; }
@@ -2491,6 +2492,7 @@ body.light-mode #output {
 }
 body.light-mode .line.narrative { color: #1a1a2a; }
 body.light-mode .line.dispatch  { color: #004e99; }
+body.light-mode .line.dialogue  { color: #4338ca; }
 body.light-mode .line.roll      { color: #7a4a00; }
 body.light-mode .line.user      { color: #005c18; }
 body.light-mode .line.system    { color: #555555; }

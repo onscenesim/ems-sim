@@ -223,10 +223,15 @@ function printHr() {
   scrollBottom();
 }
 
+// Matches: Name: "dialogue" — speaker name up to 30 chars, colon, space, opening quote
+const DIALOGUE_RE = /^[A-Z][A-Za-z\s\-']{0,28}:\s*"/;
+
 function printReply(text) {
   const lines = String(text).split('\n');
   for (const line of lines) {
-    const cls = line.startsWith('DISPATCH:') ? 'dispatch' : 'narrative';
+    let cls = 'narrative';
+    if (line.startsWith('DISPATCH:')) cls = 'dispatch';
+    else if (DIALOGUE_RE.test(line)) cls = 'dialogue';
     appendLine(line, cls);
   }
   scrollBottom();
