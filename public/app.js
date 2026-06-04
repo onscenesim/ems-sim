@@ -152,9 +152,11 @@ const splashEl     = document.getElementById('splash');
 let sessionId       = null;
 let isClosed        = false;
 let waitingDebrief  = false;
-let hasPlayedLoading  = false;
-let hasPlayedDepart   = false;
-let transportInterval = null;
+let hasPlayedLoading      = false;
+let hasPlayedDepart       = false;
+let transportInterval     = null;
+let transportStartScene   = null;   // scene-minute when EN_ROUTE fired
+let transportEtaSceneMin  = null;   // in-game ETA in scene minutes
 let prevBackupStatus  = null;   // tracks last backup status for arrival sound
 let firstVitalsPlayed = false;
 let soundEnabled      = localStorage.getItem('ems_sound') !== 'off';
@@ -631,6 +633,7 @@ async function sendTurn(msg) {
     // Vitals update on every turn
     if (typeof data.scene_minute === 'number') {
       currentSceneMinute = data.scene_minute;
+      updateTransportBar();
     }
     if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
     // Fire startup sound the first time the player asks for vitals,
@@ -924,29 +927,31 @@ function setInputEnabled(enabled) {
 }
 
 // ── Transport progress bar ───────────────────────────────────────────────────
+// Driven by in-game scene minutes, not wall-clock time.
 function startTransportBar(serverEtaMin) {
-  if (transportInterval) return;           // already running
-  const regionId  = localTranscript?.meta?.region || 'SUBURBAN';
-  const etaMin    = (serverEtaMin != null && serverEtaMin > 0)
-                      ? serverEtaMin
-                      : (REGION_TRANSPORT_MIN[regionId] || 15);
-  const etaMs     = etaMin * 60 * 1000;
-  // Cap visual fill at 8 min — long ETAs (rural) would otherwise look frozen
-  const visualMs  = Math.min(etaMs, 8 * 60 * 1000);
-  const started   = Date.now();
-  transportLabel.textContent = `EN ROUTE  ·  ~${Math.round(etaMin)} min`;
+  if (transportStartScene !== null) return;   // already running
+  const regionId = localTranscript?.meta?.region || 'SUBURBAN';
+  transportEtaSceneMin = (serverEtaMin != null && serverEtaMin > 0)
+    ? serverEtaMin
+    : (REGION_TRANSPORT_MIN[regionId] || 15);
+  transportStartScene = currentSceneMinute;
+  transportLabel.textContent = `EN ROUTE  ·  ~${Math.round(transportEtaSceneMin)} min`;
   transportFill.style.transition = 'none';
   transportFill.style.width = '0%';
   transportBar.style.display = 'block';
-  // Set sentinel immediately so a second call during the setTimeout is blocked
-  transportInterval = -1;
-  setTimeout(() => {
-    transportFill.style.transition = 'width 0.5s linear';
-    transportInterval = setInterval(() => {
-      const pct = Math.min((Date.now() - started) / visualMs * 100, 94);
-      transportFill.style.width = pct + '%';
-    }, 500);
-  }, 50);
+}
+
+// Called after each turn when currentSceneMinute updates.
+function updateTransportBar() {
+  if (transportStartScene === null || transportEtaSceneMin === null) return;
+  const elapsed = currentSceneMinute - transportStartScene;
+  const pct = Math.min(elapsed / transportEtaSceneMin * 100, 94);
+  const remaining = Math.max(0, Math.round(transportEtaSceneMin - elapsed));
+  transportFill.style.transition = 'width 0.4s ease-out';
+  transportFill.style.width = pct + '%';
+  transportLabel.textContent = remaining > 0
+    ? `EN ROUTE  ·  ~${remaining} min`
+    : `EN ROUTE  ·  arriving`;
 }
 
 function completeTransportBar() {
@@ -963,7 +968,9 @@ function completeTransportBar() {
 
 function resetTransportBar() {
   clearInterval(transportInterval);
-  transportInterval = null;
+  transportInterval     = null;
+  transportStartScene   = null;
+  transportEtaSceneMin  = null;
   transportBar.style.display = 'none';
   transportFill.style.width = '0%';
 }

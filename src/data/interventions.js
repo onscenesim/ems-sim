@@ -87,6 +87,7 @@ const INTERVENTIONS = [
     "dopamine", "dopamine drip", "intropin",
     // Norepinephrine
     "norepinephrine", "levophed", "norepi", "norepinephrine drip", "levophed drip", "norepi drip",
+    "norepi infusion", "levophed infusion", "norepinephrine infusion",
     // Phenylephrine / Vasopressin / Dobutamine
     "phenylephrine", "vasopressin", "pitressin",
     "dobutamine", "dobutrex", "dobutamine drip",
