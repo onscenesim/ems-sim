@@ -77,6 +77,7 @@ const INTERVENTIONS = [
     "racemic epi", "racemic epinephrine", "epi 1:1000", "epi 1:10000",
     // Amiodarone
     "amiodarone", "give amiodarone", "amio", "300mg amiodarone", "cordarone",
+    "amiodarone drip", "amio drip", "amiodarone infusion", "amio infusion", "amio maintenance",
     // Adenosine
     "adenosine", "6mg adenosine", "adenocard",
     // Atropine
@@ -84,25 +85,26 @@ const INTERVENTIONS = [
     // Atropine + Pralidoxime (DuoDote)
     "duodote", "atropine pralidoxime", "auto-injector antidote",
     // Dopamine
-    "dopamine", "dopamine drip", "intropin",
+    "dopamine", "dopamine drip", "dopamine infusion", "intropin", "intropin drip",
     // Norepinephrine
     "norepinephrine", "levophed", "norepi", "norepinephrine drip", "levophed drip", "norepi drip",
     "norepi infusion", "levophed infusion", "norepinephrine infusion",
     // Phenylephrine / Vasopressin / Dobutamine
-    "phenylephrine", "vasopressin", "pitressin",
-    "dobutamine", "dobutrex", "dobutamine drip",
+    "phenylephrine", "phenylephrine drip", "phenylephrine infusion",
+    "vasopressin", "pitressin", "vasopressin drip", "vasopressin infusion",
+    "dobutamine", "dobutrex", "dobutamine drip", "dobutamine infusion",
     // Lidocaine
-    "lidocaine", "xylocaine", "lido",
+    "lidocaine", "xylocaine", "lido", "lidocaine drip", "lidocaine infusion", "lido drip",
     // Procainamide
-    "procainamide", "procan",
+    "procainamide", "procan", "procainamide drip", "procainamide infusion",
     // Propranolol
     "propranolol", "inderal",
     // Metoprolol
     "metoprolol", "lopressor",
     // Diltiazem
-    "diltiazem", "cardizem",
+    "diltiazem", "cardizem", "diltiazem drip", "diltiazem infusion", "cardizem drip",
     // Magnesium
-    "magnesium", "mag sulfate", "magnesium sulfate",
+    "magnesium", "mag sulfate", "magnesium sulfate", "mag drip", "mag infusion", "magnesium infusion",
     // Sodium Bicarbonate
     "sodium bicarb", "sodium bicarbonate", "bicarb",
     // Calcium
@@ -118,7 +120,7 @@ const INTERVENTIONS = [
     // Aspirin
     "aspirin", "324mg aspirin", "asa",
     // Heparin
-    "heparin", "high dose heparin",
+    "heparin", "high dose heparin", "heparin drip", "heparin infusion",
     // Furosemide
     "lasix", "furosemide",
     // Morphine
@@ -126,9 +128,9 @@ const INTERVENTIONS = [
     // Fentanyl
     "fentanyl", "fentanyl citrate", "sublimaze",
     // Ketamine
-    "ketamine", "ketalar",
+    "ketamine", "ketalar", "ketamine drip", "ketamine infusion",
     // Midazolam
-    "versed", "midazolam",
+    "versed", "midazolam", "versed drip", "midazolam drip", "midazolam infusion",
     // Lorazepam
     "ativan", "lorazepam", "benzo",
     // Diazepam
@@ -185,7 +187,7 @@ const INTERVENTIONS = [
     // Nitrous Oxide
     "nitrous oxide", "nitronox", "n2o",
     // Oxytocin
-    "oxytocin", "pitocin",
+    "oxytocin", "pitocin", "pitocin drip", "oxytocin infusion", "pitocin infusion",
     // Oxymetazoline
     "oxymetazoline", "afrin",
     // Proparacaine
@@ -199,7 +201,7 @@ const INTERVENTIONS = [
     // Broad-spectrum antibiotics
     "antibiotics", "ceftriaxone", "rocephin", "zosyn", "vancomycin", "metronidazole", "flagyl",
     // Tranexamic Acid
-    "txa", "tranexamic acid", "tranexamic",
+    "txa", "tranexamic acid", "tranexamic", "txa drip", "txa infusion", "tranexamic acid infusion",
     // Alteplase (tPA) / Tenecteplase (TNK) / Thrombolytics
     "alteplase", "tpa", "t-pa", "activase",
     "tenecteplase", "tnk", "tnkase",
