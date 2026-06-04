@@ -643,7 +643,9 @@ async function sendTurn(msg) {
       const cprStarted     = (data.rolls || []).some(r => r.procedure_id === 'cpr' && !r.no_roll);
       if (askedForVitals || cprStarted) {
         firstVitalsPlayed = true;
-        playSound(localTranscript?.meta?.provider_level === 'BLS' ? 'kitopen' : 'lifepak');
+        const monitorSound = localTranscript?.meta?.provider_level === 'BLS' ? 'kitopen' : 'lifepak';
+        playSound(monitorSound);
+        setTimeout(() => { const s = SOUNDS[monitorSound]; if (s) { s.pause(); s.currentTime = 0; } }, 4000);
       }
     }
     if (data.backup) applyBackupStatus(data.backup);
