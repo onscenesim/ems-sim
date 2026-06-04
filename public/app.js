@@ -945,18 +945,22 @@ function startTransportBar(serverEtaMin) {
 function updateTransportBar() {
   if (transportStartScene === null || transportEtaSceneMin === null) return;
   const elapsed = currentSceneMinute - transportStartScene;
+  if (elapsed >= transportEtaSceneMin) {
+    completeTransportBar();
+    return;
+  }
   const pct = Math.min(elapsed / transportEtaSceneMin * 100, 94);
-  const remaining = Math.max(0, Math.round(transportEtaSceneMin - elapsed));
+  const remaining = Math.max(1, Math.round(transportEtaSceneMin - elapsed));
   transportFill.style.transition = 'width 0.4s ease-out';
   transportFill.style.width = pct + '%';
-  transportLabel.textContent = remaining > 0
-    ? `EN ROUTE  ·  ~${remaining} min`
-    : `EN ROUTE  ·  arriving`;
+  transportLabel.textContent = `EN ROUTE  ·  ~${remaining} min`;
 }
 
 function completeTransportBar() {
   clearInterval(transportInterval);
-  transportInterval = null;
+  transportInterval    = null;
+  transportStartScene  = null;
+  transportEtaSceneMin = null;
   transportFill.style.transition = 'width 0.6s ease-out';
   transportFill.style.width = '100%';
   transportLabel.textContent = 'ARRIVED';
