@@ -633,9 +633,11 @@ async function startScenario() {
     printHr();
     for (const r of (data.rolls || [])) printRoll(r);
 
-    // Patient card
+    // Patient card — starts in pending state
+    patientDemoSource      = null;
+    secondPatientConfirmed = false;
     if (data.patient) {
-      populatePatientPanel(data.patient, data.scenario_id, data.multi_patient);
+      populatePatientPanel(data.patient, data.scenario_id);
       patientBtn.style.display = '';
     }
 
@@ -661,6 +663,14 @@ async function startScenario() {
     }
     applyBackupStatus(data.backup || { status: 'not_called', eta: null });
     if (data.crewStatus) applyCrewStatus(data.crewStatus);
+    if (data.demo_source && !patientDemoSource) {
+      patientDemoSource = data.demo_source;
+      refreshPatientCard();
+    }
+    if (data.second_patient && !secondPatientConfirmed) {
+      secondPatientConfirmed = true;
+      refreshPatientCard();
+    }
 
     setLoading(false);
     userInput.focus();
@@ -776,6 +786,14 @@ async function sendTurn(msg) {
     }
     if (data.backup) applyBackupStatus(data.backup);
     if (data.crewStatus) applyCrewStatus(data.crewStatus);
+    if (data.demo_source && !patientDemoSource) {
+      patientDemoSource = data.demo_source;
+      refreshPatientCard();
+    }
+    if (data.second_patient && !secondPatientConfirmed) {
+      secondPatientConfirmed = true;
+      refreshPatientCard();
+    }
 
     // Save turn client-side for transcript export
     if (localTranscript) {
@@ -991,7 +1009,9 @@ function resetToStart() {
   prevBackupStatus  = null;
   firstVitalsPlayed = false;
   localTranscript   = null;
-  patientBtn.style.display = 'none';
+  patientBtn.style.display  = 'none';
+  patientDemoSource         = null;
+  secondPatientConfirmed    = false;
   hidePatientPanel();
   patientPanelBody.innerHTML = '';
   output.innerHTML = '';
@@ -1346,11 +1366,14 @@ const COMORBIDITY_LABELS = {
   otherwise_healthy:           'No significant PMH',
 };
 
-function buildPatientCard(patient, scenarioId, multiPatient) {
+// demoSource = null means pending; string = who obtained demographics
+let patientDemoSource      = null;
+let secondPatientConfirmed = false;
+
+function buildPatientCard(patient, scenarioId) {
   const wrap = document.createElement('div');
   wrap.className = 'pcr-card';
 
-  // Header
   const incNum = scenarioId ? scenarioId.slice(-6).toUpperCase() : '------';
   const today  = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
   const hdr = document.createElement('div');
@@ -1359,7 +1382,7 @@ function buildPatientCard(patient, scenarioId, multiPatient) {
     '<div class="pcr-agency">EMS Terminal</div>' +
     '<div class="pcr-title">Pre-Hospital Patient Record</div>' +
     '<div class="pcr-incident-row">' +
-      '<span>INC ' + incNum + '</span>' +
+      '<span>INC ' + incNum + '</span>' +
       '<span>' + today + '</span>' +
     '</div>';
   wrap.appendChild(hdr);
@@ -1384,20 +1407,34 @@ function buildPatientCard(patient, scenarioId, multiPatient) {
     wrap.appendChild(row);
   }
 
-  rule();
-  const nameParts = (patient.name || '').split(' ');
-  const nameFormatted = nameParts.length >= 2
-    ? nameParts.slice(1).join(' ').toUpperCase() + ', ' + nameParts[0]
-    : patient.name || '—';
-  field('NAME', nameFormatted);
-  field('AGE', patient.age ? patient.age + ' years' : '—');
-  field('SEX', patient.sex === 'male' ? 'Male' : patient.sex === 'female' ? 'Female' : '—');
+  if (!patientDemoSource) {
+    rule();
+    const pending = document.createElement('div');
+    pending.className = 'pcr-pending';
+    pending.textContent = 'Demographics not yet obtained. Identify the patient or ask a crew member.';
+    wrap.appendChild(pending);
+  } else {
+    rule();
+    const nameParts = (patient.name || '').split(' ');
+    const nameFormatted = nameParts.length >= 2
+      ? nameParts.slice(1).join(' ').toUpperCase() + ', ' + nameParts[0]
+      : (patient.name || '—');
+    field('NAME', nameFormatted);
+    field('AGE', patient.age ? patient.age + ' years' : '—');
+    field('SEX', patient.sex === 'male' ? 'Male' : patient.sex === 'female' ? 'Female' : '—');
 
-  rule();
-  const pmh = COMORBIDITY_LABELS[patient.comorbidity] || patient.comorbidity || 'None documented';
-  field('PMH', pmh, true);
+    rule();
+    const pmh = COMORBIDITY_LABELS[patient.comorbidity] || patient.comorbidity || 'None documented';
+    field('PMH', pmh, true);
 
-  if (multiPatient) {
+    rule();
+    const src = document.createElement('div');
+    src.className = 'pcr-source';
+    src.textContent = 'Courtesy of ' + patientDemoSource + '.';
+    wrap.appendChild(src);
+  }
+
+  if (secondPatientConfirmed) {
     rule();
     const notice = document.createElement('div');
     notice.className = 'pcr-multi-notice';
@@ -1408,12 +1445,17 @@ function buildPatientCard(patient, scenarioId, multiPatient) {
   return wrap;
 }
 
-function populatePatientPanel(patient, scenarioId, multiPatient) {
+function populatePatientPanel(patient, scenarioId) {
   patientPanelBody.innerHTML = '';
   if (!patient) return;
-  patientPanelBody.appendChild(buildPatientCard(patient, scenarioId, multiPatient));
+  patientPanelBody.appendChild(buildPatientCard(patient, scenarioId));
 }
 
+function refreshPatientCard() {
+  const patient    = localTranscript && localTranscript.meta && localTranscript.meta.patient;
+  const scenarioId = localTranscript && localTranscript.meta && localTranscript.meta.scenario_id;
+  if (patient) populatePatientPanel(patient, scenarioId);
+}
 function showPatientPanel() {
   patientPanel.classList.add('open');
 }
@@ -1822,7 +1864,9 @@ async function resumeFromSnapshot(snap) {
   if (snap.crew) populateCrewPanel(snap.crew);
 
   if (snap.meta && snap.meta.patient) {
-    populatePatientPanel(snap.meta.patient, snap.meta.scenario_id, snap.multi_patient);
+    patientDemoSource      = snap.demo_source   || null;
+    secondPatientConfirmed = snap.second_patient || false;
+    populatePatientPanel(snap.meta.patient, snap.meta.scenario_id);
     patientBtn.style.display = '';
   }
 

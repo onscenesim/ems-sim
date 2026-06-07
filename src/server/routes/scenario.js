@@ -95,7 +95,9 @@ router.get('/resume', (req, res) => {
       sceneMinute:  snapshot.sceneMinute || 0,
       closed:       snapshot.closed      || false,
       debriefed:    snapshot.debriefed   || false,
-      multi_patient: snapshot.meta ? (snapshot.meta.multi_patient || false) : false,
+      multi_patient:  snapshot.meta ? (snapshot.meta.multi_patient || false) : false,
+      demo_source:    snapshot.demo_source   || null,
+      second_patient: snapshot.second_patient || false,
     },
   });
 });
@@ -215,11 +217,13 @@ router.post('/:id/turn', async (req, res) => {
 
     // Update persisted snapshot after every turn
     persistence.update(req.params.id, {
-      messages:    session.messages,
-      lastVitals:  session.lastVitals,
-      sceneMinute: session.sceneMinute,
-      closed:      session.closed,
-      turns:       session.turns,
+      messages:          session.messages,
+      lastVitals:        session.lastVitals,
+      sceneMinute:       session.sceneMinute,
+      closed:            session.closed,
+      turns:             session.turns,
+      demo_source:       session.demoSource       || null,
+      second_patient:    session.secondPatientFound || false,
     });
 
     return res.json({
@@ -231,6 +235,8 @@ router.post('/:id/turn', async (req, res) => {
       vitals:         result.vitals || null,
       backup:         result.backup     || null,
       crewStatus:     result.crewStatus || null,
+      demo_source:    result.demoSource   || null,
+      second_patient: result.secondPatient || false,
       closed:         result.closed,
       scene_minute:   session.sceneMinute,
       decompensating: session.seed.decompensation_clock !== null &&

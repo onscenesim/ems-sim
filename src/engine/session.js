@@ -103,6 +103,24 @@ function parseHospitalEtaMin(str) {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
+// Parse [DEMO: source] — demographics obtained
+function parseDemoTag(reply) {
+  const re = /\s*\[DEMO:\s*([^\]]+)\]\s*/gi;
+  let source = null;
+  const cleanedReply = reply.replace(re, (_, s) => {
+    if (!source) source = s.trim();
+    return ' ';
+  }).replace(/  +/g, ' ').trim();
+  return { cleanedReply, demoSource: source };
+}
+
+// Parse [SECOND_PATIENT] — second patient identified
+function parseSecondPatientTag(reply) {
+  const found = /\[SECOND_PATIENT\]/i.test(reply);
+  const cleanedReply = reply.replace(/\s*\[SECOND_PATIENT\]\s*/gi, ' ').replace(/  +/g, ' ').trim();
+  return { cleanedReply, secondPatient: found };
+}
+
 function parseEventTags(reply) {
   let loading      = false;
   let enRoute      = false;
@@ -222,6 +240,8 @@ class Session {
     this.lastVitals = null;       // most-recent parsed [VITALS:] tag, or null if none yet
     this.turns = [];
     this.backupStatus = null;        // { status, eta } from [BACKUP:] tag
+    this.demoSource = null;          // who obtained demographics ([DEMO:] tag)
+    this.secondPatientFound = false; // second patient confirmed ([SECOND_PATIENT] tag)
     this.backupArrivalMinute = null; // scene minute when backup is expected on scene
     this.crewStatus = null;   // { partner, captain } from [CREW_STATUS:] tag
     this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
@@ -317,7 +337,9 @@ class Session {
     if (vitals) this.lastVitals = vitals;
     const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);
     const { cleanedReply: crewClean, crewStatus } = parseCrewStatusTag(backupClean);
-    const { cleanedReply: timeClean, timeMinutes } = parseTimeTag(crewClean);
+    const { cleanedReply: demoClean, demoSource } = parseDemoTag(crewClean);
+    const { cleanedReply: cleanedAfterTags, secondPatient } = parseSecondPatientTag(demoClean);
+    const { cleanedReply: timeClean, timeMinutes } = parseTimeTag(cleanedAfterTags);
     const { cleanedReply: eventClean, loading, enRoute, transportDest } = parseEventTags(timeClean);
     const { cleanedReply: reply, baseContact } = parseBaseContactTag(eventClean);
     if (backup) {
@@ -331,6 +353,8 @@ class Session {
       this.backupStatus = backup;
     }
     if (crewStatus) this.crewStatus = crewStatus;
+    if (demoSource && !this.demoSource) this.demoSource = demoSource;
+    if (secondPatient) this.secondPatientFound = true;
     // Safety net: if EN_ROUTE fires but LOADING was never emitted (Claude combined both into
     // one turn without tagging loading), auto-inject loading so the animation fires correctly.
     if (enRoute) {
@@ -387,10 +411,10 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, closed: true };
+      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, closed: true };
     }
 
-    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, closed: false };
+    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, closed: false };
   }
 
   /**
