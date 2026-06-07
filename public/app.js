@@ -348,12 +348,51 @@ if (savedPartner) partnerSelect.value = savedPartner;
 
 rebuildPartnerOptions(providerSelect.value);
 
-providerSelect.addEventListener('change', () => rebuildPartnerOptions(providerSelect.value));
+providerSelect.addEventListener('change', () => {
+  rebuildPartnerOptions(providerSelect.value);
+  rebuildCaptainOptions(providerSelect.value);
+});
 
 partnerSelect.addEventListener('change', () => {
   const v = partnerSelect.value;
   if (v) localStorage.setItem('ems_partner', v);
   else localStorage.removeItem('ems_partner');
+});
+
+// -- Captain selection -------------------------------------------------------
+const captainSelect = document.getElementById('cfg-captain');
+
+const ALS_CAPTAINS = [
+  'Captain Sandra Okonkwo', 'Captain Frank Delucci',
+  'Captain Yolanda Ferris', 'Captain Dennis Holt'
+];
+const BLS_CAPTAINS = [
+  'Captain Ruth Callahan', 'Captain Gord Beaulieu'
+];
+
+function rebuildCaptainOptions(providerLevel) {
+  const saved = captainSelect.value;
+  const list = providerLevel === 'BLS' ? BLS_CAPTAINS : [...ALS_CAPTAINS, ...BLS_CAPTAINS];
+  while (captainSelect.options.length > 1) captainSelect.remove(1);
+  list.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    captainSelect.appendChild(opt);
+  });
+  if (list.includes(saved)) captainSelect.value = saved;
+  else captainSelect.value = '';
+}
+
+const savedCaptain = localStorage.getItem('ems_captain');
+if (savedCaptain) captainSelect.value = savedCaptain;
+
+rebuildCaptainOptions(providerSelect.value);
+
+captainSelect.addEventListener('change', () => {
+  const v = captainSelect.value;
+  if (v) localStorage.setItem('ems_captain', v);
+  else localStorage.removeItem('ems_captain');
 });
 
 // ── Splash text (Minecraft-style, random per page load) ─────────────────────
@@ -467,7 +506,8 @@ async function startScenario() {
 
   try {
     const partner_name = partnerSelect ? (partnerSelect.value || null) : null;
-    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name, partner_name });
+    const captain_name = captainSelect ? (captainSelect.value || null) : null;
+    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name, partner_name, captain_name });
 
     sessionId      = data.session_id;
     isClosed       = false;

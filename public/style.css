@@ -99,6 +99,7 @@ html, body {
 .tile-provider   { background-color: #063858; } /* deep teal-navy */
 .tile-region     { background-color: #0a3818; } /* rich forest green */
 .tile-partner    { background-color: #1a1a2e; grid-column: 1 / -1; } /* spans full width */
+.tile-captain    { background-color: #1a2e2e; grid-column: 1 / -1; } /* spans full width */
 
 .tile-label {
   font-family: var(--font-block);
@@ -705,6 +706,7 @@ html, body {
   .start-tile      { order: 4; }
   .access-tile     { order: 5; }
   .tile-partner    { order: 6; }
+  .tile-captain    { order: 7; }
 
   .cfg-tile,
   .access-tile {
@@ -2481,6 +2483,7 @@ body.light-mode .tile-difficulty { background-color: #4a1a8a; }
 body.light-mode .tile-provider   { background-color: #0e5a80; }
 body.light-mode .tile-region     { background-color: #165c28; }
 body.light-mode .tile-partner    { background-color: #2a2a48; }
+body.light-mode .tile-captain    { background-color: #1a3a3a; }
 body.light-mode .start-tile      { background-color: #6a1010; }
 
 body.light-mode #theme-toggle-start { color: rgba(255,255,255,0.55); }

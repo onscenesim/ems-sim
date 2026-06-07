@@ -269,7 +269,7 @@ function pickCrew(regionId, history) {
  * @param {object} opts.history      { categories[], presentations[], crew[], doa_positions[], arrest_positions[], total_count }
  */
 function rollScenario(opts = {}) {
-  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', user_id = null, history = {}, partner_name = null } = opts;
+  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', user_id = null, history = {}, partner_name = null, captain_name = null } = opts;
 
   const curveballWeight = CURVEBALL_WEIGHTS[difficulty];
   const category = pickCategory(difficulty, history, curveballWeight);
@@ -296,6 +296,10 @@ function rollScenario(opts = {}) {
   if (partner_name) {
     const override = CREW.find(c => c.name === partner_name);
     if (override) crew = { partner: override.name, captain: crew.captain };
+  }
+  if (captain_name) {
+    const override = CREW.find(c => c.name === captain_name);
+    if (override) crew = { partner: crew.partner, captain: override.name };
   }
 
   const isCurveball = category === 'curveballs';
