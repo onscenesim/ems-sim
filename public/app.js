@@ -68,6 +68,7 @@ function getDispatchSound(regionId) {
 
 function playSound(name) {
   if (!soundEnabled) return;
+  if (document.hidden) return;   // don't queue sounds while backgrounded — iOS flushes on return
   const s = SOUNDS[name];
   if (s === undefined) { console.warn('[sound] unknown:', name); return; }
   if (s === null) return;  // known slot — file not yet assigned
@@ -110,20 +111,36 @@ function getProcedureSound(id, outcome) {
 let audioUnlocked = false;
 function unlockAudio() {
   if (audioUnlocked) return;
-  audioUnlocked = true;  // set immediately so this only ever runs once
+  audioUnlocked = true;
+  // iOS requires every HTMLAudioElement to be .play()'d during a user gesture.
+  // We mute them first, then immediately pause+reset in .then() so each element
+  // ends up in a clean "paused at 0, unlocked" state for future non-gesture calls.
+  // Guard: if playSound() already grabbed the element (s.muted === false), skip the
+  // pause so we don't clobber a real sound that's already playing.
   Object.values(SOUNDS).forEach(s => {
+    if (!s) return;
     s.muted = true;
-    // Fire-and-forget: just touching .play() during the gesture is enough to
-    // unlock the element for future calls. Don't pause in .then() — that races
-    // with real playSound calls and silences them. playSound() clears muted itself.
-    s.play().catch(() => {});
+    const p = s.play();
+    if (p && typeof p.then === 'function') {
+      p.then(() => {
+        if (s.muted) { s.pause(); s.currentTime = 0; s.muted = false; }
+      }).catch(() => { s.muted = false; });
+    }
   });
 }
 // touchend (not touchstart) avoids the iOS native <select> picker false-trigger.
-// No { once: true } -- the flag does that job, and this way the start button
-// always gets a shot even if an earlier gesture was swallowed by a form control.
 document.addEventListener('click',    unlockAudio);
 document.addEventListener('touchend', unlockAudio);
+
+// Stop all sounds when the page is backgrounded so iOS doesn't queue pending
+// play() calls and flush them all when the user tabs back in.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    Object.values(SOUNDS).forEach(s => {
+      if (s && !s.paused) { s.pause(); s.currentTime = 0; }
+    });
+  }
+});
 
 
 const startScreen  = document.getElementById('start-screen');
