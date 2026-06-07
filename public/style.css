@@ -51,8 +51,8 @@ html, body {
   justify-content: center;
   min-height: 100vh;
   overflow-y: auto;
-  gap: 22px;
-  padding: 16px 0;
+  gap: 14px;
+  padding: 10px 0;
   box-sizing: border-box;
 }
 
@@ -86,12 +86,12 @@ html, body {
   background-blend-mode: soft-light;
   border: 3px solid;
   border-color: var(--hi) var(--lo) var(--lo) var(--hi);
-  padding: 16px 14px;
+  padding: 11px 14px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
-  min-height: 130px;
+  gap: 8px;
+  min-height: 100px;
 }
 
 /* More varied, saturated tile colors */
@@ -306,14 +306,14 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
 }
 
 .magic-8-ball {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  width: 72px;
-  height: 72px;
+  width: 60px;
+  height: 60px;
 }
 
 .company-name {
