@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=35">
+  <link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 
@@ -132,6 +132,7 @@
         <span class="badge badge-unit" id="badge-unit">MEDIC 1</span>
         <span class="badge badge-backup" id="badge-backup" style="display:none"></span>
       </span>
+      <button id="patient-btn" title="View patient card" style="display:none">PT</button>
       <button id="crew-btn" title="View crew">CREW</button>
       <span class="badge badge-crew" data-crew-role="partner" style="display:none" aria-label="Partner status"></span>
       <span class="badge badge-crew" data-crew-role="captain" style="display:none" aria-label="Captain status"></span>
@@ -492,6 +493,16 @@
       <div id="crew-panel-footer">Today&#x2019;s shift</div>
     </div>
 
+    <!-- Patient card panel -->
+    <div id="patient-panel" aria-label="Patient card" role="complementary">
+      <div id="patient-panel-header">
+        <span id="patient-panel-title">PATIENT</span>
+        <button id="patient-panel-close" title="Close">&#x2715;</button>
+      </div>
+      <div id="patient-panel-body"></div>
+      <div id="patient-panel-footer">Pre-Hospital Patient Record</div>
+    </div>
+
     <div id="input-row">
       <span class="prompt">&gt;&nbsp;</span>
       <input
@@ -510,6 +521,6 @@
 
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-    <script src="app.js?v=27"></script>
+    <script src="app.js?v=28"></script>
 </body>
 </html>

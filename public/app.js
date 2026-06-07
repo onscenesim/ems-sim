@@ -633,6 +633,12 @@ async function startScenario() {
     printHr();
     for (const r of (data.rolls || [])) printRoll(r);
 
+    // Patient card
+    if (data.patient) {
+      populatePatientPanel(data.patient, data.scenario_id, data.multi_patient);
+      patientBtn.style.display = '';
+    }
+
     // Crew card pops at scenario start
     if (data.crew) {
       populateCrewPanel(data.crew);
@@ -985,6 +991,9 @@ function resetToStart() {
   prevBackupStatus  = null;
   firstVitalsPlayed = false;
   localTranscript   = null;
+  patientBtn.style.display = 'none';
+  hidePatientPanel();
+  patientPanelBody.innerHTML = '';
   output.innerHTML = '';
 
   scenarioStartTime = null;
@@ -1312,7 +1321,115 @@ crewBtn.addEventListener('click', () => {
   if (crewPanel.classList.contains('open')) {
     hideCrewPanel();
   } else {
+    hidePatientPanel();
     showCrewPanel();
+  }
+});
+
+// ── Patient card panel ──────────────────────────────────────────────────────
+
+const patientPanel      = document.getElementById('patient-panel');
+const patientPanelBody  = document.getElementById('patient-panel-body');
+const patientPanelClose = document.getElementById('patient-panel-close');
+const patientBtn        = document.getElementById('patient-btn');
+
+const COMORBIDITY_LABELS = {
+  compensated_cardiac_history: 'Cardiac Hx — HTN, hyperlipidemia, prior MI',
+  metabolic_syndrome:          'Metabolic syndrome — T2DM, HTN, obesity',
+  chronic_respiratory:         'Chronic respiratory — COPD, home O₂',
+  anticoagulated:              'Anticoagulated — A-fib, warfarin / DOAC',
+  renal_failure:               'ESRD on hemodialysis',
+  polysubstance:               'Polysubstance use disorder',
+  immunocompromised:           'Immunocompromised',
+  pediatric_complex:           'Pediatric complex medical history',
+  frail_elderly:               'Frail elderly — polypharmacy, dementia possible',
+  otherwise_healthy:           'No significant PMH',
+};
+
+function buildPatientCard(patient, scenarioId, multiPatient) {
+  const wrap = document.createElement('div');
+  wrap.className = 'pcr-card';
+
+  // Header
+  const incNum = scenarioId ? scenarioId.slice(-6).toUpperCase() : '------';
+  const today  = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
+  const hdr = document.createElement('div');
+  hdr.className = 'pcr-hdr';
+  hdr.innerHTML =
+    '<div class="pcr-agency">EMS Terminal</div>' +
+    '<div class="pcr-title">Pre-Hospital Patient Record</div>' +
+    '<div class="pcr-incident-row">' +
+      '<span>INC ' + incNum + '</span>' +
+      '<span>' + today + '</span>' +
+    '</div>';
+  wrap.appendChild(hdr);
+
+  function rule() {
+    const d = document.createElement('div');
+    d.className = 'pcr-section-rule';
+    wrap.appendChild(d);
+  }
+
+  function field(label, value, tall) {
+    const row = document.createElement('div');
+    row.className = tall ? 'pcr-field pcr-field-top' : 'pcr-field';
+    const lbl = document.createElement('span');
+    lbl.className = 'pcr-label';
+    lbl.textContent = label;
+    const val = document.createElement('span');
+    val.className = 'pcr-value';
+    val.textContent = value;
+    row.appendChild(lbl);
+    row.appendChild(val);
+    wrap.appendChild(row);
+  }
+
+  rule();
+  const nameParts = (patient.name || '').split(' ');
+  const nameFormatted = nameParts.length >= 2
+    ? nameParts.slice(1).join(' ').toUpperCase() + ', ' + nameParts[0]
+    : patient.name || '—';
+  field('NAME', nameFormatted);
+  field('AGE', patient.age ? patient.age + ' years' : '—');
+  field('SEX', patient.sex === 'male' ? 'Male' : patient.sex === 'female' ? 'Female' : '—');
+
+  rule();
+  const pmh = COMORBIDITY_LABELS[patient.comorbidity] || patient.comorbidity || 'None documented';
+  field('PMH', pmh, true);
+
+  if (multiPatient) {
+    rule();
+    const notice = document.createElement('div');
+    notice.className = 'pcr-multi-notice';
+    notice.textContent = '⚠️  MULTI-PATIENT INCIDENT — Additional patients documented in narrative only.';
+    wrap.appendChild(notice);
+  }
+
+  return wrap;
+}
+
+function populatePatientPanel(patient, scenarioId, multiPatient) {
+  patientPanelBody.innerHTML = '';
+  if (!patient) return;
+  patientPanelBody.appendChild(buildPatientCard(patient, scenarioId, multiPatient));
+}
+
+function showPatientPanel() {
+  patientPanel.classList.add('open');
+}
+
+function hidePatientPanel() {
+  patientPanel.classList.remove('open');
+}
+
+patientPanelClose.addEventListener('click', hidePatientPanel);
+
+patientBtn.addEventListener('click', () => {
+  if (patientPanel.classList.contains('open')) {
+    hidePatientPanel();
+  } else {
+    hideCrewPanel();
+    showPatientPanel();
   }
 });
 
@@ -1703,6 +1820,11 @@ async function resumeFromSnapshot(snap) {
   }
 
   if (snap.crew) populateCrewPanel(snap.crew);
+
+  if (snap.meta && snap.meta.patient) {
+    populatePatientPanel(snap.meta.patient, snap.meta.scenario_id, snap.multi_patient);
+    patientBtn.style.display = '';
+  }
 
   if (isClosed) {
     setInputEnabled(false);

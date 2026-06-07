@@ -1658,6 +1658,180 @@ html, body {
 }
 
 
+/* ── Patient card panel ──────────────────────────────────────── */
+
+#patient-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 290px;
+  height: 100%;
+  background: #f5f4f0;
+  border-left: 3px solid #888;
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  pointer-events: none;
+}
+
+#patient-panel.open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+#patient-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px 8px;
+  flex-shrink: 0;
+  background: #1e2d2a;
+}
+
+#patient-panel-title {
+  font-family: var(--font-block);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+#patient-panel-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: rgba(255,255,255,0.75);
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+#patient-panel-close:hover { color: #fff; }
+
+#patient-panel-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+#patient-panel-footer {
+  flex-shrink: 0;
+  font-family: var(--font-block);
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
+  color: #999;
+  text-align: center;
+  padding: 5px 10px;
+  border-top: 1px solid #ccc;
+  background-color: #eae8e4;
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  background-blend-mode: soft-light;
+  text-transform: uppercase;
+}
+
+/* PCR (Patient Care Report) form — legal document style */
+.pcr-card {
+  font-family: 'Courier New', Courier, monospace;
+  background: #f5f4f0;
+}
+
+.pcr-hdr {
+  padding: 12px 14px 10px;
+  border-bottom: 2px solid #333;
+  text-align: center;
+}
+
+.pcr-agency {
+  font-size: 8px;
+  color: #777;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+.pcr-title {
+  font-size: 10px;
+  font-weight: bold;
+  color: #111;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 4px 0 2px;
+}
+
+.pcr-incident-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.pcr-field {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 14px;
+  border-bottom: 1px solid #ddd;
+}
+
+.pcr-field-top { align-items: flex-start; }
+
+.pcr-label {
+  font-size: 8px;
+  font-weight: bold;
+  color: #777;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  min-width: 42px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.pcr-value {
+  font-size: 13px;
+  color: #111;
+  line-height: 1.35;
+}
+
+.pcr-field-top .pcr-value { font-size: 11px; }
+
+.pcr-section-rule {
+  height: 5px;
+  background: #e0ddd6;
+  border-top: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+}
+
+.pcr-multi-notice {
+  margin: 10px 14px;
+  padding: 7px 10px;
+  background: #fff3cd;
+  border: 1px solid #e6ac00;
+  border-left: 3px solid #e6ac00;
+  font-size: 9.5px;
+  color: #7a5800;
+  line-height: 1.45;
+  font-family: var(--font-block);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 600px) {
+  #patient-panel {
+    width: 100%;
+    height: auto;
+    max-height: 60%;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    transform: translateY(100%);
+    border-left: none;
+    border-top: 3px solid #888;
+  }
+  #patient-panel.open { transform: translateY(0); }
+  .pcr-value { font-size: 14px; }
+}
+
 /* ── Vitals monitor strip (LIFEPAK-style) ─────────────────────── */
 
 #vitals-bar {
