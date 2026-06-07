@@ -101,6 +101,14 @@ html, body {
 .tile-partner    { background-color: #1a1a2e; grid-column: 1 / -1; } /* spans full width */
 .tile-captain    { background-color: #1a2e2e; grid-column: 1 / -1; } /* spans full width */
 
+.tile-desc {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  font-style: italic;
+  min-height: 13px;
+  line-height: 1.4;
+}
+
 .tile-label {
   font-family: var(--font-block);
   font-size: 11px;
@@ -712,11 +720,14 @@ html, body {
   .access-tile {
     min-height: 0;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     padding: 10px 14px;
     gap: 12px;
   }
+
+  .tile-desc { flex-basis: 100%; font-size: 10px; margin-top: -4px; }
 
   .cfg-tile select { min-width: 0; width: auto; flex: 1; }
   .start-tile      { min-height: 56px; }
@@ -2484,6 +2495,7 @@ body.light-mode .tile-provider   { background-color: #0e5a80; }
 body.light-mode .tile-region     { background-color: #165c28; }
 body.light-mode .tile-partner    { background-color: #2a2a48; }
 body.light-mode .tile-captain    { background-color: #1a3a3a; }
+body.light-mode .tile-desc        { color: rgba(0,0,0,0.45); }
 body.light-mode .start-tile      { background-color: #6a1010; }
 
 body.light-mode #theme-toggle-start { color: rgba(255,255,255,0.55); }

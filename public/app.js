@@ -395,6 +395,86 @@ captainSelect.addEventListener('change', () => {
   else localStorage.removeItem('ems_captain');
 });
 
+// -- Tile descriptions -------------------------------------------------------
+const TILE_DESCS = {
+  difficulty: {
+    'NORMAL':      "Realistic acuity. Mistakes have consequences.",
+    'EASY':        "Stable patients. Forgiving margins. Good for learning.",
+    'HARD':        "Complex presentations. Tight windows. No slack.",
+    'BLACK_CLOUD': "Every call is your worst. Full crew. No breaks.",
+    'MURPHY':      "Guaranteed equipment failure. All rolls at disadvantage.",
+  },
+  provider: {
+    'ALS': "Full paramedic scope — IVs, drips, advanced airway.",
+    'BLS': "EMT-Basic scope. No IV meds. ALS as backup only.",
+  },
+  region: {
+    'SUBURBAN':                "Mixed career/volunteer. Standard scope. ~12 min to hospital.",
+    'URBAN_DENSE':             "Chicago, NYC. High volume, fast ALS, protocol-driven.",
+    'URBAN_SPRAWL':            "Houston, Phoenix. Full scope. Longer transport.",
+    'RURAL_TEMPERATE':         "Rural PA/Ontario. Long transport. Often BLS only.",
+    'RURAL_REMOTE':            "Northern Alberta, Montana. Air medical. 60-120 min out.",
+    'NORTHERN_URBAN':          "Winnipeg, Anchorage. Urban resources. Extreme cold.",
+    'TROPICAL_ISLAND':         "Hawaii, Caribbean. Heat, humidity. Restricted ALS scope.",
+    'CALIFORNIA_Urban':        "LA, SF. Heavy restrictions. Base contact required.",
+    'INTERNATIONAL_DEVELOPING':"Rural Mexico/Central America. Resource-limited. Improvise.",
+  },
+  partner: {
+    '':                "Drawn at random from the full roster.",
+    'Marcus Webb':     "19-year medic. Technically flawless, completely checked out.",
+    'Destiny Okafor':  "Second-year. Loves the job, reads journals for fun.",
+    'Ray Kowalski':    "Eight years in. Competent and opinionated. Will argue.",
+    'Priya Nair':      "Six months out. Eager, undertrained, confidently wrong.",
+    'Darnell Hughes':  "Former 68-W. Calm under pressure. Expects competence.",
+    'Brianna Solis':   "Twelve years in, three from retirement. Functional, disengaged.",
+    'Tyler Beaumont':  "Mediocre skills, bad attitude. Does the minimum. Argues.",
+    'Amara Diallo':    "Flight medic on ground rotation. Hard to be below.",
+    'Jorge Medina':    "Clinically average, socially exceptional. Great with families.",
+    'Quinn Abernathy': "Seven years. Reliable average. No opinions, no surprises.",
+    'Danny Kowalczyk': "Eight-year EMT-B. Knows his scope cold. No apologies.",
+    'Keisha Tremblay':  "Two years in, paramedic school nights. Occasionally oversteps.",
+    'Walt Garside':    "Sixteen years. Fully checked out. Slow. Minimum effort.",
+    'Fatima Al-Rashid':"Five years. Steady, drama-free. Speaks three languages.",
+    'Bo Hendricks':    "Three years in, thinks he's the best. Argues corrections.",
+  },
+  captain: {
+    '':                       "Drawn at random from the full roster.",
+    'Captain Sandra Okonkwo': "24-year veteran. Hands-off, backs her crew publicly.",
+    'Captain Frank Delucci':  "Old school. Thinks medicine peaked in 2003.",
+    'Captain Yolanda Ferris': "Former flight medic. High standards, direct feedback.",
+    'Captain Dennis Holt':    "Well-meaning, clinically dangerous. Never realizes it.",
+    'Captain Ruth Callahan':  "22-year rural supervisor. Knows every road and family.",
+    'Captain Gord Beaulieu':  "Volunteer captain, farmer by trade. Skeptical of everything.",
+  },
+};
+
+function updateTileDesc(id, value) {
+  const el = document.getElementById('desc-' + id);
+  if (!el) return;
+  const map = TILE_DESCS[id];
+  el.textContent = map ? (map[value] ?? '') : '';
+}
+
+// Wire desc updates to all config selects
+document.getElementById('cfg-difficulty').addEventListener('change', e => updateTileDesc('difficulty', e.target.value));
+document.getElementById('cfg-region').addEventListener('change', e => updateTileDesc('region', e.target.value));
+// Provider change: update provider desc + re-sync partner/captain descs after their lists rebuild
+providerSelect.addEventListener('change', () => {
+  updateTileDesc('provider', providerSelect.value);
+  // rebuildPartner/CaptainOptions already fired in the earlier listener; re-read current values
+  updateTileDesc('partner', partnerSelect.value);
+  updateTileDesc('captain', captainSelect.value);
+});
+partnerSelect.addEventListener('change', () => updateTileDesc('partner', partnerSelect.value));
+captainSelect.addEventListener('change', () => updateTileDesc('captain', captainSelect.value));
+
+// Initial descriptions on page load
+updateTileDesc('difficulty', document.getElementById('cfg-difficulty').value);
+updateTileDesc('provider', providerSelect.value);
+updateTileDesc('region', document.getElementById('cfg-region').value);
+updateTileDesc('partner', partnerSelect.value);
+updateTileDesc('captain', captainSelect.value);
+
 // ── Splash text (Minecraft-style, random per page load) ─────────────────────
 
 if (splashEl && typeof getRandomSplash === 'function') {
