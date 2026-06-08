@@ -431,37 +431,6 @@ html, body {
 
 
 /* ── Transport progress bar ─────────────────────────────────────────────── */
-#transport-bar {
-  display: none;
-  position: relative;
-  height: 20px;
-  background: #080e08;
-  border-bottom: 1px solid #142014;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-#transport-fill {
-  position: absolute;
-  inset: 0;
-  width: 0%;
-  background: linear-gradient(90deg, #0d230d 0%, #1e5a1e 100%);
-  transition: width 1s linear;
-}
-#transport-label {
-  position: relative;
-  z-index: 1;
-  display: block;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: #3fb83f;
-  letter-spacing: 0.14em;
-  line-height: 20px;
-  white-space: nowrap;
-}
-
-
-
 /* ── Backup status badge — dark-bg style matching .badge-unit ──── */
 .badge-backup {
   font-weight: bold;
@@ -2727,14 +2696,6 @@ body.light-mode #theme-toggle-hdr { background: #e0ddd8; color: #333; }
 body.light-mode #theme-toggle-hdr:hover { background: #d0cdc8; }
 
 /* Transport bar — light green instead of very dark */
-body.light-mode #transport-bar {
-  background: #eaf4ea;
-  border-bottom-color: #c0dcc0;
-}
-body.light-mode #transport-fill {
-  background: linear-gradient(90deg, #b8ddb8 0%, #6ab86a 100%);
-}
-body.light-mode #transport-label { color: #2a6a2a; }
 
 /* End-of-scenario action buttons */
 body.light-mode .new-scenario-btn {
