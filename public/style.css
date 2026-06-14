@@ -2526,6 +2526,82 @@ html, body {
   to { opacity: 1; }
 }
 
+/* ── IO drill overlay ───────────────────────────────────────────────── */
+#io-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 4, 0.80);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+#io-overlay.visible { opacity: 1; }
+
+#io-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.28em;
+  color: rgba(245, 166, 35, 0.85);
+  text-transform: uppercase;
+  opacity: 0;
+}
+#io-overlay.visible #io-header {
+  animation: ioLabelFade 1.6s ease 0.1s forwards;
+}
+
+#io-drill-svg {
+  width: 260px;
+  height: auto;
+  filter: drop-shadow(0 2px 14px rgba(245, 140, 10, 0.45));
+  opacity: 0;
+}
+#io-overlay.visible #io-drill-svg {
+  animation: ioSlide 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards,
+             ioVibrate 0.7s ease-in-out 0.55s forwards;
+}
+
+@keyframes ioSlide {
+  0%   { opacity: 0; transform: translateX(100px); }
+  50%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes ioVibrate {
+  0%   { transform: translateX(0) translateY(0); }
+  10%  { transform: translateX(1px) translateY(-2px); }
+  20%  { transform: translateX(-1px) translateY(2px); }
+  30%  { transform: translateX(2px) translateY(-2px); }
+  40%  { transform: translateX(-2px) translateY(2px); }
+  50%  { transform: translateX(1px) translateY(-1px); }
+  60%  { transform: translateX(-1px) translateY(1px); }
+  70%  { transform: translateX(1px) translateY(-1px); }
+  80%  { transform: translateX(0) translateY(0); }
+  100% { transform: translateX(0) translateY(0); }
+}
+
+#io-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
+  color: rgba(220, 220, 200, 0.9);
+  text-transform: uppercase;
+  opacity: 0;
+}
+#io-overlay.visible #io-label {
+  animation: ioLabelFade 1.4s ease 0.35s forwards;
+}
+@keyframes ioLabelFade {
+  0%   { opacity: 0; }
+  30%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ── Defibrillation / cardioversion overlay ─────────────────────────── */
 #defib-overlay {
   position: fixed;

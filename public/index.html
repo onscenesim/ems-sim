@@ -409,6 +409,49 @@
       <div id="thump-label"></div>
     </div>
 
+    <!-- IO drill animation overlay -->
+    <div id="io-overlay" aria-hidden="true">
+      <div id="io-header">IO ACCESS</div>
+      <svg id="io-drill-svg" viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- Drill bit shaft -->
+        <rect x="8" y="71" width="74" height="5" rx="2.5" fill="#d0d0d0"/>
+        <!-- Bit tip -->
+        <polygon points="8,71 8,76 2,73.5" fill="#b8b8b8"/>
+        <!-- Bit flutes (spiral marks) -->
+        <line x1="18" y1="71" x2="24" y2="76" stroke="#a0a0a0" stroke-width="1.3"/>
+        <line x1="30" y1="71" x2="36" y2="76" stroke="#a0a0a0" stroke-width="1.3"/>
+        <line x1="42" y1="71" x2="48" y2="76" stroke="#a0a0a0" stroke-width="1.3"/>
+        <line x1="54" y1="71" x2="60" y2="76" stroke="#a0a0a0" stroke-width="1.3"/>
+        <line x1="66" y1="71" x2="72" y2="76" stroke="#a0a0a0" stroke-width="1.3"/>
+        <!-- Chuck (black collar) -->
+        <rect x="80" y="60" width="26" height="27" rx="4" fill="#1e1e1e"/>
+        <rect x="80" y="65" width="26" height="4"  rx="1" fill="#333"/>
+        <rect x="80" y="78" width="26" height="4"  rx="1" fill="#333"/>
+        <!-- Chuck-to-body neck -->
+        <rect x="102" y="61" width="8" height="25" fill="#1e1e1e"/>
+        <!-- Main body (orange capsule) -->
+        <path d="M106 38 L214 38 Q244 38 244 73 Q244 108 214 108 L106 108 Q90 108 86 73 Q90 38 106 38 Z" fill="#F5A623"/>
+        <!-- Body highlight -->
+        <path d="M106 38 L214 38 Q244 38 244 55 L86 55 Q88 38 106 38 Z" fill="#F9C050" opacity="0.55"/>
+        <!-- Body shadow -->
+        <path d="M86 92 L244 92 Q244 108 214 108 L106 108 Q90 108 86 92 Z" fill="#C8820A" opacity="0.5"/>
+        <!-- Vent slots -->
+        <rect x="212" y="50" width="20" height="4" rx="2" fill="#1e1e1e"/>
+        <rect x="212" y="61" width="20" height="4" rx="2" fill="#1e1e1e"/>
+        <rect x="212" y="72" width="20" height="4" rx="2" fill="#1e1e1e"/>
+        <!-- Grip (black, pistol-style) -->
+        <path d="M152 106 Q158 108 156 152 L134 152 Q132 110 138 106 Z" fill="#1e1e1e"/>
+        <!-- Red accent at grip/body junction -->
+        <rect x="131" y="100" width="32" height="11" rx="2" fill="#CC2222"/>
+        <!-- Trigger -->
+        <rect x="139" y="113" width="15" height="22" rx="5" fill="#AA1111"/>
+        <!-- Battery pack -->
+        <rect x="126" y="150" width="46" height="20" rx="7" fill="#F5A623"/>
+        <rect x="126" y="160" width="46" height="10" rx="5" fill="#C8820A"/>
+      </svg>
+      <div id="io-label"></div>
+    </div>
+
     <!-- Ambulance departure animation overlay -->
     <div id="depart-overlay" aria-hidden="true">
       <div id="depart-header">TRANSPORTING</div>

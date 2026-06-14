@@ -741,6 +741,7 @@ async function sendTurn(msg) {
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
       if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
       if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
+      if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -954,6 +955,7 @@ async function endCallAndDebrief() {
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
       if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
       if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
+      if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -1484,6 +1486,24 @@ function animateLoading() {
     const FADE_MS = 220;
     let overlay = document.getElementById('loading-overlay');
     if (!overlay) { resolve(); return; }
+    overlay.classList.add('visible');
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateDrill(outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1800;
+    const FADE_MS = 180;
+    const overlay = document.getElementById('io-overlay');
+    const label   = document.getElementById('io-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = outcome;
+    overlay.classList.remove('visible');
+    void overlay.offsetWidth;
     overlay.classList.add('visible');
     setTimeout(() => {
       overlay.classList.remove('visible');
