@@ -5,7 +5,7 @@ const { buildDebriefPrompt } = require('./prompts/debrief');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = 'claude-haiku-4-5';
 const MAX_TOKENS = 1024;
 
 // Hard upstream timeout for any Claude call. Without this, a stuck request
