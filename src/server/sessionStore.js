@@ -1,5 +1,7 @@
 'use strict';
 
+const fs             = require('fs');
+const path           = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { Session }     = require('../engine/session');
 const { rollScenario } = require('../engine/roller');
@@ -13,7 +15,33 @@ const store = new Map();
 // userId → { categories[], presentations[], crew[], doa_positions[], arrest_positions[], total_count }
 // Tracks per-user scenario history so the roller can avoid repeats.
 // Keyed by IP for free users; would be keyed by auth user id for paid users.
-const userHistory = new Map();
+//
+// Persisted to disk so history survives server restarts.
+const HISTORY_PATH = path.join(__dirname, '../../sessions/user_history.json');
+
+function loadHistoryFromDisk() {
+  try {
+    const raw = fs.readFileSync(HISTORY_PATH, 'utf8');
+    const obj = JSON.parse(raw);
+    const map = new Map();
+    for (const [k, v] of Object.entries(obj)) map.set(k, v);
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+function saveHistoryToDisk(map) {
+  try {
+    const obj = {};
+    for (const [k, v] of map) obj[k] = v;
+    fs.writeFileSync(HISTORY_PATH, JSON.stringify(obj), 'utf8');
+  } catch (err) {
+    console.error('[sessionStore] history save failed:', err.message);
+  }
+}
+
+const userHistory = loadHistoryFromDisk();
 
 // Prune expired free-tier sessions every 5 minutes; paid sessions never expire.
 setInterval(() => {
@@ -89,6 +117,7 @@ function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_i
 
   // Record this scenario in the user's history so future rolls avoid repeats
   updateHistory(userId, seed, tier);
+  saveHistoryToDisk(userHistory);
 
   const id = uuidv4();
   const session = new Session(seed, id);   // pass id so session can reference itself in run logs
