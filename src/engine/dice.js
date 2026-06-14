@@ -1,7 +1,7 @@
 'use strict';
 
 const { INTERVENTIONS } = require('../data/interventions');
-const { HARD_MODE_DC_PENALTY, BLACK_CLOUD_DC_PENALTY, MURPHY_DC_PENALTY } = require('../data/config');
+const { HARD_MODE_DC_PENALTY, BLACK_CLOUD_DC_PENALTY } = require('../data/config');
 
 // ---------------------------------------------------------------------------
 // Build detection index at startup.
@@ -262,9 +262,8 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
 
   const penalty = difficulty === 'BLACK_CLOUD' ? BLACK_CLOUD_DC_PENALTY
                 : difficulty === 'HARD'        ? HARD_MODE_DC_PENALTY
-                : difficulty === 'MURPHY'      ? MURPHY_DC_PENALTY
                 : 0;
-  const useDis = difficulty === 'MURPHY';
+  const useDis = false;
 
   // Multi-DC procedures (cardioversion, defibrillation, pacing)
   if (Array.isArray(dc)) {

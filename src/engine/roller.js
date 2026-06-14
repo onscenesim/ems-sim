@@ -71,7 +71,7 @@ function pickPresentation(category, difficulty, history) {
     if (!diffPool[entryDiff]) return false;
     const key = entry.presentation || entry.surface_presentation;
     if (recentPresentations.has(key)) return false;
-    if (entry.special_flags && entry.special_flags.includes('hardmode_exclusive') && difficulty !== 'HARD' && difficulty !== 'BLACK_CLOUD' && difficulty !== 'MURPHY') return false;
+    if (entry.special_flags && entry.special_flags.includes('hardmode_exclusive') && difficulty !== 'HARD' && difficulty !== 'BLACK_CLOUD') return false;
     // Space zoo scenarios globally across all categories
     if (entry.special_flags && entry.special_flags.includes('zoo_scenario')) {
       if (lastZoo !== undefined && (totalScenarios - lastZoo) < HISTORY_WINDOWS.zoo_spacing) return false;
@@ -142,9 +142,6 @@ function rollDecompensationClock(difficulty, trajectory) {
 function rollComplication(difficulty) {
   if (difficulty === 'EASY') return { roll: null, type: 'none' };
   // BLACK_CLOUD: all three complications fire simultaneously
-  if (difficulty === 'MURPHY') {
-    return { roll: 6, type: 'equipment_failure', types: ['equipment_failure'] };
-  }
   if (difficulty === 'BLACK_CLOUD') {
     return { roll: 6, type: 'all', types: ['equipment_failure', 'unreliable_bystander', 'clinical_curveball'] };
   }

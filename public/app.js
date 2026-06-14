@@ -416,7 +416,6 @@ const TILE_DESCS = {
     'EASY':        "Stable patients. Forgiving margins. Good for learning.",
     'HARD':        "Complex presentations. Tight windows. No slack.",
     'BLACK_CLOUD': "Every call is your worst. Full crew. No breaks.",
-    'MURPHY':      "Guaranteed equipment failure. All rolls at disadvantage.",
   },
   provider: {
     'ALS': "Full paramedic scope — IVs, drips, advanced airway.",
