@@ -156,8 +156,16 @@ function assembleSeedBlock(seed) {
     lines.push('--- REGION CONTEXT ---');
     lines.push(`Region: ${region.id} (${region.examples})`);
     lines.push(`Response times: ${region.response_times}`);
-    lines.push(`Nearest hospital: ${region.nearest_hospital_min}`);
-    lines.push(`Major hospital: ${region.major_hospital_min}`);
+    if (region.hospitals) {
+      const n = region.hospitals.nearest;
+      const m = region.hospitals.major;
+      lines.push(`Nearest hospital: ${n.name} — ${n.type} — ETA ${n.eta}`);
+      lines.push(`Major hospital:   ${m.name} — ${m.type} — ETA ${m.eta}`);
+      lines.push(`Use these names consistently throughout the scenario. Never invent other hospital names.`);
+    } else {
+      lines.push(`Nearest hospital: ${region.nearest_hospital_min}`);
+      lines.push(`Major hospital: ${region.major_hospital_min}`);
+    }
     lines.push(`ALS availability: ${region.als_availability}`);
     lines.push(`ALS scope tag: ${region.als_scope_tag}`);
     lines.push(`Medical direction: ${region.medical_direction_culture}`);
@@ -199,7 +207,7 @@ function assembleSeedBlock(seed) {
     if (isCurveball) {
     lines.push('9. CURVEBALL: The surface presentation is what the user sees. The true diagnosis is hidden. Reveal it ONLY when the reveal_trigger condition is met by user action. If the user never triggers the reveal, they finish the scenario without knowing. Debrief reveals the true diagnosis.');
   }
-  lines.push('10. TRANSPORT — TWO SEPARATE EVENTS: LOADING (load up, load the patient, take her to the rig) — partner executes on order, no destination needed. DRIVING — begins only when the user gives an explicit go/transport/drive order that names a destination (e.g. "go to Mercy," "take him to Regional," "transport to the trauma center," "head to the nearest hospital"). Merely mentioning a hospital name — in a report, a question, a discussion, or any other context — does NOT start transport. If loaded with no destination given, partner asks once quietly then waits; never blocks loading, never repeats the question.');
+  lines.push('10. TRANSPORT — TWO SEPARATE EVENTS: LOADING (load up, load the patient, take her to the rig) — partner executes on order, no destination needed. DRIVING — begins only when the user gives an explicit go/transport/drive order that names a destination or type (e.g. "go to the nearest hospital," "take him to the trauma center," "head out"). Merely mentioning a hospital name — in a report, a question, a discussion, or any other context — does NOT start transport. DESTINATION QUESTION: If loaded with no destination, partner asks EXACTLY ONCE by naming both options from the region data (e.g. "Nearest is [Hospital A] — community ED, about X min. Or [Hospital B] — trauma center, about Y min. Where do you want to go?"). After asking once, partner waits silently. NEVER repeats the question. ONCE EN ROUTE: The [SYSTEM NOTE: EN_ROUTE LOCKED] tag in the user message means transport is already underway — destination is set, driver is driving. Do NOT ask about destination again under any circumstances. Do NOT invent a new crew member to drive. The named driver from the CREW POSITIONS rule is driving.');
   lines.push('11. EQUIPMENT CANON: Narrate only equipment from the manifest. Accept any brand/regional alias the user uses without correcting them. Monitor = "the monitor." It is a standalone device, not a bag. Suction is also standalone.');
   lines.push('BACKBOARD REMOVAL: The long spine board (LSB/backboard) is a transfer and extrication device, not a spinal immobilization device. Once a patient is loaded and secured on the stretcher, removing the backboard is standard correct modern EMS practice — it reduces pressure injury and discomfort. "Remove the backboard," "slide the board out," "pull the board," or any equivalent after the patient is on the stretcher = always correct, no dice roll, always succeeds. Never flag this as contraindicated. The patient remains immobilized by stretcher straps, c-collar (if applied), and head blocks. Backboard removal is the expected default step in packaging, not an optional deviation.');
   lines.push('12. AMBIGUOUS SHORTHAND: If EMS shorthand could mean two clinically different things (e.g. "4L" = O2 or monitor?), ask one clarifying question. When context makes intent clear, proceed without asking.');

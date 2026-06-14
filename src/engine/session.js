@@ -300,6 +300,12 @@ class Session {
     if (isNibpCycle) {
       messageText += '\n\n[SYSTEM NOTE: NIBP cycle only. Respond in ONE short sentence acknowledging the cuff is cycling and give the new reading when it completes. No extra exam findings, no additional narration, no partner dialogue. Just the BP result. Then update only the BP timestamp in the VITALS tag; all other vitals fields remain unchanged from the previous turn.]';
     }
+    // Inject transport lock when the unit is already moving so the model never
+    // asks about destination again or invents a phantom driver.
+    if (this.moving) {
+      messageText += '\n\n[SYSTEM NOTE: EN_ROUTE LOCKED — the unit is already moving. Destination is set. Do NOT ask where to go. Do NOT invent a new crew member to drive. The assigned driver is driving.]';
+    }
+
     const rollLines = rolls.filter(r => !r.no_roll).map(r => {
       if (r.multi_roll) {
         const parts = r.rolls.map(x => `d20=${x.roll} vs DC ${x.dc} — ${x.outcome}`);

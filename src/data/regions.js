@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const REGIONS = [
   {
@@ -7,6 +7,10 @@ const REGIONS = [
     weather_weights: "full four seasons", agency_culture: "high call volume, protocol-driven, seen everything", scope_of_practice: "ALS with no RSI",
     medical_direction_culture: "hospital patch, usually fast", als_scope_tag: "restricted",
     crew_pool: ["partner", "captain"], acuity_minimum: "EASY", bls_scope_notes: "BLS provides oxygen, CPR, AED, glucose gel, epi autoinjector, aspirin assist. No BGL in some systems. ALS always available as backup.",
+    hospitals: {
+      nearest: { name: "Riverside Community Hospital", type: "community ED", eta: "5-10 minutes" },
+      major:   { name: "Mercy General Medical Center", type: "Level I Trauma Center / Cardiac Cath Lab / Comprehensive Stroke Center", eta: "7-14 minutes" },
+    },
   },
   {
     id: "URBAN_SPRAWL", examples: "Houston, Phoenix, Los Angeles", response_times: "6-10 minutes",
@@ -14,6 +18,10 @@ const REGIONS = [
     weather_weights: "heat weighted heavily, ice excluded", agency_culture: "mixed, car dependant", scope_of_practice: "full ALS with RSI, blood, finger thoracotomy",
     medical_direction_culture: "standard", als_scope_tag: "full",
     crew_pool: ["partner", "captain"], acuity_minimum: "EASY", bls_scope_notes: "BLS provides full standard BLS scope. ALS backup available moderate wait.",
+    hospitals: {
+      nearest: { name: "Valley Regional Medical Center", type: "community ED", eta: "10-20 minutes" },
+      major:   { name: "Southwest Trauma and Heart Center", type: "Level I Trauma Center / Cardiac Cath Lab / Stroke Center", eta: "20-30 minutes" },
+    },
   },
   {
     id: "SUBURBAN", examples: "Generic midwest or mid-atlantic suburb", response_times: "6-8 minutes",
@@ -21,6 +29,10 @@ const REGIONS = [
     weather_weights: "standard four season", agency_culture: "mixed volunteer and career, \n               pride in community, less jaded", scope_of_practice: "full ALS with RSI",
     medical_direction_culture: "standard", als_scope_tag: "full",
     crew_pool: ["partner", "captain", "partner_BLS", "captain_BLS"], acuity_minimum: "EASY", bls_scope_notes: "BLS provides full standard BLS scope. Volunteer BLS crews common. ALS backup available but may be cross-staffed.",
+    hospitals: {
+      nearest: { name: "Lakeview Community Hospital", type: "community ED", eta: "10-15 minutes" },
+      major:   { name: "University Medical Center", type: "Level II Trauma Center / Cardiac Cath Lab / Stroke Center", eta: "20-30 minutes" },
+    },
   },
   {
     id: "RURAL_TEMPERATE", examples: "Rural Ontario, Rural Pennsylvania", response_times: "12-20 minutes",
@@ -28,6 +40,10 @@ const REGIONS = [
     weather_weights: "winter weighted, fog, ice", agency_culture: "volunteer heavy, deeply community connected,\n               crew may know the patient personally", scope_of_practice: "may be BLS only. If ALS, you are the only medic",
     medical_direction_culture: "difficult, cell service variable", als_scope_tag: "variable",
     crew_pool: ["partner_BLS", "captain_BLS"], acuity_minimum: "NORMAL", bls_scope_notes: "Frequently BLS only. ALS provider operating alone without backup is the ALS variant. BLS scope: standard EMT-B. No IO, no RSI, no cardiac medications without medical direction patch.",
+    hospitals: {
+      nearest: { name: "Millbrook General Hospital", type: "basic ED — limited surgical, no cath lab", eta: "30-50 minutes" },
+      major:   { name: "Regional Medical Centre", type: "Level II Trauma Center / surgical services / cardiac monitoring", eta: "60-100 minutes" },
+    },
   },
   {
     id: "RURAL_REMOTE", examples: "Northern Alberta, Rural Montana, Northern Ontario", response_times: "20-40 minutes",
@@ -35,6 +51,10 @@ const REGIONS = [
     weather_weights: "extreme cold weighted, \n                blizzard, ice, wildlife hazard", agency_culture: "volunteer, isolated, \n               extended scene time expected and accepted", scope_of_practice: "ALS with RSI",
     medical_direction_culture: "satellite phone possible, \n            radio often unreliable", als_scope_tag: "full",
     crew_pool: ["partner_BLS", "captain_BLS"], acuity_minimum: "NORMAL", bls_scope_notes: "BLS scope only for most calls. ALS unavailable. Standard EMT-B interventions. Air medical is primary ALS escalation — weather dependent. Expect to operate entirely within BLS scope even as an ALS provider.",
+    hospitals: {
+      nearest: { name: "Clearwater District Hospital", type: "very limited ED — stabilization only, no surgery on site", eta: "60-120 minutes" },
+      major:   { name: "Northern Regional Health Centre", type: "full trauma and surgical services — air medical primary, ground 6-12 hours", eta: "air medical preferred; ground 360-720 minutes" },
+    },
   },
   {
     id: "NORTHERN_URBAN", examples: "Winnipeg, Edmonton, Anchorage", response_times: "6-10 minutes",
@@ -42,6 +62,10 @@ const REGIONS = [
     weather_weights: "extreme cold heavily weighted,\n                blizzard, ice, black ice standard", agency_culture: "experienced with environmental emergencies,\n               cold weather protocols standard", scope_of_practice: "ALS",
     medical_direction_culture: "standard", als_scope_tag: "full",
     crew_pool: ["partner", "captain"], acuity_minimum: "EASY", bls_scope_notes: "Full standard BLS scope. ALS available. Cold weather protocols standard for all providers.",
+    hospitals: {
+      nearest: { name: "Northgate General Hospital", type: "community ED", eta: "10-20 minutes" },
+      major:   { name: "Northern Health Sciences Centre", type: "Level I Trauma Center / Cardiac Cath Lab / Comprehensive Stroke Center", eta: "30-40 minutes" },
+    },
   },
   {
     id: "TROPICAL_ISLAND", examples: "Hawaii, Puerto Rico, Caribbean EMS systems", response_times: "8-15 minutes",
@@ -49,6 +73,10 @@ const REGIONS = [
     weather_weights: "heat, humidity, \n                hurricane season possible", agency_culture: "community-oriented, \n               heat and humidity baseline", scope_of_practice: "ALS with no RSI",
     medical_direction_culture: "standard", als_scope_tag: "restricted",
     crew_pool: ["partner", "captain", "partner_BLS", "captain_BLS"], acuity_minimum: "EASY", bls_scope_notes: "BLS scope: standard EMT-B. ALS restricted — no RSI in most systems. Inter-island transport via air medical for critical patients.",
+    hospitals: {
+      nearest: { name: "Island Medical Center", type: "community ED", eta: "15-40 minutes" },
+      major:   { name: "Queen's Medical Center", type: "Level II Trauma / cardiac — inter-island air medical for Level I needs", eta: "40-60 minutes; inter-island air medical for highest acuity" },
+    },
   },
   {
     id: "INTERNATIONAL_DEVELOPING", examples: "Rural Mexico, parts of Central America", response_times: "15-30 minutes",
@@ -56,6 +84,10 @@ const REGIONS = [
     weather_weights: "heat, rain, flooding", agency_culture: "resource-constrained, \n               improvisation expected", scope_of_practice: "basic to intermediate only",
     medical_direction_culture: "unreliable", als_scope_tag: "none",
     crew_pool: ["partner_BLS", "captain_BLS"], acuity_minimum: "HARD", bls_scope_notes: "BLS and basic intermediate scope only. Resource-constrained — not all standard BLS equipment may be available. Improvisation expected. No ALS backup. Long transport.",
+    hospitals: {
+      nearest: { name: "Hospital General", type: "basic ED — limited resources, minimal surgical capability", eta: "30-90 minutes" },
+      major:   { name: "Centro Médico Regional", type: "regional referral center — surgical and ICU capable", eta: "120-240 minutes" },
+    },
   },
   {
     id: "CALIFORNIA_Urban", examples: "Los Angeles / San Francisco / Sacramento", response_times: "6-10 minutes",
@@ -63,6 +95,10 @@ const REGIONS = [
     weather_weights: "heat in inland valleys, fog on coast, \n         wildfire smoke seasonally significant,\n         earthquake not a weather event but worth noting\n         as a special circumstance possibility", agency_culture: "high call volume, burnout prevalent, \n         us-vs-them dynamic between field and administration,\n         crews are experienced but often demoralized,\n         documentation-heavy, liability-averse decisions common,\n         transport-first mentality even when scene stabilization \n         is clearly indicated. Fire vs Private EMS", scope_of_practice: "ALS and BLS crews. significantly restricted vs national standards\n       — BLS crews cannot take BGL and have no cardiac monitor\n       — No intubations or cricothyrotomy -Requires base contact to initiate Pacing, Push dose epinephrine, cardioversion",
     medical_direction_culture: "required frequently, often slow, \n            MD may override your clinical judgment on scene,\n            base hospital may deny orders that are \n            standard of care elsewhere", als_scope_tag: "restricted",
     crew_pool: ["partner", "captain"], acuity_minimum: "EASY", bls_scope_notes: "BLS scope significantly restricted vs national standard — no BGL, no cardiac monitoring in some systems. ALS requires base contact for most medications. RSI unavailable in most California urban systems.",
+    hospitals: {
+      nearest: { name: "Valley Presbyterian Medical Center", type: "community ED", eta: "8-15 minutes" },
+      major:   { name: "LAC+USC Medical Center", type: "Level I Trauma Center / Cardiac Cath Lab / Comprehensive Stroke Center — base hospital", eta: "10-20 minutes" },
+    },
   },
 ];
 
