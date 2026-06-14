@@ -1308,6 +1308,22 @@ html, body {
   pointer-events: auto;
 }
 
+/* ── Queue badge ───────────────────────────────────────────────── */
+
+.drug-queue-badge {
+  display: none;
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
 /* ── Header — colored by drug class ───────────────────────────── */
 
 #drug-panel-header {

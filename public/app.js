@@ -1134,15 +1134,14 @@ const diceOutcomeEl   = document.getElementById('dice-outcome-label');
  * Populate and slide in the drug reference panel.
  * @param {string} matchedKey  roll.matched_drug from the server (lowercase synonym)
  */
-function showDrugPanel(matchedKey) {
-  const card = lookupDrug(matchedKey);
-  if (!card) return;
+// Queue of matched drug keys waiting to be displayed.
+const drugCardQueue = [];
 
+function renderDrugPanel(card) {
   drugPanelName.textContent = card.name;
   drugPanel.dataset.drugClass = card.drugClass || 'other';
   drugPanelBody.innerHTML = '';
 
-  // Dose rows
   for (const d of card.doses) {
     const row = document.createElement('div');
     row.className = 'drug-dose-row';
@@ -1172,7 +1171,6 @@ function showDrugPanel(matchedKey) {
     drugPanelBody.appendChild(row);
   }
 
-  // Packaging line
   if (card.packaging) {
     const pkg = document.createElement('div');
     pkg.className = 'drug-packaging';
@@ -1180,11 +1178,40 @@ function showDrugPanel(matchedKey) {
     drugPanelBody.appendChild(pkg);
   }
 
+  // Show queue depth indicator when more cards are waiting
+  const badge = drugPanel.querySelector('.drug-queue-badge') || (() => {
+    const b = document.createElement('div');
+    b.className = 'drug-queue-badge';
+    drugPanel.appendChild(b);
+    return b;
+  })();
+  if (drugCardQueue.length > 0) {
+    badge.textContent = `+${drugCardQueue.length} more`;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+
   drugPanel.classList.add('open');
+}
+
+function showDrugPanel(matchedKey) {
+  const card = lookupDrug(matchedKey);
+  if (!card) return;
+  if (drugPanel.classList.contains('open')) {
+    // Panel already showing — queue this one for after close
+    drugCardQueue.push(card);
+  } else {
+    renderDrugPanel(card);
+  }
 }
 
 function hideDrugPanel() {
   drugPanel.classList.remove('open');
+  if (drugCardQueue.length > 0) {
+    // Small delay so the panel visibly closes before the next one opens
+    setTimeout(() => renderDrugPanel(drugCardQueue.shift()), 220);
+  }
 }
 
 drugPanelClose.addEventListener('click', hideDrugPanel);
