@@ -33,9 +33,10 @@ function loadHistoryFromDisk() {
 
 function saveHistoryToDisk(map) {
   try {
-    const obj = {};
-    for (const [k, v] of map) obj[k] = v;
-    fs.writeFileSync(HISTORY_PATH, JSON.stringify(obj), 'utf8');
+    const obj = Object.fromEntries(map);
+    const tmp = HISTORY_PATH + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(obj), 'utf8');
+    fs.renameSync(tmp, HISTORY_PATH);
   } catch (err) {
     console.error('[sessionStore] history save failed:', err.message);
   }
@@ -51,22 +52,34 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+const HISTORY_DEFAULTS = {
+  categories:       [],
+  presentations:    [],
+  crew:             [],
+  doa_positions:    [],
+  arrest_positions: [],
+  zoo_positions:    [],
+  total_count:      0,
+};
+
 /**
  * Get or initialise the history record for a user.
+ * Validates the stored value (guards against corrupt disk data) and
+ * merges in any fields added after the record was first written.
  */
 function getOrInitHistory(userId) {
-  if (!userHistory.has(userId)) {
-    userHistory.set(userId, {
-      categories:      [],
-      presentations:   [],
-      crew:            [],
-      doa_positions:   [],
-      arrest_positions: [],
-      zoo_positions:    [],
-      total_count:     0,
-    });
+  let h = userHistory.get(userId);
+  if (!h || typeof h !== 'object' || Array.isArray(h)) {
+    h = { ...HISTORY_DEFAULTS, categories: [], presentations: [], crew: [],
+          doa_positions: [], arrest_positions: [], zoo_positions: [] };
+    userHistory.set(userId, h);
+    return h;
   }
-  return userHistory.get(userId);
+  // Back-fill any fields added to HISTORY_DEFAULTS after this entry was persisted
+  for (const [key, def] of Object.entries(HISTORY_DEFAULTS)) {
+    if (!(key in h)) h[key] = Array.isArray(def) ? [] : def;
+  }
+  return h;
 }
 
 /**

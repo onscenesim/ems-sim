@@ -48,9 +48,11 @@ function markDebriefed(id) {
 }
 
 // Prune files older than MAX_AGE_MS on startup
+// Excludes user_history.json — that's a permanent accumulation file, not a session.
 function pruneOld() {
   try {
     for (const f of fs.readdirSync(SESSIONS_DIR)) {
+      if (f === 'user_history.json' || f === 'user_history.json.tmp') continue;
       const fp = path.join(SESSIONS_DIR, f);
       try {
         const stat = fs.statSync(fp);
