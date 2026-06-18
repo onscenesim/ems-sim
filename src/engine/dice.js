@@ -27,6 +27,8 @@ const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exem
   'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
   'pacing', 'pacer',
   // Drug abbreviations — specific enough to fire without an admin verb
+  'io',       // bare IO order — firefighter shorthand
+  'epi',      // bare epi order — firefighter shorthand
   'txa',      // tranexamic acid
   'sux',      // succinylcholine
   'succs',    // succinylcholine (alternate)
@@ -418,6 +420,15 @@ function detectAllProcedures(userText) {
   const found = [];
   const usedProcIds = new Set();
 
+  // Command-style input: the whole message is a terse list of bare keywords
+  // separated by commas / "and" / "or" / "then" — no sentence structure.
+  // e.g. "atropine", "defib and epi", "IO, bicarb, intubate"
+  // In this mode skip the admin-verb requirement so bare drug/procedure names fire.
+  const chunks = remaining.split(/\s*[,;]\s*|\s+(?:and|or|then|also|&)\s+/i).map(c => c.trim()).filter(Boolean);
+  const commandStyle = !ADMIN_VERB_RE.test(remaining) &&
+                       chunks.length >= 1 && chunks.length <= 8 &&
+                       chunks.every(c => c.split(/\s+/).length <= 3);
+
   // Safety cap — no message should have more than 10 distinct procedures
   for (let i = 0; i < 10; i++) {
     let bestMatch = null;
@@ -428,8 +439,8 @@ function detectAllProcedures(userText) {
       const exec = pattern.exec(remaining);
       if (!exec) continue;
       // Use precomputed 'specific' flag so uppercase acronyms (BGL, SpO2, IV)
-      // don't require an admin verb.
-      if (!specific && !ADMIN_VERB_RE.test(remaining)) continue;
+      // don't require an admin verb. Also bypass verb check in command-style input.
+      if (!specific && !commandStyle && !ADMIN_VERB_RE.test(remaining)) continue;
       bestMatch = { key, pattern, proc, matchLen: exec[0].length };
       bestMatchIndex = exec.index;
       break; // sorted longest-first, so first match is most specific
