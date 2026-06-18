@@ -2796,36 +2796,35 @@ html, body {
 }
 
 #io-drill-svg {
-  width: 184px;
+  width: 118px;
   height: auto;
-  color: rgba(180, 200, 220, 0.90);
   filter: drop-shadow(0 2px 10px rgba(80, 140, 200, 0.28));
   opacity: 0;
 }
 #io-overlay.visible #io-drill-svg {
-  animation: ioSlide 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards;
+  animation: ioSlide 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards;
 }
-/* Only the driver shakes — the bone stays put */
+/* Driver jolts/shakes as it drives the needle in */
+#io-driver { transform-box: fill-box; transform-origin: center; }
 #io-overlay.visible #io-driver {
-  animation: ioVibrate 0.7s ease-in-out 0.6s 2;
+  animation: ioJolt 0.42s linear 0.5s 3;
 }
 
 @keyframes ioSlide {
-  0%   { opacity: 0; transform: translateX(100px); }
-  50%  { opacity: 1; transform: translateX(0); }
+  0%   { opacity: 0; transform: translateX(70px); }
+  60%  { opacity: 1; transform: translateX(0); }
   100% { opacity: 1; transform: translateX(0); }
 }
-@keyframes ioVibrate {
-  0%   { transform: translateX(0) translateY(0); }
-  10%  { transform: translateX(1px) translateY(-2px); }
-  20%  { transform: translateX(-1px) translateY(2px); }
-  30%  { transform: translateX(2px) translateY(-2px); }
-  40%  { transform: translateX(-2px) translateY(2px); }
-  50%  { transform: translateX(1px) translateY(-1px); }
-  60%  { transform: translateX(-1px) translateY(1px); }
-  70%  { transform: translateX(1px) translateY(-1px); }
-  80%  { transform: translateX(0) translateY(0); }
-  100% { transform: translateX(0) translateY(0); }
+@keyframes ioJolt {
+  0%   { transform: translate(0, 0) rotate(0); }
+  12%  { transform: translate(2px, -1px) rotate(2deg); }
+  24%  { transform: translate(-2px, 1px) rotate(-2deg); }
+  36%  { transform: translate(2px, 1px) rotate(1.5deg); }
+  48%  { transform: translate(-1px, -1px) rotate(-1.5deg); }
+  60%  { transform: translate(2px, 0) rotate(2deg); }
+  72%  { transform: translate(-2px, 1px) rotate(-1deg); }
+  84%  { transform: translate(1px, -1px) rotate(1deg); }
+  100% { transform: translate(0, 0) rotate(0); }
 }
 
 #io-label {

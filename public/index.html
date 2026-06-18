@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=43">
+  <link rel="stylesheet" href="style.css?v=44">
 </head>
 <body>
 
@@ -389,29 +389,19 @@
     <!-- IO drill animation overlay -->
     <div id="io-overlay" aria-hidden="true">
       <div id="io-header">IO ACCESS</div>
-      <svg id="io-drill-svg" viewBox="0 0 170 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Long bone (tibia) — stays steady while the driver vibrates -->
-          <rect x="18" y="118" width="124" height="18" rx="9"/>
-          <line x1="26" y1="124" x2="134" y2="124" stroke-width="1" opacity="0.3"/>
-          <!-- EZ-IO power driver (this group vibrates while drilling) -->
-          <g id="io-driver">
-            <!-- Needle into bone + chuck collar -->
-            <line x1="58" y1="86" x2="58" y2="120" stroke-width="2.6"/>
-            <rect x="51" y="78" width="14" height="9" rx="2"/>
-            <!-- Motor barrel -->
-            <rect x="44" y="36" width="80" height="40" rx="19"/>
-            <!-- Teal accent band -->
-            <rect x="44" y="50" width="80" height="12" rx="6" fill="#3fb6a8" stroke="#3fb6a8" stroke-width="1.4" opacity="0.32"/>
-            <!-- Pistol grip -->
-            <path d="M98 74 Q94 98 100 112 L118 112 Q123 98 118 74"/>
-            <!-- Trigger -->
-            <path d="M96 82 q-9 1 -9 9" stroke-width="2"/>
-            <!-- Battery base -->
-            <rect x="97" y="108" width="24" height="9" rx="2.5"/>
-            <!-- Power dot -->
-            <circle cx="58" cy="44" r="2.4" fill="currentColor" stroke="none"/>
-          </g>
+      <svg id="io-drill-svg" viewBox="0 0 190 210" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- EZ-IO power driver (this group jolts/shakes while drilling) -->
+        <g id="io-driver" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Maroon body + grip -->
+          <path d="M44 92 Q43 64 56 56 Q92 47 128 56 Q150 62 156 82 L156 95 Q154 104 142 106 Q133 108 131 122 L127 177 Q125 201 110 207 Q96 212 85 207 Q72 201 70 183 L65 130 Q63 115 53 111 Q45 107 44 92 Z"
+                fill="#7e2a38" stroke="#c98a96" stroke-width="2.4"/>
+          <!-- Top highlight ridge -->
+          <path d="M62 62 Q92 54 124 62" fill="none" stroke="#d8a3ad" stroke-width="1.4" opacity="0.5"/>
+          <!-- Chuck + needle -->
+          <rect x="151" y="84" width="6" height="10" rx="1.5" fill="#9a96a0"/>
+          <line x1="157" y1="89" x2="179" y2="89" stroke="#d8d4cc" stroke-width="2.4" stroke-linecap="round"/>
+          <!-- Trigger -->
+          <path d="M131 110 q13 1 14 12 q-1 10 -14 9 Z" fill="#2a2228" stroke="#c98a96" stroke-width="1.6"/>
         </g>
       </svg>
       <div id="io-label"></div>
