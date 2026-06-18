@@ -72,6 +72,72 @@ for (const proc of INTERVENTIONS) {
 DETECT_PATTERNS.sort((a, b) => b.key.length - a.key.length);
 
 // ---------------------------------------------------------------------------
+// Fuzzy normalization — corrects misspellings before pattern matching.
+// Only single-word synonyms with length ≥ 5 are indexed.
+// Threshold: len 5-6 → edit distance 1, len 7+ → edit distance 2.
+// Short words (< 5 chars) are left exact-only to prevent false positives.
+// ---------------------------------------------------------------------------
+
+function editDistance(a, b, cap) {
+  if (Math.abs(a.length - b.length) > cap) return cap + 1;
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let corner = prev[0];
+    prev[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const saved = prev[j];
+      prev[j] = a[i-1] === b[j-1] ? corner : 1 + Math.min(corner, prev[j], prev[j-1]);
+      corner = saved;
+    }
+  }
+  return prev[b.length];
+}
+
+// Index: single-word synonyms ≥ 5 chars, keyed by first two chars for quick pruning
+const FUZZY_INDEX = new Map();  // twoChar → [{ word, proc }]
+for (const { key, proc } of DETECT_PATTERNS) {
+  if (key.includes(' ') || key.length < 5) continue;
+  const bucket = key.slice(0, 2);
+  if (!FUZZY_INDEX.has(bucket)) FUZZY_INDEX.set(bucket, []);
+  FUZZY_INDEX.get(bucket).push({ word: key, proc });
+}
+
+function fuzzyThreshold(len) {
+  if (len < 5)  return 0;
+  if (len < 7)  return 1;
+  return 2;
+}
+
+/**
+ * Replace individual misspelled tokens in `text` with their closest known
+ * synonym. Only substitutes if the best match is within threshold AND the
+ * word doesn't already match exactly.
+ */
+function normalizeForDetection(text) {
+  return text.replace(/\b[a-zA-Z]{5,}\b/g, token => {
+    const lower = token.toLowerCase();
+    // Already an exact match — nothing to fix
+    if (SYNONYM_MAP.has(lower)) return token;
+    const threshold = fuzzyThreshold(lower.length);
+    if (threshold === 0) return token;
+    // Check nearby buckets (first-two-char ± one char apart handles one-char prefix errors)
+    let bestWord = null, bestDist = threshold + 1;
+    const prefix = lower.slice(0, 2);
+    // Scan candidates whose prefix is within 1 char of ours (covers swapped/dropped first char)
+    for (const [bucket, entries] of FUZZY_INDEX) {
+      if (Math.abs(bucket.charCodeAt(0) - prefix.charCodeAt(0)) > 2) continue;
+      for (const { word } of entries) {
+        if (Math.abs(word.length - lower.length) > threshold) continue;
+        const d = editDistance(lower, word, threshold);
+        if (d > 0 && d < bestDist) { bestWord = word; bestDist = d; }
+      }
+    }
+    return bestWord || token;
+  });
+}
+
+
+// ---------------------------------------------------------------------------
 // Administration verbs — required before a SINGLE-WORD medication synonym
 // fires a roll. Multi-word synonyms ("give epi", "push the epi") already
 // contain the verb, so they bypass this check.
@@ -347,7 +413,8 @@ function detectAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
  * Returns an array (may be empty).
  */
 function detectAllProcedures(userText) {
-  let remaining = userText.toLowerCase();
+  const normalized = normalizeForDetection(userText);
+  let remaining = normalized.toLowerCase();
   const found = [];
   const usedProcIds = new Set();
 
@@ -415,4 +482,4 @@ function getProcedure(id) {
   return INTERVENTIONS.find(p => p.id === id) || null;
 }
 
-module.exports = { detectProcedure, detectAllProcedures, rollProcedure, detectAndRoll, detectAllAndRoll, getProcedure, calcOutcome, rollD20 };
+module.exports = { detectProcedure, detectAllProcedures, rollProcedure, detectAndRoll, detectAllAndRoll, getProcedure, calcOutcome, rollD20, normalizeForDetection };
