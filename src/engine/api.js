@@ -22,6 +22,22 @@ const REQUEST_TIMEOUT_MS = 90_000;
  * @returns {string} Claude's response text
  */
 async function sendTurn(systemPrompt, messages) {
+  // Cache the conversation prefix, not just the system prompt. Each turn we drop a
+  // rolling cache breakpoint on the final message; the next turn reads the entire
+  // prior conversation from cache (0.1x) instead of resending it at full input
+  // price (1x). This turns history cost from quadratic into ~linear. We copy the
+  // last message rather than mutating the caller's stored history (kept as plain
+  // strings for transcript/debrief use).
+  const messagesForApi = messages.map((m, i) => {
+    if (i !== messages.length - 1) return m;
+    const blocks = typeof m.content === 'string'
+      ? [{ type: 'text', text: m.content }]
+      : m.content.map(b => ({ ...b }));
+    const last = blocks[blocks.length - 1];
+    blocks[blocks.length - 1] = { ...last, cache_control: { type: 'ephemeral' } };
+    return { ...m, content: blocks };
+  });
+
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
@@ -32,7 +48,7 @@ async function sendTurn(systemPrompt, messages) {
         cache_control: { type: 'ephemeral' },
       },
     ],
-    messages,
+    messages: messagesForApi,
   }, { timeout: REQUEST_TIMEOUT_MS });
 
   return response.content[0].text;
