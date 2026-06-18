@@ -154,7 +154,7 @@ if (localStorage.getItem('ems_theme') === 'light') document.body.classList.add('
 
 const soundToggleBtn = document.getElementById('sound-toggle');
 const reportBtn    = document.getElementById('report-btn');
-const endBtn       = document.getElementById('end-btn');
+const skipBtn      = document.getElementById('skip-btn');
 const crewBtn      = document.getElementById('crew-btn');
 const tierMsg      = document.getElementById('tier-msg');
 const accessInput  = document.getElementById('access-code');
@@ -622,7 +622,8 @@ async function startScenario() {
     // Update header badges
     badgeUnit.textContent = (data.unit_name || unit_name).toUpperCase();
 
-    endBtn.disabled = false;
+    skipBtn.disabled = false;
+    updateSkipBtn();
 
     scenarioStartTime = Date.now(); // for vitals staleness
 
@@ -637,6 +638,7 @@ async function startScenario() {
     print('  \u2022 MOVING THE PATIENT: Say "move to the ambulance," "load the patient," or "take her to the rig" to package and load. No destination needed.', 'system');
     print('  \u2022 GOING EN ROUTE: Say "go en route to [hospital]" or "transport to [hospital]" to start driving. Your partner will not move the unit until you name a destination.', 'system');
     print('  • RADIO REPORTS: When giving a pre-arrival or handoff, use past tense for procedures already done — "we cardioverted," "patient was intubated" — so the system does not re-roll them.', 'system');
+    print('  • SKIP AHEAD: When the active part of the call is over, use the » button to fast-forward — load the patient, transport, and arrive. No further treatment is applied during a skip. To end on scene (death, refusal), type "end scenario".', 'system');
     print('  • IF THE AI GETS STUCK: Click the STOP button to cancel the request and try again.', 'system');
     print('', 'system');
     printHr();
@@ -709,8 +711,9 @@ async function startScenario() {
 
 // ── Send turn ────────────────────────────────────────────────────────────
 
-async function sendTurn(msg) {
+async function sendTurn(msg, opts = {}) {
   if (!sessionId) return;
+  const skipMode = opts.skipMode || null;
 
   addHistory(msg);
   print(`> ${msg}`, 'user');
@@ -719,9 +722,10 @@ async function sendTurn(msg) {
 
   currentAbortController = new AbortController();
   try {
-    const isReport = reportMode;
+    // A time-skip is never also a radio report.
+    const isReport = reportMode && !skipMode;
     if (reportMode) { reportMode = false; updateReportBtn(); }
-    const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg, report_mode: isReport }, currentAbortController.signal);
+    const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg, report_mode: isReport, skip_mode: skipMode }, currentAbortController.signal);
 
     // decompensating flag intentionally not shown to student — Claude fires it internally
 
@@ -762,6 +766,8 @@ async function sendTurn(msg) {
       playSound('sfx_depart');
       await animateDepart();
     }
+    // Relabel the skip button to match the new transport phase.
+    updateSkipBtn();
 
     // California base-hospital hold music
     // Fires on [BASE_CONTACT] tag OR if Claude narrates the words "elevator music" (tag fallback)
@@ -814,8 +820,7 @@ async function sendTurn(msg) {
 
     if (data.closed) {
       isClosed = true;
-      endBtn.disabled = true;
-      completeTransportBar();
+      skipBtn.disabled = true;
       showCrewPanel();
       showDebriefCTA();
       setLoading(false);
@@ -923,72 +928,115 @@ function showDebriefCTA() {
   });
 }
 
-endBtn.addEventListener('click', () => {
-  if (isClosed) return;
-  endCallAndDebrief();
+// ── Skip-ahead button (context-aware time-skip through transport) ───────────
+// Replaces the old END button. Fast-forwards the tedious parts of a call with
+// NO further player treatment. Phase is derived from the transport flags:
+//   on scene (not loaded) → load the patient into the ambulance  (intermediate)
+//   loaded, parked        → transport to hospital + arrive       (ends scenario)
+//   en route              → skip remaining drive to the bay       (ends scenario)
+// To end on scene (death, refusal, TOR) the student types a close phrase such
+// as "end scenario" or "terminate resuscitation".
+const SKIP_PHASES = {
+  to_ambulance: {
+    label: '» LOAD',
+    title: 'Skip ahead — load the patient into the ambulance',
+    userMsg: '[Skip ahead — load the patient]',
+    confirmTitle: 'SKIP TO AMBULANCE?',
+    confirmBody: 'The crew packages and loads the patient. No further treatment is rendered during the time skip.',
+    confirmLabel: 'LOAD & SKIP',
+  },
+  to_hospital: {
+    label: '» HOSP',
+    title: 'Skip ahead — transport to the hospital and arrive (ends the call)',
+    userMsg: '[Skip ahead — transport to the hospital]',
+    confirmTitle: 'SKIP TO HOSPITAL?',
+    confirmBody: 'The unit transports and arrives at the ED bay. This ends the scenario. No further treatment is rendered during the time skip.',
+    confirmLabel: 'TRANSPORT & SKIP',
+  },
+  to_arrival: {
+    label: '» BAY',
+    title: 'Skip ahead — finish the drive and arrive at the bay (ends the call)',
+    userMsg: '[Skip ahead — arrive at the hospital]',
+    confirmTitle: 'SKIP TO BAY DOORS?',
+    confirmBody: 'The unit finishes the drive and arrives at the ED bay. This ends the scenario. No further treatment is rendered during the time skip.',
+    confirmLabel: 'SKIP TO BAY',
+  },
+};
+
+function currentSkipMode() {
+  if (!hasPlayedLoading) return 'to_ambulance';
+  if (!hasPlayedDepart)  return 'to_hospital';
+  return 'to_arrival';
+}
+
+function updateSkipBtn() {
+  const phase = SKIP_PHASES[currentSkipMode()];
+  skipBtn.textContent = phase.label;
+  skipBtn.title       = phase.title;
+}
+
+skipBtn.addEventListener('click', () => {
+  if (isClosed || skipBtn.disabled) return;
+  const mode  = currentSkipMode();
+  const phase = SKIP_PHASES[mode];
+  showConfirm({
+    title:        phase.confirmTitle,
+    body:         phase.confirmBody,
+    confirmLabel: phase.confirmLabel,
+    onConfirm:    () => sendTurn(phase.userMsg, { skipMode: mode }),
+  });
 });
 
-// Closes the scenario and immediately generates the debrief without a y/n prompt.
-async function endCallAndDebrief() {
-  if (!sessionId) return;
-  endBtn.disabled = true;
-  setLoading(true);
+// ── Confirm dialog ──────────────────────────────────────────────────────────
+function showConfirm({ title, body, confirmLabel, onConfirm }) {
+  const existing = document.getElementById('confirm-overlay');
+  if (existing) existing.remove();
 
-  print('> end scenario', 'user');
-  addHistory('end scenario');
+  const overlay = document.createElement('div');
+  overlay.id = 'confirm-overlay';
+  overlay.className = 'confirm-overlay';
 
-  try {
-    // Step 1: close the scenario
-    const turnData = await apiPost(`/api/scenario/${sessionId}/turn`, { message: 'end scenario' });
+  const box = document.createElement('div');
+  box.className = 'confirm-box';
 
-    for (const r of (turnData.rolls || [])) {
-      if (r.no_roll) continue;
-      const procSound = getProcedureSound(r.procedure_id, r.outcome);
-      if (r.multi_roll) {
-        playSound(procSound);
-        if (DEFIB_PROCS.has(r.procedure_id)) await animateDefib(r.procedure_id, r.outcome);
-        continue;
-      }
-      playSound(procSound);
-      const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
-      await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
-      if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
-      if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
-      if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
-      if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
-      if (r.procedure_id === 'medication_push' && r.matched_drug) {
-        showDrugPanel(r.matched_drug);
-      }
-    }
-    // decompensating flag intentionally not shown to student — Claude fires it internally
+  const h = document.createElement('div');
+  h.className = 'confirm-title';
+  h.textContent = title;
 
-    for (const r of (turnData.rolls || [])) printRoll(r);
-    printHr();
-    printReply(turnData.reply);
-    printHr();
+  const p = document.createElement('div');
+  p.className = 'confirm-body';
+  p.textContent = body;
 
-    if (localTranscript) {
-      localTranscript.turns.push({ user: 'end scenario', assistant: turnData.reply, rolls: turnData.rolls || [] });
-    }
+  const row = document.createElement('div');
+  row.className = 'confirm-actions';
 
-    // Step 2: auto-generate debrief
-    isClosed = true;
-    showSignoffAnimation();
-    print('[generating debrief...]', 'system');
-    const debriefData = await apiPost(`/api/scenario/${sessionId}/debrief`, {});
-    if (localTranscript) localTranscript.debriefText = debriefData.debrief;
-    printHr();
-    print('Note: Debrief is experimental. Take what it says with a grain of salt.', 'system');
-    print(debriefData.debrief, 'debrief');
-    printHr();
+  const cancel = document.createElement('button');
+  cancel.className = 'confirm-cancel';
+  cancel.textContent = 'CANCEL';
 
-  } catch (err) {
-    print(`[Error: ${err.message}]`, 'error');
-  }
+  const ok = document.createElement('button');
+  ok.className = 'confirm-ok';
+  ok.textContent = confirmLabel || 'CONFIRM';
 
-  showNewScenarioBtn();
-  setLoading(false);
-  setInputEnabled(false);
+  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => {
+    if (e.key === 'Escape') { close(); }
+    else if (e.key === 'Enter') { close(); onConfirm(); }
+  };
+
+  cancel.addEventListener('click', close);
+  ok.addEventListener('click', () => { close(); onConfirm(); });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  row.appendChild(cancel);
+  row.appendChild(ok);
+  box.appendChild(h);
+  box.appendChild(p);
+  box.appendChild(row);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  ok.focus();
 }
 
 // ── New scenario button (appears inline in output) ────────────────────────
@@ -1019,6 +1067,7 @@ function resetToStart() {
   waitingDebrief  = false;
   hasPlayedLoading  = false;
   hasPlayedDepart   = false;
+  updateSkipBtn();
   prevBackupStatus  = null;
   firstVitalsPlayed = false;
   localTranscript   = null;
@@ -1073,11 +1122,11 @@ function setLoading(loading) {
   const nibpCell = document.getElementById('nibp-cell');
   if (nibpCell) nibpCell.classList.toggle('nibp-loading', loading);
   if (loading) {
-    endBtn.disabled = true;                          // disable during any request
+    skipBtn.disabled = true;                          // disable during any request
     sendBtn.textContent = 'STOP';
     sendBtn.classList.add('stop-mode');
   } else {
-    if (!isClosed && !waitingDebrief) endBtn.disabled = false;
+    if (!isClosed && !waitingDebrief) skipBtn.disabled = false;
     sendBtn.textContent = 'SEND';
     sendBtn.classList.remove('stop-mode');
   }
@@ -1839,7 +1888,8 @@ async function resumeFromSnapshot(snap) {
   const m = snap.meta || {};
   badgeUnit.textContent = (m.unit_name || 'Medic 1').toUpperCase();
 
-  endBtn.disabled = isClosed;
+  skipBtn.disabled = isClosed;
+  updateSkipBtn();
 
   scenarioStartTime = Date.now() - (snap.sceneMinute || 0) * 60 * 1000;
 

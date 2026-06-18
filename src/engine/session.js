@@ -250,19 +250,36 @@ class Session {
   }
 
   /**
+   * Estimate transport time (minutes) for the current region. Used to advance the
+   * scene clock realistically when the player time-skips through transport. Falls
+   * back to the active transport ETA, then to a sane default.
+   */
+  _transportEtaEstimate() {
+    if (typeof this.transportEtaMin === 'number' && this.transportEtaMin > 0) {
+      return Math.round(this.transportEtaMin);
+    }
+    const reg = REGIONS.find(r => r.id === this.seed.region);
+    if (reg) {
+      const v = parseHospitalEtaMin(reg.nearest_hospital_min);
+      if (v) return Math.round(v);
+    }
+    return 12;
+  }
+
+  /**
    * Send a user message and get Claude's response.
    * Auto-detects procedures and logs dice rolls.
    * Returns { reply, roll, closed }
    */
-  async send(userText, reportMode = false) {
+  async send(userText, reportMode = false, skipMode = null) {
     if (this.closed) {
       return { reply: '[Scenario is closed. Start a new scenario.]', rolls: [], closed: true };
     }
 
     // Detect and roll ALL procedures mentioned in the user's message.
-    // Skip entirely when the player is giving a radio report or handoff.
+    // Skip entirely when the player is giving a radio report, handoff, or a time-skip.
     const rollContext = { ...this.contextFlags, moving: this.moving };
-    const rolls = reportMode ? [] : detectAllAndRoll(userText, rollContext, this.seed.difficulty);
+    const rolls = (reportMode || skipMode) ? [] : detectAllAndRoll(userText, rollContext, this.seed.difficulty);
 
     for (const roll of rolls) {
       if (!roll.no_roll) {
@@ -294,6 +311,32 @@ class Session {
         + 'Respond as the receiving party (hospital, medical control, or incoming crew). '
         + 'Acknowledge the report, ask any clinically appropriate follow-up questions, '
         + 'and confirm estimated time of arrival or transfer acceptance as appropriate.]';
+    }
+    // Time-skip directive — fast-forward through tedious transport with NO new player treatment.
+    if (skipMode) {
+      const etaMin = this._transportEtaEstimate();
+      const noTreat = 'CRITICAL: the provider performs NO new assessments, treatments, medications, or procedures '
+        + 'during this skip. The patient\'s condition continues to evolve along its established trajectory, '
+        + 'including any deterioration that was already underway.';
+      if (skipMode === 'to_ambulance') {
+        messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — LOAD THE PATIENT. The provider skips ahead to load the '
+          + 'patient into the ambulance now. In 1-2 sentences, narrate the crew packaging and loading the patient. '
+          + noTreat + ' Emit [LOADING]. The unit is loaded but NOT yet moving — if no destination has been chosen, '
+          + 'the partner asks once which hospital. Do not begin driving and do not arrive anywhere.]';
+      } else if (skipMode === 'to_hospital') {
+        messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — TRANSPORT TO HOSPITAL. The provider skips ahead: transport the '
+          + 'patient and ARRIVE at the emergency department bay. If a destination was already chosen use it; otherwise '
+          + 'transport to the most clinically appropriate facility and name it in one clause. In 2-3 sentences, summarize '
+          + 'the transport and arrival. ' + noTreat + ' Advance the scene clock by roughly ' + etaMin + ' minutes to reflect '
+          + 'the full transport. Emit [EN_ROUTE:nearest] or [EN_ROUTE:major] for the destination. End at the bay doors, '
+          + 'patient ready for handoff.]';
+      } else if (skipMode === 'to_arrival') {
+        messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — COMPLETE TRANSPORT. The unit is already en route. The provider skips '
+          + 'the remainder of the drive and ARRIVES at the emergency department bay. In 1-2 sentences, summarize the rest of '
+          + 'the transport and arrival. ' + noTreat + ' Advance the scene clock by roughly ' + etaMin + ' minutes to reflect '
+          + 'the remaining transport. Do not ask about destination — it is already set. End at the bay doors, patient ready '
+          + 'for handoff.]';
+      }
     }
     // Fast-path for NIBP cycle — keep Claude's reply brief to avoid jarring wall-of-text
     const isNibpCycle = userText.trim() === 'Cycle NIBP';
@@ -412,8 +455,10 @@ class Session {
 
     this.turns.push({ user: userText, assistant: reply, rolls });
 
-    // Only close on explicit user signal — never on Claude's narration
-    if (isDebriefTrigger(userText)) {
+    // Close on explicit user signal OR a terminal time-skip (transport to / arrival at hospital).
+    // A skip to the ambulance is intermediate and never closes the scenario.
+    const terminalSkip = skipMode === 'to_hospital' || skipMode === 'to_arrival';
+    if (isDebriefTrigger(userText) || terminalSkip) {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
