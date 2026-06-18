@@ -171,6 +171,7 @@ let isClosed        = false;
 let waitingDebrief  = false;
 let hasPlayedLoading      = false;
 let hasPlayedDepart       = false;
+let arrivedAtHospital     = false;   // true after a skip-to-hospital/bay arrives — button becomes END
 let prevBackupStatus  = null;   // tracks last backup status for arrival sound
 let firstVitalsPlayed = false;
 let soundEnabled      = localStorage.getItem('ems_sound') !== 'off';
@@ -770,6 +771,9 @@ async function sendTurn(msg, opts = {}) {
       playSound('sfx_depart');
       await animateDepart();
     }
+    // A terminal skip (to the hospital / bay) has now arrived — the call isn't over
+    // yet (handoff comes next), but the button should offer END from here on.
+    if (skipMode === 'to_hospital' || skipMode === 'to_arrival') arrivedAtHospital = true;
     // Relabel the skip button to match the new transport phase.
     updateSkipBtn();
 
@@ -951,23 +955,31 @@ const SKIP_PHASES = {
   },
   to_hospital: {
     label: '» HOSP',
-    title: 'Skip ahead — transport to the hospital and arrive (ends the call)',
+    title: 'Skip ahead — transport to the hospital and arrive at the bay',
     userMsg: '[Skip ahead — transport to the hospital]',
     confirmTitle: 'SKIP TO HOSPITAL?',
-    confirmBody: 'The unit transports and arrives at the ED bay. This ends the scenario. No further treatment is rendered during the time skip.',
+    confirmBody: 'The unit transports and arrives at the ED bay, where the team is ready for your handoff. No further treatment is rendered during the time skip — and you still give your report before ending.',
     confirmLabel: 'TRANSPORT & SKIP',
   },
   to_arrival: {
     label: '» BAY',
-    title: 'Skip ahead — finish the drive and arrive at the bay (ends the call)',
+    title: 'Skip ahead — finish the drive and arrive at the bay',
     userMsg: '[Skip ahead — arrive at the hospital]',
     confirmTitle: 'SKIP TO BAY DOORS?',
-    confirmBody: 'The unit finishes the drive and arrives at the ED bay. This ends the scenario. No further treatment is rendered during the time skip.',
+    confirmBody: 'The unit finishes the drive and arrives at the ED bay, where the team is ready for your handoff. No further treatment is rendered during the time skip — and you still give your report before ending.',
     confirmLabel: 'SKIP TO BAY',
+  },
+  end: {
+    label: 'END',
+    title: 'End the call and generate the debrief',
+    confirmTitle: 'END SCENARIO?',
+    confirmBody: 'Close the call and run the debrief. Do this once you have given your handoff report.',
+    confirmLabel: 'END & DEBRIEF',
   },
 };
 
 function currentSkipMode() {
+  if (arrivedAtHospital) return 'end';
   if (!hasPlayedLoading) return 'to_ambulance';
   if (!hasPlayedDepart)  return 'to_hospital';
   return 'to_arrival';
@@ -987,7 +999,10 @@ skipBtn.addEventListener('click', () => {
     title:        phase.confirmTitle,
     body:         phase.confirmBody,
     confirmLabel: phase.confirmLabel,
-    onConfirm:    () => sendTurn(phase.userMsg, { skipMode: mode }),
+    onConfirm:    () => {
+      if (mode === 'end') sendTurn('end scenario');   // closes server-side → debrief CTA
+      else sendTurn(phase.userMsg, { skipMode: mode });
+    },
   });
 });
 
@@ -1071,6 +1086,7 @@ function resetToStart() {
   waitingDebrief  = false;
   hasPlayedLoading  = false;
   hasPlayedDepart   = false;
+  arrivedAtHospital = false;
   updateSkipBtn();
   prevBackupStatus  = null;
   firstVitalsPlayed = false;
@@ -1959,6 +1975,7 @@ async function resumeFromSnapshot(snap) {
   // Restore transport phase so the skip button reflects where the call left off.
   hasPlayedLoading = snap.hasLoaded || false;
   hasPlayedDepart  = snap.moving    || false;
+  arrivedAtHospital = false;
   window._isMoving = hasPlayedDepart; // keeps CPR/defib transport sounds correct
 
   localTranscript = {

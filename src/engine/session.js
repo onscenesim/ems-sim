@@ -367,13 +367,17 @@ class Session {
           + 'transport to the most clinically appropriate facility and name it in one clause. In 2-3 sentences, summarize '
           + 'the transport and arrival. ' + noTreat + ' Advance the scene clock by roughly ' + etaMin + ' minutes to reflect '
           + 'the full transport. Emit [EN_ROUTE:nearest] or [EN_ROUTE:major] for the destination.' + crewNote
-          + ' End at the bay doors, patient ready for handoff.]';
+          + ' Arrive at the bay doors; the receiving team meets the unit and is ready to take report. Do NOT deliver '
+          + 'the handoff yourself, do NOT transfer care, and do NOT declare the call over — prompt the provider for '
+          + 'their report and await it. The scenario continues.]';
       } else if (skipMode === 'to_arrival') {
         messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — COMPLETE TRANSPORT. The unit is already en route. The provider skips '
           + 'the remainder of the drive and ARRIVES at the emergency department bay. In 1-2 sentences, summarize the rest of '
           + 'the transport and arrival. ' + noTreat + ' Advance the scene clock by roughly ' + etaMin + ' minutes to reflect '
           + 'the remaining transport. Do not ask about destination — it is already set.' + crewNote
-          + ' End at the bay doors, patient ready for handoff.]';
+          + ' Arrive at the bay doors; the receiving team meets the unit and is ready to take report. Do NOT deliver '
+          + 'the handoff yourself, do NOT transfer care, and do NOT declare the call over — prompt the provider for '
+          + 'their report and await it. The scenario continues.]';
       }
     }
     // Fast-path for NIBP cycle — keep Claude's reply brief to avoid jarring wall-of-text
@@ -494,10 +498,10 @@ class Session {
 
     this.turns.push({ user: userText, assistant: reply, rolls });
 
-    // Close on explicit user signal OR a terminal time-skip (transport to / arrival at hospital).
-    // A skip to the ambulance is intermediate and never closes the scenario.
-    const terminalSkip = skipMode === 'to_hospital' || skipMode === 'to_arrival';
-    if (isDebriefTrigger(userText) || terminalSkip) {
+    // Close only on an explicit user signal (transfer of care, end scenario, etc.).
+    // Time-skips — including skip-to-hospital — arrive but leave the scenario OPEN so
+    // the provider still gets to give their handoff report before the call ends.
+    if (isDebriefTrigger(userText)) {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
