@@ -34,7 +34,7 @@ const VITALS_NUMERIC = new Set(['HR', 'SpO2', 'ETCO2', 'RR', 'GCS', 'Pain', 'Glu
  * Convert "T+M:SS" → float minutes (e.g. "T+4:30" → 4.5). Returns null if malformed.
  */
 function timestampToMinutes(t) {
-  const m = String(t).match(/^T\+(\d+):(\d{2})$/);
+  const m = String(t).match(/^T[+=](\d+):(\d{2})$/);
   if (!m) return null;
   return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
 }
@@ -67,9 +67,9 @@ function parseVitalsTag(reply) {
     const key = tok.slice(0, eqIdx);
     let rawValue = tok.slice(eqIdx + 1);
 
-    // Optional "@T+M:SS" timestamp suffix on episodic vitals (BP, Temp, Glucose)
+    // Optional "@T+M:SS" or "@T=M:SS" timestamp suffix on episodic vitals (BP, Temp, Glucose)
     let timestamp = null;
-    const atIdx = rawValue.indexOf('@T+');
+    const atIdx = rawValue.search(/@T[+=]/);
     if (atIdx >= 0) {
       timestamp = rawValue.slice(atIdx + 1);
       rawValue = rawValue.slice(0, atIdx);
