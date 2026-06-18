@@ -742,7 +742,7 @@ async function sendTurn(msg, opts = {}) {
       playSound(procSound);
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
-      if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id);
+      if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id, r.outcome);
       if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
       if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
       if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
@@ -1555,9 +1555,10 @@ function animateDrill(outcome) {
     const label   = document.getElementById('io-label');
     if (!overlay) { resolve(); return; }
     label.textContent = outcome;
-    overlay.classList.remove('visible');
+    overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
     setTimeout(() => {
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
@@ -1565,7 +1566,7 @@ function animateDrill(outcome) {
   });
 }
 
-function animateScalpel(procedureId) {
+function animateScalpel(procedureId, outcome) {
   return new Promise(resolve => {
     const HOLD_MS = 1150;
     const FADE_MS = 220;
@@ -1574,9 +1575,10 @@ function animateScalpel(procedureId) {
     if (!overlay) { resolve(); return; }
     label.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
     // Force CSS animation restart on repeated calls
-    overlay.classList.remove('visible');
+    overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
     setTimeout(() => {
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);

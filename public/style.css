@@ -2504,6 +2504,24 @@ html, body {
   to { stroke-dashoffset: 0; }
 }
 
+/* ── Reusable outcome check / X (shared across procedure overlays) ── */
+.outcome-mark { width: 48px; height: 48px; display: block; }
+.outcome-mark .om-check,
+.outcome-mark .om-x1,
+.outcome-mark .om-x2 { display: none; fill: none; }
+.outcome-SUCCESS  .om-check { display: block; stroke: #3dcc66; }
+.outcome-MARGINAL .om-check { display: block; stroke: #ccaa33; }
+.outcome-SUCCESS.visible  .om-check,
+.outcome-MARGINAL.visible .om-check { animation: drawCheck 0.4s ease-out 0.5s forwards; }
+.outcome-FAILURE      .om-x1,
+.outcome-FAILURE      .om-x2 { display: block; stroke: #cc4040; }
+.outcome-COMPLICATION .om-x1,
+.outcome-COMPLICATION .om-x2 { display: block; stroke: #cc5522; }
+.outcome-FAILURE.visible      .om-x1,
+.outcome-COMPLICATION.visible .om-x1 { animation: drawX 0.26s ease-out 0.5s forwards; }
+.outcome-FAILURE.visible      .om-x2,
+.outcome-COMPLICATION.visible .om-x2 { animation: drawX 0.22s ease-out 0.7s forwards; }
+
 #laryngoscope-label {
   font-family: var(--font-block, monospace);
   font-size: 0.5rem;
