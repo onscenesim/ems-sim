@@ -36,6 +36,8 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     sceneMinute: session.sceneMinute,
     closed:      session.closed,
     turns:       session.turns,
+    hasLoaded:   session.hasLoaded,
+    moving:      session.moving,
     meta,
     crew,
   };
@@ -95,6 +97,8 @@ router.get('/resume', (req, res) => {
       sceneMinute:  snapshot.sceneMinute || 0,
       closed:       snapshot.closed      || false,
       debriefed:    snapshot.debriefed   || false,
+      hasLoaded:    snapshot.hasLoaded   || false,
+      moving:       snapshot.moving      || false,
       multi_patient:  snapshot.meta ? (snapshot.meta.multi_patient || false) : false,
       demo_source:    snapshot.demo_source   || null,
       second_patient: snapshot.second_patient || false,
@@ -225,6 +229,8 @@ router.post('/:id/turn', async (req, res) => {
       sceneMinute:       session.sceneMinute,
       closed:            session.closed,
       turns:             session.turns,
+      hasLoaded:         session.hasLoaded,
+      moving:            session.moving,
       demo_source:       session.demoSource       || null,
       second_patient:    session.secondPatientFound || false,
     });

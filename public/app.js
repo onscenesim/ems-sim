@@ -1874,8 +1874,10 @@ async function resumeFromSnapshot(snap) {
   sessionId       = snap.session_id;
   isClosed        = snap.closed || false;
   waitingDebrief  = false;
-  hasPlayedLoading = false;
-  hasPlayedDepart  = false;
+  // Restore transport phase so the skip button reflects where the call left off.
+  hasPlayedLoading = snap.hasLoaded || false;
+  hasPlayedDepart  = snap.moving    || false;
+  window._isMoving = hasPlayedDepart; // keeps CPR/defib transport sounds correct
 
   localTranscript = {
     meta:        snap.meta || {},
