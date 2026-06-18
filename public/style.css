@@ -2442,18 +2442,28 @@ html, body {
 }
 
 #laryngoscope-svg {
-  width: 140px;
+  width: 168px;
   height: auto;
   color: rgba(180, 200, 220, 0.85);
   filter: drop-shadow(0 1px 8px rgba(80, 140, 200, 0.25));
   opacity: 0;
 }
 #laryngoscope-overlay.visible #laryngoscope-svg {
-  animation: lxSlideIn 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards;
+  animation: lxFadeIn 0.35s ease 0.05s forwards;
 }
-@keyframes lxSlideIn {
-  from { opacity: 0; transform: translateX(-24px); }
+@keyframes lxFadeIn {
+  from { opacity: 0; transform: translateX(-14px); }
   to   { opacity: 1; transform: translateX(0); }
+}
+/* ET tube glides down the blade into the airway after it appears */
+#et-tube { opacity: 0; }
+#laryngoscope-overlay.visible #et-tube {
+  animation: etTubeSlide 0.62s cubic-bezier(0.3, 0.7, 0.3, 1) 0.42s forwards;
+}
+@keyframes etTubeSlide {
+  0%   { opacity: 0; transform: translate(48px, -32px); }
+  35%  { opacity: 1; }
+  100% { opacity: 1; transform: translate(0, 0); }
 }
 
 #laryngoscope-outcome-svg {
@@ -2674,6 +2684,88 @@ html, body {
 #cpr-overlay.outcome-COMPLICATION #cpr-label,
 #bvm-overlay.outcome-COMPLICATION #bvm-label { color: #cc5522; }
 
+/* ── LUCAS + Suction overlays ───────────────────────────────────────── */
+#lucas-overlay, #suction-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 14, 0.84);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+#lucas-overlay.visible, #suction-overlay.visible { opacity: 1; }
+
+#lucas-header, #suction-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+
+#lucas-svg {
+  width: 168px;
+  height: auto;
+  color: rgba(190, 205, 220, 0.92);
+  filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.22));
+}
+#suction-svg {
+  width: 210px;
+  height: auto;
+  color: rgba(190, 205, 220, 0.92);
+  filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.22));
+}
+
+/* LUCAS piston pumps up and down */
+#lucas-overlay.visible #lucas-piston {
+  animation: lucasPump 0.6s ease-in-out 0.1s 3;
+}
+@keyframes lucasPump {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(9px); }
+}
+
+/* Suction: wand slides in, then droplets get drawn up the tip */
+#yankauer { opacity: 0; }
+#suction-overlay.visible #yankauer {
+  animation: suctionIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards;
+}
+@keyframes suctionIn {
+  from { opacity: 0; transform: translateX(26px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+#suction-overlay.visible #suction-drops circle {
+  animation: suctionDraw 0.9s ease-in 0.5s infinite;
+}
+#suction-overlay.visible #drop2 { animation-delay: 0.85s; }
+@keyframes suctionDraw {
+  0%   { opacity: 0;   transform: translate(8px, 6px); }
+  30%  { opacity: 0.9; }
+  100% { opacity: 0;   transform: translate(-18px, -26px); }
+}
+
+#lucas-label, #suction-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: rgba(180, 200, 220, 0.90);
+  text-transform: uppercase;
+}
+#lucas-overlay.outcome-SUCCESS #lucas-label,
+#suction-overlay.outcome-SUCCESS #suction-label { color: #3dcc66; }
+#lucas-overlay.outcome-MARGINAL #lucas-label,
+#suction-overlay.outcome-MARGINAL #suction-label { color: #ccaa33; }
+#lucas-overlay.outcome-FAILURE #lucas-label,
+#suction-overlay.outcome-FAILURE #suction-label { color: #cc4040; }
+#lucas-overlay.outcome-COMPLICATION #lucas-label,
+#suction-overlay.outcome-COMPLICATION #suction-label { color: #cc5522; }
+
 /* ── IO drill overlay ───────────────────────────────────────────────── */
 #io-overlay {
   position: fixed;
@@ -2704,15 +2796,18 @@ html, body {
 }
 
 #io-drill-svg {
-  width: 210px;
+  width: 184px;
   height: auto;
   color: rgba(180, 200, 220, 0.90);
   filter: drop-shadow(0 2px 10px rgba(80, 140, 200, 0.28));
   opacity: 0;
 }
 #io-overlay.visible #io-drill-svg {
-  animation: ioSlide 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards,
-             ioVibrate 0.7s ease-in-out 0.55s forwards;
+  animation: ioSlide 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards;
+}
+/* Only the driver shakes — the bone stays put */
+#io-overlay.visible #io-driver {
+  animation: ioVibrate 0.7s ease-in-out 0.6s 2;
 }
 
 @keyframes ioSlide {

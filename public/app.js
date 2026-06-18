@@ -748,6 +748,8 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
       if (r.procedure_id === 'cpr') await animateCPR(r.outcome);
       if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
+      if (r.procedure_id === 'lucas') await animateLUCAS(r.outcome);
+      if (r.procedure_id === 'suction') await animateSuction(r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -1646,6 +1648,44 @@ function animateBVM(outcome) {
     const FADE_MS = 220;
     const overlay = document.getElementById('bvm-overlay');
     const label   = document.getElementById('bvm-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = outcome || '';
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateLUCAS(outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1900;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('lucas-overlay');
+    const label   = document.getElementById('lucas-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = outcome || '';
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateSuction(outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1600;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('suction-overlay');
+    const label   = document.getElementById('suction-label');
     if (!overlay) { resolve(); return; }
     label.textContent = outcome || '';
     overlay.className = '';

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=42">
+  <link rel="stylesheet" href="style.css?v=43">
 </head>
 <body>
 
@@ -298,50 +298,27 @@
     <!-- Laryngoscope animation overlay — intubation outcomes -->
     <div id="laryngoscope-overlay" aria-hidden="true">
       <div id="laryngoscope-header"></div>
-      <svg id="laryngoscope-svg" viewBox="0 0 160 105" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <!--
-          Handle runs in local +y → lower-right in screen (cap at upper-left).
-          Blade runs in local +x from the ferrule end → upper-right in screen.
-          This matches the original orientation while keeping blade exactly
-          90° from handle by construction.
-          translate(18,32): places battery cap near upper-left of viewBox.
-        -->
-        <g transform="translate(18,32) rotate(-45)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-
-          <!-- ── HANDLE (local +y → lower-right in screen) ── -->
-          <!-- Battery cap / head (upper-left in screen) -->
-          <rect x="-6" y="0" width="12" height="12" rx="5" stroke-width="2.2"/>
-          <!-- Green marker rings -->
-          <line x1="-7" y1="14" x2="7" y2="14" stroke="#5ec96e" stroke-width="3.5" stroke-linecap="butt"/>
-          <line x1="-7" y1="19" x2="7" y2="19" stroke="#5ec96e" stroke-width="2"   stroke-linecap="butt"/>
-          <!-- Handle grip body -->
-          <rect x="-5.5" y="12" width="11" height="55" rx="1.5" stroke-width="2.2"/>
-          <!-- Grip knurling -->
-          <line x1="-8.5" y1="24" x2="8.5" y2="24" stroke-width="1.2" opacity="0.5"/>
-          <line x1="-8.5" y1="32" x2="8.5" y2="32" stroke-width="1.2" opacity="0.5"/>
-          <line x1="-8.5" y1="40" x2="8.5" y2="40" stroke-width="1.2" opacity="0.5"/>
-          <line x1="-8.5" y1="48" x2="8.5" y2="48" stroke-width="1.2" opacity="0.5"/>
-          <line x1="-8.5" y1="56" x2="8.5" y2="56" stroke-width="1.2" opacity="0.5"/>
-          <!-- Ferrule collar — blade junction (lower-right in screen) -->
-          <rect x="-9.5" y="67" width="19" height="12" rx="2.5" stroke-width="2.2"/>
-          <line x1="-7.5" y1="70.5" x2="7.5" y2="70.5" stroke-width="1" opacity="0.45"/>
-          <line x1="-7.5" y1="74"   x2="7.5" y2="74"   stroke-width="1" opacity="0.45"/>
-
-          <!-- ── BLADE (local +x → upper-right in screen, from ferrule) ── -->
-          <!-- Blade fill -->
-          <path d="M 0 63  Q 45 53 90 50  Q 88 54 85 58  Q 45 64 0 73 Z"
-                fill="currentColor" opacity="0.12" stroke="none"/>
-          <!-- Outer edge (faces away from handle) -->
-          <path d="M 0 63  Q 45 53 90 50" stroke-width="2.2"/>
-          <!-- Inner edge -->
-          <path d="M 0 73  Q 45 64 85 58" stroke-width="2.2"/>
-          <!-- Root face -->
-          <line x1="0" y1="63" x2="0" y2="73" stroke-width="2.2"/>
-          <!-- Tip cap -->
-          <path d="M 85 58  Q 88 54 90 50" stroke-width="2.2"/>
-          <!-- Mac blade flange / light channel rib -->
-          <path d="M 8 68  Q 48 59 80 54" stroke-width="0.9" opacity="0.45"/>
-
+      <svg id="laryngoscope-svg" viewBox="0 0 190 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Laryngoscope: angled handle + curved MAC blade (held steady) -->
+          <rect x="118" y="14" width="16" height="50" rx="4" transform="rotate(24 126 39)"/>
+          <line x1="115" y1="30" x2="129" y2="24" stroke-width="1.1" opacity="0.5" transform="rotate(24 126 39)"/>
+          <line x1="116" y1="38" x2="130" y2="32" stroke-width="1.1" opacity="0.5" transform="rotate(24 126 39)"/>
+          <line x1="117" y1="46" x2="131" y2="40" stroke-width="1.1" opacity="0.5" transform="rotate(24 126 39)"/>
+          <!-- MAC curved blade: concave-up spatula + flange, light at tip -->
+          <path d="M104 58 Q60 64 24 92" stroke-width="2.6"/>
+          <path d="M110 64 Q64 74 30 98" stroke-width="2.6"/>
+          <path d="M24 92 Q27 96 30 98" stroke-width="2.6"/>
+          <path d="M104 58 Q108 60 110 64" stroke-width="2.6"/>
+          <circle cx="34" cy="92" r="2.4" fill="#ffe27a" stroke="none"/>
+          <!-- ET tube: slides down the blade into the airway -->
+          <g id="et-tube" stroke="#7fd0ff">
+            <path d="M70 78 Q120 70 168 34" stroke-width="6" opacity="0.9"/>
+            <path d="M74 77 Q86 73 94 71" stroke-width="9" opacity="0.45"/>
+            <rect x="164" y="26" width="12" height="11" rx="2" stroke-width="2" opacity="0.9"/>
+            <path d="M150 44 q10 6 6 16" stroke-width="1.6" opacity="0.7"/>
+            <ellipse cx="158" cy="64" rx="5" ry="3.5" stroke-width="1.6" opacity="0.7"/>
+          </g>
         </g>
       </svg>
       <svg id="laryngoscope-outcome-svg" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -412,56 +389,30 @@
     <!-- IO drill animation overlay -->
     <div id="io-overlay" aria-hidden="true">
       <div id="io-header">IO ACCESS</div>
-      <svg id="io-drill-svg" viewBox="0 0 230 158" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-
-        <!-- ── Drill bit ── -->
-        <!-- Shaft -->
-        <line x1="70" y1="63" x2="8" y2="63" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <!-- Pointed tip -->
-        <path d="M 8 60 L 2 63 L 8 66 Z" fill="currentColor"/>
-        <!-- Flutes (diagonal hash marks) -->
-        <line x1="18" y1="60" x2="24" y2="66" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
-        <line x1="31" y1="60" x2="37" y2="66" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
-        <line x1="44" y1="60" x2="50" y2="66" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
-        <line x1="57" y1="60" x2="63" y2="66" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
-
-        <!-- ── Chuck collar ── -->
-        <rect x="66" y="50" width="22" height="26" rx="3.5" fill="none" stroke="currentColor" stroke-width="2.2"/>
-        <!-- Chuck grip rings -->
-        <line x1="66" y1="57" x2="88" y2="57" stroke="currentColor" stroke-width="1" stroke-linecap="butt" opacity="0.4"/>
-        <line x1="66" y1="69" x2="88" y2="69" stroke="currentColor" stroke-width="1" stroke-linecap="butt" opacity="0.4"/>
-
-        <!-- ── Main body (rounded capsule) ── -->
-        <rect x="84" y="28" width="124" height="70" rx="28" fill="none" stroke="currentColor" stroke-width="2.5"/>
-        <!-- Subtle body fill -->
-        <rect x="84" y="28" width="124" height="70" rx="28" fill="currentColor" opacity="0.07" stroke="none"/>
-
-        <!-- ── Body details ── -->
-        <!-- Horizontal seam line -->
-        <line x1="96" y1="63" x2="196" y2="63" stroke="currentColor" stroke-width="0.8" opacity="0.28"/>
-        <!-- Trigger button on body front -->
-        <rect x="99" y="42" width="18" height="12" rx="4" fill="currentColor" opacity="0.18" stroke="currentColor" stroke-width="1.6"/>
-        <!-- Vent slots (rear of body) -->
-        <line x1="176" y1="40" x2="193" y2="40" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
-        <line x1="176" y1="51" x2="193" y2="51" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
-        <line x1="176" y1="62" x2="193" y2="62" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
-        <line x1="176" y1="73" x2="193" y2="73" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
-        <line x1="176" y1="84" x2="193" y2="84" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
-
-        <!-- ── Pistol grip / handle ── -->
-        <path d="M 120 96 Q 118 98 116 150 L 146 150 Q 144 98 142 96 Z"
-              fill="currentColor" opacity="0.07" stroke="none"/>
-        <path d="M 120 96 Q 118 98 116 150 L 146 150 Q 144 98 142 96"
-              fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
-        <!-- Grip seam band -->
-        <line x1="118" y1="108" x2="143" y2="108" stroke="currentColor" stroke-width="0.9" opacity="0.35"/>
-
-        <!-- ── Trigger ── -->
-        <rect x="123" y="111" width="12" height="22" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
-
-        <!-- ── Battery / pommel base ── -->
-        <rect x="113" y="148" width="36" height="10" rx="4" fill="none" stroke="currentColor" stroke-width="1.8"/>
-
+      <svg id="io-drill-svg" viewBox="0 0 170 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Long bone (tibia) — stays steady while the driver vibrates -->
+          <rect x="18" y="118" width="124" height="18" rx="9"/>
+          <line x1="26" y1="124" x2="134" y2="124" stroke-width="1" opacity="0.3"/>
+          <!-- EZ-IO power driver (this group vibrates while drilling) -->
+          <g id="io-driver">
+            <!-- Needle into bone + chuck collar -->
+            <line x1="58" y1="86" x2="58" y2="120" stroke-width="2.6"/>
+            <rect x="51" y="78" width="14" height="9" rx="2"/>
+            <!-- Motor barrel -->
+            <rect x="44" y="36" width="80" height="40" rx="19"/>
+            <!-- Teal accent band -->
+            <rect x="44" y="50" width="80" height="12" rx="6" fill="#3fb6a8" stroke="#3fb6a8" stroke-width="1.4" opacity="0.32"/>
+            <!-- Pistol grip -->
+            <path d="M98 74 Q94 98 100 112 L118 112 Q123 98 118 74"/>
+            <!-- Trigger -->
+            <path d="M96 82 q-9 1 -9 9" stroke-width="2"/>
+            <!-- Battery base -->
+            <rect x="97" y="108" width="24" height="9" rx="2.5"/>
+            <!-- Power dot -->
+            <circle cx="58" cy="44" r="2.4" fill="currentColor" stroke="none"/>
+          </g>
+        </g>
       </svg>
       <div id="io-label"></div>
     </div>
@@ -530,6 +481,57 @@
         </g>
       </svg>
       <div id="bvm-label"></div>
+    </div>
+
+    <!-- LUCAS / mechanical CPR animation overlay -->
+    <div id="lucas-overlay" aria-hidden="true">
+      <div id="lucas-header">MECHANICAL CPR</div>
+      <svg id="lucas-svg" viewBox="0 0 150 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Backboard -->
+          <line x1="18" y1="120" x2="132" y2="120" stroke-width="3"/>
+          <!-- Patient chest mound -->
+          <path d="M42 120 Q75 98 108 120" stroke-width="1.8" opacity="0.6"/>
+          <!-- Frame legs -->
+          <path d="M34 120 L40 48"/>
+          <path d="M116 120 L110 48"/>
+          <!-- Top motor housing -->
+          <path d="M40 48 Q75 26 110 48 Z"/>
+          <rect x="62" y="34" width="26" height="12" rx="4" opacity="0.7" stroke-width="1.6"/>
+          <!-- Piston shaft + suction-cup pad (pumps up and down) -->
+          <g id="lucas-piston">
+            <rect x="69" y="46" width="12" height="40" rx="3"/>
+            <path d="M58 86 L92 86 L86 98 L64 98 Z"/>
+            <line x1="75" y1="98" x2="75" y2="104" stroke-width="3"/>
+          </g>
+        </g>
+      </svg>
+      <div id="lucas-label"></div>
+    </div>
+
+    <!-- Suction (Yankauer) animation overlay -->
+    <div id="suction-overlay" aria-hidden="true">
+      <div id="suction-header">SUCTION</div>
+      <svg id="suction-svg" viewBox="0 0 190 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Rigid Yankauer wand: hooked tip + long straight body (slides in) -->
+          <g id="yankauer">
+            <path d="M26 26 Q13 41 30 49 Q50 57 72 58 L116 60"/>
+            <circle cx="26" cy="23" r="3.4" stroke-width="2"/>
+            <ellipse cx="86" cy="57" rx="6" ry="4" stroke-width="2"/>
+          </g>
+          <!-- Connector -->
+          <rect x="114" y="51" width="16" height="17" rx="2.5" stroke-width="2.6"/>
+          <!-- Flex tubing (ribbed, trailing) -->
+          <path d="M130 60 q7 1 9 6 q-7 3 0 8 q7 3 0 8 q-6 2 9 5" stroke-width="2" opacity="0.7"/>
+          <!-- Droplets drawn up the tip -->
+          <g id="suction-drops" stroke="none" fill="#7fd0ff">
+            <circle id="drop1" cx="46" cy="52" r="2.2" opacity="0.85"/>
+            <circle id="drop2" cx="60" cy="56" r="1.6" opacity="0.6"/>
+          </g>
+        </g>
+      </svg>
+      <div id="suction-label"></div>
     </div>
 
     <!-- Ambulance departure animation overlay -->
@@ -648,6 +650,6 @@
 
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-    <script src="app.js?v=34"></script>
+    <script src="app.js?v=35"></script>
 </body>
 </html>
