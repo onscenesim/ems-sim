@@ -2442,7 +2442,7 @@ html, body {
 }
 
 #laryngoscope-svg {
-  width: 168px;
+  width: 150px;
   height: auto;
   color: rgba(180, 200, 220, 0.85);
   filter: drop-shadow(0 1px 8px rgba(80, 140, 200, 0.25));
@@ -2454,16 +2454,6 @@ html, body {
 @keyframes lxFadeIn {
   from { opacity: 0; transform: translateX(-14px); }
   to   { opacity: 1; transform: translateX(0); }
-}
-/* ET tube glides down the blade into the airway after it appears */
-#et-tube { opacity: 0; }
-#laryngoscope-overlay.visible #et-tube {
-  animation: etTubeSlide 0.62s cubic-bezier(0.3, 0.7, 0.3, 1) 0.42s forwards;
-}
-@keyframes etTubeSlide {
-  0%   { opacity: 0; transform: translate(48px, -32px); }
-  35%  { opacity: 1; }
-  100% { opacity: 1; transform: translate(0, 0); }
 }
 
 #laryngoscope-outcome-svg {
