@@ -318,24 +318,45 @@ class Session {
       const noTreat = 'CRITICAL: the provider performs NO new assessments, treatments, medications, or procedures '
         + 'during this skip. The patient\'s condition continues to evolve along its established trajectory, '
         + 'including any deterioration that was already underway.';
+      // Crew positions flip when the unit starts moving — the highest-risk moment for a
+      // tag/narration mismatch. We know who drives, so we hand the model the exact
+      // CREW_STATUS to emit rather than leaving it to discretion. Priority:
+      //   1. a runtime non-roster driver already established (backup crew etc.)
+      //   2. a seed-designated separate transport driver
+      //   3. default two-person unit → the partner drives, provider alone in back
+      const anonDriverActive = !!(this.crewStatus && this.crewStatus.driver === 'anonymous');
+      const seedSeparateDriver = this.seed.crew_transport_driver
+        && this.seed.crew_transport_driver !== this.seed.crew_partner;
+      const partnerDrives = !anonDriverActive && !seedSeparateDriver;
+      const driverName = anonDriverActive ? 'the assigned driver'
+        : (this.seed.crew_transport_driver || this.seed.crew_partner || 'your partner');
+      const captainStatus = (this.crewStatus && this.crewStatus.captain) || 'not_on_scene';
+      let crewTag = `partner=${partnerDrives ? 'driving' : 'in_back'} captain=${captainStatus}`;
+      if (anonDriverActive) crewTag += ' driver=anonymous';
+      const crewNote = ' CREW POSITIONS (unit is moving): ' + driverName + ' is driving; the provider '
+        + '(you, the player) rides in the back with the patient and is NEVER named in the CREW_STATUS tag. '
+        + 'Emit exactly [CREW_STATUS: ' + crewTag + '] and make your narration match it — never describe '
+        + driverName + ' driving while tagging the partner in_back, and never mark the partner in_back just '
+        + 'because someone is in the back (that someone is the provider).';
       if (skipMode === 'to_ambulance') {
         messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — LOAD THE PATIENT. The provider skips ahead to load the '
           + 'patient into the ambulance now. In 1-2 sentences, narrate the crew packaging and loading the patient. '
           + noTreat + ' Emit [LOADING]. The unit is loaded but NOT yet moving — if no destination has been chosen, '
-          + 'the partner asks once which hospital. Do not begin driving and do not arrive anywhere.]';
+          + 'the partner asks once which hospital. Do not begin driving and do not arrive anywhere. The unit is parked, '
+          + 'so keep [CREW_STATUS: partner=on_scene captain=' + captainStatus + '] — nobody is driving yet.]';
       } else if (skipMode === 'to_hospital') {
         messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — TRANSPORT TO HOSPITAL. The provider skips ahead: transport the '
           + 'patient and ARRIVE at the emergency department bay. If a destination was already chosen use it; otherwise '
           + 'transport to the most clinically appropriate facility and name it in one clause. In 2-3 sentences, summarize '
           + 'the transport and arrival. ' + noTreat + ' Advance the scene clock by roughly ' + etaMin + ' minutes to reflect '
-          + 'the full transport. Emit [EN_ROUTE:nearest] or [EN_ROUTE:major] for the destination. End at the bay doors, '
-          + 'patient ready for handoff.]';
+          + 'the full transport. Emit [EN_ROUTE:nearest] or [EN_ROUTE:major] for the destination.' + crewNote
+          + ' End at the bay doors, patient ready for handoff.]';
       } else if (skipMode === 'to_arrival') {
         messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — COMPLETE TRANSPORT. The unit is already en route. The provider skips '
           + 'the remainder of the drive and ARRIVES at the emergency department bay. In 1-2 sentences, summarize the rest of '
           + 'the transport and arrival. ' + noTreat + ' Advance the scene clock by roughly ' + etaMin + ' minutes to reflect '
-          + 'the remaining transport. Do not ask about destination — it is already set. End at the bay doors, patient ready '
-          + 'for handoff.]';
+          + 'the remaining transport. Do not ask about destination — it is already set.' + crewNote
+          + ' End at the bay doors, patient ready for handoff.]';
       }
     }
     // Fast-path for NIBP cycle — keep Claude's reply brief to avoid jarring wall-of-text
