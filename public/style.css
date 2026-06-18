@@ -1063,8 +1063,8 @@ html, body {
 }
 
 #depart-svg {
-  width: 148px;
-  height: 76px;
+  width: 154px;
+  height: auto;
   color: #333;
   overflow: visible;
 }
@@ -2599,6 +2599,80 @@ html, body {
 @keyframes thumpLabelFade {
   to { opacity: 1; }
 }
+
+/* ── CPR + BVM overlays ─────────────────────────────────────────────── */
+#cpr-overlay, #bvm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 14, 0.84);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+#cpr-overlay.visible, #bvm-overlay.visible { opacity: 1; }
+
+#cpr-header, #bvm-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+
+#cpr-svg {
+  width: 130px;
+  height: auto;
+  color: rgba(190, 205, 220, 0.92);
+  filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.22));
+}
+#bvm-svg {
+  width: 188px;
+  height: auto;
+  color: rgba(190, 205, 220, 0.92);
+  filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.22));
+}
+
+/* CPR: hands + arms bob downward to mime compressions */
+#cpr-press { transform-box: fill-box; transform-origin: center bottom; }
+#cpr-overlay.visible #cpr-press {
+  animation: cprPress 0.5s ease-in-out 0.05s 3;
+}
+@keyframes cprPress {
+  0%, 100% { transform: translateY(0); }
+  45%      { transform: translateY(5px); }
+}
+
+/* BVM: self-inflating bag squeezes */
+#bvm-bag { transform-box: fill-box; transform-origin: center; }
+#bvm-overlay.visible #bvm-bag {
+  animation: bvmSqueeze 0.7s ease-in-out 0.1s 2;
+}
+@keyframes bvmSqueeze {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(0.84, 0.9); }
+}
+
+#cpr-label, #bvm-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: rgba(180, 200, 220, 0.90);
+  text-transform: uppercase;
+}
+#cpr-overlay.outcome-SUCCESS #cpr-label,
+#bvm-overlay.outcome-SUCCESS #bvm-label { color: #3dcc66; }
+#cpr-overlay.outcome-MARGINAL #cpr-label,
+#bvm-overlay.outcome-MARGINAL #bvm-label { color: #ccaa33; }
+#cpr-overlay.outcome-FAILURE #cpr-label,
+#bvm-overlay.outcome-FAILURE #bvm-label { color: #cc4040; }
+#cpr-overlay.outcome-COMPLICATION #cpr-label,
+#bvm-overlay.outcome-COMPLICATION #bvm-label { color: #cc5522; }
 
 /* ── IO drill overlay ───────────────────────────────────────────────── */
 #io-overlay {

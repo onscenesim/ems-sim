@@ -746,6 +746,8 @@ async function sendTurn(msg, opts = {}) {
       if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
       if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
       if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
+      if (r.procedure_id === 'cpr') await animateCPR(r.outcome);
+      if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -1612,6 +1614,44 @@ function animateThorsHammer(outcome) {
     overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateCPR(outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1650;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('cpr-overlay');
+    const label   = document.getElementById('cpr-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = outcome || '';
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateBVM(outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1500;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('bvm-overlay');
+    const label   = document.getElementById('bvm-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = outcome || '';
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
     setTimeout(() => {
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
