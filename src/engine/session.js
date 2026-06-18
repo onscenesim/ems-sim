@@ -40,6 +40,23 @@ function timestampToMinutes(t) {
 }
 
 /**
+ * Defensive backstop: the provider (the user) never speaks in the engine's
+ * output. Strip any fabricated provider dialogue lines (e.g. `You: "..."` or
+ * `Provider: "..."`) the model may emit despite the prompt rules, so they never
+ * reach the player. Only removes colon-led dialogue lines — second-person
+ * narration like "You reach for the bag" has no colon and is left untouched
+ * (that style is handled by the prompt). Applied to the displayed reply only.
+ */
+function stripProviderSpeech(text) {
+  return text
+    .split('\n')
+    .filter(line => !/^\s*(you|provider|the provider)\s*:/i.test(line))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
  * Extract the trailing [VITALS: ...] tag from Claude's reply.
  * Returns { cleanedReply, vitals }. If no tag is found, vitals is null and
  * cleanedReply equals the input.
@@ -411,7 +428,8 @@ class Session {
     const { cleanedReply: cleanedAfterTags, secondPatient } = parseSecondPatientTag(demoClean);
     const { cleanedReply: timeClean, timeMinutes } = parseTimeTag(cleanedAfterTags);
     const { cleanedReply: eventClean, loading, enRoute, transportDest } = parseEventTags(timeClean);
-    const { cleanedReply: reply, baseContact } = parseBaseContactTag(eventClean);
+    const { cleanedReply: baseClean, baseContact } = parseBaseContactTag(eventClean);
+    const reply = stripProviderSpeech(baseClean);
     if (backup) {
       // Track backup arrival minute when unit first goes en_route
       if (backup.status === 'en_route' && backup.eta !== null && this.backupArrivalMinute === null) {
