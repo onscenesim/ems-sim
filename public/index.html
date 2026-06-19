@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=48">
+  <link rel="stylesheet" href="style.css?v=49">
 </head>
 <body>
 
@@ -245,33 +245,13 @@
 
     <!-- Scalpel animation overlay — surgical procedures -->
     <div id="scalpel-overlay" aria-hidden="true">
-      <svg id="scalpel-svg" viewBox="0 0 240 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <!-- Handle -->
-        <rect x="1" y="19" width="138" height="6" rx="3" fill="#9e9890"/>
-        <!-- Grip bands -->
-        <rect x="12" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="21" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="30" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="39" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="48" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="57" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="66" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="75" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="84" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="93" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="102" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="111" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <rect x="120" y="18" width="3" height="8" rx="1" fill="#7a7468"/>
-        <!-- Ferrule -->
-        <rect x="139" y="16" width="12" height="12" rx="2" fill="#b4b0a8"/>
-        <!-- Blade body -->
-        <path d="M151 17 L222 20.5 L222 23.5 L151 27 Z" fill="#d8d4cc"/>
-        <!-- Blade belly (cutting edge) -->
-        <path d="M151 27 Q193 33 226 22" stroke="#ece8e2" stroke-width="1.5" fill="none"/>
-        <!-- Spine -->
-        <path d="M151 17 L226 22" stroke="#c4c0b8" stroke-width="0.8" fill="none"/>
-        <!-- Tip -->
-        <path d="M218 20 L231 22 L218 24 Z" fill="#ccc8c0"/>
+      <svg id="scalpel-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- Blade slash: a curved arc sweeps across (glow + core + bright edge) -->
+        <g class="slash-g">
+          <path class="slash-line" d="M40 48 Q120 92 182 178" fill="none" stroke="#ff2740" stroke-width="17" stroke-linecap="round" opacity="0.32" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+          <path class="slash-line" d="M40 48 Q120 92 182 178" fill="none" stroke="#ff6b7a" stroke-width="7" stroke-linecap="round" opacity="0.8" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+          <path class="slash-line" d="M40 48 Q120 92 182 178" fill="none" stroke="#ffe6ea" stroke-width="2.5" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+        </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
         <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>

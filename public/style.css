@@ -2385,17 +2385,33 @@ html, body {
 #scalpel-svg {
   width: 260px;
   height: auto;
-  filter: drop-shadow(0 1px 10px rgba(160, 30, 30, 0.5));
-  opacity: 0;
+  filter: drop-shadow(0 0 14px rgba(255, 40, 60, 0.35));
 }
-#scalpel-overlay.visible #scalpel-svg {
-  animation: scalpelSlide 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) 0.12s forwards;
+/* The arc draws across fast (the slash), then the streak lingers dim */
+#scalpel-overlay .slash-g { opacity: 0; }
+#scalpel-overlay.visible .slash-g {
+  animation: slashFade 0.7s ease 0.1s forwards;
 }
-@keyframes scalpelSlide {
-  0%   { opacity: 0; transform: rotate(-18deg) translateX(-90px); }
-  20%  { opacity: 1; }
-  80%  { opacity: 1; transform: rotate(-18deg) translateX(0); }
-  100% { opacity: 0.9; transform: rotate(-18deg) translateX(6px); }
+#scalpel-overlay.visible .slash-line {
+  animation: slashDraw 0.2s cubic-bezier(0.2, 0.7, 0.3, 1) 0.1s forwards;
+}
+@keyframes slashDraw {
+  from { stroke-dashoffset: 100; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes slashFade {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  45%  { opacity: 1; }
+  100% { opacity: 0.25; }
+}
+/* Red flash at the moment of the cut */
+#scalpel-overlay.visible {
+  animation: scalpelFlash 0.6s ease forwards;
+}
+@keyframes scalpelFlash {
+  0%, 100% { background: rgba(6, 2, 2, 0.78); }
+  16%      { background: rgba(60, 8, 12, 0.92); }
 }
 
 #scalpel-label {
