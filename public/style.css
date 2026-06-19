@@ -2837,6 +2837,70 @@ html, body {
   text-transform: uppercase;
 }
 
+/* ── IV start (peripheral cannula) overlay ──────────────────────────── */
+#iv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 14, 0.84);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+#iv-overlay.visible { opacity: 1; }
+#iv-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+#iv-svg {
+  width: 270px;
+  height: auto;
+  color: rgba(235, 235, 235, 0.95);   /* black-and-white line art */
+}
+/* Cannula advances forward */
+#iv-device { opacity: 0; }
+#iv-overlay.visible #iv-device {
+  animation: ivAdvance 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s forwards;
+}
+@keyframes ivAdvance {
+  0%   { opacity: 0; transform: translateX(26px); }
+  40%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0); }
+}
+/* Flashback fills the chamber — colour set by outcome */
+#iv-fill {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transform: scaleX(0);
+  fill: #888;
+}
+#iv-overlay.outcome-SUCCESS      #iv-fill { fill: #3dcc66; }
+#iv-overlay.outcome-MARGINAL     #iv-fill { fill: #ccaa33; }
+#iv-overlay.outcome-FAILURE      #iv-fill { fill: #cc4040; }
+#iv-overlay.outcome-COMPLICATION #iv-fill { fill: #cc5522; }
+#iv-overlay.visible #iv-fill {
+  animation: ivFill 0.45s ease-out 0.5s forwards;
+}
+@keyframes ivFill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+#iv-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: rgba(180, 200, 220, 0.90);
+  text-transform: uppercase;
+}
+
 /* ── IO drill overlay ───────────────────────────────────────────────── */
 #io-overlay {
   position: fixed;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=49">
+  <link rel="stylesheet" href="style.css?v=50">
 </head>
 <body>
 
@@ -563,6 +563,35 @@
       <div id="sga-label"></div>
     </div>
 
+    <!-- IV start (peripheral cannula) animation overlay -->
+    <div id="iv-overlay" aria-hidden="true">
+      <div id="iv-header">IV ACCESS</div>
+      <svg id="iv-svg" viewBox="0 0 260 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- Cannula advances forward as one group; chamber fills with flashback -->
+        <g id="iv-device" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Needle -->
+          <line x1="22" y1="46" x2="96" y2="46"/>
+          <!-- Catheter hub -->
+          <path d="M96 36 L124 32 L124 60 L96 56 Z"/>
+          <!-- Flash chamber (barrel) -->
+          <rect x="124" y="28" width="74" height="34" rx="7"/>
+          <!-- Flashback blood fill -->
+          <rect id="iv-fill" x="127" y="31" width="68" height="28" rx="5" stroke="none"/>
+          <!-- Luer / flashback cap -->
+          <rect x="198" y="32" width="32" height="26" rx="4"/>
+          <line x1="206" y1="34" x2="206" y2="56"/>
+          <line x1="214" y1="34" x2="214" y2="56"/>
+          <line x1="222" y1="34" x2="222" y2="56"/>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="iv-label"></div>
+    </div>
+
     <!-- Ambulance departure animation overlay -->
     <div id="depart-overlay" aria-hidden="true">
       <div id="depart-header">TRANSPORTING</div>
@@ -679,6 +708,6 @@
 
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-    <script src="app.js?v=38"></script>
+    <script src="app.js?v=39"></script>
 </body>
 </html>
