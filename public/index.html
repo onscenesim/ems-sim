@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=47">
+  <link rel="stylesheet" href="style.css?v=48">
 </head>
 <body>
 
@@ -552,6 +552,37 @@
       <div id="suction-label"></div>
     </div>
 
+    <!-- Supraglottic airway (i-gel) animation overlay -->
+    <div id="sga-overlay" aria-hidden="true">
+      <div id="sga-header">SUPRAGLOTTIC AIRWAY</div>
+      <svg id="sga-svg" viewBox="0 0 210 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- i-gel slides in at an angle as one group -->
+        <g id="sga-device">
+          <!-- Translucent curved tube channel -->
+          <path d="M152 48 C144 86 112 110 86 132" fill="none" stroke="#bfe0d4" stroke-width="15" opacity="0.45" stroke-linecap="round"/>
+          <path d="M152 48 C144 86 112 110 86 132" fill="none" stroke="#dff0e8" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+          <path d="M150 54 C143 88 114 110 90 130" fill="none" stroke="#eef8f3" stroke-width="1.2" opacity="0.5"/>
+          <!-- 15mm connector (proximal) -->
+          <g transform="rotate(40 150 46)">
+            <rect x="139" y="20" width="22" height="28" rx="3.5" fill="#a9d8e6" opacity="0.5" stroke="#86c2d4" stroke-width="2"/>
+            <line x1="139" y1="29" x2="161" y2="29" stroke="#86c2d4" stroke-width="1.3" opacity="0.6"/>
+            <line x1="139" y1="38" x2="161" y2="38" stroke="#86c2d4" stroke-width="1.3" opacity="0.6"/>
+          </g>
+          <!-- Soft gel cuff (distal teardrop bowl) -->
+          <path d="M92 124 C74 128 58 146 55 166 C53 180 64 188 76 182 C92 175 102 156 99 138 C97 128 95 125 92 124 Z" fill="#8fd0b0" opacity="0.45" stroke="#7cc4a2" stroke-width="2"/>
+          <path d="M82 140 C72 148 66 160 68 170" fill="none" stroke="#6bb894" stroke-width="1.4" opacity="0.5"/>
+          <!-- Epiglottic rest fin -->
+          <path d="M96 132 C104 130 110 134 110 140 C104 142 99 140 96 137 Z" fill="#8fd0b0" opacity="0.55" stroke="#7cc4a2" stroke-width="1.6"/>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="sga-label"></div>
+    </div>
+
     <!-- Ambulance departure animation overlay -->
     <div id="depart-overlay" aria-hidden="true">
       <div id="depart-header">TRANSPORTING</div>
@@ -668,6 +699,6 @@
 
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-    <script src="app.js?v=37"></script>
+    <script src="app.js?v=38"></script>
 </body>
 </html>

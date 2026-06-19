@@ -751,6 +751,7 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
       if (r.procedure_id === 'lucas') await animateLUCAS(r.outcome);
       if (r.procedure_id === 'suction') await animateSuction(r.outcome);
+      if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
       if (r.procedure_id === 'medication_push' && r.matched_drug) {
         showDrugPanel(r.matched_drug);
       }
@@ -1704,6 +1705,25 @@ function animateSuction(outcome) {
     const FADE_MS = 220;
     const overlay = document.getElementById('suction-overlay');
     const label   = document.getElementById('suction-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = outcome || '';
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateSGA(outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1700;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('sga-overlay');
+    const label   = document.getElementById('sga-label');
     if (!overlay) { resolve(); return; }
     label.textContent = outcome || '';
     overlay.className = '';
