@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=50">
+  <link rel="stylesheet" href="style.css?v=51">
 </head>
 <body>
 
@@ -592,6 +592,44 @@
       <div id="iv-label"></div>
     </div>
 
+    <!-- Medication push animation overlay -->
+    <div id="medpush-overlay" aria-hidden="true">
+      <div id="medpush-header">MEDICATION</div>
+      <svg id="medpush-svg" viewBox="0 0 260 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- Syringe points left; plunger pushes the dose in from the right -->
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Needle -->
+          <line x1="8" y1="45" x2="42" y2="45" stroke-width="1.6"/>
+          <!-- Needle hub (cone) -->
+          <path d="M42 39 L58 33 L58 57 L42 51 Z"/>
+          <!-- Barrel -->
+          <rect x="58" y="33" width="120" height="24" rx="3"/>
+          <!-- Finger flange ears at the barrel mouth -->
+          <line x1="178" y1="27" x2="178" y2="63"/>
+          <line x1="178" y1="30" x2="186" y2="28"/>
+          <line x1="178" y1="60" x2="186" y2="62"/>
+          <!-- Graduation ticks -->
+          <line x1="86" y1="33" x2="86" y2="39" stroke-width="1" opacity="0.5"/>
+          <line x1="114" y1="33" x2="114" y2="39" stroke-width="1" opacity="0.5"/>
+          <line x1="142" y1="33" x2="142" y2="39" stroke-width="1" opacity="0.5"/>
+        </g>
+        <!-- Dose fluid — colour set by outcome, emptied as the plunger advances -->
+        <rect id="medpush-fill" x="60" y="36" width="112" height="18" rx="2" stroke="none"/>
+        <!-- Plunger assembly: rubber stopper + rod + thumb rest -->
+        <g id="medpush-plunger" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="170" y="34" width="6" height="22" rx="1.5" fill="currentColor" stroke="none"/>
+          <line x1="176" y1="45" x2="226" y2="45" stroke-width="3"/>
+          <line x1="226" y1="29" x2="226" y2="61"/>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="medpush-label"></div>
+    </div>
+
     <!-- Ambulance departure animation overlay -->
     <div id="depart-overlay" aria-hidden="true">
       <div id="depart-header">TRANSPORTING</div>
@@ -708,6 +746,6 @@
 
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-    <script src="app.js?v=39"></script>
+    <script src="app.js?v=40"></script>
 </body>
 </html>

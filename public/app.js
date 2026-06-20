@@ -753,8 +753,9 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'suction') await animateSuction(r.outcome);
       if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
       if (r.procedure_id === 'peripheral_iv') await animateIV(r.outcome);
-      if (r.procedure_id === 'medication_push' && r.matched_drug) {
-        showDrugPanel(r.matched_drug);
+      if (r.procedure_id === 'medication_push') {
+        if (!r.no_roll) await animateMedPush(r.outcome);
+        if (r.matched_drug) showDrugPanel(r.matched_drug);
       }
     }
     for (const r of (data.rolls || [])) printRoll(r);
@@ -1744,6 +1745,25 @@ function animateIV(outcome) {
     const FADE_MS = 220;
     const overlay = document.getElementById('iv-overlay');
     const label   = document.getElementById('iv-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = outcome || '';
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateMedPush(outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 1800;
+    const FADE_MS = 220;
+    const overlay = document.getElementById('medpush-overlay');
+    const label   = document.getElementById('medpush-label');
     if (!overlay) { resolve(); return; }
     label.textContent = outcome || '';
     overlay.className = '';

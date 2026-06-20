@@ -2901,6 +2901,79 @@ html, body {
   text-transform: uppercase;
 }
 
+/* ── Medication push overlay ────────────────────────────────────────── */
+#medpush-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 14, 0.84);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+#medpush-overlay.visible { opacity: 1; }
+#medpush-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+#medpush-svg {
+  width: 270px;
+  height: auto;
+  color: rgba(235, 235, 235, 0.95);   /* black-and-white line art */
+}
+/* Dose fluid — colour set by outcome */
+#medpush-fill {
+  transform-box: fill-box;
+  transform-origin: left center;   /* needle side fixed; empties toward needle */
+  transform: scaleX(1);
+  fill: #888;
+}
+#medpush-overlay.outcome-SUCCESS      #medpush-fill { fill: #3dcc66; }
+#medpush-overlay.outcome-MARGINAL     #medpush-fill { fill: #ccaa33; }
+#medpush-overlay.outcome-FAILURE      #medpush-fill { fill: #cc4040; }
+#medpush-overlay.outcome-COMPLICATION #medpush-fill { fill: #cc5522; }
+#medpush-overlay.visible #medpush-fill {
+  animation: medFill 0.7s ease-in 0.55s forwards;
+}
+@keyframes medFill {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0.16); }
+}
+/* Plunger drives the dose in */
+#medpush-plunger { opacity: 0; }
+#medpush-overlay.visible #medpush-plunger {
+  animation: medPlunger 0.7s cubic-bezier(0.4, 0.0, 0.4, 1) 0.55s forwards;
+}
+@keyframes medPlunger {
+  0%   { opacity: 1; transform: translateX(0); }
+  100% { opacity: 1; transform: translateX(-94px); }
+}
+/* The whole syringe eases in before the push */
+#medpush-svg { opacity: 0; }
+#medpush-overlay.visible #medpush-svg {
+  animation: medSlide 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s forwards;
+}
+@keyframes medSlide {
+  0%   { opacity: 0; transform: translateX(18px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+#medpush-plunger { opacity: 1; }
+#medpush-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: rgba(180, 200, 220, 0.90);
+  text-transform: uppercase;
+}
+
 /* ── IO drill overlay ───────────────────────────────────────────────── */
 #io-overlay {
   position: fixed;
