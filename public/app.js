@@ -754,7 +754,8 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
       if (r.procedure_id === 'peripheral_iv') await animateIV(r.outcome);
       if (r.procedure_id === 'medication_push') {
-        if (!r.no_roll) await animateMedPush(r.outcome);
+        // No-roll pushes work by default → show the green (SUCCESS) syringe.
+        await animateMedPush(r.no_roll ? 'SUCCESS' : r.outcome);
         if (r.matched_drug) showDrugPanel(r.matched_drug);
       }
     }
