@@ -106,26 +106,32 @@ console.log('\n=== 3. rollTimeOfDay night weight ===');
 {
   const NIGHT_HOURS_2DIGIT = [22, 23, 0, 1, 2, 3, 4, 5];
 
-  // Verify all TIME_OF_DAY entries parse correctly to 2-digit hours
-  let parseOk = true;
-  const badEntries = [];
+  // The production code (roller.rollTimeOfDay) classifies an entry as night by
+  // slicing the FIRST 2 CHARS of its text into an hour. Verify that 2-char parse
+  // marks exactly the expected night hours — and document why the 4-char slice
+  // (an old bug) would be wrong.
+  const nightByTwoChar = [];
+  const fourCharMisses = [];
   for (const entry of TIME_OF_DAY) {
-    // Correct parse: first 2 characters give the hour
-    const hourStr = entry.text.substring(0, 2);
-    const hour = parseInt(hourStr, 10);
-    // Old buggy parse: first 4 characters → 2200, 2300, 0100 etc.
-    const badHour = parseInt(entry.text.substring(0, 4), 10);
-    const isNight = NIGHT_HOURS_2DIGIT.includes(hour);
-    const bugWouldMiss = isNight && !NIGHT_HOURS_2DIGIT.includes(badHour);
-    if (bugWouldMiss) {
-      badEntries.push(`"${entry.text.substring(0, 4)}" (parsed as ${badHour}, should be hour ${hour})`);
-      parseOk = false;
+    const hour = parseInt(entry.text.substring(0, 2), 10);     // correct parse
+    const badHour = parseInt(entry.text.substring(0, 4), 10);  // old buggy parse
+    if (NIGHT_HOURS_2DIGIT.includes(hour)) nightByTwoChar.push(hour);
+    // A 4-char slice turns "2200"/"0100" into 2200/100, which the hour array misses.
+    if (NIGHT_HOURS_2DIGIT.includes(hour) && !NIGHT_HOURS_2DIGIT.includes(badHour)) {
+      fourCharMisses.push(entry.text.substring(0, 4));
     }
   }
-  if (badEntries.length) {
-    console.log(`    Night entries that 4-char parse misses: ${badEntries.join(', ')}`);
-  }
-  assert(badEntries.length === 0, 'All night-hour entries parse correctly with 2-char slice (no 4-char bug)');
+  // 2-char parse must catch every night hour present in the table (22,23,0-5 → 8).
+  assert(
+    nightByTwoChar.length === NIGHT_HOURS_2DIGIT.length,
+    `2-char slice classifies all ${NIGHT_HOURS_2DIGIT.length} night hours (got ${nightByTwoChar.length})`
+  );
+  // And the old 4-char slice would in fact misclassify night entries — proving the
+  // fix matters. (This is a regression guard on the rationale, not the product.)
+  assert(
+    fourCharMisses.length > 0,
+    `4-char slice would misclassify night entries (demonstrates why 2-char is required; got ${fourCharMisses.length})`
+  );
 
   // Statistical test: roll 10000 times and verify night hours appear ~1.5x more often than day
   const nightWeight = 1.5;
