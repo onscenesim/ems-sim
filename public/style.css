@@ -3037,6 +3037,61 @@ html, body {
   text-transform: uppercase;
 }
 
+/* ── OPA (oropharyngeal airway) overlay ──────────────────────────────── */
+#opa-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 14, 0.84);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+#opa-overlay.visible { opacity: 1; }
+#opa-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+#opa-svg {
+  width: 250px;
+  height: auto;
+  color: rgba(232, 232, 232, 0.95);   /* translucent airway */
+}
+/* Inserted inverted, then flips 180° as it slides home */
+#opa-device {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+}
+#opa-overlay.visible #opa-device {
+  animation: opaInsert 1s cubic-bezier(0.34, 1.2, 0.5, 1) 0.15s forwards;
+}
+@keyframes opaInsert {
+  0%   { opacity: 0; transform: translateX(46px) rotate(180deg); }
+  25%  { opacity: 1; transform: translateX(30px) rotate(180deg); }
+  100% { opacity: 1; transform: translateX(0) rotate(0deg); }
+}
+/* Hold the check/X until the airway is seated (ID specificity beats the
+   shared .outcome-* shorthand, so only the delay is overridden here). */
+#opa-overlay.visible .om-check,
+#opa-overlay.visible .om-x1 { animation-delay: 1.2s; }
+#opa-overlay.visible .om-x2 { animation-delay: 1.36s; }
+#opa-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: rgba(180, 200, 220, 0.90);
+  text-transform: uppercase;
+}
+
 /* ── IO drill overlay ───────────────────────────────────────────────── */
 #io-overlay {
   position: fixed;
