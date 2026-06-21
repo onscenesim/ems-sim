@@ -14,6 +14,8 @@ const SOUNDS = {
   lifepak:  new Audio('/sounds/LifepakStartup.m4a'),
   radio:    new Audio('/sounds/RadioCrackle.m4a'),
   surgical:         new Audio('/sounds/SurgicalIncision.m4a'),
+  sword:            new Audio('/sounds/SwordSlice.mp3'),
+  hiss:             new Audio('/sounds/SteamHiss.mp3'),
   dispatch:         new Audio('/sounds/incident_assigned.m4a'),
   bvm_fail:         new Audio('/sounds/BVM_fail.m4a'),
   bvm_success:      new Audio('/sounds/BVM_success.m4a'),
@@ -94,6 +96,12 @@ function getProcedureSound(id, outcome) {
   if (id === 'io_access') return 'io';
   if (id === 'lucas') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'lucas' : 'fail';
   if (id === 'precordial_thump') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'thump' : 'fail';
+  // Violent sword slice: the only sound for a surgical cric, and the opening
+  // sound of a finger thoracostomy.
+  if (id === 'cricothyrotomy' || id === 'finger_thoracostomy') return 'sword';
+  // Air hiss on a successful chest/airway decompression (NCD + needle cric).
+  if (id === 'needle_decompression' || id === 'needle_cricothyrotomy')
+    return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'hiss' : 'fail';
   if (SURGICAL_PROCS.has(id)) return 'surgical';
   if (id === 'bvm') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'bvm_success' : 'bvm_fail';
   if (id === 'cpr') {
@@ -767,7 +775,8 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'peripheral_iv') await animateIV(r.outcome);
       if (r.procedure_id === 'twelve_lead') await animateTwelveLead(r.outcome);
       if (r.procedure_id === 'oropharyngeal_airway') await animateOPA(r.outcome);
-      if (r.procedure_id === 'needle_decompression') await animateNCD(r.outcome);
+      if (r.procedure_id === 'needle_decompression') await animateNCD(r.outcome, 'needle_decompression');
+      if (r.procedure_id === 'needle_cricothyrotomy') await animateNCD(r.outcome, 'needle_cricothyrotomy');
       if (r.procedure_id === 'medication_push') {
         // No-roll pushes work by default → show the green (SUCCESS) syringe.
         await animateMedPush(r.no_roll ? 'SUCCESS' : r.outcome);
@@ -1802,13 +1811,15 @@ function animateMedPush(outcome) {
   });
 }
 
-function animateNCD(outcome) {
+function animateNCD(outcome, procedureId = 'needle_decompression') {
   return new Promise(resolve => {
     const HOLD_MS = 2600;   // needle advance + the air-puff bursts + outcome mark
     const FADE_MS = 220;
     const overlay = document.getElementById('ncd-overlay');
     const label   = document.getElementById('ncd-label');
+    const header  = document.getElementById('ncd-header');
     if (!overlay) { resolve(); return; }
+    if (header) header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
     label.textContent = outcome || '';
     overlay.className = '';
     void overlay.offsetWidth;
