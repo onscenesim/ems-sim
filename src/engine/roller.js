@@ -326,8 +326,14 @@ function rollScenario(opts = {}) {
     special_circumstance: specialCircumstance,
     crew_partner: crew.partner,
     crew_captain: crew.captain,
-    crew_transport_driver: crew.captain || crew.partner,
-    crew_in_back: crew.captain ? [crew.partner] : [],
+    // Standard two-person ALS unit: the PARTNER drives during transport and the
+    // provider rides alone in the back. The captain is an off-scene supervisor
+    // (Rule 18 keeps captain=not_on_scene for the whole call and only brings them
+    // in on backup), so the captain must NOT be the routine transport driver —
+    // doing so contradicted Rule 18 and produced an incoherent crew tag
+    // (captain narrated driving but tagged not_on_scene, nobody shown at the wheel).
+    crew_transport_driver: crew.partner,
+    crew_in_back: [],
     backup_present_on_arrival:
       category === 'arrest' ? Math.random() < 0.40 :
       (presentation.special_flags && /two_patients|mci/i.test(presentation.special_flags)) ? true :

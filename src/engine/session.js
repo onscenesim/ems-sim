@@ -431,7 +431,11 @@ class Session {
     const { cleanedReply: demoClean, demoSource } = parseDemoTag(crewClean);
     const { cleanedReply: cleanedAfterTags, secondPatient } = parseSecondPatientTag(demoClean);
     const { cleanedReply: timeClean, timeMinutes } = parseTimeTag(cleanedAfterTags);
-    const { cleanedReply: eventClean, loading, enRoute, transportDest } = parseEventTags(timeClean);
+    // `loading` is reassigned by the safety net below (auto-load when the unit
+    // departs without a prior [LOADING]), so this must be `let`, not `const` —
+    // declaring it `const` threw "Assignment to constant variable" and 500'd every
+    // depart-without-separate-load turn (e.g. skip-to-hospital straight from scene).
+    let { cleanedReply: eventClean, loading, enRoute, transportDest } = parseEventTags(timeClean);
     const { cleanedReply: baseClean, baseContact } = parseBaseContactTag(eventClean);
     const reply = stripProviderSpeech(baseClean);
     if (backup) {
