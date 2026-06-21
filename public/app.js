@@ -765,6 +765,7 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'suction') await animateSuction(r.outcome);
       if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
       if (r.procedure_id === 'peripheral_iv') await animateIV(r.outcome);
+      if (r.procedure_id === 'twelve_lead') await animateTwelveLead(r.outcome);
       if (r.procedure_id === 'medication_push') {
         // No-roll pushes work by default → show the green (SUCCESS) syringe.
         await animateMedPush(r.no_roll ? 'SUCCESS' : r.outcome);
@@ -1786,6 +1787,25 @@ function animateMedPush(outcome) {
     const FADE_MS = 220;
     const overlay = document.getElementById('medpush-overlay');
     const label   = document.getElementById('medpush-label');
+    if (!overlay) { resolve(); return; }
+    label.textContent = outcome || '';
+    overlay.className = '';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, FADE_MS);
+    }, HOLD_MS);
+  });
+}
+
+function animateTwelveLead(outcome) {
+  return new Promise(resolve => {
+    const HOLD_MS = 2600;   // covers the six staggered leads + the outcome mark
+    const FADE_MS = 220;
+    const overlay = document.getElementById('ekg-overlay');
+    const label   = document.getElementById('ekg-label');
     if (!overlay) { resolve(); return; }
     label.textContent = outcome || '';
     overlay.className = '';

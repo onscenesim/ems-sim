@@ -2974,6 +2974,69 @@ html, body {
   text-transform: uppercase;
 }
 
+/* ── 12-lead EKG overlay ─────────────────────────────────────────────── */
+#ekg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 14, 0.84);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+#ekg-overlay.visible { opacity: 1; }
+#ekg-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+#ekg-svg {
+  width: 230px;
+  height: auto;
+  color: rgba(235, 235, 235, 0.95);   /* torso line art */
+}
+#ekg-svg .ekg-lead text {
+  fill: #fff;
+  font-family: var(--font-block, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+/* Each lead pops on in sequence, V1 → V6 */
+.ekg-lead {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+}
+#ekg-overlay.visible .ekg-lead {
+  animation: ekgPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: calc(0.25s + var(--i) * 0.16s);
+}
+@keyframes ekgPop {
+  0%   { opacity: 0; transform: scale(0.2); }
+  70%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+/* Hold the check/X until all six leads have landed (ID specificity beats the
+   shared .outcome-* shorthand, so only the delay is overridden here). */
+#ekg-overlay.visible .om-check,
+#ekg-overlay.visible .om-x1 { animation-delay: 1.5s; }
+#ekg-overlay.visible .om-x2 { animation-delay: 1.66s; }
+#ekg-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: rgba(180, 200, 220, 0.90);
+  text-transform: uppercase;
+}
+
 /* ── IO drill overlay ───────────────────────────────────────────────── */
 #io-overlay {
   position: fixed;
