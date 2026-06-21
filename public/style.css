@@ -3092,6 +3092,71 @@ html, body {
   text-transform: uppercase;
 }
 
+/* ── Needle chest decompression overlay ──────────────────────────────── */
+#ncd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 14, 0.84);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+#ncd-overlay.visible { opacity: 1; }
+#ncd-header {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+#ncd-svg {
+  width: 270px;
+  height: auto;
+  color: rgba(235, 235, 235, 0.95);   /* black-and-white line art */
+}
+/* Needle advances into the chest */
+#ncd-device { opacity: 0; }
+#ncd-overlay.visible #ncd-device {
+  animation: ncdAdvance 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s forwards;
+}
+@keyframes ncdAdvance {
+  0%   { opacity: 0; transform: translateX(24px); }
+  40%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0); }
+}
+/* Air escapes the hub ONLY on a successful decompression — failure = no air */
+#ncd-puff {
+  transform-box: fill-box;
+  transform-origin: left center;
+  opacity: 0;
+}
+#ncd-overlay.outcome-SUCCESS.visible  #ncd-puff,
+#ncd-overlay.outcome-MARGINAL.visible #ncd-puff {
+  animation: ncdPuff 0.55s ease-out 0.65s 3;
+}
+@keyframes ncdPuff {
+  0%   { opacity: 0;    transform: translateX(-6px) scale(0.7); }
+  40%  { opacity: 0.95; }
+  100% { opacity: 0;    transform: translateX(16px) scale(1.15); }
+}
+/* Hold the check/X until the needle is seated and the first puff has shown */
+#ncd-overlay.visible .om-check,
+#ncd-overlay.visible .om-x1 { animation-delay: 1.1s; }
+#ncd-overlay.visible .om-x2 { animation-delay: 1.26s; }
+#ncd-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: rgba(180, 200, 220, 0.90);
+  text-transform: uppercase;
+}
+
 /* ── IO drill overlay ───────────────────────────────────────────────── */
 #io-overlay {
   position: fixed;
