@@ -458,6 +458,13 @@ class Session {
     if (crewStatus) this.crewStatus = crewStatus;
     if (demoSource && !this.demoSource) this.demoSource = demoSource;
     if (secondPatient) this.secondPatientFound = true;
+    // Skip turns drive the transport phase DETERMINISTICALLY from the skip target.
+    // The model often omits [LOADING]/[EN_ROUTE] during a time-skip, which left the
+    // load/depart animations un-fired and the arrival inconsistent (arrived=true but
+    // moving=false). Force the phase here; the safety net below auto-loads if needed
+    // and sets moving/hasLoaded, so the client's load/depart animations always fire.
+    if (skipMode === 'to_ambulance') loading = true;
+    else if (skipMode === 'to_hospital' || skipMode === 'to_arrival') enRoute = true;
     // Safety net: if EN_ROUTE fires but LOADING was never emitted (Claude combined both into
     // one turn without tagging loading), auto-inject loading so the animation fires correctly.
     if (enRoute) {
