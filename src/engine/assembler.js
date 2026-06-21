@@ -54,10 +54,10 @@ function assembleSeedBlock(seed) {
     lines.push(`Surface presentation: ${seed.presentation}`);
     lines.push(`TRUE diagnosis (hidden until reveal): ${seed.true_diagnosis}`);
     lines.push(`Reveal trigger: ${seed.reveal_trigger}`);
-    lines.push(`HINT (for your narration, not for user): ${seed.hint}`);
+    lines.push(`PRIVATE CASE KEY — never reveal, hint at, suggest, or act on (see Rule 8): ${seed.hint}`);
   } else {
     lines.push(`Presentation: ${seed.presentation}`);
-    lines.push(`HINT (for your narration, not for user): ${seed.hint}`);
+    lines.push(`PRIVATE CASE KEY — never reveal, hint at, suggest, or act on (see Rule 8): ${seed.hint}`);
   }
   if (seed.special_flags) {
     lines.push(`Special flags: ${seed.special_flags}`);
@@ -203,7 +203,7 @@ function assembleSeedBlock(seed) {
   lines.push('5. SCENE CLOCK: Time every action — simple assessments 1 min, full exam 3 min, procedures 2–5 min, packaging 2 min. End EVERY reply with [TIME: M:SS] showing cumulative scene time since arrival. Never omit, including short replies and report turns.');
   lines.push('6. SCENARIO CLOSE: On "transfer of care," "we\'re clear," "pronounce," or equivalent: brief professional sign-off, unit number, one-sentence patient summary, clear. 1–3 sentences max. No debrief commentary.');
     lines.push(`7. DISPATCH: Begin the scenario with a dispatch message in this format: "DISPATCH: ${seed.unit_name || 'Medic 1'}, respond to [nature of call] at [address or location] — [any additional info from caller]. Your partner is [partner name]. Time: [time_of_day]." Use the unit identifier exactly as given in radio traffic, follow-up dispatch updates, and medical control patches throughout the scenario.`);
-  lines.push('8. The hint is for your internal narration only. Never reveal it to the user.');
+  lines.push('8. PRIVATE CASE KEY — HARD WALL: The "PRIVATE CASE KEY" in the patient card is your hidden answer sheet; it may name the diagnosis, the findings to expect, and the correct treatments. It exists for ONE reason: so that WHEN the provider actually assesses for something, you portray the matching finding accurately and keep the case internally consistent. It is NOT a script to read from. You MUST NOT, under any circumstances: state or imply the diagnosis; name, recommend, or hint at any treatment or intervention it mentions; telegraph management ("keep him calm," "this one needs X," "you might consider," "have you thought about"); or have ANY NPC — partner, captain, bystander, dispatch, family, or hospital — voice its contents. Surface a finding ONLY as the direct result of an assessment the provider explicitly performs; never volunteer it and never front-run it. Treat the key exactly like the hidden dice: it drives what happens, but the player never sees or hears it. This binds with Rule 3 (zero guidance).');
     if (isCurveball) {
     lines.push('9. CURVEBALL: The surface presentation is what the user sees. The true diagnosis is hidden. Reveal it ONLY when the reveal_trigger condition is met by user action. If the user never triggers the reveal, they finish the scenario without knowing. Debrief reveals the true diagnosis.');
   }
