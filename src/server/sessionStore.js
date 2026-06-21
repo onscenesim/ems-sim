@@ -166,6 +166,7 @@ function restoreSession(snapshot) {
   session.turns       = snapshot.turns       || [];
   session.hasLoaded   = snapshot.hasLoaded   || false;
   session.moving      = snapshot.moving      || false;
+  session.arrivedAtHospital = snapshot.arrivedAtHospital || false;
   store.set(snapshot.id, {
     session,
     lastActive: Date.now(),

@@ -293,8 +293,20 @@ function authHeaders() {
 let currentAbortController = null;
 
 async function apiPost(path, body, signal = null) {
-  const res  = await fetch(path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body), signal });
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch(path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body), signal });
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;            // user pressed STOP — handled upstream
+    // Browser "Failed to fetch" (server asleep/restarting, connection dropped).
+    throw Object.assign(new Error('Connection dropped — check your network and retry.'), { code: 'network_error' });
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw Object.assign(new Error(`Server returned an unreadable response (HTTP ${res.status}) — please retry.`), { code: 'bad_response' });
+  }
   if (!res.ok) throw Object.assign(new Error(data.message || `HTTP ${res.status}`), { code: data.error });
   return data;
 }
@@ -777,7 +789,9 @@ async function sendTurn(msg, opts = {}) {
     }
     // A terminal skip (to the hospital / bay) has now arrived — the call isn't over
     // yet (handoff comes next), but the button should offer END from here on.
-    if (skipMode === 'to_hospital' || skipMode === 'to_arrival') arrivedAtHospital = true;
+    // The server is authoritative (data.arrived) and persists across resume; the
+    // skipMode check is a belt-and-suspenders fallback for the same turn.
+    if (data.arrived || skipMode === 'to_hospital' || skipMode === 'to_arrival') arrivedAtHospital = true;
     // Relabel the skip button to match the new transport phase.
     updateSkipBtn();
 
@@ -845,6 +859,13 @@ async function sendTurn(msg, opts = {}) {
       print('[Cancelled by user. The server may still finish the request in the background — if you re-send, your previous message may also have been processed.]', 'system');
     } else {
       print(`[Error: ${err.message}]`, 'error');
+      // Connection/parse failure — the turn never landed. Restore a genuinely
+      // typed message to the input so a dropped handoff isn't lost; skip the
+      // synthetic skip/end commands (those re-fire from their buttons).
+      const synthetic = skipMode || msg === 'end scenario' || /^\[Skip ahead/.test(msg);
+      if ((err.code === 'network_error' || err.code === 'bad_response') && !synthetic && !userInput.value) {
+        userInput.value = msg;
+      }
     }
   } finally {
     currentAbortController = null;
@@ -2036,7 +2057,7 @@ async function resumeFromSnapshot(snap) {
   // Restore transport phase so the skip button reflects where the call left off.
   hasPlayedLoading = snap.hasLoaded || false;
   hasPlayedDepart  = snap.moving    || false;
-  arrivedAtHospital = false;
+  arrivedAtHospital = snap.arrivedAtHospital || false;  // server-persisted — keeps END after resume
   window._isMoving = hasPlayedDepart; // keeps CPR/defib transport sounds correct
 
   localTranscript = {

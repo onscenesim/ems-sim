@@ -99,6 +99,7 @@ router.get('/resume', (req, res) => {
       debriefed:    snapshot.debriefed   || false,
       hasLoaded:    snapshot.hasLoaded   || false,
       moving:       snapshot.moving      || false,
+      arrivedAtHospital: snapshot.arrivedAtHospital || false,
       multi_patient:  snapshot.meta ? (snapshot.meta.multi_patient || false) : false,
       demo_source:    snapshot.demo_source   || null,
       second_patient: snapshot.second_patient || false,
@@ -231,6 +232,7 @@ router.post('/:id/turn', async (req, res) => {
       turns:             session.turns,
       hasLoaded:         session.hasLoaded,
       moving:            session.moving,
+      arrivedAtHospital: session.arrivedAtHospital || false,
       demo_source:       session.demoSource       || null,
       second_patient:    session.secondPatientFound || false,
     });
@@ -246,6 +248,7 @@ router.post('/:id/turn', async (req, res) => {
       crewStatus:     result.crewStatus || null,
       demo_source:    result.demoSource   || null,
       second_patient: result.secondPatient || false,
+      arrived:        result.arrived || false,
       closed:         result.closed,
       scene_minute:   session.sceneMinute,
       decompensating: session.seed.decompensation_clock !== null &&

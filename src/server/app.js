@@ -36,4 +36,14 @@ app.get(/.*/, (_req, res) => {
   res.sendFile(path.join(__dirname, '../../public/index.html'));
 });
 
+// Catch-all error handler. Express 5 forwards rejected async handlers here, so
+// any route error returns a clean JSON 500 instead of leaving the socket to
+// hang or close — which is what surfaces in the browser as "Failed to fetch".
+// eslint-disable-next-line no-unused-vars
+app.use((err, _req, res, _next) => {
+  console.error('[unhandled route error]', err && err.stack ? err.stack : err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: 'internal_error', message: 'The server hit an unexpected error — please retry.' });
+});
+
 module.exports = app;

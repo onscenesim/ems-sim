@@ -51,7 +51,24 @@ async function sendTurn(systemPrompt, messages) {
     messages: messagesForApi,
   }, { timeout: REQUEST_TIMEOUT_MS });
 
-  return response.content[0].text;
+  return extractText(response);
+}
+
+/**
+ * Pull the text out of a Messages response defensively. The model can return
+ * multiple blocks, or (rarely) none — reading content[0].text blindly throws an
+ * opaque "Cannot read properties of undefined" and 500s the turn. Join all text
+ * blocks; if there's nothing usable, fail with a clear, retryable message.
+ */
+function extractText(response) {
+  const text = (response && Array.isArray(response.content) ? response.content : [])
+    .filter(b => b && b.type === 'text' && typeof b.text === 'string')
+    .map(b => b.text)
+    .join('');
+  if (!text.trim()) {
+    throw new Error('The model returned an empty response — please retry your last action.');
+  }
+  return text;
 }
 
 /**
@@ -75,7 +92,7 @@ async function sendDebrief(debriefContext, providerLevel) {
     ],
   }, { timeout: REQUEST_TIMEOUT_MS });
 
-  return response.content[0].text;
+  return extractText(response);
 }
 
 module.exports = { sendTurn, sendDebrief };

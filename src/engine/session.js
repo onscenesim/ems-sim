@@ -264,6 +264,7 @@ class Session {
     this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
     this.transportEtaMin = null; // minutes to hospital, set when [EN_ROUTE] fires
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
+    this.arrivedAtHospital = false; // true once a transport skip reaches the bay — gates END server-side
   }
 
   /**
@@ -331,6 +332,12 @@ class Session {
     }
     // Time-skip directive — fast-forward through tedious transport with NO new player treatment.
     if (skipMode) {
+      // A transport skip deterministically lands at the ED bay — record it server-
+      // side so the END/handoff state never depends on whether the model's prose
+      // happened to say "we've arrived". This survives resume via the snapshot.
+      if (skipMode === 'to_hospital' || skipMode === 'to_arrival') {
+        this.arrivedAtHospital = true;
+      }
       const etaMin = this._transportEtaEstimate();
       const noTreat = 'CRITICAL: the provider performs NO new assessments, treatments, medications, or procedures '
         + 'during this skip. The patient\'s condition continues to evolve along its established trajectory, '
@@ -509,10 +516,10 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, closed: true };
+      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true };
     }
 
-    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, closed: false };
+    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: false };
   }
 
   /**
