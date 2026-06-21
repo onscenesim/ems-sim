@@ -299,98 +299,149 @@ function assembleSeedBlock(seed) {
 }
 
 /**
- * Build a scenario context for the debrief API call.
- * Includes both the structured event log and the full conversation transcript
- * so the debrief model can evaluate performance from actual evidence.
+ * Build the objective run log the debrief is judged from.
  *
- * @param {object}  seed      Scenario seed
- * @param {Array}   events    Logged events (procedure rolls, narrative snippets)
- * @param {Array}   messages  Full conversation history [{ role, content }]
+ * Deliberately does NOT include the model's narrated scene prose — the debrief
+ * grades the provider against three objective records only:
+ *   1. seed ground truth (what the patient actually has + how it evolves)
+ *   2. the provider's own actions/orders, each with its dice outcome
+ *   3. the vital-sign timeline (the physiologic response)
+ * This anchors the critique to evidence instead of re-reading and
+ * re-interpreting the entire conversation.
+ *
+ * @param {object} seed   Scenario seed
+ * @param {Array}  turns  Structured per-turn log:
+ *                        [{ user, rolls, sceneMinute, vitals, skip, report }]
  */
-function buildDebriefContext(seed, events, messages = []) {
+function buildDebriefContext(seed, turns = []) {
   const lines = [];
-  lines.push('=== SCENARIO LOG FOR DEBRIEF ===');
-  lines.push(`Scenario ID: ${seed.scenario_id}`);
-  lines.push(`Category: ${seed.category} | Difficulty: ${seed.difficulty}`);
-  lines.push(`Presentation: ${seed.presentation}`);
-  if (seed.true_diagnosis) lines.push(`True diagnosis (curveball reveal): ${seed.true_diagnosis}`);
-  if (seed.special_flags) lines.push(`Special flags: ${seed.special_flags}`);
-  lines.push(`Patient: ${seed.patient_age}yo ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
-  lines.push(`Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
-  lines.push(`Complication: ${seed.complication_type}`);
-  lines.push(`Region: ${seed.region} | Provider: ${seed.provider_level}`);
-  lines.push('');
   const isMultiPatient = seed.special_flags && /two_patients/i.test(seed.special_flags);
-  const procEvents = events.filter(e => e.event_type === 'procedure');
 
-  const formatEvent = ev => {
-    const parts = [`T+${ev.scene_minute}min`, ev.procedure_id || ''];
-    if (ev.roll !== null && ev.roll !== undefined) parts.push(`d20=${ev.roll} vs DC${ev.dc} → ${ev.outcome}`);
-    else if (ev.outcome) parts.push(`→ ${ev.outcome}`);
-    return parts.join(' ');
-  };
-
-  if (isMultiPatient) {
-    const primary   = procEvents.filter(e => (e.patient || 'primary') === 'primary');
-    const secondary = procEvents.filter(e => e.patient === 'secondary');
-    lines.push('--- PROCEDURE ROLL LOG — PRIMARY PATIENT ---');
-    if (primary.length === 0) lines.push('(no procedures logged for primary patient)');
-    else primary.forEach(ev => lines.push(formatEvent(ev)));
-    lines.push('');
-    lines.push('--- PROCEDURE ROLL LOG — SECONDARY PATIENT (NEONATE/OTHER) ---');
-    if (secondary.length === 0) lines.push('(no procedures logged for secondary patient)');
-    else secondary.forEach(ev => lines.push(formatEvent(ev)));
-  } else {
-    lines.push('--- PROCEDURE ROLL LOG ---');
-    if (procEvents.length === 0) lines.push('(no procedure rolls logged)');
-    else procEvents.forEach(ev => lines.push(formatEvent(ev)));
-  }
+  // ── 1. Scenario ground truth ────────────────────────────────────────────
+  lines.push('=== OBJECTIVE RUN LOG FOR DEBRIEF ===');
+  lines.push('');
+  lines.push('[1] SCENARIO GROUND TRUTH (what was actually true — the student could not see this)');
+  lines.push(`  Scenario ID: ${seed.scenario_id}`);
+  lines.push(`  Category: ${seed.category} | Difficulty: ${seed.difficulty}`);
+  lines.push(`  Presentation: ${seed.presentation}`);
+  if (seed.true_diagnosis) lines.push(`  True diagnosis: ${seed.true_diagnosis}`);
+  if (seed.special_flags) lines.push(`  Special flags: ${seed.special_flags}`);
+  lines.push(`  Patient: ${seed.patient_age}yo ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
+  lines.push(`  Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
+  lines.push(`  Complication: ${seed.complication_type}`);
+  lines.push(`  Region: ${seed.region} | Provider level: ${seed.provider_level}`);
+  lines.push(`  Total scene time: ${seed.total_scene_minutes != null ? seed.total_scene_minutes + ' min' : 'N/A'}`);
   lines.push('');
 
-  // ── BGL flag: only fire when presentation actually involves AMS, altered
-  // cognition, seizure, syncope, weakness, or a tox/diabetic picture.
-  // Do NOT fire for patients with normal mentation and a clear non-glucose dx.
-  const bglIndicatedRE = /altered|mental.?status|confus|agitat|ams|disorient|unconsci|unrespons|seiz|syncop|collaps|letharg|obtund|delirium|overdose|intoxicat|diabet|hypoglyc|hyperglycemi|dka|hhs|glucose|blood.?sugar|weak(?:ness)?|dizzi/i;
-  const bglAlwaysCategories = ['toxicology'];
-  const hasBGL = events.some(e =>
-    e.procedure_id === 'glucometry' ||
-    (e.detail && /glucose|BGL|glucomet|finger.?stick/i.test(e.detail))
-  ) || messages.some(m =>
-    /blood.?glucose|blood.?sugar|finger.?stick|glucomet|check.*BGL|BGL.*check|glucose.*check|dextrose|D50|D10|oral glucose/i.test(m.content || '')
-  );
-  const bglIndicated = bglAlwaysCategories.includes(seed.category) ||
-    bglIndicatedRE.test(seed.presentation || '');
-  lines.push('--- FLAGS ---');
-  if (!hasBGL && bglIndicated) {
-    lines.push('BGL_NOT_CHECKED: Glucose was not checked despite a presentation where hypoglycemia is on the differential (AMS, seizure, syncope, weakness, or tox/diabetic context).');
-  }
-  lines.push('');
-
-  // ── Full conversation transcript ─────────────────────────────────────────
-  if (messages.length > 0) {
-    lines.push('--- CONVERSATION TRANSCRIPT ---');
-    lines.push('Use this to evaluate what the provider actually said and did.');
-    for (const msg of messages) {
-      const role = msg.role === 'user' ? 'PROVIDER' : 'SCENE';
-      // Strip machine tags that are irrelevant to clinical evaluation
-      const text = (msg.content || '')
-        .replace(/\[VITALS:[^\]]*\]/gi, '')
-        .replace(/\[SYSTEM ROLL:[^\]]*\]/g, '')
-        .replace(/\s{2,}/g, ' ')
-        .trim();
-      if (!text) continue;
-      const truncated = text.length > 700 ? text.slice(0, 700) + ' [...]' : text;
-      lines.push(`[${role}] ${truncated}`);
+  // ── 2. Provider action log (orders + dice outcomes, chronological) ───────
+  lines.push('[2] PROVIDER ACTIONS (every order the student gave, in sequence, with the dice result)');
+  let actionCount = 0;
+  for (const t of turns) {
+    const action = cleanProviderAction(t);
+    if (action === null) continue;   // pure meta turn (end scenario) — omit
+    actionCount++;
+    lines.push(`  T+${formatMinutes(t.sceneMinute)} — ${action}`);
+    for (const r of (t.rolls || [])) {
+      if (r.no_roll) continue;
+      lines.push(`        - ${formatRoll(r, isMultiPatient)}`);
     }
-    lines.push('');
   }
+  if (actionCount === 0) lines.push('  (no provider actions recorded)');
+  lines.push('');
 
-  lines.push('--- DEBRIEF CONSTRAINTS ---');
-  lines.push('Base all critique on what is actually in the transcript above — do not reference events not evidenced by the record.');
-  lines.push('NEVER fabricate specific facility or hospital names. Use "the receiving facility."');
-  lines.push('NEVER invent medication names, dosages, or procedures not present in the transcript.');
+  // ── 3. Vital-sign timeline (physiologic response) ───────────────────────
+  lines.push("[3] VITAL SIGNS OVER TIME (the patient's objective response — judge trends against the actions above)");
+  let vitalsRows = 0;
+  let lastRow = null;
+  for (const t of turns) {
+    if (!t.vitals) continue;
+    const row = formatVitals(t.vitals);
+    if (!row || row === lastRow) continue;   // skip empty + unchanged-from-previous
+    lines.push(`  T+${formatMinutes(t.sceneMinute)} — ${row}`);
+    lastRow = row;
+    vitalsRows++;
+  }
+  if (vitalsRows === 0) lines.push('  (no vital signs were ever obtained)');
+  lines.push('');
+
+  // ── 4. Objective flags ───────────────────────────────────
+  // BGL: only fire when the presentation puts hypoglycemia on the differential.
+  const bglIndicatedRE = /altered|mental.?status|confus|agitat|ams|disorient|unconsci|unrespons|seiz|syncop|collaps|letharg|obtund|delirium|overdose|intoxicat|diabet|hypoglyc|hyperglycemi|dka|hhs|glucose|blood.?sugar|weak(?:ness)?|dizzi/i;
+  const bglAlwaysCategories = ['toxicology'];
+  const hasBGL = turns.some(t =>
+    (t.rolls || []).some(r => r.procedure_id === 'glucometry') ||
+    /blood.?glucose|blood.?sugar|finger.?stick|glucomet|check.*BGL|BGL.*check|glucose.*check|dextrose|D50|D10|oral glucose/i.test(t.user || '')
+  );
+  const bglIndicated = bglAlwaysCategories.includes(seed.category) || bglIndicatedRE.test(seed.presentation || '');
+  lines.push('[4] OBJECTIVE FLAGS');
+  if (!hasBGL && bglIndicated) {
+    lines.push('  BGL_NOT_CHECKED: Glucose was never checked despite a presentation where hypoglycemia is on the differential.');
+  } else {
+    lines.push('  (none)');
+  }
+  lines.push('');
+
+  // ── How to judge ──────────────────────────────────────
+  lines.push('--- HOW TO JUDGE ---');
+  lines.push('Grade the provider ONLY against the records above — the ground truth, their actions, and the vitals timeline.');
+  lines.push('Do NOT assume or invent any action, medication, dose, assessment, or vital not listed above; if it is not in the log, it did not happen.');
+  lines.push('NEVER fabricate specific facility or hospital names — use "the receiving facility".');
   lines.push('=== END LOG ===');
   return lines.join('\n');
+}
+
+/** Scene minutes (float) -> "M:SS" string for the log. */
+function formatMinutes(min) {
+  const total = Math.max(0, Math.round((min || 0) * 60));
+  const whole = Math.floor(total / 60);
+  const secs = total % 60;
+  return secs ? `${whole}:${String(secs).padStart(2, '0')}` : `${whole}min`;
+}
+
+/**
+ * Turn a stored turn into a clean one-line provider action for the log.
+ * Returns null for pure meta turns that should be omitted (end scenario).
+ */
+function cleanProviderAction(t) {
+  const raw = (t.user || '').trim();
+  if (t.skip || /^\[Skip ahead/i.test(raw)) return '(time-skip - fast-forwarded transport, no treatment rendered)';
+  if (/^end scenario$|^stop the scenario$/i.test(raw)) return null;
+  if (raw === 'Cycle NIBP') return '(re-cycled the NIBP cuff)';
+  const cleaned = raw.replace(/\[REPORT MODE:[^\]]*\]/gi, '').replace(/\s{2,}/g, ' ').trim();
+  if (!cleaned) return null;
+  const prefix = t.report ? '[RADIO REPORT] ' : '';
+  return prefix + (cleaned.length > 400 ? cleaned.slice(0, 400) + ' [...]' : cleaned);
+}
+
+/** Format one dice roll for the action log. */
+function formatRoll(r, isMultiPatient) {
+  const who = isMultiPatient && r.patient ? `[${r.patient}] ` : '';
+  const drug = r.matched_drug ? ` (${r.matched_drug})` : '';
+  if (r.multi_roll && Array.isArray(r.rolls)) {
+    const parts = r.rolls.map(x => `d20=${x.roll} vs DC${x.dc} -> ${x.outcome}`);
+    return `${who}${r.procedure_id}${drug}: ${parts.join(' | ')}`;
+  }
+  return `${who}${r.procedure_id}${drug}: d20=${r.roll} vs DC${r.dc} -> ${r.outcome}`;
+}
+
+/** Render a parsed vitals snapshot as a compact one-liner in a stable order. */
+function formatVitals(v) {
+  if (!v) return '';
+  const order = ['HR', 'BP', 'SpO2', 'ETCO2', 'RR', 'GCS', 'Temp', 'Glucose', 'Pain', 'Rhythm'];
+  const seen = new Set();
+  const parts = [];
+  const emit = (key) => {
+    if (!(key in v) || seen.has(key)) return;
+    seen.add(key);
+    const raw = v[key];
+    const val = (raw && typeof raw === 'object') ? raw.value : raw;
+    if (val === undefined || val === null || val === '') return;
+    const unit = key === 'SpO2' ? '%' : '';
+    parts.push(`${key} ${val}${unit}`);
+  };
+  order.forEach(emit);
+  Object.keys(v).forEach(emit);   // any extra fields beyond the canonical order
+  return parts.join(', ');
 }
 
 module.exports = { assembleSeedBlock, buildDebriefContext };

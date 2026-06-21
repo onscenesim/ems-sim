@@ -507,7 +507,19 @@ class Session {
       detail: reply.substring(0, 120),
     }, this.sceneMinute);
 
-    this.turns.push({ user: userText, assistant: reply, rolls });
+    // Each turn entry doubles as the objective debrief record: the player's raw
+    // order (user), the dice outcomes (rolls), the scene-clock, and the vitals
+    // snapshot at that moment. The debrief is built from THIS structured log
+    // (seed + actions + vitals) rather than re-reading the narrated scene prose.
+    this.turns.push({
+      user: userText,
+      assistant: reply,
+      rolls,
+      sceneMinute: this.sceneMinute,
+      vitals: vitals || null,
+      skip: !!skipMode,
+      report: reportMode === true,
+    });
 
     // Close only on an explicit user signal (transfer of care, end scenario, etc.).
     // Time-skips — including skip-to-hospital — arrive but leave the scenario OPEN so
@@ -526,7 +538,7 @@ class Session {
    * Request the full debrief. Call after session is closed.
    */
   async debrief() {
-    const context = buildDebriefContext(this.seed, this.seed.events, this.messages);
+    const context = buildDebriefContext(this.seed, this.turns);
     const text = await sendDebrief(context, this.seed.provider_level);
     updateRunDebrief(this.sessionId, text);
     this.debriefText = text;   // kept for transcript export
