@@ -6,6 +6,10 @@ const { buildDebriefPrompt } = require('./prompts/debrief');
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const MODEL = 'claude-haiku-4-5-20251001';
+// The debrief is the single most learning-critical output and runs once per
+// scenario on the compact structured log (not the transcript), so it gets the
+// stronger Sonnet model. The per-turn play loop stays on Haiku for cost/latency.
+const DEBRIEF_MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 1024;
 
 // Hard upstream timeout for any Claude call. Without this, a stuck request
@@ -81,7 +85,7 @@ function extractText(response) {
  */
 async function sendDebrief(debriefContext, providerLevel) {
   const response = await client.messages.create({
-    model: MODEL,
+    model: DEBRIEF_MODEL,
     max_tokens: 3000,
     system: buildDebriefPrompt(providerLevel),
     messages: [
