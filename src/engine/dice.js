@@ -270,7 +270,7 @@ function selectDC(proc, contextFlags = {}) {
     case 'needle_decompression':
       return obese ? 13 : dcs[0];
     case 'cricothyrotomy':
-      return difficult_airway ? 17 : dcs[0];
+      return difficult_airway ? 13 : dcs[0];
     case 'emergency_delivery':
       return contextFlags.complicated_delivery ? dcs[1] : dcs[0];
     case 'bleeding_control':
