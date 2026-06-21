@@ -305,26 +305,17 @@ console.log('\n=== 8. EASY difficulty constraints ===');
   assert(noRapidDeterioration, `EASY: trajectory never 'rapidly_deteriorating' (${N} rolls)`);
 }
 
-// ── 9. rollComplication — HARD has ~50% complication rate ────────────────────
+// ── 9. HARD — complications are GUARANTEED (every call carries one) ──────────
 
-console.log('\n=== 9. rollComplication HARD complication rate ===');
+console.log('\n=== 9. HARD guaranteed complications ===');
 {
-  const N = 5000;
-  // d6 roll; HARD: clinical_curveball on [5,6] = 2/6; equipment/bystander on [4,5,6] but
-  // clinical_curveball takes priority → effective complication = any roll >= 4 = 3/6 = 50%
-  // Wait: the thresholds: if roll is 6 → clinical_curveball; if roll in [4,5] → equipment or bystander;
-  // 1,2,3 → none. So P(complication) = 3/6 = 50%
-  let complications = 0;
-  function rollD6() { return Math.floor(Math.random() * 6) + 1; }
+  const N = 400;
+  let allComplicated = true;
   for (let i = 0; i < N; i++) {
-    const roll = rollD6();
-    const type = roll >= 6 ? 'clinical_curveball' :
-                 roll >= 4 ? (Math.random() < 0.5 ? 'equipment_failure' : 'unreliable_bystander') :
-                 'none';
-    if (type !== 'none') complications++;
+    const seed = rollScenario({ difficulty: 'HARD', provider_level: 'ALS', region_id: 'SUBURBAN', history: {} });
+    if (seed.complication_type === 'none') { allComplicated = false; break; }
   }
-  const rate = complications / N;
-  assert(Math.abs(rate - 0.5) < 0.04, `HARD complication rate ~50% (got ${(rate*100).toFixed(1)}%)`);
+  assert(allComplicated, `HARD: every scenario carries a complication (${N} rolls)`);
 }
 
 // ── 10. rollScenario consecutive — no repeated category ──────────────────────

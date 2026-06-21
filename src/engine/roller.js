@@ -45,7 +45,6 @@ function pickCategory(difficulty, history, curveBallWeight) {
       const lastArrest = recentArrest[recentArrest.length - 1];
       if (lastArrest !== undefined && (totalScenarios - lastArrest) < HISTORY_WINDOWS.arrest_spacing) return false;
     }
-    if (difficulty === 'EASY' && cat === 'curveballs') return false;
     return true;
   });
 
@@ -71,7 +70,7 @@ function pickPresentation(category, difficulty, history) {
     if (!diffPool[entryDiff]) return false;
     const key = entry.presentation || entry.surface_presentation;
     if (recentPresentations.has(key)) return false;
-    if (entry.special_flags && entry.special_flags.includes('hardmode_exclusive') && difficulty !== 'HARD' && difficulty !== 'BLACK_CLOUD') return false;
+    // Full roster on every difficulty — no presentation is gated by mode.
     // Space zoo scenarios globally across all categories
     if (entry.special_flags && entry.special_flags.includes('zoo_scenario')) {
       if (lastZoo !== undefined && (totalScenarios - lastZoo) < HISTORY_WINDOWS.zoo_spacing) return false;
@@ -125,8 +124,9 @@ function rollTrajectory(difficulty) {
     if (r < 0.75) return 'slowly_deteriorating';
     return 'rapidly_deteriorating';
   } else {
-    if (r < 0.15) return 'stable';
-    if (r < 0.5) return 'slowly_deteriorating';
+    // HARD — EMS on a bad day: more calls go sour, and sooner.
+    if (r < 0.10) return 'stable';
+    if (r < 0.40) return 'slowly_deteriorating';
     return 'rapidly_deteriorating';
   }
 }
@@ -134,9 +134,9 @@ function rollTrajectory(difficulty) {
 function rollDecompensationClock(difficulty, trajectory) {
   if (trajectory === 'stable') return null;
   if (difficulty === 'BLACK_CLOUD') return Math.floor(Math.random() * 4) + 1; // 1-4 min
-  if (difficulty === 'EASY') return Math.floor(Math.random() * 6) + 15;   // 15-20 min
+  if (difficulty === 'EASY') return Math.floor(Math.random() * 6) + 15;   // 15-20 min — forgiving even for sick calls
   if (difficulty === 'NORMAL') return Math.floor(Math.random() * 10) + 8;  // 8-17 min
-  return Math.floor(Math.random() * 8) + 4;                                // 4-11 min
+  return Math.floor(Math.random() * 6) + 3;                                // HARD: 3-8 min — earlier
 }
 
 function rollComplication(difficulty) {
@@ -146,15 +146,14 @@ function rollComplication(difficulty) {
     return { roll: 6, type: 'all', types: ['equipment_failure', 'unreliable_bystander', 'clinical_curveball'] };
   }
   const roll = d6();
-  const thresholds = {
-    NORMAL: { equipment_failure: [5, 6], unreliable_bystander: [5, 6], clinical_curveball: [6] },
-    HARD:   { equipment_failure: [4, 5, 6], unreliable_bystander: [4, 5, 6], clinical_curveball: [5, 6] },
-  }[difficulty];
-
-  if (thresholds.clinical_curveball.includes(roll)) return { roll, type: 'clinical_curveball' };
-  if (thresholds.equipment_failure.includes(roll)) {
+  // HARD — guaranteed complication every call (EMS on a bad day).
+  if (difficulty === 'HARD') {
+    if (roll >= 5) return { roll, type: 'clinical_curveball' };
     return { roll, type: Math.random() < 0.5 ? 'equipment_failure' : 'unreliable_bystander' };
   }
+  // NORMAL — complications fire at the baseline rate.
+  if (roll === 6) return { roll, type: 'clinical_curveball' };
+  if (roll === 5) return { roll, type: Math.random() < 0.5 ? 'equipment_failure' : 'unreliable_bystander' };
   return { roll, type: 'none' };
 }
 

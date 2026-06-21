@@ -302,7 +302,9 @@ function rollD20Disadvantage() {
 /**
  * Outcomes: nat-1 = COMPLICATION | ≥DC = SUCCESS | ≥DC-3 = MARGINAL | else FAILURE
  */
-function calcOutcome(roll, dc) {
+function calcOutcome(roll, dc, difficulty) {
+  // EASY: rolls succeed automatically unless the player rolls a natural 1.
+  if (difficulty === 'EASY') return roll === 1 ? 'COMPLICATION' : 'SUCCESS';
   if (roll === 1) return 'COMPLICATION';
   if (roll >= dc) return 'SUCCESS';
   if (roll >= dc - 3) return 'MARGINAL';
@@ -331,7 +333,8 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
   const penalty = difficulty === 'BLACK_CLOUD' ? BLACK_CLOUD_DC_PENALTY
                 : difficulty === 'HARD'        ? HARD_MODE_DC_PENALTY
                 : 0;
-  const useDis = false;
+  // BLACK_CLOUD: every roll is at DISADVANTAGE — roll twice, take the lower.
+  const useDis = difficulty === 'BLACK_CLOUD';
 
   // Multi-DC procedures (cardioversion, defibrillation, pacing)
   if (Array.isArray(dc)) {
@@ -340,7 +343,7 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
       let r, bothRolls;
       if (useDis) { const d2 = rollD20Disadvantage(); r = d2.result; bothRolls = d2.both; }
       else        { r = rollD20(); }
-      return { dc: adj, base_dc: d, roll: r, both_rolls: bothRolls || null, outcome: calcOutcome(r, adj) };
+      return { dc: adj, base_dc: d, roll: r, both_rolls: bothRolls || null, outcome: calcOutcome(r, adj, difficulty) };
     });
     const outcomes = rolls.map(r => r.outcome);
     const summary = outcomes.includes('COMPLICATION') ? 'COMPLICATION'
@@ -366,7 +369,7 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
   let roll, bothRolls;
   if (useDis) { const d2 = rollD20Disadvantage(); roll = d2.result; bothRolls = d2.both; }
   else        { roll = rollD20(); }
-  const outcome = calcOutcome(roll, adjustedDC);
+  const outcome = calcOutcome(roll, adjustedDC, difficulty);
 
   return {
     procedure_id: proc.id,

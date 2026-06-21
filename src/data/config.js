@@ -15,11 +15,14 @@ const CATEGORY_WEIGHTS = {
   ob: 2,
 };
 
+// Full roster on every difficulty — no call type is off limits to anyone.
+// Difficulty changes the MECHANICS (roll odds, complications, deterioration),
+// not which calls you can draw.
 const DIFFICULTY_POOL = {
-  EASY:   { EASY: true,  NORMAL: false, HARD: false },
-  NORMAL: { EASY: true,  NORMAL: true,  HARD: false },
-  HARD:        { EASY: true,  NORMAL: true,  HARD: true  },
-  BLACK_CLOUD:  { EASY: true,  NORMAL: true,  HARD: true  },
+  EASY:   { EASY: true, NORMAL: true, HARD: true },
+  NORMAL: { EASY: true, NORMAL: true, HARD: true },
+  HARD:        { EASY: true, NORMAL: true, HARD: true },
+  BLACK_CLOUD:  { EASY: true, NORMAL: true, HARD: true },
 };
 
 const MODIFIER_FIRE_RATES = {
@@ -40,13 +43,13 @@ const MODIFIER_FIRE_RATES = {
 const COMPLICATION_THRESHOLDS = {
   EASY:   { enabled: false },
   NORMAL: { enabled: true, equipment_failure: [5,6], unreliable_bystander: [5,6], clinical_curveball: [6] },
-  HARD:   { enabled: true, equipment_failure: [4,5,6], unreliable_bystander: [4,5,6], clinical_curveball: [5,6] },
+  HARD:   { enabled: true, guaranteed: true },  // every HARD call carries a complication
 };
 
-const HARD_MODE_DC_PENALTY    = 2;
-const BLACK_CLOUD_DC_PENALTY  = 5;  // universe is working against you
+const HARD_MODE_DC_PENALTY    = 2;   // slightly tougher rolls
+const BLACK_CLOUD_DC_PENALTY  = 0;   // black cloud's mechanic is DISADVANTAGE (roll twice, take lower), not a flat DC bump
 
-const CURVEBALL_WEIGHTS = { EASY: 0, NORMAL: 6, HARD: 9 };
+const CURVEBALL_WEIGHTS = { EASY: 6, NORMAL: 6, HARD: 9, BLACK_CLOUD: 9 };
 
 const HISTORY_WINDOWS = {
   category:     10,
