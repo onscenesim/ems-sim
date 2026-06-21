@@ -4,13 +4,12 @@
   "description": "EMS training simulation — data layer",
   "main": "src/engine/roller.js",
   "scripts": {
-    "test": "node test/test-roller.js",
+    "test": "node test/test-roller.js && node test/test-randomness.js",
     "play": "node bin/play.js",
     "play:easy": "node bin/play.js EASY",
     "play:hard": "node bin/play.js HARD",
     "start": "node bin/server.js",
-    "serve": "node bin/server.js",
-    "serve:hard": "node bin/server.js HARD"
+    "serve": "node bin/server.js"
   },
   "engines": {
     "node": ">=18"
