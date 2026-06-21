@@ -330,7 +330,9 @@ class Session {
         + 'Acknowledge the report, ask any clinically appropriate follow-up questions, '
         + 'and confirm estimated time of arrival or transfer acceptance as appropriate.]';
     }
-    // Time-skip directive — fast-forward through tedious transport with NO new player treatment.
+    // Time-skip directive — fast-forward an uneventful transport leg, assuming the
+    // provider kept monitoring (not an abandonment of care), and pick up from the
+    // patient's current state.
     if (skipMode) {
       // A transport skip deterministically lands at the ED bay — record it server-
       // side so the END/handoff state never depends on whether the model's prose
@@ -339,9 +341,11 @@ class Session {
         this.arrivedAtHospital = true;
       }
       const etaMin = this._transportEtaEstimate();
-      const noTreat = 'CRITICAL: the provider performs NO new assessments, treatments, medications, or procedures '
-        + 'during this skip. The patient\'s condition continues to evolve along its established trajectory, '
-        + 'including any deterioration that was already underway.';
+      const noTreat = 'IMPORTANT: a time-skip is a fast-forward through an uneventful stretch, NOT an abandonment of care. '
+        + 'Assume the provider kept monitoring the patient and continued whatever care was already in progress the entire '
+        + 'time; they simply did not issue new minute-to-minute orders during the skipped interval. The patient\'s '
+        + 'condition picks up from its CURRENT state and continues to evolve along its established trajectory, including '
+        + 'any deterioration already underway.';
       // Crew positions flip when the unit starts moving — the highest-risk moment for a
       // tag/narration mismatch. We know who drives, so we hand the model the exact
       // CREW_STATUS to emit rather than leaving it to discretion. Priority:
@@ -465,6 +469,14 @@ class Session {
     // and sets moving/hasLoaded, so the client's load/depart animations always fire.
     if (skipMode === 'to_ambulance') loading = true;
     else if (skipMode === 'to_hospital' || skipMode === 'to_arrival') enRoute = true;
+    // Narration fallback: if the model clearly describes the unit departing/driving
+    // but forgot the [EN_ROUTE] tag, treat it as en route so the transport phase (and
+    // the SKIP button, which only appears once moving) engages. Keys on the model's
+    // own prose — more reliable than its tag discipline — with departure-specific
+    // wording to avoid false positives. Skipped in report mode.
+    if (!enRoute && !reportMode && /\b(en[ -]?route to|pulls? (?:away|out|onto)|pulled away|wheels (?:are )?rolling|under ?way to|begins? the (?:drive|transport)|heading (?:to|toward) (?:the )?(?:hospital|er|ed|trauma|facility)|on (?:the|our) way to (?:the )?(?:hospital|er|ed|trauma)|transporting (?:to|her|him|the patient|emergent|priority|code))\b/i.test(reply)) {
+      enRoute = true;
+    }
     // Safety net: if EN_ROUTE fires but LOADING was never emitted (Claude combined both into
     // one turn without tagging loading), auto-inject loading so the animation fires correctly.
     if (enRoute) {

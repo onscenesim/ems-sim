@@ -803,7 +803,7 @@ async function sendTurn(msg, opts = {}) {
     // yet (handoff comes next), but the button should offer END from here on.
     // The server is authoritative (data.arrived) and persists across resume; the
     // skipMode check is a belt-and-suspenders fallback for the same turn.
-    if (data.arrived || skipMode === 'to_hospital' || skipMode === 'to_arrival') arrivedAtHospital = true;
+    if (data.arrived || skipMode === 'to_arrival') arrivedAtHospital = true;
     // Relabel the skip button to match the new transport phase.
     updateSkipBtn();
 
@@ -981,49 +981,38 @@ function showDebriefCTA() {
 //   en route              → skip remaining drive to the bay       (ends scenario)
 // To end on scene (death, refusal, TOR) the student types a close phrase such
 // as "end scenario" or "terminate resuscitation".
+// The skip button exists ONLY for the transport leg — fast-forwarding the long,
+// uneventful drive once you're already en route. It is hidden on scene and while
+// loading; it appears after departure as "SKIP AHEAD" and becomes "END" on arrival.
 const SKIP_PHASES = {
-  to_ambulance: {
-    label: '» LOAD',
-    title: 'Skip ahead — load the patient into the ambulance',
-    userMsg: '[Skip ahead — load the patient]',
-    confirmTitle: 'SKIP TO AMBULANCE?',
-    confirmBody: 'The crew packages and loads the patient. No further treatment is rendered during the time skip.',
-    confirmLabel: 'LOAD & SKIP',
-  },
-  to_hospital: {
-    label: '» HOSP',
-    title: 'Skip ahead — transport to the hospital and arrive at the bay',
-    userMsg: '[Skip ahead — transport to the hospital]',
-    confirmTitle: 'SKIP TO HOSPITAL?',
-    confirmBody: 'The unit transports and arrives at the ED bay, where the team is ready for your handoff. No further treatment is rendered during the time skip — and you still give your report before ending.',
-    confirmLabel: 'TRANSPORT & SKIP',
-  },
   to_arrival: {
-    label: '» BAY',
-    title: 'Skip ahead — finish the drive and arrive at the bay',
-    userMsg: '[Skip ahead — arrive at the hospital]',
-    confirmTitle: 'SKIP TO BAY DOORS?',
-    confirmBody: 'The unit finishes the drive and arrives at the ED bay, where the team is ready for your handoff. No further treatment is rendered during the time skip — and you still give your report before ending.',
-    confirmLabel: 'SKIP TO BAY',
+    label: 'SKIP AHEAD »',
+    title: 'Fast-forward the rest of the drive — you keep monitoring the patient',
+    userMsg: '[Skip ahead — continue monitoring and arrive at the hospital]',
+    confirmTitle: 'SKIP AHEAD TO ARRIVAL?',
+    confirmBody: 'Fast-forward the rest of the transport. You keep monitoring the patient the whole way — this only skips the routine minute-to-minute checks, not your care. You arrive at the ED bay where the team is ready for your handoff, and you still give your report before ending.',
+    confirmLabel: 'SKIP AHEAD',
   },
   end: {
     label: 'END',
     title: 'End the call and generate the debrief',
     confirmTitle: 'END SCENARIO?',
-    confirmBody: 'Close the call and run the debrief. Do this once you have given your handoff report.',
+    confirmBody: 'You\'re at the hospital — nothing left to skip. Close the call and run the debrief. Do this once you have given your handoff report.',
     confirmLabel: 'END & DEBRIEF',
   },
 };
 
 function currentSkipMode() {
-  if (arrivedAtHospital) return 'end';
-  if (!hasPlayedLoading) return 'to_ambulance';
-  if (!hasPlayedDepart)  return 'to_hospital';
-  return 'to_arrival';
+  if (arrivedAtHospital) return 'end';     // at the hospital — button becomes END
+  if (hasPlayedDepart)   return 'to_arrival'; // en route — can fast-forward the drive
+  return null;                              // on scene / loading — no skip offered
 }
 
 function updateSkipBtn() {
-  const phase = SKIP_PHASES[currentSkipMode()];
+  const mode = currentSkipMode();
+  if (!mode) { skipBtn.style.display = 'none'; return; }   // hidden until departure
+  skipBtn.style.display = '';
+  const phase = SKIP_PHASES[mode];
   skipBtn.textContent = phase.label;
   skipBtn.title       = phase.title;
 }
@@ -1031,6 +1020,7 @@ function updateSkipBtn() {
 skipBtn.addEventListener('click', () => {
   if (isClosed || skipBtn.disabled) return;
   const mode  = currentSkipMode();
+  if (!mode) return;                        // not en route yet — nothing to skip
   const phase = SKIP_PHASES[mode];
   showConfirm({
     title:        phase.confirmTitle,
