@@ -25,20 +25,28 @@ const CALLER_BEHAVIORS = [
   { text: "interpreter on the line — significant delay between questions and answers", requires: null }
 ];
 
+// `weight` controls how often a condition is picked once weather fires at all.
+// Everyday weather (rain, fog, ordinary cold/heat/snow) should dominate; the
+// dramatic, scene-defining events (tornado, blizzard, dust storm, flooding,
+// wildfire smoke) are rare surprises, not the norm. Roughly: common ~6, ordinary
+// seasonal ~3-4, dramatic ~1. Region gating still applies on top of this.
 const WEATHER = [
-  { text: "extreme cold — patient and crew risk, hypothermia factor on any outdoor scene", requires: "not in southern US or tropical regions" },
-  { text: "ice and snow — extended extrication likely, helicopter unavailable", requires: "not in southern US, tropical, or desert southwest" },
-  { text: "extreme heat — patient and crew risk, heat as complicating factor", requires: "not in northern Canada or pacific northwest" },
-  { text: "heavy rain — limited visibility, helicopter unavailable", requires: "not in desert southwest or arctic" },
-  { text: "high winds — helicopter unavailable", requires: null },
-  { text: "fog — delayed response, helicopter unavailable", requires: "not in desert southwest" },
-  { text: "wildfire smoke — air quality critical, respiratory risk for patient and crew", requires: "not in eastern US or tropical regions" },
-  { text: "flooding — road access compromised, water rescue possible", requires: "not in desert southwest or arctic" },
-  { text: "tornado warning active — shelter in place considerations", requires: "not in pacific coast or arctic" },
-  { text: "blizzard conditions — extended response time, crew exposure risk", requires: "not in southern US or tropical regions" },
-  { text: "humid heat — heat index significantly above air temperature", requires: "not in arctic, northern Canada, or pacific northwest" },
-  { text: "black ice — invisible road hazard, extended response time", requires: "not in southern US or tropical regions" },
-  { text: "dust storm — near zero visibility", requires: "not in eastern US, pacific northwest, or arctic" }
+  // Common, everyday weather — should make up the large majority of weather calls.
+  { text: "heavy rain — limited visibility, helicopter unavailable", requires: "not in desert southwest or arctic", weight: 6 },
+  { text: "fog — delayed response, helicopter unavailable", requires: "not in desert southwest", weight: 6 },
+  { text: "high winds — helicopter unavailable", requires: null, weight: 4 },
+  // Ordinary seasonal conditions — region-gated, moderately common where they fit.
+  { text: "ice and snow — extended extrication likely, helicopter unavailable", requires: "not in southern US, tropical, or desert southwest", weight: 4 },
+  { text: "extreme cold — patient and crew risk, hypothermia factor on any outdoor scene", requires: "not in southern US or tropical regions", weight: 3 },
+  { text: "extreme heat — patient and crew risk, heat as complicating factor", requires: "not in northern Canada or pacific northwest", weight: 3 },
+  { text: "humid heat — heat index significantly above air temperature", requires: "not in arctic, northern Canada, or pacific northwest", weight: 3 },
+  { text: "black ice — invisible road hazard, extended response time", requires: "not in southern US or tropical regions", weight: 3 },
+  // Dramatic, scene-defining events — rare surprises only.
+  { text: "wildfire smoke — air quality critical, respiratory risk for patient and crew", requires: "not in eastern US or tropical regions", weight: 1 },
+  { text: "flooding — road access compromised, water rescue possible", requires: "not in desert southwest or arctic", weight: 1 },
+  { text: "blizzard conditions — extended response time, crew exposure risk", requires: "not in southern US or tropical regions", weight: 1 },
+  { text: "tornado warning active — shelter in place considerations", requires: "not in pacific coast or arctic", weight: 1 },
+  { text: "dust storm — near zero visibility", requires: "not in eastern US, pacific northwest, or arctic", weight: 1 }
 ];
 
 const TIME_OF_DAY = [

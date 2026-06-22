@@ -192,14 +192,16 @@ function rollWeather(difficulty, region) {
     const exc = w.requires.toLowerCase();
     if (exc.includes('not in southern us') && regionExcludes.includes('tropical')) return false;
     if (exc.includes('not in desert southwest') && regionExcludes.includes('sprawl')) return false;
-    // Wildfire smoke is primarily a California/mountain-west phenomenon.
-    // Outside CA, allow it only ~10% of the time to keep it occasional but rare.
-    if (!isCA && w.text.toLowerCase().includes('wildfire') && Math.random() > 0.10) return false;
-    // Tornadoes are rare in most regions; keep them as an occasional surprise (10%).
-    if (w.text.toLowerCase().includes('tornado') && Math.random() > 0.10) return false;
     return true;
   });
-  return eligible.length > 0 ? pickRandom(eligible).text : null;
+  if (eligible.length === 0) return null;
+  // Weighted pick so everyday weather dominates and dramatic events stay rare
+  // (weights live on each WEATHER entry). Wildfire smoke is a California signature,
+  // so weight it up there and leave it as a rare surprise elsewhere.
+  return weightedRandom(eligible, w => {
+    if (w.text.toLowerCase().includes('wildfire')) return isCA ? 4 : w.weight;
+    return w.weight;
+  }).text;
 }
 
 function rollSpecialCircumstance(difficulty, category) {
