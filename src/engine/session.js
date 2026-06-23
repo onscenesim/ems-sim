@@ -482,15 +482,22 @@ class Session {
     // pulling away/out, beginning the drive) can't appear in that opening, so they
     // stay unanchored. Skipped in report mode.
     const _dest = '(?:the )?(?:hospital|er|ed|emergency department|trauma(?: center)?|facility|receiving(?: facility)?|level [0-9])';
-    const _departRe = new RegExp(
+    // Strong signal: OUR rig is heading for a hospital destination. Always trustworthy.
+    const _hospitalRe = new RegExp(
       '\\b(?:' +
         '(?:en[ -]?route|under ?way|on (?:the|our) way|heading) (?:to|toward) ' + _dest +
         '|transporting (?:emergent|priority|code|(?:to|her|him|the patient) (?:to )?' + _dest + ')' +
         '|begins? the (?:drive|transport) to ' + _dest +
-        '|pulls? (?:away|out)|pulled away|wheels (?:are )?rolling' +
       ')\\b', 'i');
-    if (!enRoute && !reportMode && _departRe.test(reply)) {
-      enRoute = true;
+    // Weak signal: pure departure-motion with no destination named. Trustworthy only
+    // for OUR ambulance — a fire engine / PD unit / backup "pulling away" or "rolling"
+    // off the scene must NOT flip us into transport. Suppress when an other-unit subject
+    // immediately precedes the motion verb.
+    const _motionRe = /\b(?:pulls? (?:away|out)|pulled away|wheels (?:are )?rolling)\b/i;
+    const _otherUnitRe = /\b(?:engine|fire|police|pd|cruiser|squad car|ladder|chief|sheriff|deputy|backup(?: unit)?|second (?:unit|crew)|the other (?:unit|crew|rig)|first responders?)\b[^.!?]{0,30}\b(?:pulls?|pulled|wheels)\b/i;
+    if (!enRoute && !reportMode) {
+      if (_hospitalRe.test(reply)) enRoute = true;
+      else if (_motionRe.test(reply) && !_otherUnitRe.test(reply)) enRoute = true;
     }
     // Safety net: if EN_ROUTE fires but LOADING was never emitted (Claude combined both into
     // one turn without tagging loading), auto-inject loading so the animation fires correctly.
