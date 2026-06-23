@@ -469,12 +469,27 @@ class Session {
     // and sets moving/hasLoaded, so the client's load/depart animations always fire.
     if (skipMode === 'to_ambulance') loading = true;
     else if (skipMode === 'to_hospital' || skipMode === 'to_arrival') enRoute = true;
-    // Narration fallback: if the model clearly describes the unit departing/driving
-    // but forgot the [EN_ROUTE] tag, treat it as en route so the transport phase (and
-    // the SKIP button, which only appears once moving) engages. Keys on the model's
-    // own prose — more reliable than its tag discipline — with departure-specific
-    // wording to avoid false positives. Skipped in report mode.
-    if (!enRoute && !reportMode && /\b(en[ -]?route to|pulls? (?:away|out|onto)|pulled away|wheels (?:are )?rolling|under ?way to|begins? the (?:drive|transport)|heading (?:to|toward) (?:the )?(?:hospital|er|ed|trauma|facility)|on (?:the|our) way to (?:the )?(?:hospital|er|ed|trauma)|transporting (?:to|her|him|the patient|emergent|priority|code))\b/i.test(reply)) {
+    // Narration fallback: if the model clearly describes the unit departing FOR THE
+    // HOSPITAL but forgot the [EN_ROUTE] tag, treat it as en route so the transport
+    // phase (and the SKIP button, which only appears once moving) engages. Keys on the
+    // model's own prose — more reliable than its tag discipline.
+    //
+    // CRITICAL: every "en route / under way / heading / on our way / transporting"
+    // branch MUST be anchored to a hospital-destination keyword. The scene-response
+    // narration on turn 1 of every scenario says the unit is "en route to the scene /
+    // residence / call" — an unanchored match there falsely fired load-and-go on the
+    // first action of every round. Pure departure-motion phrases (wheels rolling,
+    // pulling away/out, beginning the drive) can't appear in that opening, so they
+    // stay unanchored. Skipped in report mode.
+    const _dest = '(?:the )?(?:hospital|er|ed|emergency department|trauma(?: center)?|facility|receiving(?: facility)?|level [0-9])';
+    const _departRe = new RegExp(
+      '\\b(?:' +
+        '(?:en[ -]?route|under ?way|on (?:the|our) way|heading) (?:to|toward) ' + _dest +
+        '|transporting (?:emergent|priority|code|(?:to|her|him|the patient) (?:to )?' + _dest + ')' +
+        '|begins? the (?:drive|transport) to ' + _dest +
+        '|pulls? (?:away|out)|pulled away|wheels (?:are )?rolling' +
+      ')\\b', 'i');
+    if (!enRoute && !reportMode && _departRe.test(reply)) {
       enRoute = true;
     }
     // Safety net: if EN_ROUTE fires but LOADING was never emitted (Claude combined both into
