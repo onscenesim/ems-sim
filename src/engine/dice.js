@@ -125,10 +125,15 @@ const FUZZY_INPUT_BLOCKLIST = new Set([
   'restrain', 'restrained', 'restrains', 'restraining',
 ]);
 
+// Cap fuzzy correction at a SINGLE edit, regardless of length. Real-world drug
+// misspellings are overwhelmingly one error ("epinephrin", "amioderone",
+// "midazlam" — all edit distance 1). Allowing distance 2 on long words turned
+// ordinary English into unrelated drugs by deleting/altering a couple letters
+// ("breathing" -> "brethine"/terbutaline, "restrain" -> "strain"), phantom-
+// logging meds into the debrief. One-edit correction keeps the genuine typo
+// fixes while removing that whole class of two-edit false positives.
 function fuzzyThreshold(len) {
-  if (len < 5)  return 0;
-  if (len < 7)  return 1;
-  return 2;
+  return len < 5 ? 0 : 1;
 }
 
 /**
@@ -193,7 +198,12 @@ function isSpecificSynonym(key) {
 
 // Negation tokens that, when they immediately precede a procedure keyword,
 // indicate the user is talking about NOT doing it — suppress the roll.
-const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?|stage(?:d|s|ing)?|prep(?:ped|ping)?|staging|standby|stand-by|remove(?:d|s|ing)?|remov(?:e|ing)|pull(?:ed|ing|s|ing\s+out)?|discontinue(?:d|s|ing)?|d\/c)\b/i;
+// `stop/halt/cease/pause/quit` suppress an order to CEASE an in-progress
+// intervention ("stop CPR while I get a line") — without them, "stop CPR" matched
+// the bare "cpr" keyword and phantom-rolled a compression attempt. Safe to add:
+// the hemorrhage-control synonym is "control the bleeding", so "stop the bleeding"
+// does not collide here.
+const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?|stage(?:d|s|ing)?|prep(?:ped|ping)?|staging|standby|stand-by|remove(?:d|s|ing)?|remov(?:e|ing)|pull(?:ed|ing|s|ing\s+out)?|discontinue(?:d|s|ing)?|d\/c|stop(?:ped|ping)?|halt(?:ed|ing)?|cease(?:d|ing)?|paus(?:e|ed|ing)|quit(?:ting)?)\b/i;
 
 // Route qualifier prepositions: when immediately preceding a device/access synonym,
 // the user is specifying an admin route ("push epi through the IO"), not placing new access.
