@@ -1502,7 +1502,8 @@ function buildPatientCard(patient, scenarioId) {
       ? nameParts.slice(1).join(' ').toUpperCase() + ', ' + nameParts[0]
       : (patient.name || '—');
     field('NAME', nameFormatted);
-    field('AGE', patient.age ? patient.age + ' years' : '—');
+    // Infants/neonates have patient.age === 0; show the months/days display instead.
+    field('AGE', patient.age ? patient.age + ' years' : (patient.age_display || '—'));
     field('SEX', patient.sex === 'male' ? 'Male' : patient.sex === 'female' ? 'Female' : '—');
 
     rule();
@@ -2018,7 +2019,7 @@ function formatTranscript(t) {
     lines.push(`Region:         ${typeof meta.region === 'object' ? meta.region.name || '' : meta.region || ''}`);
     if (meta.patient) {
       const p = meta.patient;
-      lines.push(`Patient:        ${p.age || ''}yo ${p.sex || ''}`);
+      lines.push(`Patient:        ${p.age ? p.age + 'yo' : (p.age_display || '')} ${p.sex || ''}`);
       if (p.weight_kg) lines.push(`Weight:         ${p.weight_kg} kg`);
       if (p.chief_complaint) lines.push(`Chief Complaint: ${p.chief_complaint}`);
     }

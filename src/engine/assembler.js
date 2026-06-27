@@ -47,7 +47,7 @@ function assembleSeedBlock(seed) {
   // --- Patient card ---
   lines.push('--- PATIENT CARD (hidden from user) ---');
   lines.push(`Patient name: ${seed.patient_name}`);
-  lines.push(`Age: ${seed.patient_age} (${seed.age_group.replace('_', ' ')})`);
+  lines.push(`Age: ${seed.patient_age_display || `${seed.patient_age} years old`} (${seed.age_group.replace('_', ' ')})`);
   lines.push(`Sex: ${seed.sex}`);
   lines.push(`Category: ${seed.category}`);
   if (isCurveball) {
@@ -327,7 +327,7 @@ function buildDebriefContext(seed, turns = []) {
   lines.push(`  Presentation: ${seed.presentation}`);
   if (seed.true_diagnosis) lines.push(`  True diagnosis: ${seed.true_diagnosis}`);
   if (seed.special_flags) lines.push(`  Special flags: ${seed.special_flags}`);
-  lines.push(`  Patient: ${seed.patient_age}yo ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
+  lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
   lines.push(`  Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
   lines.push(`  Complication: ${seed.complication_type}`);
   lines.push(`  Region: ${seed.region} | Provider level: ${seed.provider_level}`);

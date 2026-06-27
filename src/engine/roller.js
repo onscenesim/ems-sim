@@ -95,6 +95,22 @@ function rollAgeGroup(category, presentationEntry) {
   return pickRandom(groups);
 }
 
+// Developmental sub-bands for pediatric age_override qualifiers. A pediatric
+// presentation can target a specific band ("pediatric — infant predominantly");
+// the band keyword(s) after the em-dash narrow the rolled age. Infant/neonate
+// map to 0 years and are rendered in months/days by formatAgeDisplay.
+const SUB_AGE_RANGES = {
+  neonate:     [0, 0],
+  newborn:     [0, 0],
+  infant:      [0, 0],
+  toddler:     [1, 3],
+  preschool:   [3, 5],
+  'school age':[6, 12],
+  'school-age':[6, 12],
+  adolescent:  [13, 17],
+  teen:        [13, 17],
+};
+
 function rollAgeFromGroup(group) {
   const ranges = {
     pediatric:    [1, 17],
@@ -104,8 +120,36 @@ function rollAgeFromGroup(group) {
   };
   // age_override entries may be descriptive, e.g. "pediatric — toddler predominantly"
   const normalized = group.split('—')[0].trim().toLowerCase().replace(' ', '_');
-  const [min, max] = ranges[normalized] || [25, 55];
+  let [min, max] = ranges[normalized] || [25, 55];
+  // Honor a pediatric sub-band qualifier so e.g. SIDS ("infant predominantly")
+  // can't roll a 10-year-old. Union the ranges of every band keyword present.
+  if (normalized === 'pediatric' && group.includes('—')) {
+    const qualifier = group.slice(group.indexOf('—') + 1).toLowerCase();
+    let lo = null, hi = null;
+    for (const [kw, [kmin, kmax]] of Object.entries(SUB_AGE_RANGES)) {
+      if (qualifier.includes(kw)) {
+        lo = lo === null ? kmin : Math.min(lo, kmin);
+        hi = hi === null ? kmax : Math.max(hi, kmax);
+      }
+    }
+    if (lo !== null) { min = lo; max = hi; }
+  }
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Human-readable age for the patient card and UI. Infants (age 0) render in
+// months; neonates render in days, so an "infant" scenario narrates as a real
+// baby ("3 months old"), not "0 years". Everyone else renders in years.
+function formatAgeDisplay(group, ageYears) {
+  if (ageYears === 0) {
+    if (/neonate|newborn/i.test(group)) {
+      const days = 1 + Math.floor(Math.random() * 27); // 1–27 days
+      return `${days} day${days === 1 ? '' : 's'} old (newborn)`;
+    }
+    const months = 1 + Math.floor(Math.random() * 11); // 1–11 months
+    return `${months} month${months === 1 ? '' : 's'} old (infant)`;
+  }
+  return `${ageYears} year${ageYears === 1 ? '' : 's'} old`;
 }
 
 function rollSex(presentationEntry) {
@@ -277,6 +321,7 @@ function rollScenario(opts = {}) {
 
   const ageGroup = rollAgeGroup(category, presentation);
   const age = rollAgeFromGroup(ageGroup);
+  const ageDisplay = formatAgeDisplay(ageGroup, age);
   const sex = rollSex(presentation);
   const patientName = rollPatientName(sex);
   const trajectory = category === 'doa' ? 'stable' : rollTrajectory(difficulty);
@@ -314,6 +359,7 @@ function rollScenario(opts = {}) {
     special_flags: presentation.special_flags || null,
     patient_name: patientName,
     patient_age: age,
+    patient_age_display: ageDisplay,
     age_group: ageGroup,
     sex,
     comorbidity_bundle: comorbidityBundle,

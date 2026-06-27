@@ -156,6 +156,7 @@ router.post('/new', async (req, res) => {
         patient: {
           name:        seed.patient_name,
           age:         seed.patient_age,
+          age_display: seed.patient_age_display || null,
           sex:         seed.sex,
           age_group:   seed.age_group,
           comorbidity: seed.comorbidity_bundle || null,
@@ -176,6 +177,7 @@ router.post('/new', async (req, res) => {
       patient: {
         name:        seed.patient_name,
         age:         seed.patient_age,
+        age_display: seed.patient_age_display || null,
         sex:         seed.sex,
         age_group:   seed.age_group,
         comorbidity: seed.comorbidity_bundle || null,

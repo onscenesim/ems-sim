@@ -310,7 +310,10 @@ function buildContextFlags(seed) {
   const comorbidity = seed.comorbidity_bundle || '';
   return {
     obese: comorbidity.includes('metabolic') || comorbidity.includes('obese'),
-    pediatric: seed.age_group === 'pediatric',
+    // age_group is the override string (e.g. "pediatric — infant predominantly"),
+    // so match the base band, not an exact 'pediatric' — otherwise the pediatric
+    // airway DC bump never fired for any qualified pediatric scenario.
+    pediatric: String(seed.age_group || '').toLowerCase().startsWith('pediatric'),
     hypotensive: false,      // updated dynamically if needed
     difficult_airway: false, // updated dynamically if needed
     junctional: false,
