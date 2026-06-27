@@ -10,6 +10,9 @@ const { logRun, updateRunDebrief } = require('../server/adminLogger');
 // Phrases that close the scenario and trigger debrief offer
 const DEBRIEF_TRIGGERS = [
   'transfer of care',
+  'transfer care',          // providers routinely drop the "of"
+  'transferred care',
+  'transferring care',
   'patient is in ed hands',
   'patient is at the ed',
   'we are clear from',
@@ -19,6 +22,9 @@ const DEBRIEF_TRIGGERS = [
   'time of death',
   'terminate resuscitation',
   'end scenario',
+  'end the scenario',
+  'end call',               // natural phrasing seen in play — close the call
+  'end the call',
   'stop the scenario',
 ];
 
@@ -526,6 +532,18 @@ class Session {
     }
     if (loading) this.hasLoaded = true;
     if (enRoute) this.moving = true; // ambulance is rolling — CPR DC increases
+
+    // ORGANIC ARRIVAL: the provider can reach the ED without ever pressing the skip
+    // button — by driving in through normal narration. The skip path sets
+    // arrivedAtHospital directly (see above); this covers the non-skip path so the
+    // client's skip button still flips to END. Trigger on unambiguous "we're physically
+    // at the hospital" cues — the ambulance bay / ED entrance, or a bedside transfer of
+    // care. Gated on this.moving so nothing on scene (or an en-route ETA mention like
+    // "arriving in 18 minutes") can trip it, and only matters until it's set once.
+    if (this.moving && !this.arrivedAtHospital && !reportMode) {
+      const _arrivalRe = /\b(?:ambulance bay|ed bay|hospital bay|bay doors?|ambulance entrance|ed entrance|hospital entrance|emergency (?:department|room) entrance|we have it from here|we'?ve got (?:it|him|her|them) from here|(?:resus|trauma|ed|the) team takes over|transfer(?:s|red|ring)? (?:of )?care|releas\w+ the stretcher|hand(?:s|ed|ing)? (?:off )?(?:the )?(?:patient|care) (?:off )?to the (?:resus|trauma|ed|hospital|receiving) team)\b/i;
+      if (_arrivalRe.test(reply)) this.arrivedAtHospital = true;
+    }
 
     // Advance scene clock.
     // Primary:   [TIME: M:SS] tag — Claude's explicit, authoritative timestamp.
