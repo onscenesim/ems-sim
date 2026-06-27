@@ -28,6 +28,72 @@ const DEBRIEF_TRIGGERS = [
   'stop the scenario',
 ];
 
+// ── Roll reconciliation ─────────────────────────────────────────────────────
+// The dice are rolled and injected BEFORE the model narrates, so the model can
+// still decline an order it judges wrong/impossible ("not indicated", "no IV
+// access", partner refuses). When it does, the rolled outcome never happened —
+// but it was being logged into the objective debrief log anyway, mis-grading the
+// student for meds that were refused or never given. After the model replies we
+// reconcile: if the narration clearly shows a rolled action did NOT occur, that
+// roll is dropped from the log, the debrief turn record, and the client payload
+// (so its animation/sound also won't fire). Conservative by design — a roll is
+// only voided on a clear cue; ambiguous cases are kept.
+
+// Search terms used to find a roll's action in the narration. Drug aliases cover
+// the model writing the generic name when the order used a brand/abbreviation.
+const DRUG_ALIASES = {
+  narcan: ['naloxone'], naloxone: ['narcan'], epi: ['epinephrine'], epinephrine: ['epi'],
+  nitro: ['nitroglycer'], amio: ['amiodarone'], amiodarone: ['amio'], bicarb: ['bicarbonate'],
+  d50: ['dextrose'], duoneb: ['albuterol', 'ipratropium'], versed: ['midazolam'],
+  ativan: ['lorazepam'], zofran: ['ondansetron'], ondansetron: ['zofran'], lasix: ['furosemide'],
+};
+const PROC_TERMS = {
+  emergency_delivery: ['deliver', 'delivery', 'crowning', 'the baby'],
+  newborn_resuscitation: ['newborn', 'infant', 'neonate', 'the baby'],
+  cpr: ['cpr', 'compression'],
+  bvm: ['bag-valve', 'bag valve', 'bvm', 'bagging', 'ventilat'],
+  needle_decompression: ['decompress', 'needle'],
+  fundal_massage: ['fundal', 'uterine massage'],
+};
+function rollSearchTerms(r) {
+  if (r.procedure_id === 'medication_push' && r.matched_drug) {
+    const d = r.matched_drug.toLowerCase();
+    return [d, ...(DRUG_ALIASES[d] || [])];
+  }
+  return PROC_TERMS[r.procedure_id] || r.procedure_id.split('_').filter(w => w.length > 3);
+}
+
+// A med-push could not have been delivered this turn (no route, blown line, or an
+// explicit "nothing was given"). Voids ALL med-push rolls for the turn.
+function medNotGiven(reply) {
+  return /\bno (?:medication|medications|meds|drugs?)\b[^.;!?]{0,40}\b(?:administered|given|pushed|on board)\b/i.test(reply)
+    || /\bno (?:iv access|line|patent line|patent iv|venous access|vascular access|iv route|route for)\b/i.test(reply)
+    || /\b(?:the )?(?:iv|line) (?:is|was|has)\b[^.;!?]{0,20}\b(?:no longer patent|blown|infiltrated|not patent|not in)\b/i.test(reply)
+    || /\bcannot be (?:pushed|given|administered)\b/i.test(reply)
+    || /\bhave (?:no|neither) (?:patent )?(?:line|route|iv access|venous access)\b/i.test(reply)
+    || /\bno (?:viable|available|patent) route\b/i.test(reply);
+}
+
+// Per-roll refusal / non-occurrence cue, scoped to a sentence that names the action.
+const REFUSAL_RE = /\b(?:not indicated|no (?:\w+ )?indication|is contraindicated|contraindicated (?:here|in|anyway)|refus(?:e|es|ed|ing)|declin(?:e|es|ed|ing)|will not (?:give|push|administer|execute|happen|proceed)|won'?t (?:give|push|administer)|(?:is )?not warranted|inappropriate|premature|not happening|will not proceed|received no|did not receive|never received|there (?:is|are) no|no (?:newborn|baby|infant|delivery|crowning|fetus)|not (?:delivering|in labor|crowning|administered|given))\b/i;
+
+function reconcileRolls(rolls, reply) {
+  if (!rolls.length || !reply) return rolls;
+  const sentences = reply.split(/(?<=[.;!?])\s+/);
+  const noMeds = medNotGiven(reply);
+  return rolls.filter(r => {
+    if (r.no_roll) return true;                       // routine action, always kept
+    const isMed = r.procedure_id === 'medication_push';
+    if (isMed && noMeds) return false;                // no route / nothing given
+    const terms = rollSearchTerms(r);
+    for (const sent of sentences) {
+      const sl = sent.toLowerCase();
+      if (terms.some(t => sl.includes(t)) && REFUSAL_RE.test(sent)) return false;
+    }
+    return true;
+  });
+}
+
 function isDebriefTrigger(text) {
   const lower = text.toLowerCase();
   return DEBRIEF_TRIGGERS.some(t => lower.includes(t));
@@ -304,26 +370,10 @@ class Session {
     // Skip entirely when the player is giving a radio report, handoff, or a time-skip.
     const rollContext = { ...this.contextFlags, moving: this.moving };
     const rolls = (reportMode || skipMode) ? [] : detectAllAndRoll(userText, rollContext, this.seed.difficulty);
-
-    for (const roll of rolls) {
-      if (!roll.no_roll) {
-        logEvent(this.seed, {
-          event_type: 'procedure',
-          procedure_id: roll.procedure_id,
-          patient: roll.patient || 'primary',
-          dice_roll: roll.roll,
-          dc_value: Array.isArray(roll.dc) ? roll.dc[0] : roll.dc,
-          outcome: roll.outcome,
-        }, this.sceneMinute);
-      } else {
-        logEvent(this.seed, {
-          event_type: 'procedure',
-          procedure_id: roll.procedure_id,
-          patient: roll.patient || 'primary',
-          outcome: 'NO_ROLL',
-        }, this.sceneMinute);
-      }
-    }
+    // NOTE: rolls are logged AFTER the model narrates (see reconcileRolls below),
+    // not here — so an order the model declines as wrong/impossible doesn't get
+    // logged as if it happened. The full `rolls` set is still injected into the
+    // model message right away so Claude sees every outcome to narrate.
 
     // Inject all real roll results into the user message so Claude knows every outcome.
     // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
@@ -455,6 +505,16 @@ class Session {
     let { cleanedReply: eventClean, loading, enRoute, transportDest } = parseEventTags(timeClean);
     const { cleanedReply: baseClean, baseContact } = parseBaseContactTag(eventClean);
     const reply = stripProviderSpeech(baseClean);
+
+    // Reconcile dice against the narration: drop any roll the model declined or
+    // showed didn't happen, so the debrief/log and client only see real events.
+    const reconciledRolls = reconcileRolls(rolls, reply);
+    for (const roll of reconciledRolls) {
+      logEvent(this.seed, roll.no_roll
+        ? { event_type: 'procedure', procedure_id: roll.procedure_id, patient: roll.patient || 'primary', outcome: 'NO_ROLL' }
+        : { event_type: 'procedure', procedure_id: roll.procedure_id, patient: roll.patient || 'primary', dice_roll: roll.roll, dc_value: Array.isArray(roll.dc) ? roll.dc[0] : roll.dc, outcome: roll.outcome },
+        this.sceneMinute);
+    }
     if (backup) {
       // Track backup arrival minute when unit first goes en_route
       if (backup.status === 'en_route' && backup.eta !== null && this.backupArrivalMinute === null) {
@@ -585,7 +645,7 @@ class Session {
     this.turns.push({
       user: userText,
       assistant: reply,
-      rolls,
+      rolls: reconciledRolls,
       sceneMinute: this.sceneMinute,
       vitals: vitals || null,
       skip: !!skipMode,
@@ -599,10 +659,10 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true };
+      return { reply, rolls: reconciledRolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true };
     }
 
-    return { reply, rolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: false };
+    return { reply, rolls: reconciledRolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: false };
   }
 
   /**
@@ -639,4 +699,4 @@ class Session {
   }
 }
 
-module.exports = { Session };
+module.exports = { Session, reconcileRolls };
