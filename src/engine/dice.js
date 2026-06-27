@@ -95,14 +95,35 @@ function editDistance(a, b, cap) {
   return prev[b.length];
 }
 
+// Some single-word synonyms are too collision-prone to ever be a FUZZY TARGET:
+// the edit-distance corrector will "fix" an unrelated valid word into them and
+// roll the wrong — sometimes dangerous — intervention. Two classes:
+//   • plain English words that are themselves common in orders/narration
+//     ("strain" ← "restrain")
+//   • minimal-pair drug names one edit from an everyday verb
+//     ("activase" ← "activate"/"activated" — Activase is tPA; this both killed
+//      cath-lab activation and made "activated charcoal" roll a thrombolytic)
+// These still match when typed EXACTLY (they stay in DETECT_PATTERNS) — they are
+// only barred from absorbing fuzzy corrections.
+const FUZZY_TARGET_BLOCKLIST = new Set(['strain', 'activase']);
+
 // Index: single-word synonyms ≥ 5 chars, keyed by first two chars for quick pruning
 const FUZZY_INDEX = new Map();  // twoChar → [{ word, proc }]
 for (const { key, proc } of DETECT_PATTERNS) {
   if (key.includes(' ') || key.length < 5) continue;
+  if (FUZZY_TARGET_BLOCKLIST.has(key)) continue;
   const bucket = key.slice(0, 2);
   if (!FUZZY_INDEX.has(bucket)) FUZZY_INDEX.set(bucket, []);
   FUZZY_INDEX.get(bucket).push({ word: key, proc });
 }
+
+// Valid words that must NEVER be treated as a misspelling (defense in depth on
+// the INPUT side, complementing the target blocklist above). Even if a future
+// synonym lands within edit distance of these, they pass through untouched.
+const FUZZY_INPUT_BLOCKLIST = new Set([
+  'activate', 'activated', 'activates', 'activating', 'activation',
+  'restrain', 'restrained', 'restrains', 'restraining',
+]);
 
 function fuzzyThreshold(len) {
   if (len < 5)  return 0;
@@ -120,6 +141,8 @@ function normalizeForDetection(text) {
     const lower = token.toLowerCase();
     // Already an exact match — nothing to fix
     if (SYNONYM_MAP.has(lower)) return token;
+    // Valid word that collides with a synonym under edit distance — never rewrite
+    if (FUZZY_INPUT_BLOCKLIST.has(lower)) return token;
     const threshold = fuzzyThreshold(lower.length);
     if (threshold === 0) return token;
     // Check nearby buckets (first-two-char ± one char apart handles one-char prefix errors)
