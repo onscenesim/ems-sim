@@ -586,6 +586,8 @@ async function startScenario() {
   const difficulty    = document.getElementById('cfg-difficulty').value;
   const provider_level = document.getElementById('cfg-provider').value;
   const region_id     = document.getElementById('cfg-region').value;
+  const categoryEl    = document.getElementById('cfg-category');
+  const category      = categoryEl ? (categoryEl.value || null) : null; // '' = Random
   const unit_name     = getUnitName();
 
   startBtn.disabled = true;
@@ -594,7 +596,7 @@ async function startScenario() {
   try {
     const partner_name = partnerSelect ? (partnerSelect.value || null) : null;
     const captain_name = captainSelect ? (captainSelect.value || null) : null;
-    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name, partner_name, captain_name });
+    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name, partner_name, captain_name, category });
 
     sessionId      = data.session_id;
     isClosed       = false;

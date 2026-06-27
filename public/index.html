@@ -63,7 +63,23 @@
           <button id="start-btn">BEGIN SCENARIO</button>
         </div>
 
-        <div id="tier-msg" class="tier-status"></div>
+        <div class="cfg-tile tile-category">
+          <div class="tile-label">CATEGORY</div>
+          <select id="cfg-category">
+            <option value="" selected>Random</option>
+            <option value="cardiac">Cardiac</option>
+            <option value="respiratory">Respiratory</option>
+            <option value="trauma">Trauma</option>
+            <option value="medical">Medical</option>
+            <option value="neuro">Neuro</option>
+            <option value="toxicology">Toxicology</option>
+            <option value="behavioral">Behavioral</option>
+            <option value="ob">OB / Childbirth</option>
+            <option value="pediatric">Pediatric</option>
+            <option value="arrest">Cardiac Arrest</option>
+          </select>
+          <div class="tile-desc" id="desc-category"></div>
+        </div>
         <div class="theme-row">
           <button id="theme-toggle-start" aria-label="Toggle light mode">&#x2600; LIGHT MODE</button>
         </div>
@@ -83,6 +99,8 @@
           </select>
           <div class="tile-desc" id="desc-captain"></div>
         </div>
+
+        <div id="tier-msg" class="tier-status"></div>
 
       </div>
 
@@ -833,6 +851,6 @@
 
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-    <script src="app.js?v=48"></script>
+    <script src="app.js?v=49"></script>
 </body>
 </html>

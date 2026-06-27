@@ -26,6 +26,13 @@ function pickRandom(arr) {
 function d6() { return Math.floor(Math.random() * 6) + 1; }
 function d20() { return Math.floor(Math.random() * 20) + 1; }
 
+// Categories a player may explicitly request from the menu. Curveballs and DOA
+// are deliberately excluded — they occur naturally and must not be selectable.
+const PLAYER_SELECTABLE_CATEGORIES = new Set([
+  'medical', 'trauma', 'cardiac', 'respiratory', 'behavioral',
+  'neuro', 'toxicology', 'arrest', 'pediatric', 'ob',
+]);
+
 function pickCategory(difficulty, history, curveBallWeight) {
   const weights = { ...CATEGORY_WEIGHTS };
   if (curveBallWeight !== undefined) weights.curveballs = curveBallWeight;
@@ -311,10 +318,14 @@ function pickCrew(regionId, history) {
  * @param {object} opts.history      { categories[], presentations[], crew[], doa_positions[], arrest_positions[], total_count }
  */
 function rollScenario(opts = {}) {
-  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', user_id = null, history = {}, partner_name = null, captain_name = null } = opts;
+  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', user_id = null, history = {}, partner_name = null, captain_name = null, category: requestedCategory = null } = opts;
 
   const curveballWeight = CURVEBALL_WEIGHTS[difficulty];
-  const category = pickCategory(difficulty, history, curveballWeight);
+  // Honor an explicit player choice (if it's a selectable category); otherwise
+  // pick by weight. A forced choice intentionally bypasses the no-repeat history.
+  const category = (requestedCategory && PLAYER_SELECTABLE_CATEGORIES.has(requestedCategory))
+    ? requestedCategory
+    : pickCategory(difficulty, history, curveballWeight);
   const presentation = pickPresentation(category, difficulty, history);
 
   if (!presentation) throw new Error(`No eligible presentation for category: ${category}`);
@@ -400,4 +411,4 @@ function generateId() {
   });
 }
 
-module.exports = { rollScenario };
+module.exports = { rollScenario, PLAYER_SELECTABLE_CATEGORIES };

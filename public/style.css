@@ -98,6 +98,7 @@ html, body {
 .tile-difficulty { background-color: #28085c; } /* vivid purple */
 .tile-provider   { background-color: #063858; } /* deep teal-navy */
 .tile-region     { background-color: #0a3818; } /* rich forest green */
+.tile-category   { background-color: #3a2808; } /* warm amber-bronze */
 .tile-partner    { background-color: #1a1a2e; grid-column: 1 / -1; } /* spans full width */
 .tile-captain    { background-color: #1a2e2e; grid-column: 1 / -1; } /* spans full width */
 
@@ -290,6 +291,8 @@ html, body {
 #access-apply:hover { background: #3a4e68; color: #fff; }
 
 #tier-msg {
+  grid-column: 1 / -1;
+  text-align: center;
   font-family: var(--font-block);
   font-size: 9px;
   color: rgba(255,255,255,0.35);
@@ -758,9 +761,10 @@ html, body {
   .tile-provider   { order: 2; }
   .tile-region     { order: 3; }
   .start-tile      { order: 4; }
-  #tier-msg        { order: 5; }
+  .tile-category   { order: 5; }
   .tile-partner    { order: 6; }
   .tile-captain    { order: 7; }
+  #tier-msg        { order: 8; }
 
   .cfg-tile,
   .access-tile {
@@ -3388,6 +3392,7 @@ body.light-mode #start-card {
 body.light-mode .tile-difficulty { background-color: #4a1a8a; }
 body.light-mode .tile-provider   { background-color: #0e5a80; }
 body.light-mode .tile-region     { background-color: #165c28; }
+body.light-mode .tile-category   { background-color: #6a4a14; }
 body.light-mode .tile-partner    { background-color: #2a2a48; }
 body.light-mode .tile-captain    { background-color: #1a3a3a; }
 body.light-mode .tile-desc        { color: rgba(0,0,0,0.45); }
