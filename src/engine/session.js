@@ -489,12 +489,24 @@ class Session {
         '|transporting (?:emergent|priority|code|(?:to|her|him|the patient) (?:to )?' + _dest + ')' +
         '|begins? the (?:drive|transport) to ' + _dest +
       ')\\b', 'i');
-    // Weak signal: pure departure-motion with no destination named. Trustworthy only
-    // for OUR ambulance — a fire engine / PD unit / backup "pulling away" or "rolling"
-    // off the scene must NOT flip us into transport. Suppress when an other-unit subject
-    // immediately precedes the motion verb.
-    const _motionRe = /\b(?:pulls? (?:away|out)|pulled away|wheels (?:are )?rolling)\b/i;
-    const _otherUnitRe = /\b(?:engine|fire|police|pd|cruiser|squad car|ladder|chief|sheriff|deputy|backup(?: unit)?|second (?:unit|crew)|the other (?:unit|crew|rig)|first responders?)\b[^.!?]{0,30}\b(?:pulls?|pulled|wheels)\b/i;
+    // Weak signal: pure departure-motion with no destination named. A bare "pull out"
+    // collides with pulling out EQUIPMENT ("you pull out the monitor / stethoscope /
+    // shears") — that false-fired load-and-go on a 12-lead turn. So the motion verbs
+    // must be anchored to either a VEHICLE SUBJECT (the rig/ambulance/unit/truck...) or
+    // a DEPARTURE LOCATIVE ("pulls out of the driveway"). "wheels rolling" is a strong
+    // enough departure idiom to stand alone. Even with a vehicle subject this is still
+    // only trustworthy for OUR rig, so the other-unit guard below still applies.
+    const _motionRe = new RegExp(
+      '\\b(?:' +
+        // vehicle subject within a few words of a departure verb
+        '(?:rig|ambulance|unit|truck|bus|wagon|medic\\s*\\d*)\\b[^.!?]{0,20}\\b' +
+          '(?:pulls?\\s+(?:away|out|onto)|pulled\\s+away|rolls?\\s+(?:away|out|onto|forward|toward)|(?:is|are|begins?)\\s+(?:now\\s+)?rolling)' +
+        // departure locative — no explicit vehicle needed
+        '|pulls?\\s+(?:away\\s+from|out\\s+of)\\s+the\\s+(?:driveway|lot|parking|drive|curb|scene|bay|house|residence|home)' +
+        // strong standalone departure idiom
+        '|wheels\\s+(?:are\\s+)?(?:now\\s+)?rolling' +
+      ')\\b', 'i');
+    const _otherUnitRe = /\b(?:engine|fire|police|pd|cruiser|squad car|ladder|chief|sheriff|deputy|backup(?: unit)?|second (?:unit|crew)|the other (?:unit|crew|rig)|first responders?)\b[^.!?]{0,30}\b(?:pulls?|pulled|rolls?|rolling|wheels)\b/i;
     if (!enRoute && !reportMode) {
       if (_hospitalRe.test(reply)) enRoute = true;
       else if (_motionRe.test(reply) && !_otherUnitRe.test(reply)) enRoute = true;
