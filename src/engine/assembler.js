@@ -147,6 +147,7 @@ function assembleSeedBlock(seed) {
     lines.push('ALS-only: LUCAS/AutoPulse (mechanical CPR) = "the LUCAS"; transport ventilator = "the vent"; infusion pump = "the pump."');
   }
 
+  lines.push('BLS MEDICATION SCOPE: aspirin (chewable, suspected ACS), sublingual nitroglycerin (assisting per protocol or the patient\'s own), oral glucose, epinephrine auto-injector (anaphylaxis), naloxone (IN/IM), albuterol (MDI or nebulized per protocol), and CPAP are ALL within modern EMT/BLS scope. NEVER have any NPC — including a BLS partner or first responder — call these "ALS only," "above my ticket," or otherwise out of an EMT\'s scope; they are routine BLS skills.');
   lines.push('Ambulance aliases: the box, the rig, the unit, the truck, the bus, the ambo — all mean the vehicle, NOT the monitor.');
   lines.push('Off-manifest equipment: if a device truly does not exist on a standard unit, narrate realistically (partner can\'t locate it) — teaching moment, never a hard stop. ALS DRUGS: never refuse a medication on stocking grounds. ALS carries a full formulary — 3% saline, hypertonic saline, TXA, ketamine, push-dose epi, mag, calcium, bicarb, alteplase — all available. If the drug is unusual, administer it and address the clinical context; never tell the student their drug is not on board. CALCIUM DEFAULT: if the provider orders "calcium" without specifying the salt, treat it as calcium chloride -- the standard prehospital formulation.');
   lines.push('');
