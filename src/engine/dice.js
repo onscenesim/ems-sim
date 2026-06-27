@@ -199,6 +199,18 @@ const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|l
 // the user is specifying an admin route ("push epi through the IO"), not placing new access.
 const ROUTE_QUALIFIER_RE = /\b(?:through|via|into|from|out\s+of)\s*(?:the\s+|an?\s+|my\s+)?$/i;
 
+// Contingent / hypothetical phrasing — the action is NOT a committed order this
+// turn. Rolling these produced phantom outcomes ("if respiratory depression, give
+// narcan" rolled narcan; "IV or IO if needed" rolled both; "consider sedation"
+// rolled the sedative) that were then logged into the objective debrief log even
+// though the action never happened. Scanned across the match's whole sentence.
+const HEDGE_RE = /\b(?:if\s+(?:needed|necessary|required|indicated|warranted|appropriate|tolerated)|as\s+needed|prn|consider(?:ing)?|in\s+case\b|in\s+the\s+event|(?:may|might|would|could)\s+(?:need|want|have)\s+to|anticipat\w+|be\s+(?:ready|prepared)|get\s+ready|stand(?:ing)?\s+by|standby|prepared?\s+to)\b/i;
+
+// Interrogative verbs that turn a following "if" into an embedded QUESTION
+// ("ask if she's allergic", "check if there's a pulse") rather than a conditional
+// order — these must NOT suppress a later action in the same sentence.
+const INTERROG_BEFORE_IF_RE = /\b(?:ask(?:s|ed|ing)?|know|knows|knew|wonder(?:s|ing|ed)?|see|seeing|saw|check(?:s|ed|ing)?|determine|find\s+out|finding\s+out|tell|told|confirm(?:s|ed|ing)?|verif(?:y|ies|ied|ying)|assess(?:es|ed|ing)?|figure\s+out|unsure|not\s+sure|question(?:s|ed|ing)?)\b[^.;!?]*$/i;
+
 // Past-tense / reporting context words that indicate the player is describing
 // something already done rather than ordering it now.
 const PAST_CONTEXT_RE = /\b(gave|administered|was\s+given|had\s+received|received|already\s+(?:gave|given|pushed|administered|established|placed|started)|after\s+\d[\d.]*\s*(?:mg|ml|mcg|g|mEq)|was\s+(?:doing|performing|in|on)|had\s+(?:been|started)|were\s+(?:doing|performing|on)|had\s+CPR|did\s+CPR|performed\s+CPR|did\s+compressions|were\s+doing\s+compressions)\b/i;
@@ -241,6 +253,42 @@ function isNegated(text, matchStart) {
   const words = sentenceTail.split(/\s+/).filter(Boolean);
   const windowText = words.slice(-3).join(' ');
   return NEGATION_RE.test(windowText);
+}
+
+/**
+ * Returns true when the procedure keyword at `matchStart` sits inside a
+ * contingent / hypothetical clause rather than a committed order this turn —
+ * "if respiratory depression, give narcan", "IV or IO if needed", "consider
+ * sedation", "be ready to shock". Rolling these phantom-logged outcomes into the
+ * debrief. Two signals, both scoped to the match's own sentence:
+ *   1. an explicit hedge anywhere in the sentence (HEDGE_RE), or
+ *   2. a leading "if <condition>, <action>" — an `if` earlier in the sentence
+ *      that is NOT an embedded question ("ask if …", "check if …").
+ */
+function isConditional(text, matchStart) {
+  const before = text.slice(0, matchStart);
+  let sentStart = 0;
+  for (const ch of '.;!?\n') {
+    const idx = before.lastIndexOf(ch);
+    if (idx + 1 > sentStart) sentStart = idx + 1;
+  }
+  let sentEnd = text.length;
+  for (const ch of '.;!?\n') {
+    const idx = text.indexOf(ch, matchStart);
+    if (idx !== -1 && idx < sentEnd) sentEnd = idx;
+  }
+  const sentence = text.slice(sentStart, sentEnd);
+  if (HEDGE_RE.test(sentence)) return true;
+
+  // Leading conditional: an `if` before the action, within the same sentence,
+  // that isn't the object of an interrogative verb.
+  const beforeInSent = text.slice(sentStart, matchStart);
+  const ifMatch = /\bif\b/i.exec(beforeInSent);
+  if (ifMatch) {
+    const beforeIf = beforeInSent.slice(0, ifMatch.index);
+    if (!INTERROG_BEFORE_IF_RE.test(beforeIf)) return true;
+  }
+  return false;
 }
 
 /**
@@ -479,6 +527,11 @@ function detectAllProcedures(userText) {
     // ("Morphine 4mg. No intubation needed yet." → morphine fires, intubation does not.)
     const negated = isNegated(remaining, bestMatchIndex);
 
+    // Conditional/hedge guard: "if respiratory depression, give narcan",
+    // "IV or IO if needed", "consider sedation" — contingent, not a committed
+    // order this turn. Rolling them phantom-logs outcomes the action never had.
+    const conditional = isConditional(remaining, bestMatchIndex);
+
     // Route qualifier guard: "push epi through the IO" → IO synonym is a route,
     // not a new procedure order. Suppress access/device rolls in this context.
     const routeQual = isRouteQualifier(remaining, bestMatchIndex);
@@ -489,7 +542,7 @@ function detectAllProcedures(userText) {
     // Always consume the matched span so we don't loop on the same hit.
     remaining = remaining.replace(bestMatch.pattern, ' ');
 
-    if (!negated && !routeQual && !stagingPost && !isPastContext(remaining, bestMatchIndex)) {
+    if (!negated && !conditional && !routeQual && !stagingPost && !isPastContext(remaining, bestMatchIndex)) {
       found.push({ proc: bestMatch.proc, matchedKey: bestMatch.key });
       // medication_push can fire multiple times in one message (once per drug).
       // Text consumption already prevents the same drug from re-matching.
