@@ -118,7 +118,7 @@ router.post('/new', async (req, res) => {
   if (tier === 'free' && !checkFreeLimit(ip)) {
     return res.status(429).json({
       error: 'free_limit_reached',
-      message: `Free tier allows ${FREE_DAILY_LIMIT} scenarios per day. Upgrade for unlimited access.`,
+      message: `You've reached today's limit of ${FREE_DAILY_LIMIT} scenarios. It resets tomorrow.`,
     });
   }
 

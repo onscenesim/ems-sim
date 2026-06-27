@@ -165,8 +165,6 @@ const reportBtn    = document.getElementById('report-btn');
 const skipBtn      = document.getElementById('skip-btn');
 const crewBtn      = document.getElementById('crew-btn');
 const tierMsg      = document.getElementById('tier-msg');
-const accessInput  = document.getElementById('access-code');
-const accessApply  = document.getElementById('access-apply');
 
 const badgeUnit    = document.getElementById('badge-unit');
 const unitNameInput = document.getElementById('cfg-unit-name');
@@ -290,10 +288,7 @@ function scrollBottom() {
 // ── API helpers ──────────────────────────────────────────────────────────
 
 function authHeaders() {
-  const token = localStorage.getItem('ems_token');
-  const h = { 'Content-Type': 'application/json' };
-  if (token) h['Authorization'] = 'Bearer ' + token;
-  return h;
+  return { 'Content-Type': 'application/json' };
 }
 
 // Tracks the AbortController for the current in-flight turn or debrief request.
@@ -328,10 +323,6 @@ async function apiGet(path) {
 
 // ── Access code UI ───────────────────────────────────────────────────────
 
-// Pre-populate from localStorage on load
-if (localStorage.getItem('ems_token')) {
-  accessInput.value = localStorage.getItem('ems_token');
-}
 
 // ── Unit name (custom medic identifier) ──────────────────────────────────────
 
@@ -515,34 +506,16 @@ if (splashEl && typeof getRandomSplash === 'function') {
   splashEl.textContent = getRandomSplash();
 }
 
-async function applyAccessCode() {
-  const code = accessInput.value.trim();
-  if (code) {
-    localStorage.setItem('ems_token', code);
-  } else {
-    localStorage.removeItem('ems_token');
-  }
-  await refreshStatus();
-}
-
-accessApply.addEventListener('click', applyAccessCode);
-accessInput.addEventListener('keydown', e => { if (e.key === 'Enter') applyAccessCode(); });
-
-// ── Status check ─────────────────────────────────────────────────────────
+// ── Daily scenario counter ───────────────────────────────────────────────
 
 async function refreshStatus() {
   try {
     const s = await apiGet('/api/scenario/status');
-    if (s.tier === 'paid') {
-      tierMsg.textContent = '✓ Beta access active — unlimited scenarios';
-      tierMsg.classList.add('active');
-    } else if (s.scenarios_remaining !== null) {
-      tierMsg.textContent =
-        s.scenarios_remaining > 0
-          ? `Free tier — ${s.scenarios_remaining} of ${s.free_daily_limit} scenarios remaining today`
-          : `Free tier — daily limit reached`;
-      tierMsg.classList.remove('active');
-    }
+    if (!tierMsg || s.scenarios_remaining === null || s.scenarios_remaining === undefined) return;
+    tierMsg.textContent =
+      s.scenarios_remaining > 0
+        ? `${s.scenarios_remaining} of ${s.free_daily_limit} scenarios remaining today`
+        : `Daily limit reached — resets tomorrow`;
   } catch (_) { /* ignore */ }
 }
 
@@ -711,22 +684,18 @@ async function startScenario() {
     setLoading(false);
     userInput.focus();
 
-    // Update tier msg for next visit to start screen
-    if (data.tier === 'free' && data.scenarios_remaining !== null) {
+    // Update the daily counter for the next visit to the start screen
+    if (tierMsg && data.scenarios_remaining !== null && data.scenarios_remaining !== undefined) {
       tierMsg.textContent =
         data.scenarios_remaining > 0
-          ? `Free tier — ${data.scenarios_remaining} of ${data.free_daily_limit || 3} scenarios remaining today`
-          : `Free tier — daily limit reached`;
+          ? `${data.scenarios_remaining} of ${data.free_daily_limit} scenarios remaining today`
+          : `Daily limit reached — resets tomorrow`;
     }
 
   } catch (err) {
     startBtn.disabled = false;
     startBtn.textContent = 'BEGIN SCENARIO';
-    if (err.code === 'free_limit_reached') {
-      tierMsg.textContent = `Daily limit reached (${err.message})`;
-    } else {
-      tierMsg.textContent = `Error: ${err.message}`;
-    }
+    if (tierMsg) tierMsg.textContent = err.code === 'free_limit_reached' ? err.message : `Error: ${err.message}`;
   }
 }
 

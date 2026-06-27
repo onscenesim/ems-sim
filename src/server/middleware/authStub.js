@@ -51,11 +51,14 @@ function getClientIP(req) {
 }
 
 // ---------------------------------------------------------------------------
-// Free-tier daily scenario limit (in-memory; resets on server restart).
-// In Session 4 this moves to Supabase.
+// Daily scenario cap (in-memory; resets at local midnight / on server restart).
+// The beta access-code UI was removed, so every visitor is treated as 'free'
+// and gets this generous cap — plenty for the small beta-tester pool while
+// still bounding runaway cost. (The Bearer-token 'paid' path below is retained
+// as a dev escape hatch but is no longer reachable from the UI.)
 // ---------------------------------------------------------------------------
 
-const FREE_DAILY_LIMIT = 20;
+const FREE_DAILY_LIMIT = 50;
 
 // ip → { count: number, date: string }
 const freeUsage = new Map();

@@ -758,7 +758,7 @@ html, body {
   .tile-provider   { order: 2; }
   .tile-region     { order: 3; }
   .start-tile      { order: 4; }
-  .access-tile     { order: 5; }
+  #tier-msg        { order: 5; }
   .tile-partner    { order: 6; }
   .tile-captain    { order: 7; }
 
