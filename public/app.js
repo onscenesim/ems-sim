@@ -830,6 +830,7 @@ async function sendTurn(msg, opts = {}) {
     if (data.closed) {
       isClosed = true;
       skipBtn.disabled = true;
+      updateSkipBtn();          // hide the END CALL button once the call is closed
       showCrewPanel();
       showDebriefCTA();
       setLoading(false);
@@ -944,63 +945,29 @@ function showDebriefCTA() {
   });
 }
 
-// ── Skip-ahead button (context-aware time-skip through transport) ───────────
-// Replaces the old END button. Fast-forwards the tedious parts of a call with
-// NO further player treatment. Phase is derived from the transport flags:
-//   on scene (not loaded) → load the patient into the ambulance  (intermediate)
-//   loaded, parked        → transport to hospital + arrive       (ends scenario)
-//   en route              → skip remaining drive to the bay       (ends scenario)
-// To end on scene (death, refusal, TOR) the student types a close phrase such
-// as "end scenario" or "terminate resuscitation".
-// The skip button exists ONLY for the transport leg — fast-forwarding the long,
-// uneventful drive once you're already en route. It is hidden on scene and while
-// loading; it appears after departure as "SKIP AHEAD" and becomes "END" on arrival.
-const SKIP_PHASES = {
-  to_arrival: {
-    label: 'SKIP AHEAD »',
-    title: 'Fast-forward the rest of the drive — you keep monitoring the patient',
-    userMsg: '[Skip ahead — continue monitoring and arrive at the hospital]',
-    confirmTitle: 'SKIP AHEAD TO ARRIVAL?',
-    confirmBody: 'Fast-forward the rest of the transport. You keep monitoring the patient the whole way — this only skips the routine minute-to-minute checks, not your care. You arrive at the ED bay where the team is ready for your handoff, and you still give your report before ending.',
-    confirmLabel: 'SKIP AHEAD',
-  },
-  end: {
-    label: 'END',
-    title: 'End the call and generate the debrief',
-    confirmTitle: 'END SCENARIO?',
-    confirmBody: 'You\'re at the hospital — nothing left to skip. Close the call and run the debrief. Do this once you have given your handoff report.',
-    confirmLabel: 'END & DEBRIEF',
-  },
-};
-
-function currentSkipMode() {
-  if (arrivedAtHospital) return 'end';     // at the hospital — button becomes END
-  if (hasPlayedDepart)   return 'to_arrival'; // en route — can fast-forward the drive
-  return null;                              // on scene / loading — no skip offered
-}
+// ── END CALL button ─────────────────────────────────────────────────────────
+// A single, always-available END CALL button (replaces the old skip-ahead /
+// arrival-state-machine). It's shown whenever a scenario is active and closes the
+// call to the debrief whenever pressed — never gated on transport/arrival state,
+// so you can never get stranded with no way to end. Load/depart animations still
+// fire off the server's tags, independent of this button. Typed close phrases
+// ("end scenario", "transfer of care", etc.) still work as well.
 
 function updateSkipBtn() {
-  const mode = currentSkipMode();
-  if (!mode) { skipBtn.style.display = 'none'; return; }   // hidden until departure
+  // Visible during an active scenario; hidden before start and after close.
+  if (!sessionId || isClosed) { skipBtn.style.display = 'none'; return; }
   skipBtn.style.display = '';
-  const phase = SKIP_PHASES[mode];
-  skipBtn.textContent = phase.label;
-  skipBtn.title       = phase.title;
+  skipBtn.textContent   = 'END CALL »';
+  skipBtn.title         = 'End the call and generate the debrief';
 }
 
 skipBtn.addEventListener('click', () => {
-  if (isClosed || skipBtn.disabled) return;
-  const mode  = currentSkipMode();
-  if (!mode) return;                        // not en route yet — nothing to skip
-  const phase = SKIP_PHASES[mode];
+  if (isClosed || skipBtn.disabled || !sessionId) return;
   showConfirm({
-    title:        phase.confirmTitle,
-    body:         phase.confirmBody,
-    confirmLabel: phase.confirmLabel,
-    onConfirm:    () => {
-      if (mode === 'end') sendTurn('end scenario');   // closes server-side → debrief CTA
-      else sendTurn(phase.userMsg, { skipMode: mode });
-    },
+    title:        'END CALL?',
+    body:         'Close the call and run the debrief. Do this once you have given your handoff report — or whenever the call is over.',
+    confirmLabel: 'END & DEBRIEF',
+    onConfirm:    () => sendTurn('end scenario'),   // closes server-side → debrief CTA
   });
 });
 
