@@ -219,13 +219,19 @@ function parseEventTags(reply) {
     loading = true;
     cleaned = cleaned.replace(/\s*\[LOADING\]\s*/gi, ' ');
   }
-  // Accept [EN_ROUTE], [EN_ROUTE:nearest], [EN_ROUTE:major]
-  const routeMatch = cleaned.match(/\[EN_ROUTE(?::([a-z]+))?\]/i);
+  // Accept [EN_ROUTE], [EN_ROUTE:nearest], [EN_ROUTE: nearest], [EN_ROUTE:major].
+  // The model frequently writes a space after the colon ("[EN_ROUTE: nearest]");
+  // without tolerating it the tag never matched, so departure never fired and the
+  // raw tag leaked into the visible reply. A single trailing [a-z] word is required
+  // so a placeholder like "[EN_ROUTE: pending destination]" does NOT fire transport.
+  const routeMatch = cleaned.match(/\[EN_ROUTE(?::\s*([a-z]+))?\]/i);
   if (routeMatch) {
     enRoute = true;
     transportDest = routeMatch[1] ? routeMatch[1].toLowerCase() : 'nearest';
-    cleaned = cleaned.replace(/\s*\[EN_ROUTE(?::[a-z]+)?\]\s*/gi, ' ');
   }
+  // Strip ANY [EN_ROUTE…] tag from the visible text, including malformed/placeholder
+  // forms (e.g. "[EN_ROUTE: pending destination]") that don't fire transport.
+  cleaned = cleaned.replace(/\s*\[EN_ROUTE\b[^\]]*\]\s*/gi, ' ');
   return { cleanedReply: cleaned.trim(), loading, enRoute, transportDest };
 }
 
@@ -260,6 +266,12 @@ function parseBackupTag(reply) {
     },
   };
 }
+
+// Provider phrasings that request additional resources (mirrors the Rule 19
+// backup triggers). Used to set backup status deterministically — the model does
+// not reliably emit [BACKUP:] when the provider asks, so the UI indicator was
+// never updating even though backup was narrated and arrived.
+const BACKUP_REQUEST_RE = /\b(?:(?:call(?:ing)?|send|request(?:ing)?|get\s+me|dispatch|need)\s+(?:me\s+|us\s+|for\s+|a\s+|an\s+|another\s+|additional\s+|the\s+|some\s+)*(?:backup|back-?up|second\s+(?:unit|medic|ambulance|crew)|another\s+(?:unit|medic|ambulance|crew)|additional\s+(?:units?|medics?|personnel|resources?)|engine\s*(?:company)?|fire(?:\s+department)?|rescue|mutual\s+aid)|\b(?:engine|ladder|truck|rescue)\s+company\b)/i;
 
 /**
  * Parse [TIME: M:SS] tag from Claude's reply.
@@ -474,6 +486,18 @@ class Session {
       messageText += '\n\n' + rollLines.join('\n');
     }
 
+    // Deterministic backup: the provider asked for help but the model often omits
+    // the [BACKUP:] machine tag, so the UI status never updated. Set en_route here
+    // ourselves; a model-emitted [BACKUP:] tag (parsed below) still refines it.
+    if (!reportMode && !skipMode && BACKUP_REQUEST_RE.test(userText)
+        && (!this.backupStatus || ['not_called', 'called'].includes(this.backupStatus.status))) {
+      const _backupEta = 8;
+      this.backupStatus = { status: 'en_route', eta: _backupEta };
+      this.backupArrivalMinute = this.sceneMinute + _backupEta;
+      messageText += '\n\n[SYSTEM NOTE: The provider requested backup. Your captain (named in the CREW section) responds personally. '
+        + 'Narrate dispatch confirming backup en route with an ETA of about ' + _backupEta + ' minutes, and emit [BACKUP: en_route ETA=' + _backupEta + '].]';
+    }
+
     // Auto-trigger backup arrival when server-tracked ETA has elapsed
     if (
       this.backupStatus &&
@@ -576,7 +600,10 @@ class Session {
         '|wheels\\s+(?:are\\s+)?(?:now\\s+)?rolling' +
       ')\\b', 'i');
     const _otherUnitRe = /\b(?:engine|fire|police|pd|cruiser|squad car|ladder|chief|sheriff|deputy|backup(?: unit)?|second (?:unit|crew)|the other (?:unit|crew|rig)|first responders?)\b[^.!?]{0,30}\b(?:pulls?|pulled|rolls?|rolling|wheels)\b/i;
-    if (!enRoute && !reportMode) {
+    // Once we've arrived at the hospital, the rig can't "depart for the hospital"
+    // again — without this guard, end-of-call narration like "the ambulance pulls
+    // out of the ED bay, heading back to station" re-fired the departure animation.
+    if (!enRoute && !reportMode && !this.arrivedAtHospital) {
       if (_hospitalRe.test(reply)) enRoute = true;
       else if (_motionRe.test(reply) && !_otherUnitRe.test(reply)) enRoute = true;
     }
