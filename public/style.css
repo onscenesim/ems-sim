@@ -1272,17 +1272,20 @@ html, body {
   flex-direction: column;
   align-items: center;
   gap: 0.4rem;
-  background: var(--panel);
+  /* Chrome card — matches the dispatch/depart/loading family. (Was var(--panel),
+     an undefined variable, which left the card rendering as raw noise texture.) */
+  background: var(--chrome-bg);
   background-image: var(--noise);
   background-blend-mode: soft-light;
   border: 2px solid;
   border-color: var(--hi) var(--lo) var(--lo) var(--hi);
-  padding: 1.2rem 2rem 1rem;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  padding: 1.1rem 2rem 0.9rem;
   font-family: var(--font-block, monospace);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s ease, transform 0.15s ease;
-  min-width: 160px;
+  min-width: 176px;
 }
 
 #dice-overlay.visible {
@@ -1292,17 +1295,17 @@ html, body {
 
 #dice-proc {
   font-size: 0.55rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--dim);
+  color: #0a3d52;
   text-align: center;
   max-width: 180px;
 }
 
 #dice-svg {
-  width: 88px;
-  height: 88px;
-  color: var(--text);
+  width: 96px;
+  height: 96px;
+  color: #333;
 }
 
 /* Spin animation during number cycling */
@@ -1321,7 +1324,7 @@ html, body {
 #dice-dc-label {
   font-size: 0.55rem;
   letter-spacing: 0.1em;
-  color: var(--dim);
+  color: #555;
 }
 
 #dice-outcome-label {
@@ -1340,11 +1343,21 @@ html, body {
 #dice-outcome-label.FAILURE    { color: #d94040; }
 #dice-outcome-label.COMPLICATION { color: #c0389f; }
 
-/* Colour the die number to match outcome once it lands */
-#dice-svg.SUCCESS    text { fill: #5dbb63; }
-#dice-svg.FAILURE    text { fill: #d94040; }
-#dice-svg.COMPLICATION text { fill: #c0389f; }
-#dice-svg.MARGINAL   text { fill: #e8a838; }
+/* Colour the die number to match outcome once it lands, with a landing pop */
+#dice-svg.SUCCESS    text { fill: #2e8a3e; }
+#dice-svg.FAILURE    text { fill: #c22a2a; }
+#dice-svg.COMPLICATION text { fill: #a82a8a; }
+#dice-svg.MARGINAL   text { fill: #b57a10; }
+
+#dice-svg.SUCCESS, #dice-svg.MARGINAL,
+#dice-svg.FAILURE, #dice-svg.COMPLICATION {
+  animation: diceLand 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes diceLand {
+  0%   { transform: scale(0.88); }
+  60%  { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
 
 
 /* ── Drug reference side panel ───────────────────────────────────────────── */
@@ -2585,7 +2598,7 @@ html, body {
 }
 
 #thump-hammer-svg {
-  width: 100px;
+  width: 116px;
   height: auto;
   color: rgba(180, 200, 220, 0.90);
   filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.30));
@@ -3191,8 +3204,9 @@ html, body {
 }
 
 #io-drill-svg {
-  width: 118px;
+  width: 148px;
   height: auto;
+  color: rgba(190, 205, 220, 0.92);
   filter: drop-shadow(0 2px 10px rgba(80, 140, 200, 0.28));
   opacity: 0;
 }
@@ -3276,15 +3290,21 @@ html, body {
   overflow: visible;
 }
 
-/* Heart — deep crimson, dims slightly between jolts */
+/* Heart — line art with a faint crimson wash (matches the house style) */
 #defib-heart {
-  fill: #c02840;
-  filter: drop-shadow(0 0 6px rgba(200,40,60,0.5));
+  fill: rgba(192, 40, 64, 0.16);
+  stroke: #e04858;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 8px rgba(224, 72, 88, 0.45));
 }
 
 /* Bolt — hidden until animation fires */
 #defib-bolt {
   fill: #ffe040;
+  stroke: #8a6a10;
+  stroke-width: 1;
+  stroke-linejoin: round;
   opacity: 0;
 }
 

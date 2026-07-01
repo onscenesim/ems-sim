@@ -387,19 +387,25 @@
     <!-- IO drill animation overlay -->
     <div id="io-overlay" aria-hidden="true">
       <div id="io-header">IO ACCESS</div>
-      <svg id="io-drill-svg" viewBox="0 0 190 210" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <!-- EZ-IO power driver (this group jolts/shakes while drilling) -->
-        <g id="io-driver" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Maroon body + grip -->
-          <path d="M44 92 Q43 64 56 56 Q92 47 128 56 Q150 62 156 82 L156 95 Q154 104 142 106 Q133 108 131 122 L127 177 Q125 201 110 207 Q96 212 85 207 Q72 201 70 183 L65 130 Q63 115 53 111 Q45 107 44 92 Z"
-                fill="#7e2a38" stroke="#c98a96" stroke-width="2.4"/>
-          <!-- Top highlight ridge -->
-          <path d="M62 62 Q92 54 124 62" fill="none" stroke="#d8a3ad" stroke-width="1.4" opacity="0.5"/>
-          <!-- Chuck + needle -->
-          <rect x="151" y="84" width="6" height="10" rx="1.5" fill="#9a96a0"/>
-          <line x1="157" y1="89" x2="179" y2="89" stroke="#d8d4cc" stroke-width="2.4" stroke-linecap="round"/>
+      <svg id="io-drill-svg" viewBox="0 0 210 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- EZ-IO power driver, line art (this group jolts/shakes while drilling) -->
+        <g id="io-driver" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Motor body -->
+          <path d="M32 58 L142 58 Q158 58 160 72 L160 82 Q158 96 142 96 L54 96 Q36 96 33 80 Q32 72 32 58 Z"/>
+          <!-- Cooling vents -->
+          <line x1="46" y1="67" x2="46" y2="87" stroke-width="1.3" opacity="0.45"/>
+          <line x1="55" y1="67" x2="55" y2="87" stroke-width="1.3" opacity="0.45"/>
+          <line x1="64" y1="67" x2="64" y2="87" stroke-width="1.3" opacity="0.45"/>
+          <!-- Chuck + IO needle -->
+          <rect x="160" y="66" width="14" height="24" rx="3"/>
+          <line x1="174" y1="78" x2="204" y2="78" stroke-width="2.2"/>
+          <line x1="197" y1="71" x2="204" y2="78" stroke-width="1.4" opacity="0.6"/>
+          <!-- Pistol grip -->
+          <path d="M66 96 L100 96 L90 154 Q88 168 73 168 Q59 168 60 152 L63 104 Q64 97 66 96 Z"/>
+          <line x1="67" y1="112" x2="92" y2="112" stroke-width="1.3" opacity="0.45"/>
+          <line x1="66" y1="126" x2="89" y2="126" stroke-width="1.3" opacity="0.45"/>
           <!-- Trigger -->
-          <path d="M131 110 q13 1 14 12 q-1 10 -14 9 Z" fill="#2a2228" stroke="#c98a96" stroke-width="1.6"/>
+          <path d="M106 100 Q118 104 116 116 Q114 124 104 122"/>
         </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
@@ -520,12 +526,16 @@
     <!-- Suction (Yankauer) animation overlay -->
     <div id="suction-overlay" aria-hidden="true">
       <div id="suction-header">SUCTION</div>
-      <svg id="suction-svg" viewBox="0 0 134 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Stripped-down rigid suction catheter: hooked tip + body (waves gently) -->
+      <svg id="suction-svg" viewBox="0 0 196 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Rigid Yankauer: bulbous tip, curved wand, ribbed handle, tubing tail (waves gently) -->
           <g id="yankauer">
-            <path d="M24 30 Q12 46 30 54 Q54 64 80 65 L122 67"/>
-            <circle cx="24" cy="26" r="3.6" stroke-width="2"/>
+            <circle cx="22" cy="30" r="5.5" stroke-width="2.4"/>
+            <path d="M26 34 Q44 46 70 52 Q100 58 128 58"/>
+            <path d="M128 50 L156 50 Q163 53 163 58 Q163 63 156 66 L128 66 Z" stroke-width="2.4"/>
+            <line x1="137" y1="50" x2="137" y2="66" stroke-width="1.4" opacity="0.5"/>
+            <line x1="146" y1="50" x2="146" y2="66" stroke-width="1.4" opacity="0.5"/>
+            <path d="M163 58 Q175 58 179 65 Q184 73 189 71" stroke-width="2.2" opacity="0.8"/>
           </g>
           <!-- Secretion particles drawn into the tip -->
           <g id="suction-drops" stroke="none" fill="#7fd0ff">
@@ -548,22 +558,23 @@
       <div id="sga-header">SUPRAGLOTTIC AIRWAY</div>
       <svg id="sga-svg" viewBox="0 0 210 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <!-- i-gel slides in at an angle as one group -->
-        <g id="sga-device">
-          <!-- Translucent curved tube channel -->
-          <path d="M152 48 C144 86 112 110 86 132" fill="none" stroke="#bfe0d4" stroke-width="15" opacity="0.45" stroke-linecap="round"/>
-          <path d="M152 48 C144 86 112 110 86 132" fill="none" stroke="#dff0e8" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
-          <path d="M150 54 C143 88 114 110 90 130" fill="none" stroke="#eef8f3" stroke-width="1.2" opacity="0.5"/>
-          <!-- 15mm connector (proximal) -->
-          <g transform="rotate(40 150 46)">
-            <rect x="139" y="20" width="22" height="28" rx="3.5" fill="#a9d8e6" opacity="0.5" stroke="#86c2d4" stroke-width="2"/>
-            <line x1="139" y1="29" x2="161" y2="29" stroke="#86c2d4" stroke-width="1.3" opacity="0.6"/>
-            <line x1="139" y1="38" x2="161" y2="38" stroke="#86c2d4" stroke-width="1.3" opacity="0.6"/>
+        <g id="sga-device" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Airway tube: two crisp walls -->
+          <g fill="none" stroke="rgba(190,205,220,0.9)" stroke-width="2.4">
+            <path d="M146 44 C138 82 106 106 84 125"/>
+            <path d="M160 52 C152 90 120 116 95 137"/>
+            <!-- 15mm connector (proximal) -->
+            <g transform="rotate(40 152 46)">
+              <rect x="141" y="20" width="22" height="26" rx="3.5"/>
+              <line x1="141" y1="29" x2="163" y2="29" stroke-width="1.3" opacity="0.55"/>
+              <line x1="141" y1="37" x2="163" y2="37" stroke-width="1.3" opacity="0.55"/>
+            </g>
           </g>
           <!-- Soft gel cuff (distal teardrop bowl) -->
-          <path d="M92 124 C74 128 58 146 55 166 C53 180 64 188 76 182 C92 175 102 156 99 138 C97 128 95 125 92 124 Z" fill="#8fd0b0" opacity="0.45" stroke="#7cc4a2" stroke-width="2"/>
-          <path d="M82 140 C72 148 66 160 68 170" fill="none" stroke="#6bb894" stroke-width="1.4" opacity="0.5"/>
+          <path d="M92 124 C74 128 58 146 55 166 C53 180 64 188 76 182 C92 175 102 156 99 138 C97 128 95 125 92 124 Z" fill="rgba(110,200,150,0.22)" stroke="#7ecfa5" stroke-width="2.4"/>
+          <path d="M82 140 C72 148 66 160 68 170" fill="none" stroke="#7ecfa5" stroke-width="1.4" opacity="0.6"/>
           <!-- Epiglottic rest fin -->
-          <path d="M96 132 C104 130 110 134 110 140 C104 142 99 140 96 137 Z" fill="#8fd0b0" opacity="0.55" stroke="#7cc4a2" stroke-width="1.6"/>
+          <path d="M96 132 C104 130 110 134 110 140 C104 142 99 140 96 137 Z" fill="rgba(110,200,150,0.25)" stroke="#7ecfa5" stroke-width="1.8"/>
         </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
@@ -647,23 +658,31 @@
       <svg id="ekg-svg" viewBox="0 0 240 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <!-- Bare torso, front view (black-and-white line art) -->
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M48 56 Q72 26 100 28 Q110 12 120 12 Q130 12 140 28 Q168 26 192 56 L202 152 Q202 206 120 210 Q38 206 38 152 Z"/>
-          <!-- collarbone hints -->
-          <path d="M70 44 Q92 36 108 40" stroke-width="1.4" opacity="0.5"/>
-          <path d="M170 44 Q148 36 132 40" stroke-width="1.4" opacity="0.5"/>
+          <!-- neck -->
+          <path d="M103 12 Q104 30 95 37"/>
+          <path d="M137 12 Q136 30 145 37"/>
+          <!-- trapezius → shoulder → hanging upper arm (cropped at bottom) -->
+          <path d="M95 37 Q72 44 55 54 Q39 63 35 84 Q32 100 37 120 L43 212"/>
+          <path d="M145 37 Q168 44 185 54 Q201 63 205 84 Q208 100 203 120 L197 212"/>
+          <!-- inner arm / chest-wall separation -->
+          <path d="M63 212 L65 132 Q66 106 58 88" stroke-width="1.6" opacity="0.7"/>
+          <path d="M177 212 L175 132 Q174 106 182 88" stroke-width="1.6" opacity="0.7"/>
+          <!-- clavicles -->
+          <path d="M99 50 Q110 56 118 56" stroke-width="1.4" opacity="0.5"/>
+          <path d="M141 50 Q130 56 122 56" stroke-width="1.4" opacity="0.5"/>
           <!-- sternum -->
-          <line x1="120" y1="46" x2="120" y2="118" stroke-width="1.4" opacity="0.45"/>
+          <line x1="120" y1="58" x2="120" y2="120" stroke-width="1.4" opacity="0.45"/>
           <!-- costal margin hint -->
-          <path d="M120 118 Q98 150 70 150" stroke-width="1.3" opacity="0.4"/>
-          <path d="M120 118 Q150 150 178 150" stroke-width="1.3" opacity="0.4"/>
+          <path d="M120 120 Q100 148 78 150" stroke-width="1.3" opacity="0.4"/>
+          <path d="M120 120 Q140 148 162 150" stroke-width="1.3" opacity="0.4"/>
         </g>
         <!-- Precordial leads pop on in order V1→V6 -->
-        <g class="ekg-lead" style="--i:0"><circle cx="104" cy="96"  r="11" fill="#d63a3a"/><text x="104" y="99.5">V1</text></g>
-        <g class="ekg-lead" style="--i:1"><circle cx="134" cy="94"  r="11" fill="#e6c12e"/><text x="134" y="97.5">V2</text></g>
-        <g class="ekg-lead" style="--i:2"><circle cx="146" cy="113" r="11" fill="#2fa14e"/><text x="146" y="116.5">V3</text></g>
-        <g class="ekg-lead" style="--i:3"><circle cx="160" cy="130" r="11" fill="#2f6dd0"/><text x="160" y="133.5">V4</text></g>
-        <g class="ekg-lead" style="--i:4"><circle cx="180" cy="130" r="11" fill="#8b5a2b"/><text x="180" y="133.5">V5</text></g>
-        <g class="ekg-lead" style="--i:5"><circle cx="196" cy="121" r="11" fill="#9333a8"/><text x="196" y="124.5">V6</text></g>
+        <g class="ekg-lead" style="--i:0"><circle cx="104" cy="96"  r="10" fill="#d63a3a"/><text x="104" y="99.5">V1</text></g>
+        <g class="ekg-lead" style="--i:1"><circle cx="132" cy="96"  r="10" fill="#e6c12e"/><text x="132" y="99.5">V2</text></g>
+        <g class="ekg-lead" style="--i:2"><circle cx="141" cy="121" r="10" fill="#2fa14e"/><text x="141" y="124.5">V3</text></g>
+        <g class="ekg-lead" style="--i:3"><circle cx="149" cy="146" r="10" fill="#2f6dd0"/><text x="149" y="149.5">V4</text></g>
+        <g class="ekg-lead" style="--i:4"><circle cx="171" cy="139" r="10" fill="#8b5a2b"/><text x="171" y="142.5">V5</text></g>
+        <g class="ekg-lead" style="--i:5"><circle cx="189" cy="126" r="10" fill="#9333a8"/><text x="189" y="129.5">V6</text></g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
         <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
@@ -789,13 +808,23 @@
     <div id="dice-overlay" aria-hidden="true">
       <div id="dice-proc"></div>
       <svg id="dice-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <!-- d20 face: outer decagon + inner pentagon + spokes -->
-        <polygon points="50,4 79,17 95,44 95,56 79,83 50,96 21,83 5,56 5,44 21,17"
-                 fill="none" stroke="currentColor" stroke-width="3"/>
-        <polygon points="50,22 68,34 68,60 50,72 32,60 32,34"
-                 fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
-        <text id="dice-number" x="50" y="58" text-anchor="middle"
-              font-size="30" font-weight="bold" font-family="inherit" fill="currentColor">?</text>
+        <!-- d20 wireframe: hexagonal silhouette, central face, radiating edges -->
+        <polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"
+                 fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round"/>
+        <g fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.4" stroke-linejoin="round">
+          <polygon points="26,33 74,33 50,74"/>
+          <line x1="26" y1="33" x2="9"  y2="26.5"/>
+          <line x1="26" y1="33" x2="50" y2="3"/>
+          <line x1="26" y1="33" x2="9"  y2="73.5"/>
+          <line x1="74" y1="33" x2="91" y2="26.5"/>
+          <line x1="74" y1="33" x2="50" y2="3"/>
+          <line x1="74" y1="33" x2="91" y2="73.5"/>
+          <line x1="50" y1="74" x2="9"  y2="73.5"/>
+          <line x1="50" y1="74" x2="91" y2="73.5"/>
+          <line x1="50" y1="74" x2="50" y2="97"/>
+        </g>
+        <text id="dice-number" x="50" y="56" text-anchor="middle"
+              font-size="26" font-weight="bold" font-family="inherit" fill="currentColor">?</text>
       </svg>
       <div id="dice-dc-label"></div>
       <div id="dice-outcome-label"></div>
