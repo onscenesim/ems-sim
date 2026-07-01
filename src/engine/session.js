@@ -381,6 +381,27 @@ class Session {
       return { reply: '[Scenario is closed. Start a new scenario.]', rolls: [], closed: true };
     }
 
+    // CLOSE COMMAND — no model turn. The END CALL button (and typed close phrases
+    // like "end scenario") end the call directly. If we let the model respond to
+    // the close turn it generates its own after-action/"debrief", so the user saw
+    // TWO debriefs: the model's, then the official one. Close server-side with a
+    // canned sign-off and skip the model call entirely. (Report-mode handoffs are
+    // NOT short-circuited here — they still get the ED's acknowledgment and close
+    // via the post-reply check below.)
+    if (!reportMode && !skipMode && isDebriefTrigger(userText)) {
+      closeScenario(this.seed, this.sceneMinute);
+      this.closed = true;
+      logRun(this.sessionId, this.seed, this.messages);
+      const unit = this.seed.unit_name || 'Unit';
+      return {
+        reply: `${unit} is clear. — End of call —`,
+        rolls: [], vitals: this.lastVitals, loading: false, enRoute: false,
+        transportEtaMin: this.transportEtaMin, baseContact: false,
+        backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource,
+        secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true,
+      };
+    }
+
     // Detect and roll ALL procedures mentioned in the user's message.
     // Skip entirely when the player is giving a radio report, handoff, or a time-skip.
     const rollContext = { ...this.contextFlags, moving: this.moving };
