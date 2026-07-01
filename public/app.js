@@ -79,7 +79,6 @@ function playSound(name) {
   s.currentTime = 0;
   s.play().catch(err => console.warn('[sound] play error:', name, err.message));
 }
-function playDefibSound() { playSound('defib'); } // legacy wrapper
 const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression',
   'finger_thoracostomy', 'resuscitative_thoracotomy', 'perimortem_csection']);
 // Subset that triggers the scalpel animation — excludes NCD (needle decompression)
@@ -661,13 +660,15 @@ async function startScenario() {
       patientBtn.style.display = '';
     }
 
-    // Crew card pops at scenario start
+    // Crew card pops at scenario start. The captain is an off-scene supervisor
+    // at T+0 (Rule 18) — the model's [CREW_STATUS:] tag below overrides this
+    // default when backup is already on scene.
     if (data.crew) {
       populateCrewPanel(data.crew);
       showCrewPanel();
       applyCrewStatus({
         partner: 'on_scene',
-        captain: data.crew.captain ? 'on_scene' : 'not_on_scene',
+        captain: 'not_on_scene',
       });
     }
 
@@ -1061,6 +1062,7 @@ function resetToStart() {
   hasPlayedLoading  = false;
   hasPlayedDepart   = false;
   arrivedAtHospital = false;
+  window._isMoving  = false;   // next scenario starts on scene — reset transport sounds
   updateSkipBtn();
   prevBackupStatus  = null;
   firstVitalsPlayed = false;
@@ -2108,6 +2110,10 @@ async function resumeFromSnapshot(snap) {
   }
 
   if (snap.crew) populateCrewPanel(snap.crew);
+
+  // Restore header chips — backup + crew positions (server-persisted)
+  applyBackupStatus(snap.backup || { status: 'not_called', eta: null });
+  if (snap.crewStatus) applyCrewStatus(snap.crewStatus);
 
   if (snap.meta && snap.meta.patient) {
     patientDemoSource      = snap.demo_source   || null;

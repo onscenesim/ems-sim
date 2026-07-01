@@ -38,6 +38,10 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     turns:       session.turns,
     hasLoaded:   session.hasLoaded,
     moving:      session.moving,
+    backupStatus:        session.backupStatus,
+    backupArrivalMinute: session.backupArrivalMinute,
+    crewStatus:          session.crewStatus,
+    transportEtaMin:     session.transportEtaMin,
     meta,
     crew,
   };
@@ -103,6 +107,8 @@ router.get('/resume', (req, res) => {
       multi_patient:  snapshot.meta ? (snapshot.meta.multi_patient || false) : false,
       demo_source:    snapshot.demo_source   || null,
       second_patient: snapshot.second_patient || false,
+      backup:         snapshot.backupStatus  || null,
+      crewStatus:     snapshot.crewStatus    || null,
     },
   });
 });
@@ -237,6 +243,10 @@ router.post('/:id/turn', async (req, res) => {
       arrivedAtHospital: session.arrivedAtHospital || false,
       demo_source:       session.demoSource       || null,
       second_patient:    session.secondPatientFound || false,
+      backupStatus:        session.backupStatus        || null,
+      backupArrivalMinute: session.backupArrivalMinute ?? null,
+      crewStatus:          session.crewStatus          || null,
+      transportEtaMin:     session.transportEtaMin     ?? null,
     });
 
     return res.json({
@@ -246,6 +256,7 @@ router.post('/:id/turn', async (req, res) => {
       transport_eta_min:  result.transportEtaMin ?? null,
       rolls:          result.rolls || [],
       vitals:         result.vitals || null,
+      baseContact:    result.baseContact || false,
       backup:         result.backup     || null,
       crewStatus:     result.crewStatus || null,
       demo_source:    result.demoSource   || null,

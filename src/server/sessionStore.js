@@ -168,6 +168,12 @@ function restoreSession(snapshot) {
   session.hasLoaded   = snapshot.hasLoaded   || false;
   session.moving      = snapshot.moving      || false;
   session.arrivedAtHospital = snapshot.arrivedAtHospital || false;
+  session.backupStatus        = snapshot.backupStatus        || null;
+  session.backupArrivalMinute = snapshot.backupArrivalMinute ?? null;
+  session.crewStatus          = snapshot.crewStatus          || null;
+  session.transportEtaMin     = snapshot.transportEtaMin     ?? null;
+  session.demoSource          = snapshot.demo_source         || null;
+  session.secondPatientFound  = snapshot.second_patient      || false;
   store.set(snapshot.id, {
     session,
     lastActive: Date.now(),

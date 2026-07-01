@@ -278,10 +278,13 @@ const BACKUP_REQUEST_RE = /\b(?:(?:call(?:ing)?|send|request(?:ing)?|get\s+me|di
  * Returns { cleanedReply, timeMinutes }. timeMinutes is null if tag absent.
  */
 function parseTimeTag(reply) {
-  const re = /\s*\[TIME:\s*(\d+):(\d{2})\]\s*/i;
-  const m = reply.match(re);
-  if (!m) return { cleanedReply: reply, timeMinutes: null };
+  // Strip ALL [TIME:] tags from the visible reply; if the model emits more than
+  // one, the LAST is the most current and wins.
+  const re = /\s*\[TIME:\s*(\d+):(\d{2})\]\s*/gi;
+  const matches = [...reply.matchAll(re)];
+  if (matches.length === 0) return { cleanedReply: reply, timeMinutes: null };
   const cleanedReply = reply.replace(re, ' ').replace(/\s{2,}/g, ' ').trim();
+  const m = matches[matches.length - 1];
   const timeMinutes = parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
   return { cleanedReply, timeMinutes };
 }
