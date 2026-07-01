@@ -114,27 +114,36 @@ function getProcedureSound(id, outcome) {
 }
 
 // ── Mobile audio unlock ─────────────────────────────────────────────────────
-// iOS Safari blocks programmatic audio until a user gesture has played each
-// Audio element once. Silently play+pause every sound on the first interaction.
+// Mobile browsers block programmatic audio until playback has been started once
+// from a user gesture. The OLD approach played EVERY sound (muted) on the first
+// tap — but the muted-before-play trick isn't reliable on mobile and the 30+
+// queued play() calls could flush audibly, blasting the whole library at once on
+// the menu. Modern iOS/Android unlock the page's audio session from a SINGLE
+// gesture-initiated play, so we unlock with one short SILENT clip instead. Real
+// sounds then play on demand via playSound().
 let audioUnlocked = false;
+function makeSilentClip() {
+  // ~0.05s of 8-bit mono PCM silence, built at runtime (no asset needed).
+  const rate = 8000, samples = 400, bytes = 44 + samples;
+  const buf = new ArrayBuffer(bytes), v = new DataView(buf);
+  const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + samples, true); str(8, 'WAVE');
+  str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  str(36, 'data'); v.setUint32(40, samples, true);
+  for (let i = 0; i < samples; i++) v.setUint8(44 + i, 128); // 128 = silence (unsigned 8-bit)
+  const a = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })));
+  a.preload = 'auto';
+  return a;
+}
+const _unlockClip = makeSilentClip();
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
-  // iOS requires every HTMLAudioElement to be .play()'d during a user gesture.
-  // We mute them first, then immediately pause+reset in .then() so each element
-  // ends up in a clean "paused at 0, unlocked" state for future non-gesture calls.
-  // Guard: if playSound() already grabbed the element (s.muted === false), skip the
-  // pause so we don't clobber a real sound that's already playing.
-  Object.values(SOUNDS).forEach(s => {
-    if (!s) return;
-    s.muted = true;
-    const p = s.play();
-    if (p && typeof p.then === 'function') {
-      p.then(() => {
-        if (s.muted) { s.pause(); s.currentTime = 0; s.muted = false; }
-      }).catch(() => { s.muted = false; });
-    }
-  });
+  const p = _unlockClip.play();
+  if (p && typeof p.then === 'function') {
+    p.then(() => { _unlockClip.pause(); _unlockClip.currentTime = 0; }).catch(() => {});
+  }
 }
 // touchend (not touchstart) avoids the iOS native <select> picker false-trigger.
 document.addEventListener('click',    unlockAudio);
