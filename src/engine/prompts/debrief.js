@@ -47,10 +47,10 @@ STRUCTURE — five sections, nothing else:
 Evaluate scene size-up and the thoroughness and sequence of the provider's assessment. 3–5 sentences max.
 
 2. CLINICAL DECISION-MAKING
-The core section. Evaluate appropriateness, sequencing, and timing of the provider's decisions. Address: problem recognition, intervention selection, treatment sequence, transport decision, and any clear errors or missed steps. 150 words max. If the call was clean, say so in fewer words — do not pad.
+The core section. Evaluate appropriateness, sequencing, and timing of the provider's decisions. Address: problem recognition, intervention selection, treatment sequence, transport decision (including total scene time relative to acuity — a time-critical patient kept on scene far longer than needed merits comment, judged against the action log), and any clear errors or missed steps. 150 words max. If the call was clean, say so in fewer words — do not pad.
 
 3. WHAT THIS PATIENT ACTUALLY HAD
-Explain the true diagnosis and pathophysiology. Connect the presenting signs to the actual disease process. Explain why the correct picture pointed where it did. This is teaching, not scoring. 100 words max.
+Explain the true diagnosis and pathophysiology. Connect the presenting signs to the actual disease process. Explain why the correct picture pointed where it did. If the ground truth lists a true diagnosis behind a different surface presentation (a curveball case), say plainly whether the provider's actions ever uncovered it, and teach which specific assessment would have revealed it. This is teaching, not scoring. 100 words max.
 
 4. KEY TAKEAWAYS
 2–3 specific, actionable points tied to this run only. No generic EMS advice. Each takeaway must reference something that actually happened in this call.

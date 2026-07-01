@@ -3,7 +3,7 @@
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
-const { detectAllAndRoll } = require('./dice');
+const { detectAllAndRoll, getProcedure } = require('./dice');
 const { sendTurn, sendDebrief } = require('./api');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 
@@ -92,6 +92,52 @@ function reconcileRolls(rolls, reply) {
     }
     return true;
   });
+}
+
+// ── Roll outcome guidance ───────────────────────────────────────────────────
+// The interventions data documents each procedure's real failure modes and
+// complications (dc_notes), but the model never saw them — on a FAILURE or
+// COMPLICATION it had to invent what went wrong, sometimes implausibly (e.g. a
+// random adverse event instead of the documented esophageal placement on an
+// intubation COMPLICATION). Extract the matching "Failure:"/"Complication:"
+// sentence(s) from dc_notes and append them to the injected [SYSTEM ROLL] line
+// so the narration lands on the documented failure mode.
+const GUIDANCE_LABEL_RE = {
+  FAILURE:      /^failure\b/i,
+  COMPLICATION: /^complication\b/i,
+  MARGINAL:     /^marginal\b/i,
+};
+// A new labeled clause ends the guidance we're collecting.
+const GUIDANCE_STOP_RE = /^(?:failure|complication|marginal|success|dc\s?\d|scope|always|never|document)/i;
+
+function outcomeGuidance(procedureId, outcome) {
+  const labelRe = GUIDANCE_LABEL_RE[outcome];
+  if (!labelRe) return null;   // SUCCESS or unknown — no guidance needed
+  const proc = getProcedure(procedureId);
+  const notes = proc && proc.dc_notes;
+  if (notes) {
+    const sentences = notes.split(/(?<=\.)\s+/);
+    const idx = sentences.findIndex(s => labelRe.test(s.trim()));
+    if (idx >= 0) {
+      let out = sentences[idx].trim();
+      for (let i = idx + 1; i < sentences.length && out.length < 180; i++) {
+        const s = sentences[i].trim();
+        // A same-label sentence continues the guidance (e.g. cardioversion's
+        // "Failure of equipment:" + "Failure of response:"); a different label
+        // or DC/roll mechanics ends it — that's engine meta, not narration.
+        if (labelRe.test(s)) { out += ' ' + s; continue; }
+        if (GUIDANCE_STOP_RE.test(s) || /\bDC\b/.test(s)) break;
+        out += ' ' + s;
+      }
+      return out.length > 240 ? out.slice(0, 237) + '...' : out;
+    }
+  }
+  // No documented guidance for this outcome — give MARGINAL a sane default so
+  // the model doesn't treat it as either a clean success or a failure.
+  if (outcome === 'MARGINAL') {
+    return 'Marginal: the attempt barely succeeds — it works, but narrate degraded quality, extra time, or a minor imperfection.';
+  }
+  return null;
 }
 
 function isDebriefTrigger(text) {
@@ -498,13 +544,15 @@ class Session {
     }
 
     const rollLines = rolls.filter(r => !r.no_roll).map(r => {
+      const guide = outcomeGuidance(r.procedure_id, r.outcome);
+      const guideStr = guide ? ` — narrate: ${guide}` : '';
       if (r.multi_roll) {
         const parts = r.rolls.map(x => `d20=${x.roll} vs DC ${x.dc} — ${x.outcome}`);
         const mLabel = r.matched_drug ? ` (${r.matched_drug})` : '';
-        return `[SYSTEM ROLL: ${r.procedure_id}${mLabel} — ${parts.join(' | ')}]`;
+        return `[SYSTEM ROLL: ${r.procedure_id}${mLabel} — ${parts.join(' | ')}${guideStr}]`;
       }
       const drugLabel = r.matched_drug ? ` (${r.matched_drug})` : '';
-      return `[SYSTEM ROLL: ${r.procedure_id}${drugLabel} — d20=${r.roll} vs DC ${r.dc} — ${r.outcome}]`;
+      return `[SYSTEM ROLL: ${r.procedure_id}${drugLabel} — d20=${r.roll} vs DC ${r.dc} — ${r.outcome}${guideStr}]`;
     });
     if (rollLines.length > 0) {
       messageText += '\n\n' + rollLines.join('\n');
