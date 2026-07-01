@@ -489,25 +489,30 @@ class Session {
     // Deterministic backup: the provider asked for help but the model often omits
     // the [BACKUP:] machine tag, so the UI status never updated. Set en_route here
     // ourselves; a model-emitted [BACKUP:] tag (parsed below) still refines it.
+    const _capName = this.seed.crew_captain || 'your captain';
     if (!reportMode && !skipMode && BACKUP_REQUEST_RE.test(userText)
         && (!this.backupStatus || ['not_called', 'called'].includes(this.backupStatus.status))) {
       const _backupEta = 8;
       this.backupStatus = { status: 'en_route', eta: _backupEta };
       this.backupArrivalMinute = this.sceneMinute + _backupEta;
-      messageText += '\n\n[SYSTEM NOTE: The provider requested backup. Your captain (named in the CREW section) responds personally. '
-        + 'Narrate dispatch confirming backup en route with an ETA of about ' + _backupEta + ' minutes, and emit [BACKUP: en_route ETA=' + _backupEta + '].]';
+      messageText += '\n\n[SYSTEM NOTE: The provider requested backup. ' + _capName + ' responds personally by name. '
+        + 'Narrate dispatch confirming ' + _capName + ' en route with an ETA of about ' + _backupEta + ' minutes, and emit [BACKUP: en_route ETA=' + _backupEta + '].]';
     }
 
-    // Auto-trigger backup arrival when server-tracked ETA has elapsed
+    // Auto-trigger backup arrival when server-tracked ETA has elapsed. Backup is a
+    // CONCRETE, NAMED person (the captain) who becomes a directable crew member —
+    // not an abstract "on scene" flag with nobody actually there.
     if (
       this.backupStatus &&
       this.backupStatus.status === 'en_route' &&
       this.backupArrivalMinute !== null &&
       this.sceneMinute >= this.backupArrivalMinute
     ) {
-      messageText += '\n\n[SYSTEM NOTE: The backup unit\'s ETA has elapsed — they are on scene. '
-        + 'You MUST emit [BACKUP: on_scene ETA=0] in this response and announce the arrival '
-        + 'through dispatch, describing who arrived and what resources they brought.]';
+      messageText += '\n\n[SYSTEM NOTE: The backup ETA has elapsed — ' + _capName + ' is now ON SCENE, by name. '
+        + 'Emit [BACKUP: on_scene ETA=0] this response and set captain=on_scene in the [CREW_STATUS:] tag. Narrate '
+        + _capName + ' arriving and physically joining the crew — they are now a real, directable person who can help '
+        + 'with the load and, during transport, ride in the back to assist you (captain=in_back). The captain NEVER drives. '
+        + 'Do NOT report backup on scene without an actual named person present and available.]';
     }
 
     this.messages.push({ role: 'user', content: messageText });
