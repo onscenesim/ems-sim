@@ -184,7 +184,8 @@
     <!-- Expanded vitals panel — toggled by the chevron in #vitals-bar -->
     <div id="vitals-panel" aria-hidden="true">
       <div class="vital-row"><span class="vital-row-label">RR</span><span class="vital-row-value" data-vital="RR">&mdash;</span></div>
-      <div class="vital-row"><span class="vital-row-label">Rhythm</span><span class="vital-row-value" data-vital="Rhythm">&mdash;</span></div>
+      <!-- No Rhythm row: the rhythm is deliberately never named in the UI — the
+           player has to interpret the ECG strip, like a real monitor. -->
       <div class="vital-row"><span class="vital-row-label">Temp</span><span class="vital-row-value" data-vital="Temp">&mdash;</span><span class="vital-row-stamp" data-vital-stamp="Temp"></span></div>
       <div class="vital-row"><span class="vital-row-label">Glucose</span><span class="vital-row-value" data-vital="Glucose">&mdash;</span><span class="vital-row-stamp" data-vital-stamp="Glucose"></span></div>
       <div class="vital-row"><span class="vital-row-label">GCS</span><span class="vital-row-value" data-vital="GCS">&mdash;</span></div>

@@ -2159,7 +2159,7 @@ let stalenessInterval  = null;
 const RHYTHM_RATE_DEFAULT = {
   sinus: 80, sinus_tach: 125, sinus_brad: 45, afib: 95, aflutter: 140,
   svt: 180, vt: 185, vf: 0, asystole: 0, pea: 45, paced: 70,
-  junctional: 45, idioventricular: 35,
+  junctional: 45, idioventricular: 35, hyperk: 70,
   av_block_1: 70, av_block_2_i: 55, av_block_2_ii: 45, av_block_3: 35,
 };
 
@@ -2189,6 +2189,7 @@ function normalizeRhythm(raw) {
   if (/asystole|flat/.test(k))                      return 'asystole';
   if (/pea|pulseless_electrical/.test(k))           return 'pea';
   if (/pace/.test(k))                               return 'paced';
+  if (/hyperk|peaked_t|tented_t/.test(k))           return 'hyperk';
   if (/junctional/.test(k))                         return 'junctional';
   if (/idio|agonal/.test(k))                        return 'idioventricular';
   if (/block_3|third_degree|complete_heart/.test(k)) return 'av_block_3';
@@ -2249,6 +2250,9 @@ function stripSchedule(until) {
       case 'paced':
         beat.wide = true; beat.pacer = true;
         break;
+      case 'hyperk':
+        beat.hyperk = true;   // flattened P, widened QRS, tall tented T
+        break;
       case 'sinus': case 'sinus_tach': case 'sinus_brad': case 'pea':
         beat.p = true;
         break;
@@ -2268,7 +2272,22 @@ function stripBeatY(dt, b) {
   let y = 0;
   if (b.p) y += 0.14 * gaus(dt + b.pr, 0.022);            // P wave
   if (b.dropped) return y;                                 // blocked — P only
-  if (b.pacer && Math.abs(dt + 0.035) < 0.008) y += 1.25;  // pacer spike
+  if (b.pacer) {
+    // Pacer spike then a wide rsR'-style (bundle-branch) double-peaked complex
+    if (Math.abs(dt + 0.045) < 0.008) y += 1.3;            // spike
+    y += 0.55 * gaus(dt, 0.016);                           // r
+    y += -0.22 * gaus(dt - 0.038, 0.014);                  // s
+    y += 0.95 * gaus(dt - 0.075, 0.024);                   // R' (dominant)
+    y += -0.30 * gaus(dt - 0.34, 0.07);                    // discordant T
+    return y;
+  }
+  if (b.hyperk) {
+    // Hyperkalemia: no visible P, moderately widened QRS, tall tented T
+    y += 0.85 * gaus(dt, 0.020);                           // widened R
+    y += -0.30 * gaus(dt - 0.045, 0.022);                  // widened S
+    y += 0.65 * gaus(dt - 0.26, 0.045);                    // tall peaked T
+    return y;
+  }
   if (b.wide) {
     y += 0.95 * gaus(dt, 0.032) - 0.45 * gaus(dt - 0.06, 0.032);
     y += -0.28 * gaus(dt - 0.30, 0.07);                    // discordant T
