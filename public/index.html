@@ -155,6 +155,10 @@
 
     <!-- Vitals monitor strip — LIFEPAK-style. Sits below header on all viewports. -->
     <div id="vitals-bar" aria-label="Patient vitals monitor">
+      <div class="vital-cell" id="rhythm-cell" aria-label="ECG rhythm strip">
+        <div class="vital-label">ECG</div>
+        <canvas id="rhythm-strip"></canvas>
+      </div>
       <div class="vital-cell vital-hr">
         <div class="vital-label">HR</div>
         <div class="vital-value" data-vital="HR">&mdash;&mdash;</div>
@@ -174,6 +178,7 @@
         <div class="vital-value" data-vital="ETCO2">&mdash;&mdash;</div>
       </div>
       <button id="vitals-expand" title="Show all vitals" aria-label="Expand vitals">&#x25BC;</button>
+      <span id="multi-patient-notice">Multiple patients on scene &mdash; vitals unavailable</span>
     </div>
 
     <!-- Expanded vitals panel — toggled by the chevron in #vitals-bar -->

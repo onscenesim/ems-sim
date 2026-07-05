@@ -2150,6 +2150,284 @@ let currentVitals      = null;   // last parsed vitals object from server
 let currentSceneMinute = 0;      // most recent server scene_minute
 let stalenessInterval  = null;
 
+// ── ECG rhythm strip ─────────────────────────────────────────────────────────
+// A monitor-style sweeping trace in the vitals bar, driven by the Rhythm and
+// HR fields of the [VITALS:] tag. The pen sweeps left→right with an erase gap
+// ahead of it (like a real LIFEPAK), wrapping at the right edge. Each rhythm
+// token the engine can emit gets its own waveform generator.
+
+const RHYTHM_RATE_DEFAULT = {
+  sinus: 80, sinus_tach: 125, sinus_brad: 45, afib: 95, aflutter: 140,
+  svt: 180, vt: 185, vf: 0, asystole: 0, pea: 45, paced: 70,
+  junctional: 45, idioventricular: 35,
+  av_block_1: 70, av_block_2_i: 55, av_block_2_ii: 45, av_block_3: 35,
+};
+
+const STRIP_SPEED = 46;   // CSS px per second of sweep
+const STRIP_GAP   = 12;   // erase gap ahead of the pen
+
+const rhythmStrip = {
+  canvas: document.getElementById('rhythm-strip'),
+  ctx: null, dpr: 1, w: 0, h: 0,
+  active: false, type: null, rate: 80,
+  clock: 0, x: 0, penY: null, lastTs: null, raf: null,
+  beats: [], horizon: 0, beatCount: 0,
+  vfPhase: [Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28],
+};
+if (rhythmStrip.canvas) rhythmStrip.ctx = rhythmStrip.canvas.getContext('2d');
+
+// Map whatever the model wrote into one of the generator keys. The prompt
+// specifies exact tokens (sinus_tach, AV_block_3, VF, ...) but be liberal.
+function normalizeRhythm(raw) {
+  const k = String(raw).toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  if (k in RHYTHM_RATE_DEFAULT) return k;
+  if (/^v_?fib|ventricular_fib/.test(k))            return 'vf';
+  if (/^v_?tach|ventricular_tach/.test(k))          return 'vt';
+  if (/fine_vf|coarse_vf/.test(k))                  return 'vf';
+  if (/a_?fib|atrial_fib/.test(k))                  return 'afib';
+  if (/flutter/.test(k))                            return 'aflutter';
+  if (/asystole|flat/.test(k))                      return 'asystole';
+  if (/pea|pulseless_electrical/.test(k))           return 'pea';
+  if (/pace/.test(k))                               return 'paced';
+  if (/junctional/.test(k))                         return 'junctional';
+  if (/idio|agonal/.test(k))                        return 'idioventricular';
+  if (/block_3|third_degree|complete_heart/.test(k)) return 'av_block_3';
+  if (/block_2_ii|mobitz_ii|type_ii/.test(k))       return 'av_block_2_ii';
+  if (/block_2|wenckebach|mobitz/.test(k))          return 'av_block_2_i';
+  if (/block_1|first_degree/.test(k))               return 'av_block_1';
+  if (/^svt|supraventricular/.test(k))              return 'svt';
+  if (/tach/.test(k))                               return 'sinus_tach';
+  if (/brad/.test(k))                               return 'sinus_brad';
+  return 'sinus';
+}
+
+function stripSizeCanvas() {
+  const c = rhythmStrip.canvas;
+  if (!c) return false;
+  const w = c.clientWidth, h = c.clientHeight;
+  if (!w || !h) return false;
+  const dpr = window.devicePixelRatio || 1;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
+  }
+  rhythmStrip.dpr = dpr; rhythmStrip.w = w; rhythmStrip.h = h;
+  return true;
+}
+
+/* Schedule QRS complexes out to `until` seconds of strip time. */
+function stripSchedule(until) {
+  const s = rhythmStrip, type = s.type;
+  if (type === 'vf' || type === 'asystole') { s.horizon = until; return; }
+  const hr = s.rate || RHYTHM_RATE_DEFAULT[type] || 75;
+  while (s.horizon < until) {
+    let interval = 60 / Math.max(hr, 15);
+    let beat = { wide: false, p: false, pr: 0.16, pacer: false, dropped: false };
+    switch (type) {
+      case 'afib':
+        interval *= 0.65 + Math.random() * 0.7;   // irregularly irregular
+        break;
+      case 'av_block_3':
+        beat.wide = true;                          // escape rhythm; Ps drawn analytically
+        break;
+      case 'av_block_2_i':
+      case 'av_block_2_ii': {
+        const group = type === 'av_block_2_i' ? 4 : 3;
+        s.beatCount++;
+        beat.p = true;
+        beat.pr = type === 'av_block_2_i' ? 0.16 + 0.05 * (s.beatCount % group) : 0.18;
+        beat.dropped = (s.beatCount % group) === 0;  // P without a QRS
+        break;
+      }
+      case 'av_block_1':
+        beat.p = true; beat.pr = 0.34;
+        break;
+      case 'vt':
+      case 'idioventricular':
+        beat.wide = true;
+        break;
+      case 'paced':
+        beat.wide = true; beat.pacer = true;
+        break;
+      case 'sinus': case 'sinus_tach': case 'sinus_brad': case 'pea':
+        beat.p = true;
+        break;
+      // svt, junctional: narrow, no P — defaults are already right
+    }
+    beat.t = s.horizon + interval;
+    s.beats.push(beat);
+    s.horizon += interval;
+  }
+  while (s.beats.length && s.beats[0].t < s.clock - 1.5) s.beats.shift();
+}
+
+function gaus(dt, sigma) { return Math.exp(-(dt * dt) / (2 * sigma * sigma)); }
+
+/* One beat's contribution at time offset dt from its QRS. */
+function stripBeatY(dt, b) {
+  let y = 0;
+  if (b.p) y += 0.14 * gaus(dt + b.pr, 0.022);            // P wave
+  if (b.dropped) return y;                                 // blocked — P only
+  if (b.pacer && Math.abs(dt + 0.035) < 0.008) y += 1.25;  // pacer spike
+  if (b.wide) {
+    y += 0.95 * gaus(dt, 0.032) - 0.45 * gaus(dt - 0.06, 0.032);
+    y += -0.28 * gaus(dt - 0.30, 0.07);                    // discordant T
+  } else {
+    y += -0.08 * gaus(dt + 0.028, 0.008);                  // q
+    y += 1.0  * gaus(dt, 0.011);                           // R
+    y += -0.28 * gaus(dt - 0.030, 0.012);                  // S
+    y += 0.24 * gaus(dt - 0.30, 0.045);                    // T
+  }
+  return y;
+}
+
+/* Trace amplitude (−1..1.3) at strip time t. */
+function stripY(t) {
+  const s = rhythmStrip, type = s.type;
+  if (type === 'asystole') {
+    return 0.02 * Math.sin(t * 1.7) + 0.012 * Math.sin(t * 4.3);
+  }
+  if (type === 'vf') {
+    const [p1, p2, p3] = s.vfPhase;
+    const mod = 0.65 + 0.35 * Math.sin(t * 1.1 + p1);
+    return mod * (0.42 * Math.sin(2 * Math.PI * 4.6 * t + p1)
+                + 0.30 * Math.sin(2 * Math.PI * 7.4 * t + p2)
+                + 0.18 * Math.sin(2 * Math.PI * 11.3 * t + p3));
+  }
+  let y = 0;
+  if (type === 'aflutter') y += 0.13 - 0.26 * ((t * 5) % 1);              // sawtooth F waves
+  if (type === 'afib')     y += 0.05 * Math.sin(2 * Math.PI * 7.7 * t)
+                              + 0.035 * Math.sin(2 * Math.PI * 12.3 * t + 1.2);
+  if (type === 'av_block_3') {                                            // independent Ps at ~90
+    const pInt = 60 / 90;
+    const d = ((t % pInt) + pInt) % pInt;
+    y += 0.14 * gaus(d < pInt / 2 ? d : d - pInt, 0.022);
+  }
+  for (const b of s.beats) {
+    const dt = t - b.t;
+    if (dt < -0.6 || dt > 0.6) continue;
+    y += stripBeatY(dt, b);
+  }
+  return y;
+}
+
+function stripFrame(ts) {
+  const s = rhythmStrip;
+  if (!s.active) return;
+  s.raf = requestAnimationFrame(stripFrame);
+  if (!stripSizeCanvas() || !s.ctx) return;
+  if (s.lastTs === null) s.lastTs = ts;
+  let dt = (ts - s.lastTs) / 1000;
+  s.lastTs = ts;
+  if (dt <= 0) return;
+  if (dt > 0.25) dt = 0.25;               // tab was backgrounded — don't lurch
+
+  stripSchedule(s.clock + dt + 2);
+
+  const ctx = s.ctx;
+  ctx.save();
+  ctx.scale(s.dpr, s.dpr);
+  const baseline = s.h * 0.62;
+  const amp = s.h * 0.40;
+  const targetX = s.x + STRIP_SPEED * dt;
+  ctx.strokeStyle = '#2ee76a';
+  ctx.lineWidth = 1.4;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  // The pen persists across frames: a 60fps frame advances less than one
+  // sample step, so each frame must draw FROM last frame's endpoint or the
+  // path degenerates into isolated moveTo points and nothing renders.
+  if (s.penY === null) s.penY = baseline;
+  let prevDraw = s.x % s.w;
+  ctx.moveTo(prevDraw, s.penY);
+  const step = 0.75;
+  for (let x = s.x + step; ; x += step) {
+    if (x > targetX) x = targetX;
+    const t = s.clock + (x - s.x) / STRIP_SPEED;
+    const drawX = x % s.w;
+    const y = baseline - amp * Math.max(-1.05, Math.min(1.35, stripY(t)));
+    if (drawX < prevDraw) ctx.moveTo(drawX, y);   // wrapped past the right edge
+    else ctx.lineTo(drawX, y);
+    prevDraw = drawX;
+    s.penY = y;
+    if (x >= targetX) break;
+  }
+  ctx.stroke();
+  // Erase gap ahead of the pen (wraps around the edge)
+  const gapX = targetX % s.w;
+  ctx.clearRect(gapX + 1, 0, STRIP_GAP, s.h);
+  if (gapX + 1 + STRIP_GAP > s.w) ctx.clearRect(0, 0, gapX + 1 + STRIP_GAP - s.w, s.h);
+  ctx.restore();
+
+  s.clock += dt;
+  s.x = targetX % s.w;
+}
+
+/* Dim dashed baseline when no rhythm is on the monitor. */
+function stripIdle() {
+  const s = rhythmStrip;
+  if (!stripSizeCanvas() || !s.ctx) return;
+  const ctx = s.ctx;
+  ctx.save();
+  ctx.scale(s.dpr, s.dpr);
+  ctx.clearRect(0, 0, s.w, s.h);
+  ctx.strokeStyle = 'rgba(46, 231, 106, 0.22)';
+  ctx.setLineDash([3, 5]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(2, s.h * 0.62);
+  ctx.lineTo(s.w - 2, s.h * 0.62);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function setRhythmStrip(rhythmRaw, hr) {
+  const s = rhythmStrip;
+  if (!s.canvas) return;
+  const type = normalizeRhythm(rhythmRaw);
+  const rate = (hr && hr > 0) ? hr : (RHYTHM_RATE_DEFAULT[type] || 75);
+  if (s.active && type === s.type && Math.abs(rate - s.rate) < 1) return;  // unchanged
+  const wasActive = s.active;
+  s.type = type;
+  s.rate = rate;
+  s.beats = [];
+  s.beatCount = 0;
+  s.horizon = s.clock + 0.2;   // new rhythm picks up just ahead of the pen
+  if (!wasActive) {
+    s.active = true;
+    s.lastTs = null;
+    s.clock = 0; s.x = 0; s.penY = null; s.horizon = 0.2;
+    if (stripSizeCanvas() && s.ctx) {
+      s.ctx.clearRect(0, 0, s.canvas.width, s.canvas.height);
+    }
+    s.raf = requestAnimationFrame(stripFrame);
+  }
+}
+
+function stopRhythmStrip() {
+  const s = rhythmStrip;
+  if (!s.canvas) return;
+  s.active = false;
+  s.type = null;
+  if (s.raf) { cancelAnimationFrame(s.raf); s.raf = null; }
+  stripIdle();
+}
+
+/* Feed the strip from a vitals snapshot (Rhythm gated on monitor placement). */
+function updateRhythmStrip(vitals) {
+  const raw = vitals ? vitals.Rhythm : null;
+  const val = (raw && typeof raw === 'object') ? raw.value : raw;
+  if (!val) { stopRhythmStrip(); return; }
+  const hrRaw = vitals.HR;
+  const hrVal = Number((hrRaw && typeof hrRaw === 'object') ? hrRaw.value : hrRaw);
+  setRhythmStrip(val, Number.isFinite(hrVal) ? hrVal : null);
+}
+
+window.addEventListener('resize', () => {
+  if (!rhythmStrip.active) stripIdle();
+});
+
 function formatVitalDisplay(name, raw) {
   // raw is either a primitive (HR/SpO2/etc.) or { value, t, tMin } for episodic
   const value = (raw && typeof raw === 'object' && 'value' in raw) ? raw.value : raw;
@@ -2206,6 +2484,9 @@ function applyVitals(vitals) {
       sEl.textContent = display !== null ? formatStamp(raw) : '';
     }
   }
+
+  // Drive the ECG strip from the same snapshot
+  updateRhythmStrip(currentVitals);
 }
 
 /**
@@ -2323,6 +2604,7 @@ function resetCrewStatus() {
 function resetVitals() {
   currentVitals = null;
   currentSceneMinute = 0;
+  stopRhythmStrip();
   for (const name of VITAL_FIELDS) {
     for (const el of document.querySelectorAll(`[data-vital="${name}"]`)) {
       el.textContent = '\u2014\u2014';
@@ -2404,13 +2686,16 @@ document.addEventListener('click', e => {
 });
 
 function setMultiPatientVitalsNotice(active) {
+  // Class toggle only — replacing the bar's innerHTML (the old approach)
+  // permanently destroyed the vital cells and the expand button for every
+  // subsequent scenario in the same page session.
   if (active) {
     vitalsBar.dataset.multiPatient = '1';
-    vitalsBar.innerHTML = '<span id="multi-patient-notice">Multiple patients on scene — vitals unavailable</span>';
-    vitalsExpand.style.display = 'none';
+    vitalsBar.classList.add('multi-patient');
+    stopRhythmStrip();
   } else {
     delete vitalsBar.dataset.multiPatient;
-    vitalsExpand.style.display = '';
+    vitalsBar.classList.remove('multi-patient');
   }
 }
 

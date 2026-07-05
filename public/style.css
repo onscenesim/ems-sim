@@ -949,15 +949,25 @@ html, body {
 
 
 /* ── Multi-patient vitals notice ────────────────────────────────────────── */
+/* Toggled via the .multi-patient class on #vitals-bar — the cells stay in the
+   DOM (replacing innerHTML permanently destroyed them for the rest of the
+   page's life, including the next scenario). */
 
 #multi-patient-notice {
+  display: none;
+  align-items: center;
+  min-height: 40px;
+  font-family: var(--font-block, monospace);
   font-size: 0.6rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--dim);
-  opacity: 0.75;
+  color: #8a8a8a;
   padding: 0 0.5rem;
 }
+
+#vitals-bar.multi-patient .vital-cell,
+#vitals-bar.multi-patient #vitals-expand { display: none; }
+#vitals-bar.multi-patient #multi-patient-notice { display: flex; }
 
 
 /* ── Patient loading overlay ─────────────────────────────────────────────── */
@@ -1960,6 +1970,22 @@ html, body {
   position: relative;
 }
 
+/* ECG rhythm strip cell — wider than the numeric cells */
+#rhythm-cell {
+  flex: 2 1 0;
+  padding: 3px 8px 4px;
+  align-items: stretch;
+}
+#rhythm-cell .vital-label {
+  align-self: flex-start;
+  color: #4a8a5a;
+}
+#rhythm-strip {
+  display: block;
+  width: 100%;
+  height: 30px;
+}
+
 .vital-label {
   font-family: var(--font-block);
   font-size: 9px;
@@ -2128,6 +2154,8 @@ html, body {
     font-size: 7px;
     margin-top: 1px;
   }
+  #rhythm-cell { flex: 1.6 1 0; padding: 3px 4px 4px; }
+  #rhythm-strip { height: 24px; }
   #vitals-expand {
     font-size: 16px;
     padding: 0 10px;
