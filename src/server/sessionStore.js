@@ -173,6 +173,7 @@ function restoreSession(snapshot) {
   session.crewStatus          = snapshot.crewStatus          || null;
   session.transportEtaMin     = snapshot.transportEtaMin     ?? null;
   session.departSceneMinute   = snapshot.departSceneMinute   ?? null;
+  session.access              = snapshot.access              || [];
   session.demoSource          = snapshot.demo_source         || null;
   session.secondPatientFound  = snapshot.second_patient      || false;
   store.set(snapshot.id, {

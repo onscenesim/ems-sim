@@ -35,6 +35,8 @@ EVIDENCE RULES — NON-NEGOTIABLE:
 
 3b. TIME TERMS. "On-scene time" is arrival until departing for the hospital; "call time" is the whole run. Section [1] labels both — use them precisely. Never call total call time "scene time".
 
+3c. ROUTE ATTRIBUTION. A medication's route counts as the student's decision ONLY if their order named it ("epi 1mg IO"). When the order named no route, the ROUTE was chosen by the scene, not the student — never fault the student for "choosing" it. The vascular-access ledger in section [1] tells you which lines existed and their condition; use it to keep any access discussion factually straight.
+
 4. NO CONTRADICTIONS. If you flag something as an error, do not also credit it as correct elsewhere in the same debrief. Pick one, defend it, and be consistent.
 
 5. SCOPE. ${providerLevel} is held to ${providerLevel} scope only. Never suggest an intervention outside this provider level's scope.

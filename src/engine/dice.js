@@ -275,18 +275,24 @@ function isNegated(text, matchStart) {
  *   2. a leading "if <condition>, <action>" — an `if` earlier in the sentence
  *      that is NOT an embedded question ("ask if …", "check if …").
  */
-function isConditional(text, matchStart) {
-  const before = text.slice(0, matchStart);
+/** Bounds of the sentence containing index `idx` — [start, end). */
+function sentenceBounds(text, idx) {
+  const before = text.slice(0, idx);
   let sentStart = 0;
   for (const ch of '.;!?\n') {
-    const idx = before.lastIndexOf(ch);
-    if (idx + 1 > sentStart) sentStart = idx + 1;
+    const i = before.lastIndexOf(ch);
+    if (i + 1 > sentStart) sentStart = i + 1;
   }
   let sentEnd = text.length;
   for (const ch of '.;!?\n') {
-    const idx = text.indexOf(ch, matchStart);
-    if (idx !== -1 && idx < sentEnd) sentEnd = idx;
+    const i = text.indexOf(ch, idx);
+    if (i !== -1 && i < sentEnd) sentEnd = i;
   }
+  return [sentStart, sentEnd];
+}
+
+function isConditional(text, matchStart) {
+  const [sentStart, sentEnd] = sentenceBounds(text, matchStart);
   const sentence = text.slice(sentStart, sentEnd);
   if (HEDGE_RE.test(sentence)) return true;
 
@@ -310,6 +316,57 @@ function isRouteQualifier(text, matchStart) {
   // Look at up to 30 chars before the match for a route preposition
   const tail = text.slice(Math.max(0, matchStart - 30), matchStart);
   return ROUTE_QUALIFIER_RE.test(tail);
+}
+
+// ── Uncertainty classification ───────────────────────────────────────────────
+// Real transcripts showed the detector firing on MENTIONS: "preoxygenate her
+// for intubation later" intubated the patient immediately; "handoff report
+// explaining ... unresponsiveness to narcan" pushed a phantom narcan dose at
+// the ED door. These matches aren't safely skippable either — sometimes the
+// player really does mean "RSI her". So instead of a silent yes/no, matches in
+// ambiguous contexts are flagged UNCERTAIN and surfaced to the player for a
+// one-click confirm (✓ perform / ✗ just talking) before the turn runs.
+
+// The sentence is talking ABOUT care rather than ordering it: reports,
+// handoffs, explanations, summaries.
+const UNCERTAIN_DISCUSS_RE = /\b(?:report|handoff|hand-off|explain\w*|describe|describing|discuss\w*|summariz\w*|debrief|recap|tell (?:them|him|her|the \w+)|talking about|thoughts? (?:on|about)|what (?:do you|about))\b/i;
+
+// The sentence defers the action to a future moment: "for intubation later",
+// "once cap gets here we'll...", "planning to", "prep for".
+const UNCERTAIN_FUTURE_RE = /\b(?:later|in a (?:bit|minute|moment|few)|after (?:we|the|that|this|cap)|once (?:we|the|cap|he|she|they)|when (?:we|the|cap|he|she|they)|we(?:'|’)?ll\b|we will|going to|gonna|about to|plan(?:ning)?(?: to| on)?|prep(?:are|ping)? for|get(?:ting)? ready for|set(?:ting)? up for|thinking about|consider(?:ing)?|might|may need|eventually|soon|next)\b/i;
+
+// Procedure NOUNS that name the act without performing it ("RSI", "intubation").
+// Acronyms bypass the admin-verb gate, so a bare mention in prose rolled the
+// full procedure. These only roll confidently when the sentence carries a
+// performance verb; otherwise they're uncertain.
+const NOUN_MENTION_KEYS = new Set([
+  'rsi', 'dsi', 'dai', 'intubation', 'rapid sequence intubation',
+  'rapid sequence induction', 'ett', 'endotracheal tube', 'definitive airway',
+  'advanced airway', 'definitive airway management', 'oral intubation',
+  'orotracheal intubation', 'needle decompression', 'ncd', 'cardioversion',
+  'defibrillation', 'cricothyrotomy', 'needle cricothyrotomy',
+]);
+const PERFORMANCE_VERB_RE = /\b(?:perform|proceed(?:ing)? with|attempt(?:ing)?|do(?:ing)?(?: the| an?)?|start(?:ing)?|begin(?:ning)?|go(?:ing)? (?:ahead|for)|carry out|execut\w+|intubate|tube|drop(?:ping)?|pass(?:ing)?|plac(?:e|ing)|deliver(?:ing)?|shock|cardiovert|defibrillate|decompress|cric|cut|drill|paralyze|induce|sedate and|push(?:ing)?|giv(?:e|ing)|administer(?:ing)?|now\b)\b/i;
+
+/**
+ * Classify how confident we are that a matched procedure is a real order this
+ * turn. Returns null (confident) or a short reason string (uncertain).
+ */
+function uncertaintyReason(text, matchStart, matchedKey, proc) {
+  if (proc.no_roll) return null;   // routine logged actions — never worth a confirm prompt
+  const [s, e] = sentenceBounds(text, matchStart);
+  const sentence = text.slice(s, e);
+  if (UNCERTAIN_DISCUSS_RE.test(sentence)) return 'sounds like a report/discussion, not an order';
+  if (UNCERTAIN_FUTURE_RE.test(sentence)) return 'sounds like a plan for later, not an order for now';
+  if (NOUN_MENTION_KEYS.has(matchedKey) && !PERFORMANCE_VERB_RE.test(sentence)) {
+    return 'named the procedure without a clear "do it now"';
+  }
+  return null;
+}
+
+/** Stable key identifying one detected entry (per-drug for medication_push). */
+function procEntryKey(procId, matchedKey) {
+  return procId + '|' + (matchedKey || '');
 }
 
 function detectProcedure(userText) {
@@ -342,7 +399,6 @@ function selectDC(proc, contextFlags = {}) {
     case 'peripheral_iv':
       return (hypotensive || obese || pediatric) ? dcs[1] : dcs[0];
     case 'intubation':
-    case 'rsi':
       return difficult_airway ? dcs[dcs.length - 1] : dcs[0];
     case 'cardioversion':
     case 'defibrillation':
@@ -524,7 +580,14 @@ function detectAllProcedures(userText) {
       if (!exec) continue;
       // Use precomputed 'specific' flag so uppercase acronyms (BGL, SpO2, IV)
       // don't require an admin verb. Also bypass verb check in command-style input.
-      if (!specific && !commandStyle && !ADMIN_VERB_RE.test(remaining)) continue;
+      // The verb must live in the SAME SENTENCE as the match — a message-wide
+      // check let "I place a nasal cannula" license "for intubation later" in a
+      // different sentence, intubating a patient the provider was only
+      // planning to intubate.
+      if (!specific && !commandStyle) {
+        const [s, e] = sentenceBounds(remaining, exec.index);
+        if (!ADMIN_VERB_RE.test(remaining.slice(s, e))) continue;
+      }
       bestMatch = { key, pattern, proc, matchLen: exec[0].length };
       bestMatchIndex = exec.index;
       break; // sorted longest-first, so first match is most specific
@@ -549,11 +612,25 @@ function detectAllProcedures(userText) {
     // Post-match staging guard: e.g. "LUCAS backboard" should not roll.
     const stagingPost = hasStagingPostContext(remaining, bestMatchIndex + bestMatch.matchLen);
 
+    // Ambiguous-context classification (reports, plans, bare procedure nouns).
+    // Terse command-style input is always a real order — skip the check there.
+    const uncertain = commandStyle ? null
+      : uncertaintyReason(remaining, bestMatchIndex, bestMatch.key, bestMatch.proc);
+    const [uS, uE] = sentenceBounds(remaining, bestMatchIndex);
+    const sentence = remaining.slice(uS, uE).trim();
+
     // Always consume the matched span so we don't loop on the same hit.
     remaining = remaining.replace(bestMatch.pattern, ' ');
 
     if (!negated && !conditional && !routeQual && !stagingPost && !isPastContext(remaining, bestMatchIndex)) {
-      found.push({ proc: bestMatch.proc, matchedKey: bestMatch.key });
+      found.push({
+        proc: bestMatch.proc,
+        matchedKey: bestMatch.key,
+        uncertain: !!uncertain,
+        reason: uncertain || null,
+        sentence,
+        key: procEntryKey(bestMatch.proc.id, bestMatch.key),
+      });
       // medication_push can fire multiple times in one message (once per drug).
       // Text consumption already prevents the same drug from re-matching.
       if (bestMatch.proc.id !== 'medication_push') {
@@ -578,8 +655,41 @@ function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
   });
 }
 
+/**
+ * Confirmation-aware detection. Overrides come from the player's ✓/✗ choices:
+ *   allow — uncertain entries the player confirmed (roll them)
+ *   deny  — entries the player rejected (suppress + tell the model)
+ * Unresolved uncertain entries are suppressed too (safe default: a mention is
+ * not an order) — the API layer surfaces them for confirmation before the turn
+ * ever reaches this point, so unresolved only happens in CLI/tests.
+ *
+ * Returns { rolls, suppressed } where suppressed is
+ * [{ procedure_id, matchedKey, reason }].
+ */
+function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMAL', overrides = {}) {
+  const allow = new Set(overrides.allow || []);
+  const deny  = new Set(overrides.deny  || []);
+  const rolls = [];
+  const suppressed = [];
+  for (const entry of detectAllProcedures(userText)) {
+    const { proc, matchedKey, uncertain, reason, key } = entry;
+    if (deny.has(key)) {
+      suppressed.push({ procedure_id: proc.id, matchedKey, reason: 'player said not performed' });
+      continue;
+    }
+    if (uncertain && !allow.has(key)) {
+      suppressed.push({ procedure_id: proc.id, matchedKey, reason });
+      continue;
+    }
+    const result = rollProcedure(proc, contextFlags, difficulty);
+    if (proc.id === 'medication_push' && matchedKey) result.matched_drug = matchedKey;
+    rolls.push(result);
+  }
+  return { rolls, suppressed };
+}
+
 function getProcedure(id) {
   return INTERVENTIONS.find(p => p.id === id) || null;
 }
 
-module.exports = { detectProcedure, detectAllProcedures, rollProcedure, detectAndRoll, detectAllAndRoll, getProcedure, calcOutcome, rollD20, normalizeForDetection };
+module.exports = { detectProcedure, detectAllProcedures, rollProcedure, detectAndRoll, detectAllAndRoll, detectWithConfirmation, getProcedure, calcOutcome, rollD20, normalizeForDetection };

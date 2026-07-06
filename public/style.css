@@ -3492,3 +3492,69 @@ body.light-mode .export-btn:hover { background: #c4d0e4; }
 
 /* Header reveal strip (mobile) */
 body.light-mode #header-reveal { background: #e8e5e0; border-color: #c8c5c0; }
+
+/* ── Confirm-dice panel — ✓/✗ uncertain procedure detections ─────────────── */
+.proc-confirm {
+  margin: 10px 0;
+  border: 1px solid #7a5a10;
+  background: rgba(60, 44, 8, 0.25);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+}
+.proc-confirm-title {
+  font-family: var(--font-block, monospace);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  color: #e8a838;
+  margin-bottom: 8px;
+}
+.proc-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px dashed #4a3a12;
+}
+.proc-confirm-info { flex: 1 1 auto; min-width: 0; }
+.proc-confirm-name {
+  color: #e8d5a0;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+}
+.proc-confirm-why {
+  color: #907840;
+  font-size: 11px;
+  margin-top: 2px;
+}
+.proc-confirm-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.proc-confirm-btns button,
+.proc-confirm-actions button {
+  font-family: var(--font-block, monospace);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  padding: 6px 10px;
+  cursor: pointer;
+  background: #111;
+  border: 1px solid #444;
+  color: #999;
+}
+.proc-confirm-btns .proc-yes:hover  { border-color: #3dcc66; color: #3dcc66; }
+.proc-confirm-btns .proc-no:hover   { border-color: #cc4040; color: #cc4040; }
+.proc-confirm-btns .proc-yes.chosen { background: #0c2a14; border-color: #3dcc66; color: #3dcc66; }
+.proc-confirm-btns .proc-no.chosen  { background: #2a0c0c; border-color: #cc4040; color: #cc4040; }
+.proc-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+.proc-confirm-continue:not(:disabled) { border-color: #e8a838; color: #e8a838; }
+.proc-confirm-continue:disabled { opacity: 0.4; cursor: default; }
+.proc-confirm-cancel:hover { border-color: #999; color: #ccc; }
+
+body.light-mode .proc-confirm { background: rgba(240, 220, 160, 0.35); border-color: #b08820; }
+body.light-mode .proc-confirm-name { color: #5a4408; }
+body.light-mode .proc-confirm-why  { color: #8a7030; }
+body.light-mode .proc-confirm-btns button,
+body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666; border-color: #aaa; }

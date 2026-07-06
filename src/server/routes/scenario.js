@@ -6,6 +6,7 @@ const router  = express.Router();
 const { createSession, getSession, restoreSession } = require('../sessionStore');
 const persistence = require('../persistence');
 const { CREW } = require('../../data/crew');
+const { detectAllProcedures } = require('../../engine/dice');
 
 const COOKIE_NAME = 'ems_sid';
 const COOKIE_MAX_AGE = 30 * 24 * 3600; // 30 days in seconds
@@ -221,7 +222,7 @@ router.post('/:id/turn', async (req, res) => {
     return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired (30 min timeout).' });
   }
 
-  const { message, report_mode, skip_mode } = req.body;
+  const { message, report_mode, skip_mode, proc_allow, proc_deny, procs_resolved } = req.body;
   if (!message || typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ error: 'invalid_input', message: '`message` is required.' });
   }
@@ -229,8 +230,29 @@ router.post('/:id/turn', async (req, res) => {
   const VALID_SKIP_MODES = ['to_ambulance', 'to_hospital', 'to_arrival'];
   const skipMode = VALID_SKIP_MODES.includes(skip_mode) ? skip_mode : null;
 
+  // Confirm-dice pre-check: if any detected procedure sits in ambiguous wording
+  // (plans, reports, bare procedure nouns), bounce it back for a ✓/✗ before the
+  // turn runs. No model call, no clock, no state change.
+  if (!skipMode && report_mode !== true && procs_resolved !== true) {
+    const pending = detectAllProcedures(message.trim()).filter(e => e.uncertain);
+    if (pending.length > 0) {
+      return res.json({
+        needs_confirmation: pending.map(e => ({
+          key:          e.key,
+          procedure_id: e.proc.id,
+          matched:      e.matchedKey,
+          reason:       e.reason,
+          sentence:     e.sentence,
+        })),
+      });
+    }
+  }
+
   try {
-    const result = await session.send(message.trim(), report_mode === true, skipMode);
+    const result = await session.send(message.trim(), report_mode === true, skipMode, {
+      allow: Array.isArray(proc_allow) ? proc_allow : [],
+      deny:  Array.isArray(proc_deny)  ? proc_deny  : [],
+    });
 
     // Update persisted snapshot after every turn
     persistence.update(req.params.id, {
@@ -249,6 +271,7 @@ router.post('/:id/turn', async (req, res) => {
       crewStatus:          session.crewStatus          || null,
       transportEtaMin:     session.transportEtaMin     ?? null,
       departSceneMinute:   session.departSceneMinute   ?? null,
+      access:              session.access              || [],
     });
 
     return res.json({
@@ -257,6 +280,7 @@ router.post('/:id/turn', async (req, res) => {
       departing:          result.enRoute         || false,
       transport_eta_min:  result.transportEtaMin ?? null,
       rolls:          result.rolls || [],
+      suppressed:     result.suppressed || [],
       vitals:         result.vitals || null,
       baseContact:    result.baseContact || false,
       backup:         result.backup     || null,

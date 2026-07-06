@@ -3,7 +3,7 @@
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
-const { detectAllAndRoll, getProcedure } = require('./dice');
+const { detectWithConfirmation, getProcedure } = require('./dice');
 const { sendTurn, sendDebrief } = require('./api');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 
@@ -432,6 +432,11 @@ class Session {
     this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
     this.transportEtaMin = null; // minutes to hospital, set when [EN_ROUTE] fires
     this.departSceneMinute = null; // scene-clock minute when the unit first departed for the hospital — the true "scene time" boundary for the debrief
+    // Vascular access ledger — the engine's authoritative record of every line
+    // placed this call: [{ kind: 'IV'|'IO', status: 'patent'|'marginal'|'blown' }].
+    // Injected into each turn so the model can't push drugs through a dead line,
+    // and into the debrief so route confusion can't be pinned on the provider.
+    this.access = [];
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
     this.arrivedAtHospital = false; // true once a transport skip reaches the bay — gates END server-side
   }
@@ -453,12 +458,47 @@ class Session {
     return 12;
   }
 
+  /** One-line summary of the access ledger, numbered per kind. */
+  _accessSummary() {
+    const counts = {};
+    return this.access.map(a => {
+      counts[a.kind] = (counts[a.kind] || 0) + 1;
+      return `${a.kind} #${counts[a.kind]}: ${a.status.toUpperCase()}`;
+    }).join(', ');
+  }
+
+  /**
+   * Update the access ledger from this turn's reconciled rolls (lines placed)
+   * and the reply narration (lines the model declared blown/infiltrated).
+   */
+  _updateAccess(rolls, reply) {
+    for (const r of rolls) {
+      if (r.no_roll) continue;
+      if (r.procedure_id === 'peripheral_iv') {
+        if (r.outcome === 'SUCCESS')       this.access.push({ kind: 'IV', status: 'patent' });
+        else if (r.outcome === 'MARGINAL') this.access.push({ kind: 'IV', status: 'marginal' });
+        else if (r.outcome === 'COMPLICATION') this.access.push({ kind: 'IV', status: 'blown' });
+        // FAILURE: no line placed
+      } else if (r.procedure_id === 'io_access') {
+        if (r.outcome === 'SUCCESS')       this.access.push({ kind: 'IO', status: 'patent' });
+        else if (r.outcome === 'MARGINAL') this.access.push({ kind: 'IO', status: 'marginal' });
+      }
+    }
+    // Narrated line failure ("IV's blown", "the catheter has infiltrated")
+    if (/\b(?:iv|line|catheter)\b[^.!?]{0,80}\b(?:blown|blew|infiltrat\w*|extravasat\w*|no longer patent|lost)\b|\b(?:blown|infiltrat\w+)\b[^.!?]{0,40}\b(?:iv|line|catheter)\b/i.test(reply)) {
+      const last = [...this.access].reverse().find(a => a.kind === 'IV' && a.status !== 'blown');
+      if (last) last.status = 'blown';
+    }
+  }
+
   /**
    * Send a user message and get Claude's response.
    * Auto-detects procedures and logs dice rolls.
-   * Returns { reply, roll, closed }
+   * `procOverrides` = { allow: [keys], deny: [keys] } from the player's
+   * confirm-dice choices on uncertain detections.
+   * Returns { reply, rolls, suppressed, closed, ... }
    */
-  async send(userText, reportMode = false, skipMode = null) {
+  async send(userText, reportMode = false, skipMode = null, procOverrides = {}) {
     if (this.closed) {
       return { reply: '[Scenario is closed. Start a new scenario.]', rolls: [], closed: true };
     }
@@ -477,7 +517,7 @@ class Session {
       const unit = this.seed.unit_name || 'Unit';
       return {
         reply: `${unit} is clear. — End of call —`,
-        rolls: [], vitals: this.lastVitals, loading: false, enRoute: false,
+        rolls: [], suppressed: [], vitals: this.lastVitals, loading: false, enRoute: false,
         transportEtaMin: this.transportEtaMin, baseContact: false,
         backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource,
         secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true,
@@ -487,7 +527,11 @@ class Session {
     // Detect and roll ALL procedures mentioned in the user's message.
     // Skip entirely when the player is giving a radio report, handoff, or a time-skip.
     const rollContext = { ...this.contextFlags, moving: this.moving };
-    const rolls = (reportMode || skipMode) ? [] : detectAllAndRoll(userText, rollContext, this.seed.difficulty);
+    const detection = (reportMode || skipMode)
+      ? { rolls: [], suppressed: [] }
+      : detectWithConfirmation(userText, rollContext, this.seed.difficulty, procOverrides);
+    const rolls = detection.rolls;
+    const suppressed = detection.suppressed;
     // NOTE: rolls are logged AFTER the model narrates (see reconcileRolls below),
     // not here — so an order the model declines as wrong/impossible doesn't get
     // logged as if it happened. The full `rolls` set is still injected into the
@@ -591,6 +635,21 @@ class Session {
       messageText += '\n\n' + rollLines.join('\n');
     }
 
+    // Mentions the player confirmed are NOT orders (or that context marked as
+    // discussion/planning): tell the model explicitly, or it narrates them
+    // being performed anyway ("...for intubation later" → an intubation).
+    if (suppressed.length > 0) {
+      const names = suppressed.map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
+      const plural = names.length > 1;
+      messageText += `\n\n[SYSTEM NOTE: The provider's message MENTIONS ${names.join(', ')} but ${plural ? 'these are' : 'this is'} NOT being performed this turn — it is planning, discussion, or report content. Do NOT narrate ${plural ? 'them' : 'it'} being performed, prepared, or started. No roll occurred.]`;
+    }
+
+    // Authoritative vascular access state — the model must not resurrect blown
+    // lines or invent routes the patient doesn't have.
+    if (this.access.length > 0) {
+      messageText += `\n\n[ACCESS STATE (server-tracked): ${this._accessSummary()}. A BLOWN line is permanently unusable — nothing further goes through it. If the provider orders a medication without naming a route, use the best PATENT access (patent before marginal, never blown) and name the route in your narration.]`;
+    }
+
     // Deterministic backup: the provider asked for help but the model often omits
     // the [BACKUP:] machine tag, so the UI status never updated. Set en_route here
     // ourselves; a model-emitted [BACKUP:] tag (parsed below) still refines it.
@@ -647,6 +706,7 @@ class Session {
     // Reconcile dice against the narration: drop any roll the model declined or
     // showed didn't happen, so the debrief/log and client only see real events.
     const reconciledRolls = reconcileRolls(rolls, reply);
+    this._updateAccess(reconciledRolls, reply);
     for (const roll of reconciledRolls) {
       logEvent(this.seed, roll.no_roll
         ? { event_type: 'procedure', procedure_id: roll.procedure_id, patient: roll.patient || 'primary', outcome: 'NO_ROLL' }
@@ -806,17 +866,17 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls: reconciledRolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true };
+      return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true };
     }
 
-    return { reply, rolls: reconciledRolls, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: false };
+    return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: false };
   }
 
   /**
    * Request the full debrief. Call after session is closed.
    */
   async debrief() {
-    const context = buildDebriefContext(this.seed, this.turns, this.departSceneMinute);
+    const context = buildDebriefContext(this.seed, this.turns, this.departSceneMinute, this._accessSummary());
     const text = await sendDebrief(context, this.seed.provider_level);
     updateRunDebrief(this.sessionId, text);
     this.debriefText = text;   // kept for transcript export

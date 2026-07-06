@@ -717,17 +717,37 @@ async function sendTurn(msg, opts = {}) {
   if (!sessionId) return;
   const skipMode = opts.skipMode || null;
 
-  addHistory(msg);
-  print(`> ${msg}`, 'user');
+  if (!opts.resend) {
+    addHistory(msg);
+    print(`> ${msg}`, 'user');
+  }
   setLoading(true);
   showLoadingDots();
 
   currentAbortController = new AbortController();
   try {
-    // A time-skip is never also a radio report.
-    const isReport = reportMode && !skipMode;
+    // A time-skip is never also a radio report. On a confirm-resend the report
+    // toggle was already consumed — reuse the value captured the first time.
+    const isReport = opts.isReport !== undefined ? opts.isReport : (reportMode && !skipMode);
     if (reportMode) { reportMode = false; updateReportBtn(); }
-    const data = await apiPost(`/api/scenario/${sessionId}/turn`, { message: msg, report_mode: isReport, skip_mode: skipMode }, currentAbortController.signal);
+    const data = await apiPost(`/api/scenario/${sessionId}/turn`, {
+      message: msg,
+      report_mode: isReport,
+      skip_mode: skipMode,
+      proc_allow: opts.procAllow || [],
+      proc_deny: opts.procDeny || [],
+      procs_resolved: !!opts.resolved,
+    }, currentAbortController.signal);
+
+    // Ambiguous wording — the server wants a ✓/✗ on each uncertain procedure
+    // before running the turn. Nothing has happened yet (no roll, no clock).
+    if (data.needs_confirmation) {
+      hideLoadingDots();
+      setLoading(false);
+      currentAbortController = null;
+      showProcConfirm(msg, { skipMode, isReport }, data.needs_confirmation);
+      return;
+    }
 
     // decompensating flag intentionally not shown to student — Claude fires it internally
 
@@ -802,6 +822,11 @@ async function sendTurn(msg, opts = {}) {
     // Radio crackle when the reply mentions the radio
     if (/\bradio\b/i.test(data.reply)) playSound('radio');
     printReply(data.reply);
+    // Mentions that were confirmed (or classified) as not-performed
+    if (data.suppressed && data.suppressed.length) {
+      const names = data.suppressed.map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
+      print(`[mentioned, not performed: ${names.join(', ')}]`, 'system');
+    }
     printHr();
 
     // Vitals update on every turn
@@ -832,9 +857,16 @@ async function sendTurn(msg, opts = {}) {
       refreshPatientCard();
     }
 
-    // Save turn client-side for transcript export
+    // Save turn client-side for transcript export (incl. backend data)
     if (localTranscript) {
-      localTranscript.turns.push({ user: msg, assistant: data.reply, rolls: data.rolls || [] });
+      localTranscript.turns.push({
+        user: msg,
+        assistant: data.reply,
+        rolls: data.rolls || [],
+        suppressed: data.suppressed || [],
+        vitals: data.vitals || null,
+        scene_minute: typeof data.scene_minute === 'number' ? data.scene_minute : null,
+      });
     }
 
     if (data.closed) {
@@ -866,6 +898,101 @@ async function sendTurn(msg, opts = {}) {
   }
 
   setLoading(false);
+}
+
+// ── Confirm-dice panel — ✓/✗ each uncertain procedure before the turn runs ──
+
+function showProcConfirm(msg, opts, items) {
+  const existing = document.getElementById('proc-confirm');
+  if (existing) existing.remove();
+
+  const wrap = document.createElement('div');
+  wrap.className = 'proc-confirm';
+  wrap.id = 'proc-confirm';
+
+  const title = document.createElement('div');
+  title.className = 'proc-confirm-title';
+  title.textContent = '🎲 DICE CHECK — are you actually doing these right now?';
+  wrap.appendChild(title);
+
+  const choices = new Map();   // key → true (perform) / false (just talk)
+  const rows = [];
+
+  const continueBtn = document.createElement('button');
+  continueBtn.className = 'proc-confirm-continue';
+  continueBtn.textContent = 'CONTINUE';
+  continueBtn.disabled = true;
+
+  const refresh = () => { continueBtn.disabled = choices.size !== items.length; };
+
+  for (const item of items) {
+    const row = document.createElement('div');
+    row.className = 'proc-confirm-row';
+
+    const info = document.createElement('div');
+    info.className = 'proc-confirm-info';
+    const name = document.createElement('div');
+    name.className = 'proc-confirm-name';
+    name.textContent = item.procedure_id.replace(/_/g, ' ').toUpperCase()
+      + (item.matched && item.matched !== item.procedure_id ? ` ("${item.matched}")` : '');
+    const why = document.createElement('div');
+    why.className = 'proc-confirm-why';
+    why.textContent = `“…${item.sentence}…” — ${item.reason}`;
+    info.appendChild(name);
+    info.appendChild(why);
+    row.appendChild(info);
+
+    const btns = document.createElement('div');
+    btns.className = 'proc-confirm-btns';
+    const yes = document.createElement('button');
+    yes.className = 'proc-yes';
+    yes.textContent = '✓ DO IT';
+    const no = document.createElement('button');
+    no.className = 'proc-no';
+    no.textContent = '✗ JUST TALK';
+    yes.addEventListener('click', () => {
+      choices.set(item.key, true);
+      yes.classList.add('chosen'); no.classList.remove('chosen');
+      refresh();
+    });
+    no.addEventListener('click', () => {
+      choices.set(item.key, false);
+      no.classList.add('chosen'); yes.classList.remove('chosen');
+      refresh();
+    });
+    btns.appendChild(yes);
+    btns.appendChild(no);
+    row.appendChild(btns);
+    wrap.appendChild(row);
+    rows.push(row);
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'proc-confirm-actions';
+
+  const cancel = document.createElement('button');
+  cancel.className = 'proc-confirm-cancel';
+  cancel.textContent = 'EDIT MESSAGE';
+  cancel.addEventListener('click', () => {
+    wrap.remove();
+    userInput.value = msg;
+    setLoading(false);
+    userInput.focus();
+  });
+
+  continueBtn.addEventListener('click', () => {
+    const procAllow = [], procDeny = [];
+    for (const [key, perform] of choices) (perform ? procAllow : procDeny).push(key);
+    wrap.remove();
+    sendTurn(msg, { ...opts, resend: true, resolved: true, procAllow, procDeny });
+  });
+
+  actions.appendChild(cancel);
+  actions.appendChild(continueBtn);
+  wrap.appendChild(actions);
+
+  output.appendChild(wrap);
+  scrollBottom();
 }
 
 // ── End scenario button ───────────────────────────────────────────────────
@@ -1946,14 +2073,85 @@ eightball.addEventListener('animationend', () => eightball.classList.remove('sha
 
 // ── Export transcript ─────────────────────────────────────────────────────
 
-function exportTranscript() {
+async function exportTranscript() {
   if (!localTranscript) return;
-  const text = formatTranscript(localTranscript);
+  // Pull the server-side seed + engine log so exports carry the ground truth
+  // and dice record for post-run analysis. Falls back gracefully if the
+  // server session has expired.
+  let backend = null;
+  if (sessionId) {
+    try { backend = await apiGet(`/api/scenario/${sessionId}/transcript`); } catch (_) { /* session gone */ }
+  }
+  const text = formatTranscript(localTranscript, backend);
   const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   downloadFile(`ems-transcript-${ts}.txt`, text);
 }
 
-function formatTranscript(t) {
+function formatBackendSection(t, backend) {
+  const lines = [];
+  lines.push('BACKEND DATA — GROUND TRUTH & ENGINE LOG (for analysis)');
+  lines.push('═'.repeat(60));
+  lines.push('');
+
+  const seed = backend && backend.seed;
+  if (seed) {
+    lines.push('[SEED / GROUND TRUTH]');
+    lines.push(`  Scenario ID:     ${seed.scenario_id}`);
+    lines.push(`  Category:        ${seed.category} | Difficulty: ${seed.difficulty} | Region: ${seed.region}`);
+    lines.push(`  Presentation:    ${seed.presentation}`);
+    if (seed.true_diagnosis) lines.push(`  True diagnosis:  ${seed.true_diagnosis}`);
+    if (seed.reveal_trigger) lines.push(`  Reveal trigger:  ${seed.reveal_trigger}`);
+    lines.push(`  Hidden case key: ${seed.hint || '(none)'}`);
+    if (seed.special_flags) lines.push(`  Special flags:   ${seed.special_flags}`);
+    lines.push(`  Trajectory:      ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock ?? 'none'} min`);
+    lines.push(`  Complication:    ${seed.complication_type}`);
+    lines.push(`  Crew:            partner ${seed.crew_partner} | captain ${seed.crew_captain} | backup on arrival: ${seed.backup_present_on_arrival}`);
+    if (seed.total_scene_minutes != null) lines.push(`  Total call time: ${Math.round(seed.total_scene_minutes)} min`);
+    lines.push('');
+    if (Array.isArray(seed.events) && seed.events.length) {
+      lines.push('[ENGINE EVENT LOG]');
+      for (const ev of seed.events) {
+        const t2 = `T+${(ev.scene_minute ?? 0).toFixed ? ev.scene_minute.toFixed(1) : ev.scene_minute}m`;
+        if (ev.event_type === 'procedure') {
+          const dice = ev.dice_roll != null ? ` d20=${ev.dice_roll} vs DC${ev.dc_value} -> ${ev.outcome}` : ` ${ev.outcome || ''}`;
+          lines.push(`  ${t2} procedure ${ev.procedure_id}${ev.patient && ev.patient !== 'primary' ? ' [' + ev.patient + ']' : ''}${dice}`);
+        } else {
+          lines.push(`  ${t2} ${ev.event_type}${ev.detail ? ' — ' + ev.detail : ''}`);
+        }
+      }
+      lines.push('');
+    }
+  } else {
+    lines.push('(server session unavailable — seed/ground truth not included)');
+    lines.push('');
+  }
+
+  lines.push('[PER-TURN CLIENT LOG — rolls, vitals, suppressed mentions]');
+  for (const turn of (t.turns || [])) {
+    const tm = turn.scene_minute != null ? `T+${Math.round(turn.scene_minute)}m` : 'T+?';
+    lines.push(`  ${tm} > ${(turn.user || '').slice(0, 90)}`);
+    for (const r of (turn.rolls || [])) {
+      if (r.no_roll) { lines.push(`      roll: ${r.procedure_id} (no roll — routine)`); continue; }
+      if (r.multi_roll) {
+        const parts = (r.rolls || []).map(x => `d20=${x.roll} vs DC${x.dc} -> ${x.outcome}`).join(' | ');
+        lines.push(`      roll: ${r.procedure_id}${r.matched_drug ? ' (' + r.matched_drug + ')' : ''} ${parts}`);
+      } else {
+        lines.push(`      roll: ${r.procedure_id}${r.matched_drug ? ' (' + r.matched_drug + ')' : ''} d20=${r.roll} vs DC${r.dc} -> ${r.outcome}${r.disadvantage ? ' (dis)' : ''}`);
+      }
+    }
+    if (turn.suppressed && turn.suppressed.length) {
+      lines.push(`      suppressed: ${turn.suppressed.map(s => (s.matchedKey || s.procedure_id)).join(', ')}`);
+    }
+    if (turn.vitals) {
+      const v = Object.entries(turn.vitals).map(([k, raw]) => `${k}=${raw && typeof raw === 'object' ? raw.value : raw}`).join(' ');
+      lines.push(`      vitals: ${v}`);
+    }
+  }
+  lines.push('');
+  return lines;
+}
+
+function formatTranscript(t, backend) {
   const { meta, turns, debriefText } = t;
   const lines = [];
 
@@ -2000,6 +2198,9 @@ function formatTranscript(t) {
     lines.push(debriefText);
     lines.push('');
   }
+
+  // ── Backend data (ground truth + engine log) ─────────────────────────────
+  lines.push(...formatBackendSection(t, backend));
 
   lines.push('─'.repeat(60));
   lines.push('Generated by EMS TERMINAL  |  onscenesim.com');
