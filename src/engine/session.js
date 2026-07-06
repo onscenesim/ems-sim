@@ -148,6 +148,11 @@ function isDebriefTrigger(text) {
 // Numeric fields in the VITALS tag (everything else is treated as a string token)
 const VITALS_NUMERIC = new Set(['HR', 'SpO2', 'ETCO2', 'RR', 'GCS', 'Pain', 'Glucose']);
 
+// Placeholder tokens the model emits despite the prompt ban ("ETCO2=not_yet",
+// "RR=call_manually"). A field only appears when actually measured — drop these
+// so junk strings never reach the UI or the debrief log.
+const VITALS_PLACEHOLDER_RE = /^(?:-+|\?+|x+|n\/?a|none|nil|pend\w*|unknown\w*|unavail\w*|await\w*|not[_-]?\w*|call[_-]?\w*|manual\w*|no[_-](?:reading|value|data)\w*)$/i;
+
 /**
  * Convert "T+M:SS" → float minutes (e.g. "T+4:30" → 4.5). Returns null if malformed.
  */
@@ -210,10 +215,21 @@ function parseVitalsTag(reply) {
       rawValue = rawValue.slice(0, atIdx);
     }
 
+    // Placeholder ("not_yet", "pending") — the field was not measured; omit it.
+    if (VITALS_PLACEHOLDER_RE.test(rawValue)) continue;
+
     let parsedValue = rawValue;
     if (VITALS_NUMERIC.has(key)) {
       const n = Number(rawValue);
-      parsedValue = Number.isFinite(n) ? n : rawValue;
+      if (!Number.isFinite(n)) continue;   // garbage in a numeric field — omit
+      parsedValue = n;
+    } else if (key === 'Temp') {
+      // Normalize temperature to plain Fahrenheit. The model occasionally emits
+      // Celsius ("29.8C", "40.6") despite the prompt — any physiologic temp ≤ 45
+      // can only be Celsius, so convert; strip unit suffixes either way.
+      const t = parseFloat(rawValue);
+      if (!Number.isFinite(t)) continue;
+      parsedValue = t <= 45 ? Math.round((t * 9 / 5 + 32) * 10) / 10 : t;
     }
 
     if (timestamp) {
