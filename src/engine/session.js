@@ -153,6 +153,22 @@ const VITALS_NUMERIC = new Set(['HR', 'SpO2', 'ETCO2', 'RR', 'GCS', 'Pain', 'Glu
 // so junk strings never reach the UI or the debrief log.
 const VITALS_PLACEHOLDER_RE = /^(?:-+|\?+|x+|n\/?a|none|nil|pend\w*|unknown\w*|unavail\w*|await\w*|not[_-]?\w*|call[_-]?\w*|manual\w*|no[_-](?:reading|value|data)\w*)$/i;
 
+// Pulse oximetry and NIBP require pulsatile flow. In an unambiguously pulseless
+// rhythm the model still sometimes emits numbers ("BP=58/38 SpO2=88" in PEA) —
+// strip them so the monitor can never show perfusion that doesn't exist.
+// VT is left alone: the token can't distinguish pulseless from perfusing VT.
+const PULSELESS_RHYTHM_RE = /^(?:vf|v[\s_-]?fib\w*|ventricular[\s_-]?fib\w*|asystole|flatline|pea|pulseless\w*)$/i;
+function stripPulselessPerfusion(vitals) {
+  if (!vitals || !vitals.Rhythm) return vitals;
+  const raw = vitals.Rhythm;
+  const tok = (raw && typeof raw === 'object') ? raw.value : raw;
+  if (tok && PULSELESS_RHYTHM_RE.test(String(tok).trim())) {
+    delete vitals.SpO2;
+    delete vitals.BP;
+  }
+  return vitals;
+}
+
 /**
  * Convert "T+M:SS" → float minutes (e.g. "T+4:30" → 4.5). Returns null if malformed.
  */
@@ -415,6 +431,7 @@ class Session {
     this.crewStatus = null;   // { partner, captain } from [CREW_STATUS:] tag
     this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
     this.transportEtaMin = null; // minutes to hospital, set when [EN_ROUTE] fires
+    this.departSceneMinute = null; // scene-clock minute when the unit first departed for the hospital — the true "scene time" boundary for the debrief
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
     this.arrivedAtHospital = false; // true once a transport skip reaches the bay — gates END server-side
   }
@@ -611,7 +628,8 @@ class Session {
     // remembers what it last reported. Strip the tag from the user-facing copy.
     this.messages.push({ role: 'assistant', content: rawReply });
 
-    const { cleanedReply: vitalsClean, vitals } = parseVitalsTag(rawReply);
+    const { cleanedReply: vitalsClean, vitals: rawVitals } = parseVitalsTag(rawReply);
+    const vitals = rawVitals ? stripPulselessPerfusion(rawVitals) : rawVitals;
     if (vitals) this.lastVitals = vitals;
     const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);
     const { cleanedReply: crewClean, crewStatus } = parseCrewStatusTag(backupClean);
@@ -756,6 +774,12 @@ class Session {
       }
     }
 
+    // Record the on-scene → transport boundary the first time the unit departs
+    // (after the clock advance, so it carries this turn's departure timestamp).
+    if (enRoute && this.departSceneMinute === null) {
+      this.departSceneMinute = this.sceneMinute;
+    }
+
     logEvent(this.seed, {
       event_type: 'narrative',
       detail: reply.substring(0, 120),
@@ -792,7 +816,7 @@ class Session {
    * Request the full debrief. Call after session is closed.
    */
   async debrief() {
-    const context = buildDebriefContext(this.seed, this.turns);
+    const context = buildDebriefContext(this.seed, this.turns, this.departSceneMinute);
     const text = await sendDebrief(context, this.seed.provider_level);
     updateRunDebrief(this.sessionId, text);
     this.debriefText = text;   // kept for transcript export

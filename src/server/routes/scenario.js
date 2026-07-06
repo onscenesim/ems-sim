@@ -42,6 +42,7 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     backupArrivalMinute: session.backupArrivalMinute,
     crewStatus:          session.crewStatus,
     transportEtaMin:     session.transportEtaMin,
+    departSceneMinute:   session.departSceneMinute,
     meta,
     crew,
   };
@@ -247,6 +248,7 @@ router.post('/:id/turn', async (req, res) => {
       backupArrivalMinute: session.backupArrivalMinute ?? null,
       crewStatus:          session.crewStatus          || null,
       transportEtaMin:     session.transportEtaMin     ?? null,
+      departSceneMinute:   session.departSceneMinute   ?? null,
     });
 
     return res.json({

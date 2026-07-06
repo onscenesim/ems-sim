@@ -227,6 +227,7 @@ function assembleSeedBlock(seed) {
   lines.push('  Rhythm values: sinus sinus_tach sinus_brad AFib AFlutter SVT VT VF asystole PEA paced junctional idioventricular hyperK AV_block_1 AV_block_2_I AV_block_2_II AV_block_3');
   lines.push('  Use Rhythm=hyperK when hyperkalemia is affecting the ECG (renal failure, dialysis miss, crush injury): the monitor waveform will show flattened P waves, a widening QRS, and tall tented T waves. The Rhythm token is MACHINE-FACING ONLY — the player is never shown the rhythm name, only the drawn waveform, so never name the rhythm in narration either (Rule 4: describe the waveform, let them interpret).');
   lines.push('  ARREST PHYSIOLOGY — arrest is loss of a PULSE, not always loss of a monitor rhythm. The HR number is the monitor\'s COUNT OF ORGANIZED BEATS — only emit a rate when the rhythm actually has one. Four pictures: (a) ASYSTOLE — flatline, HR=0, Rhythm=asystole; obvious. (b) VF (ventricular fibrillation) — chaotic, DISORGANIZED, NO countable rate: emit Rhythm=VF and HR=0. The monitor shows the fibrillatory waveform, not an organized number. NEVER emit a clean organized HR (e.g. 150, 160, 200) in VF — a real rate falsely implies an organized rhythm; in VF the Rhythm=VF LABEL is what the student reads, not the number. VF and asystole both carry HR=0 — the Rhythm field distinguishes them (VF is shockable, asystole is not). (b2) PULSELESS VT — ventricular tachycardia IS organized and regular, so it DOES have a real rate: emit Rhythm=VT with a fast HR (commonly 150-220) but NO pulse. (Both VF and pulseless VT are shockable and recognized fast.) (c) PEA — the common, DECEPTIVE real-world picture: the monitor still shows an ORGANIZED rhythm and a REAL HR number (a slow sinus, junctional, or idioventricular at ~20-60, OR sometimes a near-normal-looking rate) but there is NO pulse. PEA can wear ANY organized rhythm — that is exactly what makes it dangerous: the screen looks perfusing. In PEA keep emitting that HR and Rhythm — do NOT drop HR to 0 and do NOT omit HR; the whole point is that the number looks fine while the patient has no pulse. UNRECOGNIZED ARREST is a deliberate teaching opportunity: do NOT announce "the patient is in cardiac arrest." Reveal it only through findings the student must look for — absent pulse (only if they palpate), unobtainable BP, a sharp ETCO2 fall (dropping below ~20 toward 10), unresponsiveness, and apnea or agonal breathing. If the student keeps treating the HR number and never checks a pulse, let the arrest go unrecognized — that is the lesson.');
+  lines.push('  PULSELESS = NO SpO2, NO BP — HARD RULE: pulse oximetry and NIBP both require pulsatile blood flow. In ANY pulseless state (VF, pulseless VT, asystole, PEA — yes, even though PEA shows an organized rhythm on the screen) the SpO2 and BP fields DISAPPEAR from the VITALS tag entirely. If the provider cycles the cuff, it errors — narrate "UNABLE TO OBTAIN" — and the sat probe shows no pleth waveform. NEVER invent a number (a "BP 58/38" or "SpO2 88" in arrest falsely signals perfusion and forces you to explain it away). ETCO2 is the ONLY perfusion number during CPR: typically 10-20 with compressions, tracking compression quality, and an abrupt sustained jump above ~40 is the classic ROSC signal. SpO2 and BP readings RETURN only with ROSC — their reappearance is itself a powerful cue the provider can discover.');
   lines.push('  SpO2 = OXYGENATION ONLY — never a generic "patient is unstable" signal. Drop SpO2 ONLY when a real hypoxic mechanism exists: airway compromise, respiratory failure or fatigue, pulmonary edema/CHF, pneumonia/aspiration, pneumothorax, severe bronchospasm, drowning, opioid or CNS hypoventilation, or very late shock with collapsed perfusion. Many critically UNSTABLE patients keep a NORMAL SpO2 — GI/hemorrhagic shock (until late), early sepsis, cardiac ischemia without pulmonary edema, hypoglycemia, isolated hypotension, most perfusing dysrhythmias, DKA before respiratory failure. Show deterioration through HR, BP, mentation, skin signs, and ETCO2 — NOT by inventing hypoxia. Never drop SpO2 just because the patient is decompensating, and never imply oxygen is the fix for a non-hypoxic problem.');
   lines.push('  ETCO2 = VENTILATION and PERFUSION — get the DIRECTION right. In a patient who is still PERFUSING (has a pulse and a BP), HYPOVENTILATION RAISES ETCO2: shallow or slow breathing, sedation (opioids, ketamine, benzodiazepines), or CNS depression retain CO2, so ETCO2 CLIMBS (commonly into the high-40s to 50s-plus). A RISING ETCO2 is the early hypoventilation alarm, and effective assisted ventilation (BVM at an appropriate rate) then brings ETCO2 DOWN toward normal (35-45). NEVER show a perfusing, hypoventilating patient with a LOW and FALLING ETCO2 that bagging then raises — that inverts the real relationship and teaches the wrong lesson. ETCO2 only FALLS in a hypoventilating or apneic patient when PERFUSION is failing — peri-arrest, profound shock, massive PE, or cardiac arrest — because CO2 is no longer delivered to the lungs; there a low/falling ETCO2 is an ominous PERFUSION sign, not a ventilation problem (see the arrest rule). Hyperventilation (over-bagging or true tachypnea with good tidal volume) lowers ETCO2.');
   lines.push('');
@@ -304,26 +305,29 @@ function assembleSeedBlock(seed) {
 }
 
 /**
- * Build the objective run log the debrief is judged from.
+ * Build the run log the debrief is judged from.
  *
- * Deliberately does NOT include the model's narrated scene prose — the debrief
- * grades the provider against three objective records only:
+ * Three evidence layers:
  *   1. seed ground truth (what the patient actually has + how it evolves)
- *   2. the provider's own actions/orders, each with its dice outcome
+ *   2. a chronological CALL TIMELINE — the provider's orders with their dice
+ *      outcomes, interleaved with the SCENE narration the provider saw back.
+ *      The narration is what establishes WHAT THE PROVIDER KNEW AND WHEN —
+ *      without it the debrief invented scene details and blamed the provider
+ *      with hindsight for information the sim had not yet revealed.
  *   3. the vital-sign timeline (the physiologic response)
- * This anchors the critique to evidence instead of re-reading and
- * re-interpreting the entire conversation.
  *
  * @param {object} seed   Scenario seed
  * @param {Array}  turns  Structured per-turn log:
- *                        [{ user, rolls, sceneMinute, vitals, skip, report }]
+ *                        [{ user, assistant, rolls, sceneMinute, vitals, skip, report }]
+ * @param {number|null} departSceneMinute  Scene-clock minute the unit first
+ *                        departed for the hospital (null = never departed)
  */
-function buildDebriefContext(seed, turns = []) {
+function buildDebriefContext(seed, turns = [], departSceneMinute = null) {
   const lines = [];
   const isMultiPatient = seed.special_flags && /two_patients/i.test(seed.special_flags);
 
   // ── 1. Scenario ground truth ────────────────────────────────────────────
-  lines.push('=== OBJECTIVE RUN LOG FOR DEBRIEF ===');
+  lines.push('=== RUN LOG FOR DEBRIEF ===');
   lines.push('');
   lines.push('[1] SCENARIO GROUND TRUTH (what was actually true — the student could not see this)');
   lines.push(`  Scenario ID: ${seed.scenario_id}`);
@@ -335,21 +339,29 @@ function buildDebriefContext(seed, turns = []) {
   lines.push(`  Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
   lines.push(`  Complication: ${seed.complication_type}`);
   lines.push(`  Region: ${seed.region} | Provider level: ${seed.provider_level}`);
-  lines.push(`  Total scene time: ${seed.total_scene_minutes != null ? seed.total_scene_minutes + ' min' : 'N/A'}`);
+  const totalCall = seed.total_scene_minutes;
+  lines.push(`  Total call time (arrival to close, INCLUDING any transport): ${totalCall != null ? Math.round(totalCall) + ' min' : 'N/A'}`);
+  if (departSceneMinute != null) {
+    lines.push(`  On-scene time (arrival until departing for the hospital): ${Math.round(departSceneMinute)} min`);
+  } else {
+    lines.push('  On-scene time: the unit never departed scene — the entire call was on scene.');
+  }
   lines.push('');
 
-  // ── 2. Provider action log (orders + dice outcomes, chronological) ───────
-  lines.push('[2] PROVIDER ACTIONS (every order the student gave, in sequence, with the dice result)');
+  // ── 2. Chronological call timeline: orders + dice + scene narration ──────
+  lines.push("[2] CALL TIMELINE (chronological). Each entry: the provider's order, its dice results, then SCENE — what the simulation narrated back. The SCENE text is the provider's ONLY source of information: anything it has not yet mentioned, the provider does not know.");
   let actionCount = 0;
   for (const t of turns) {
     const action = cleanProviderAction(t);
     if (action === null) continue;   // pure meta turn (end scenario) — omit
     actionCount++;
-    lines.push(`  T+${formatMinutes(t.sceneMinute)} — ${action}`);
+    lines.push(`  T+${formatMinutes(t.sceneMinute)} — PROVIDER: ${action}`);
     for (const r of (t.rolls || [])) {
       if (r.no_roll) continue;
       lines.push(`        - ${formatRoll(r, isMultiPatient)}`);
     }
+    const scene = trimNarration(t.assistant);
+    if (scene) lines.push(`        SCENE: ${scene}`);
   }
   if (actionCount === 0) lines.push('  (no provider actions recorded)');
   lines.push('');
@@ -388,11 +400,23 @@ function buildDebriefContext(seed, turns = []) {
 
   // ── How to judge ──────────────────────────────────────
   lines.push('--- HOW TO JUDGE ---');
-  lines.push('Grade the provider ONLY against the records above — the ground truth, their actions, and the vitals timeline.');
-  lines.push('Do NOT assume or invent any action, medication, dose, assessment, or vital not listed above; if it is not in the log, it did not happen.');
+  lines.push('Grade the provider ONLY against the records above — their actions and the vitals timeline, with the SCENE narration establishing what they knew and when, and the ground truth establishing what was actually wrong.');
+  lines.push('INFORMATION TIMING — NO HINDSIGHT: if a critical finding (a DNR bracelet, a hidden hazard, a second patient) first appears in the SCENE text at time T, the provider could not have acted on it before T. Judge their response from the moment of reveal, not from the start of the call. Faulting them for not asking sooner is allowed ONLY when standard practice demands that question regardless of cues — and say so explicitly.');
+  lines.push('Do NOT assume or invent any action, medication, dose, assessment, or vital not listed above; if it is not in the log, it did not happen. Do NOT invent scene details (documents, signage, bystanders, locations) that never appear in the SCENE text.');
   lines.push('NEVER fabricate specific facility or hospital names — use "the receiving facility".');
+  lines.push('TIME TERMS: "on-scene time" means arrival until departing for the hospital; "call time" means the whole run. Both are labeled in section [1] — use the terms precisely and never call total call time "scene time".');
   lines.push('=== END LOG ===');
   return lines.join('\n');
+}
+
+/**
+ * Compact one turn's scene narration for the timeline. Keeps the head (scene
+ * response, findings) and tail (dialogue, late reveals) of long replies.
+ */
+function trimNarration(text) {
+  const t = (text || '').replace(/\s+/g, ' ').trim();
+  if (t.length <= 700) return t;
+  return t.slice(0, 500) + ' [...] ' + t.slice(-180);
 }
 
 /** Scene minutes (float) -> "M:SS" string for the log. */
