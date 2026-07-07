@@ -357,8 +357,9 @@ const BACKUP_REQUEST_RE = /\b(?:(?:call(?:ing)?|send|request(?:ing)?|get\s+me|di
  */
 function parseTimeTag(reply) {
   // Strip ALL [TIME:] tags from the visible reply; if the model emits more than
-  // one, the LAST is the most current and wins.
-  const re = /\s*\[TIME:\s*(\d+):(\d{2})\]\s*/gi;
+  // one, the LAST is the most current and wins. Tolerates a "T+" prefix
+  // ("[TIME: T+6:30]") — a drift the strict regex used to silently drop.
+  const re = /\s*\[TIME:\s*(?:T\s*[+=]\s*)?(\d+):(\d{2})\]\s*/gi;
   const matches = [...reply.matchAll(re)];
   if (matches.length === 0) return { cleanedReply: reply, timeMinutes: null };
   const cleanedReply = reply.replace(re, ' ').replace(/\s{2,}/g, ' ').trim();
@@ -437,6 +438,7 @@ class Session {
     // Injected into each turn so the model can't push drugs through a dead line,
     // and into the debrief so route confusion can't be pinned on the provider.
     this.access = [];
+    this.lastReplyHadTime = true; // whether the previous reply carried a [TIME:] tag — drives a self-healing reminder
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
     this.arrivedAtHospital = false; // true once a transport skip reaches the bay — gates END server-side
   }
@@ -644,6 +646,16 @@ class Session {
       messageText += `\n\n[SYSTEM NOTE: The provider's message MENTIONS ${names.join(', ')} but ${plural ? 'these are' : 'this is'} NOT being performed this turn — it is planning, discussion, or report content. Do NOT narrate ${plural ? 'them' : 'it'} being performed, prepared, or started. No roll occurred.]`;
     }
 
+    // Self-healing scene clock: if the last reply dropped the mandatory [TIME:]
+    // tag, remind the model where the clock stands so it resumes tagging —
+    // otherwise the fixed fallback increment quietly corrupts the timeline
+    // (observed: an entire arrest logged in synthetic +3 min steps).
+    if (!this.lastReplyHadTime) {
+      const mins = Math.floor(this.sceneMinute);
+      const secs = String(Math.round((this.sceneMinute - mins) * 60)).padStart(2, '0');
+      messageText += `\n\n[SYSTEM NOTE: Your previous reply omitted the mandatory [TIME:] tag. The official scene clock currently reads T+${mins}:${secs}. Resume from there, advance it realistically for this turn's actions, and end THIS and every reply with [TIME: M:SS] as the final line.]`;
+    }
+
     // Authoritative vascular access state — the model must not resurrect blown
     // lines or invent routes the patient doesn't have.
     if (this.access.length > 0) {
@@ -810,6 +822,7 @@ class Session {
     // Primary:   [TIME: M:SS] tag — Claude's explicit, authoritative timestamp.
     // Secondary: vitals @T+M:SS timestamps — used only if TIME tag absent.
     // Fallback:  fixed increment per turn.
+    this.lastReplyHadTime = timeMinutes !== null;
     if (!reportMode) {
       if (timeMinutes !== null && timeMinutes > this.sceneMinute) {
         // [TIME] tag is the single source of truth
@@ -826,10 +839,11 @@ class Session {
         }
         if (maxTMin !== null && maxTMin > this.sceneMinute) {
           this.sceneMinute = maxTMin;
-        } else {
-          // Last resort: fixed increment
-          const fallback = this.seed.category === 'arrest' ? 3 : 2;
-          this.sceneMinute += fallback;
+        } else if (this.turns.length > 0) {
+          // Last resort: fixed increment. Not on the opening dispatch turn —
+          // arrival IS T+0, and charging it +3 shifted every event in the log
+          // (the first pulse check of an arrest showed up at T+6).
+          this.sceneMinute += 2;
         }
       }
     }

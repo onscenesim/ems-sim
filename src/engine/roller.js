@@ -366,7 +366,12 @@ function rollScenario(opts = {}) {
     presentation: presentation.presentation || presentation.surface_presentation,
     true_diagnosis: isCurveball ? presentation.true_diagnosis : null,
     reveal_trigger: isCurveball ? presentation.reveal_trigger : null,
-    hint: presentation.hint,
+    // Arrest entries store the case key as `reversible_cause_hint` — reading
+    // only `.hint` shipped every arrest scenario with NO hidden case key.
+    hint: presentation.hint || presentation.reversible_cause_hint || null,
+    // Arrest entries also seed the arrest rhythm — drive the monitor with it
+    // instead of letting the model invent one.
+    arrest_rhythm: presentation.rhythm || null,
     special_flags: presentation.special_flags || null,
     patient_name: patientName,
     patient_age: age,
