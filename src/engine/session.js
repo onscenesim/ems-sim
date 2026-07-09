@@ -351,6 +351,19 @@ function parseBackupTag(reply) {
 // never updating even though backup was narrated and arrived.
 const BACKUP_REQUEST_RE = /\b(?:(?:call(?:ing)?|send|request(?:ing)?|get\s+me|dispatch|need)\s+(?:me\s+|us\s+|for\s+|a\s+|an\s+|another\s+|additional\s+|the\s+|some\s+)*(?:backup|back-?up|second\s+(?:unit|medic|ambulance|crew)|another\s+(?:unit|medic|ambulance|crew)|additional\s+(?:units?|medics?|personnel|resources?)|engine\s*(?:company)?|fire(?:\s+department)?|rescue|mutual\s+aid)|\b(?:engine|ladder|truck|rescue)\s+company\b)/i;
 
+// An unambiguous order to LOAD the patient into the ambulance — movement INTO
+// the vehicle, or a classic load idiom. Deliberately narrower than the
+// `packaging` procedure (which also covers on-scene packaging like backboarding
+// and extrication that are NOT loading). The model sometimes defers a plain load
+// order or drops [LOADING] (observed: "move the patient to the ambulance"
+// registered as packaging, loading never fired, the destination panel never
+// appeared) — this drives loading deterministically so the panel always fires.
+const LOAD_REQUEST_RE = /\b(?:(?:load|get|bring|take|put|wheel|roll|move)\s+(?:up\s+)?(?:him|her|them|'?em|the\s+(?:patient|kid|child|boy|girl|man|woman|pt|stretcher|cot))\s+(?:up\s+)?(?:in|into|in\s?to|to|on|onto|aboard)\s+the\s+(?:ambulance|rig|truck|unit|bus|van|medic|wagon|back)|load\s+(?:him|her|them|'?em|the\s+(?:patient|kid|child|boy|girl|man|woman|pt))\s+up|load\s+and\s+go|scoop\s+and\s+(?:run|go)|package\s+and\s+(?:move|load|go))\b/i;
+
+// Interrogative / hypothetical framing — don't force a load on a question
+// ("should we load him up?", "are we ready to move to the rig?").
+const LOAD_QUESTION_RE = /\b(?:should|shall|can|could|are|is|ready|when|do)\s+(?:we|i|you|he|she|they|it)\b/i;
+
 /**
  * Parse [TIME: M:SS] tag from Claude's reply.
  * Returns { cleanedReply, timeMinutes }. timeMinutes is null if tag absent.
@@ -542,6 +555,12 @@ class Session {
     // Inject all real roll results into the user message so Claude knows every outcome.
     // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
     let messageText = userText;
+
+    // Deterministic LOAD: the provider clearly ordered the patient into the rig and
+    // the unit isn't already loaded or moving. The model sometimes defers this or
+    // forgets [LOADING], which suppressed the destination panel — force it below.
+    const wantsLoad = !reportMode && !skipMode && !this.hasLoaded && !this.moving
+      && LOAD_REQUEST_RE.test(userText) && !LOAD_QUESTION_RE.test(userText);
     // In report mode, tell Claude this is a report/handoff turn — no procedure rolls.
     if (reportMode) {
       messageText += '\n\n[REPORT MODE: The player is giving a radio report or patient handoff. '
@@ -620,6 +639,12 @@ class Session {
     // asks about destination again or invents a phantom driver.
     if (this.moving) {
       messageText += '\n\n[SYSTEM NOTE: EN_ROUTE LOCKED — the unit is already moving. Destination is set. Do NOT ask where to go. Do NOT invent a new crew member to drive. The assigned driver is driving.]';
+    }
+    // Deterministic load directive — force the model to resolve loading atomically
+    // this turn instead of deferring it, so narration and the [LOADING] tag agree.
+    if (wantsLoad) {
+      const _capStatus = (this.crewStatus && this.crewStatus.captain) || 'not_on_scene';
+      messageText += '\n\n[SYSTEM NOTE: LOAD THE PATIENT NOW. The provider ordered the patient loaded into the ambulance. Resolve loading COMPLETELY this turn — narrate the crew packaging and moving the patient into the rig — and emit [LOADING]. Unless the provider ALSO explicitly named a destination to drive to in THIS same message, the unit is loaded but PARKED: do NOT emit [EN_ROUTE], do NOT narrate the rig pulling away or arriving anywhere, and keep the crew on scene ([CREW_STATUS: partner=on_scene captain=' + _capStatus + ']). The two destination options are presented to the provider by the system — the partner does NOT ask which hospital.]';
     }
 
     const rollLines = rolls.filter(r => !r.no_roll).map(r => {
@@ -803,6 +828,10 @@ class Session {
     if (enRoute && !this.hasLoaded) {
       loading = true;
     }
+    // Deterministic load fallback: the provider unambiguously ordered the patient
+    // into the rig this turn — fire loading even if the model narrated a deferral
+    // or dropped [LOADING], so the load animation and destination panel appear.
+    if (wantsLoad) loading = true;
     if (loading) this.hasLoaded = true;
     if (enRoute) this.moving = true; // ambulance is rolling — CPR DC increases
 
