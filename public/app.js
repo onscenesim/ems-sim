@@ -2384,6 +2384,10 @@ function normalizeRhythm(raw) {
   if (k in RHYTHM_RATE_DEFAULT) return k;
   if (/^v_?fib|ventricular_fib/.test(k))            return 'vf';
   if (/^v_?tach|ventricular_tach/.test(k))          return 'vt';
+  // Any wide/broad-complex tachycardia (VT, SVT w/ aberrancy, Na-channel tox)
+  // draws as VT morphology — WIDE QRS. Catches invented tokens the prompt
+  // vocabulary lacks (wide_complex_tach, WCT) before the /tach/ narrow fallback.
+  if (/wide|broad|wct/.test(k))                     return 'vt';
   if (/fine_vf|coarse_vf/.test(k))                  return 'vf';
   if (/a_?fib|atrial_fib/.test(k))                  return 'afib';
   if (/flutter/.test(k))                            return 'aflutter';
