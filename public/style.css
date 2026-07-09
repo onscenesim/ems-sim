@@ -686,7 +686,7 @@ html, body {
   color: var(--cyan); font-size: 12px; font-weight: bold; letter-spacing: 0.18em;
 }
 .dest-sub { color: var(--dim-term); font-size: 12px; font-style: italic; }
-.dest-card.resolved .dest-sub { color: var(--green); font-style: normal; }
+.dest-panel.resolved .dest-sub { color: var(--green); font-style: normal; }
 
 .dest-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 560px) { .dest-opts { grid-template-columns: 1fr; } }
@@ -3641,7 +3641,7 @@ body.light-mode .dest-head   { border-bottom-color: #ddd6cb; }
 body.light-mode .dest-dot    { background: #0f6ea6; box-shadow: 0 0 5px #0f6ea6; }
 body.light-mode .dest-title  { color: #0f6ea6; }
 body.light-mode .dest-sub    { color: #6b6b6b; }
-body.light-mode .dest-card.resolved .dest-sub { color: #1f8a3b; }
+body.light-mode .dest-panel.resolved .dest-sub { color: #1f8a3b; }
 body.light-mode .dest-opt    { border-color: #ddd6cb; border-left-color: #b8b4ae; background: #fff; color: #22222e; }
 body.light-mode .dest-opt:hover { background: #f2efe9; }
 body.light-mode .dest-name   { color: #111; }

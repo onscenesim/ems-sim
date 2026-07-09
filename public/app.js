@@ -831,7 +831,7 @@ async function sendTurn(msg, opts = {}) {
     if (!hasPlayedDepart && data.departing) {
       hasPlayedDepart = true;
       window._isMoving = true; // ambulance en route — CPR sound switches
-      lockDestinationPanel();  // unit is rolling — the choice is made
+      lockDestinationPanel(data.transport_dest);  // unit is rolling — the choice is made
       playSound('sfx_depart');
       await animateDepart();
     }
@@ -864,9 +864,10 @@ async function sendTurn(msg, opts = {}) {
     }
     printHr();
 
-    // Patient is now loaded — present the two-destination binary. Skipped on a
-    // load-and-go turn (already departing) since the destination is settled.
-    if (data.loading && !data.departing && !hasPlayedDepart) showDestinationPanel();
+    // Patient is now loaded — ALWAYS flash the two-destination binary as a fixed
+    // structural beat. On a load-and-go (destination already chosen this turn) it
+    // renders locked with the chosen side marked instead of interactive.
+    if (data.loading) showDestinationPanel(data.transport_dest);
 
     // Vitals update on every turn
     if (typeof data.scene_minute === 'number') {
@@ -1041,14 +1042,19 @@ function showProcConfirm(msg, opts, items) {
 // the normal turn pipeline) or ignores it and keeps working, deciding later in
 // their own words. Closer/lower-capability vs farther/higher-capability is the
 // same binary every run, so it becomes a familiar routine fast.
-function showDestinationPanel() {
+function showDestinationPanel(chosenKey = null) {
   if (destinationShown) return;
   const h = currentHospitals;
   if (!h || !h.nearest || !h.major) return;   // region lacks a structured pair
   destinationShown = true;
 
+  // The panel flashes on EVERY load for structure. If the unit already committed
+  // to a destination (a load-and-go, or a resume mid-transport), it renders
+  // locked with the chosen side marked instead of interactive.
+  const committed = !!chosenKey || hasPlayedDepart;
+
   const wrap = document.createElement('div');
-  wrap.className = 'line dest-panel';
+  wrap.className = 'line dest-panel' + (committed ? ' resolved' : '');
   wrap.id = 'dest-panel';
 
   const card = document.createElement('div');
@@ -1059,28 +1065,36 @@ function showDestinationPanel() {
   const dot = document.createElement('span'); dot.className = 'dest-dot';
   const title = document.createElement('span'); title.className = 'dest-title'; title.textContent = 'TRANSPORT DECISION';
   const sub = document.createElement('span'); sub.className = 'dest-sub';
-  sub.textContent = "You're in the back — pick a destination to roll out, or keep working and decide later.";
+  sub.textContent = committed
+    ? 'Destination set — en route.'
+    : "You're in the back — pick a destination to roll out, or keep working and decide later.";
   head.appendChild(dot); head.appendChild(title); head.appendChild(sub);
   card.appendChild(head);
 
   const opts = document.createElement('div');
   opts.className = 'dest-opts';
 
-  const makeOpt = (hosp, tag, cls) => {
+  const makeOpt = (hosp, tag, cls, key) => {
     const btn = document.createElement('button');
     btn.className = 'dest-opt ' + cls;
     btn.dataset.name = hosp.name || '';
+    btn.dataset.key = key;
     const t = document.createElement('span'); t.className = 'dest-tag'; t.textContent = tag;
     const n = document.createElement('span'); n.className = 'dest-name'; n.textContent = hosp.name || '';
     const m = document.createElement('span'); m.className = 'dest-meta';
     m.textContent = [hosp.type, hosp.eta ? 'ETA ' + hosp.eta : null].filter(Boolean).join('  ·  ');
     btn.appendChild(t); btn.appendChild(n); btn.appendChild(m);
-    btn.addEventListener('click', () => chooseDestination(hosp.name, wrap));
+    if (committed) {
+      btn.disabled = true;
+      if (key === chosenKey) btn.classList.add('chosen');
+    } else {
+      btn.addEventListener('click', () => chooseDestination(hosp.name, wrap));
+    }
     return btn;
   };
 
-  opts.appendChild(makeOpt(h.nearest, 'CLOSER · LOWER CAPABILITY', 'dest-near'));
-  opts.appendChild(makeOpt(h.major,   'FARTHER · HIGHER CAPABILITY', 'dest-major'));
+  opts.appendChild(makeOpt(h.nearest, 'CLOSER · LOWER CAPABILITY', 'dest-near', 'nearest'));
+  opts.appendChild(makeOpt(h.major,   'FARTHER · HIGHER CAPABILITY', 'dest-major', 'major'));
   card.appendChild(opts);
   wrap.appendChild(card);
 
@@ -1096,19 +1110,27 @@ function chooseDestination(name, wrap) {
     if (b.dataset.name === name) b.classList.add('chosen');
   });
   wrap.classList.add('resolved');
+  const sub = wrap.querySelector('.dest-sub');
+  if (sub) sub.textContent = 'Destination set — en route.';
   // Explicit transport — the same order a typed "transport to X" would send,
   // so the engine's [EN_ROUTE] handling is identical. This is deliberate, not
   // the accidental transport that mere presentation must never cause.
   sendTurn(`Transport to ${name}.`);
 }
 
-// Disable the destination panel once the unit is actually rolling (by click or
-// by a typed go order), so its buttons can't fire mid-transport.
-function lockDestinationPanel() {
+// Lock the destination panel once the unit is actually rolling (by click or by a
+// typed go order), so its buttons can't fire mid-transport. Marks the chosen
+// side when the destination key is known.
+function lockDestinationPanel(chosenKey = null) {
   const dp = document.getElementById('dest-panel');
   if (!dp) return;
-  dp.querySelectorAll('.dest-opt').forEach(b => { b.disabled = true; });
   dp.classList.add('resolved', 'departed');
+  dp.querySelectorAll('.dest-opt').forEach(b => {
+    b.disabled = true;
+    if (chosenKey && b.dataset.key === chosenKey) b.classList.add('chosen');
+  });
+  const sub = dp.querySelector('.dest-sub');
+  if (sub) sub.textContent = 'Destination set — en route.';
 }
 
 // ── End scenario button ───────────────────────────────────────────────────
@@ -2440,9 +2462,9 @@ async function resumeFromSnapshot(snap) {
     printHr();
   }
 
-  // Patient loaded but not yet rolling — keep the destination binary in front
-  // of the provider after a resume.
-  if (hasPlayedLoading && !hasPlayedDepart) showDestinationPanel();
+  // Patient was loaded — re-flash the destination binary after a resume. If the
+  // unit is already en route, it renders locked with the chosen side marked.
+  if (hasPlayedLoading) showDestinationPanel(snap.transportDest || null);
 
   if (snap.multi_patient) {
     setMultiPatientVitalsNotice(true);

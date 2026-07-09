@@ -172,6 +172,7 @@ function restoreSession(snapshot) {
   session.backupArrivalMinute = snapshot.backupArrivalMinute ?? null;
   session.crewStatus          = snapshot.crewStatus          || null;
   session.transportEtaMin     = snapshot.transportEtaMin     ?? null;
+  session.transportDest       = snapshot.transportDest       ?? null;
   session.departSceneMinute   = snapshot.departSceneMinute   ?? null;
   session.access              = snapshot.access              || [];
   session.demoSource          = snapshot.demo_source         || null;

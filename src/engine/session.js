@@ -445,6 +445,7 @@ class Session {
     this.crewStatus = null;   // { partner, captain } from [CREW_STATUS:] tag
     this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
     this.transportEtaMin = null; // minutes to hospital, set when [EN_ROUTE] fires
+    this.transportDest = null;   // 'nearest' | 'major' — which hospital the unit is en route to
     this.departSceneMinute = null; // scene-clock minute when the unit first departed for the hospital — the true "scene time" boundary for the debrief
     // Vascular access ledger — the engine's authoritative record of every line
     // placed this call: [{ kind: 'IV'|'IO', status: 'patent'|'marginal'|'blown' }].
@@ -818,6 +819,9 @@ class Session {
     // Safety net: if EN_ROUTE fires but LOADING was never emitted (Claude combined both into
     // one turn without tagging loading), auto-inject loading so the animation fires correctly.
     if (enRoute) {
+      // Record which hospital the unit committed to so the destination panel can
+      // mark the chosen side when it flashes on a load-and-go.
+      this.transportDest = transportDest || 'nearest';
       // Compute transport ETA from region data
       const _reg = REGIONS.find(r => r.id === this.seed.region);
       if (_reg) {
@@ -909,10 +913,10 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true };
+      return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, transportDest: this.transportDest, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true };
     }
 
-    return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: false };
+    return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, transportDest: this.transportDest, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: false };
   }
 
   /**

@@ -111,6 +111,7 @@ router.get('/resume', (req, res) => {
       second_patient: snapshot.second_patient || false,
       backup:         snapshot.backupStatus  || null,
       crewStatus:     snapshot.crewStatus    || null,
+      transportDest:  snapshot.transportDest || null,
     },
   });
 });
@@ -272,6 +273,7 @@ router.post('/:id/turn', async (req, res) => {
       backupArrivalMinute: session.backupArrivalMinute ?? null,
       crewStatus:          session.crewStatus          || null,
       transportEtaMin:     session.transportEtaMin     ?? null,
+      transportDest:       session.transportDest       ?? null,
       departSceneMinute:   session.departSceneMinute   ?? null,
       access:              session.access              || [],
     });
@@ -281,6 +283,7 @@ router.post('/:id/turn', async (req, res) => {
       loading:        result.loading  || false,
       departing:          result.enRoute         || false,
       transport_eta_min:  result.transportEtaMin ?? null,
+      transport_dest:     result.transportDest   || null,
       rolls:          result.rolls || [],
       suppressed:     result.suppressed || [],
       vitals:         result.vitals || null,
