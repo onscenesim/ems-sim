@@ -342,6 +342,12 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   lines.push(`  Category: ${seed.category} | Difficulty: ${seed.difficulty}`);
   lines.push(`  Presentation: ${seed.presentation}`);
   if (seed.true_diagnosis) lines.push(`  True diagnosis: ${seed.true_diagnosis}`);
+  // The case key is the authoritative answer sheet for what the patient had and
+  // how it should have been managed. Without it the evaluator was left to infer
+  // the diagnosis from the presentation label alone — and for an unfamiliar named
+  // syndrome (e.g. FOSPE) it would confabulate a wrong definition. Teach from this.
+  if (seed.hint) lines.push(`  Case key (authoritative — the correct clinical picture and management; teach the "what this patient actually had" section from THIS, never from a guess): ${seed.hint}`);
+  if (seed.arrest_rhythm) lines.push(`  Arrest rhythm: ${seed.arrest_rhythm}`);
   if (seed.special_flags) lines.push(`  Special flags: ${seed.special_flags}`);
   lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
   lines.push(`  Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);

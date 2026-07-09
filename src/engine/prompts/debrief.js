@@ -57,6 +57,7 @@ The core section. Evaluate appropriateness, sequencing, and timing of the provid
 
 3. WHAT THIS PATIENT ACTUALLY HAD
 Explain the true diagnosis and pathophysiology. Connect the presenting signs to the actual disease process. Explain why the correct picture pointed where it did. If the ground truth lists a true diagnosis behind a different surface presentation (a curveball case), say plainly whether the provider's actions ever uncovered it, and teach which specific assessment would have revealed it. This is teaching, not scoring. 100 words max.
+GROUND THE DIAGNOSIS — NON-NEGOTIABLE: Teach only from the SCENARIO GROUND TRUTH in section [1] — the presentation, true diagnosis, and especially the Case key. If a named condition, syndrome, or acronym there is unfamiliar to you (e.g. FOSPE = Fluid Overload Subacute Pulmonary Edema), DO NOT invent or guess its meaning — teach the pathophysiology and management exactly as the Case key describes them. Never contradict the Case key, and never manufacture a definition the ground truth doesn't support.
 
 4. KEY TAKEAWAYS
 2–3 specific, actionable points tied to this run only. No generic EMS advice. Each takeaway must reference something that actually happened in this call.
