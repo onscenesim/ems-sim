@@ -171,6 +171,7 @@ router.post('/new', async (req, res) => {
         },
         unit_name:      seed.unit_name,
         multi_patient:  multiPatient,
+        hospitals:      seed.hospitals || null,
       },
       crew: { partner: partnerRec, captain: captainRec },
     }));
@@ -182,6 +183,7 @@ router.post('/new', async (req, res) => {
       difficulty:          seed.difficulty,
       provider_level:      seed.provider_level,
       region:              seed.region,
+      hospitals:           seed.hospitals || null,
       patient: {
         name:        seed.patient_name,
         age:         seed.patient_age,

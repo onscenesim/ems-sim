@@ -402,6 +402,10 @@ function rollScenario(opts = {}) {
       (presentation.special_flags && /two_patients|mci/i.test(presentation.special_flags)) ? true :
       Math.random() < 0.08,
     region: region_id,
+    // The two transport destinations for this region: `nearest` (closer, lower
+    // capability — community/basic ED) vs `major` (farther, higher capability —
+    // trauma/cath/stroke). This binary is presented to the provider on every run.
+    hospitals: region && region.hospitals ? region.hospitals : null,
     provider_level,
     difficulty,
     unit_name,
