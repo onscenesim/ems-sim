@@ -623,14 +623,25 @@ html, body {
 .brief-rows { display: grid; gap: 9px; }
 .brief-row {
   display: grid;
-  grid-template-columns: 20px 1fr;
+  grid-template-columns: 26px 1fr;
   gap: 10px;
   align-items: start;
+  --k: var(--cyan);
 }
+.brief-row[data-k="move"],
+.brief-row[data-k="skip"]  { --k: var(--green); }
+.brief-row[data-k="route"],
+.brief-row[data-k="radio"] { --k: var(--yellow); }
+.brief-row[data-k="stop"]  { --k: var(--red); }
 .brief-ico {
-  font-size: 14px;
-  line-height: 1.5;
-  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1.6;
+  letter-spacing: -0.02em;
+  text-align: right;
+  color: var(--k);
+  opacity: 0.85;
   user-select: none;
 }
 .brief-text {
@@ -639,16 +650,11 @@ html, body {
   line-height: 1.6;
 }
 .brief-label {
-  color: var(--cyan);
+  color: var(--k);
   font-weight: bold;
   margin-right: 8px;
 }
 .brief-label::after { content: ':'; }
-.brief-row[data-k="move"] .brief-label,
-.brief-row[data-k="skip"] .brief-label  { color: var(--green); }
-.brief-row[data-k="route"] .brief-label,
-.brief-row[data-k="radio"] .brief-label { color: var(--yellow); }
-.brief-row[data-k="stop"] .brief-label  { color: var(--red); }
 .brief-text i { font-style: italic; color: #c3ccdb; }
 .brief-text b:not(.brief-label) { color: #e5e7eb; }
 
@@ -3554,12 +3560,12 @@ body.light-mode .brief-dot   { background: #1f8a3b; box-shadow: 0 0 5px #1f8a3b;
 body.light-mode .brief-title { color: #1f8a3b; }
 body.light-mode .brief-sub   { color: #6b6b6b; }
 body.light-mode .brief-text  { color: #22222e; }
-body.light-mode .brief-label { color: #0f6ea6; }
-body.light-mode .brief-row[data-k="move"] .brief-label,
-body.light-mode .brief-row[data-k="skip"] .brief-label  { color: #1f8a3b; }
-body.light-mode .brief-row[data-k="route"] .brief-label,
-body.light-mode .brief-row[data-k="radio"] .brief-label { color: #8a5a00; }
-body.light-mode .brief-row[data-k="stop"] .brief-label  { color: #bb1111; }
+body.light-mode .brief-row              { --k: #0f6ea6; }
+body.light-mode .brief-row[data-k="move"],
+body.light-mode .brief-row[data-k="skip"]  { --k: #1f8a3b; }
+body.light-mode .brief-row[data-k="route"],
+body.light-mode .brief-row[data-k="radio"] { --k: #8a5a00; }
+body.light-mode .brief-row[data-k="stop"]  { --k: #bb1111; }
 body.light-mode .brief-text i { color: #3a4a63; }
 body.light-mode .brief-text b:not(.brief-label) { color: #111; }
 

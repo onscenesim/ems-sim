@@ -258,17 +258,17 @@ function printHr() {
 // dim system tips, so players actually read how to drive the sim.
 function printBriefing() {
   const tips = [
-    { icon: '💉', key: 'rx',    label: 'Meds &amp; procedures',
+    { icon: 'Rx', key: 'rx',    label: 'Meds &amp; procedures',
       text: 'Lead with an action verb — <i>“give morphine,” “push TXA,” “hang a dopamine drip,” “intubate,” “establish an IO.”</i> Passive phrasing may not register a roll.' },
-    { icon: '🚑', key: 'move',  label: 'Moving the patient',
+    { icon: '&gt;&gt;', key: 'move',  label: 'Moving the patient',
       text: 'Say <i>“load the patient,” “move to the ambulance,”</i> or <i>“take her to the rig.”</i> Packages and loads — no destination needed yet.' },
-    { icon: '🧭', key: 'route', label: 'Going en route',
+    { icon: '-&gt;', key: 'route', label: 'Going en route',
       text: 'Say <i>“transport to [hospital]”</i> or <i>“go en route to [hospital].”</i> Your partner won’t move the unit until you name a destination.' },
-    { icon: '📻', key: 'radio', label: 'Radio reports',
+    { icon: '))', key: 'radio', label: 'Radio reports',
       text: 'Give pre-arrival and handoff reports in <b>past tense</b> for anything already done — <i>“we cardioverted,” “patient was intubated”</i> — so the system doesn’t re-roll it.' },
-    { icon: '⏭️', key: 'skip',  label: 'Skip ahead',
+    { icon: '&gt;|', key: 'skip',  label: 'Skip ahead',
       text: 'When the active call is over, hit <b>»</b> to fast-forward: load, transport, arrive. No treatment is applied during a skip. To end on scene (death, refusal), type <i>“end scenario.”</i>' },
-    { icon: '🛑', key: 'stop',  label: 'If the AI gets stuck',
+    { icon: '!!', key: 'stop',  label: 'If the AI gets stuck',
       text: 'Click <b>STOP</b> to cancel the request, then try again.' },
   ];
   const rows = tips.map(t =>
