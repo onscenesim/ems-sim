@@ -254,6 +254,43 @@ function printHr() {
   scrollBottom();
 }
 
+// Start-of-run "field briefing" — a styled card in place of the old wall of
+// dim system tips, so players actually read how to drive the sim.
+function printBriefing() {
+  const tips = [
+    { icon: '💉', key: 'rx',    label: 'Meds &amp; procedures',
+      text: 'Lead with an action verb — <i>“give morphine,” “push TXA,” “hang a dopamine drip,” “intubate,” “establish an IO.”</i> Passive phrasing may not register a roll.' },
+    { icon: '🚑', key: 'move',  label: 'Moving the patient',
+      text: 'Say <i>“load the patient,” “move to the ambulance,”</i> or <i>“take her to the rig.”</i> Packages and loads — no destination needed yet.' },
+    { icon: '🧭', key: 'route', label: 'Going en route',
+      text: 'Say <i>“transport to [hospital]”</i> or <i>“go en route to [hospital].”</i> Your partner won’t move the unit until you name a destination.' },
+    { icon: '📻', key: 'radio', label: 'Radio reports',
+      text: 'Give pre-arrival and handoff reports in <b>past tense</b> for anything already done — <i>“we cardioverted,” “patient was intubated”</i> — so the system doesn’t re-roll it.' },
+    { icon: '⏭️', key: 'skip',  label: 'Skip ahead',
+      text: 'When the active call is over, hit <b>»</b> to fast-forward: load, transport, arrive. No treatment is applied during a skip. To end on scene (death, refusal), type <i>“end scenario.”</i>' },
+    { icon: '🛑', key: 'stop',  label: 'If the AI gets stuck',
+      text: 'Click <b>STOP</b> to cancel the request, then try again.' },
+  ];
+  const rows = tips.map(t =>
+    `<div class="brief-row" data-k="${t.key}">` +
+      `<span class="brief-ico">${t.icon}</span>` +
+      `<span class="brief-text"><b class="brief-label">${t.label}</b>${t.text}</span>` +
+    `</div>`).join('');
+  const el = document.createElement('div');
+  el.className = 'line briefing';
+  el.innerHTML =
+    `<div class="brief-card">` +
+      `<div class="brief-head">` +
+        `<span class="brief-dot"></span>` +
+        `<span class="brief-title">FIELD BRIEFING</span>` +
+        `<span class="brief-sub">You run the call — talk to your crew and patient in plain English.</span>` +
+      `</div>` +
+      `<div class="brief-rows">${rows}</div>` +
+    `</div>`;
+  output.appendChild(el);
+  scrollBottom();
+}
+
 // Matches: Name: "dialogue" — speaker name up to 30 chars, colon, space, opening quote
 const DIALOGUE_RE = /^[A-Z][A-Za-z\s\-']{0,28}:\s*"/;
 
@@ -637,14 +674,7 @@ async function startScenario() {
 
     playSound(getDispatchSound(data.region));
     print(`Scenario ID: ${data.scenario_id}`, 'system');
-    print('TIPS FOR THIS SIMULATOR:', 'system');
-    print('  \u2022 MEDS & PROCEDURES: Use an action verb to trigger a dice roll \u2014 "give morphine," "push TXA," "hang a dopamine drip," "intubate," "establish an IO." Passive phrasing may not register.', 'system');
-    print('  \u2022 MOVING THE PATIENT: Say "move to the ambulance," "load the patient," or "take her to the rig" to package and load. No destination needed.', 'system');
-    print('  \u2022 GOING EN ROUTE: Say "go en route to [hospital]" or "transport to [hospital]" to start driving. Your partner will not move the unit until you name a destination.', 'system');
-    print('  • RADIO REPORTS: When giving a pre-arrival or handoff, use past tense for procedures already done — "we cardioverted," "patient was intubated" — so the system does not re-roll them.', 'system');
-    print('  • SKIP AHEAD: When the active part of the call is over, use the » button to fast-forward — load the patient, transport, and arrive. No further treatment is applied during a skip. To end on scene (death, refusal), type "end scenario".', 'system');
-    print('  • IF THE AI GETS STUCK: Click the STOP button to cancel the request and try again.', 'system');
-    print('', 'system');
+    printBriefing();
     printHr();
     // Show dispatch flash before the text appears
     if (/DISPATCH:/i.test(data.reply)) await animateDispatch();
