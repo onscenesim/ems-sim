@@ -685,7 +685,7 @@ class Session {
     // Authoritative vascular access state — the model must not resurrect blown
     // lines or invent routes the patient doesn't have.
     if (this.access.length > 0) {
-      messageText += `\n\n[ACCESS STATE (server-tracked): ${this._accessSummary()}. A BLOWN line is permanently unusable — nothing further goes through it. If the provider orders a medication without naming a route, use the best PATENT access (patent before marginal, never blown) and name the route in your narration.]`;
+      messageText += `\n\n[ACCESS STATE (server-tracked, do NOT repeat this tag in your narration): ${this._accessSummary()}. These lines are RELIABLE — do NOT narrate any of them infiltrating, blowing, going marginal, or failing on your own; line status changes ONLY when the engine rolls it. A med pushed through a PATENT line always delivers cleanly. A line marked blown is permanently unusable. For a medication with no named route, use the best patent line (patent before marginal, never blown) and name it in your narration.]`;
     }
 
     // Deterministic backup: the provider asked for help but the model often omits
@@ -739,7 +739,15 @@ class Session {
     // depart-without-separate-load turn (e.g. skip-to-hospital straight from scene).
     let { cleanedReply: eventClean, loading, enRoute, transportDest } = parseEventTags(timeClean);
     const { cleanedReply: baseClean, baseContact } = parseBaseContactTag(eventClean);
-    const reply = stripProviderSpeech(baseClean);
+    // [ACCESS STATE ...] / [ACCESS ...] is a server-only ledger tag injected into
+    // the model's message; the model sometimes echoes it (or invents its own
+    // site-specific version) in prose. Strip any such tag so it never reaches the
+    // player as visible text.
+    const reply = stripProviderSpeech(baseClean)
+      .replace(/\s*\[ACCESS[^\]]*\]\s*/gi, ' ')
+      .replace(/[^\S\n]{2,}/g, ' ')
+      .replace(/[^\S\n]+\n/g, '\n')
+      .trim();
 
     // Reconcile dice against the narration: drop any roll the model declined or
     // showed didn't happen, so the debrief/log and client only see real events.
