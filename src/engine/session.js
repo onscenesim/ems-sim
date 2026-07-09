@@ -902,9 +902,12 @@ class Session {
    */
   getTranscriptData() {
     return {
-      seed:        this.seed,
-      messages:    this.messages,
-      debriefText: this.debriefText || null,
+      seed:         this.seed,
+      // The fully-assembled seed block — literally everything injected into the
+      // model's system prompt for this run. Exported verbatim for analysis.
+      systemPrompt: this.systemPrompt || null,
+      messages:     this.messages,
+      debriefText:  this.debriefText || null,
     };
   }
 

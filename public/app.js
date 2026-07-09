@@ -2178,6 +2178,25 @@ function formatBackendSection(t, backend) {
     }
   }
   lines.push('');
+
+  // Full seed object — every field the engine rolled and injected, nothing
+  // curated out. Redundant with the summary above by design; this guarantees
+  // no injected value is ever silently dropped from the export.
+  if (seed) {
+    lines.push('[FULL SEED OBJECT — every injected field, verbatim]');
+    lines.push(JSON.stringify(seed, null, 2));
+    lines.push('');
+  }
+
+  // The complete system prompt actually sent to the model: the assembled seed
+  // block (all numbered rules + patient card + scenario injection). This is
+  // literally everything that was injected to shape the run.
+  if (backend && backend.systemPrompt) {
+    lines.push('[INJECTED SYSTEM PROMPT — assembled seed block sent to the model]');
+    lines.push(backend.systemPrompt);
+    lines.push('');
+  }
+
   return lines;
 }
 
