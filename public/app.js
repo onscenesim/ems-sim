@@ -940,7 +940,9 @@ async function sendTurn(msg, opts = {}) {
   setLoading(false);
 }
 
-// ── Confirm-dice panel — ✓/✗ each uncertain procedure before the turn runs ──
+// ── Confirm panel — every dice-rolling skill gets a ✓/✗ before the turn runs.
+// A fixed structural beat: confident detections come pre-checked ✓ (one click
+// on CONFIRM proceeds), ambiguous ones (item.reason set) require a choice.
 
 function showProcConfirm(msg, opts, items) {
   const existing = document.getElementById('proc-confirm');
@@ -952,7 +954,7 @@ function showProcConfirm(msg, opts, items) {
 
   const title = document.createElement('div');
   title.className = 'proc-confirm-title';
-  title.textContent = '🎲 DICE CHECK — are you actually doing these right now?';
+  title.textContent = 'CONFIRM ORDERS — ✓ perform now · ✗ not an order';
   wrap.appendChild(title);
 
   const choices = new Map();   // key → true (perform) / false (just talk)
@@ -960,12 +962,13 @@ function showProcConfirm(msg, opts, items) {
 
   const continueBtn = document.createElement('button');
   continueBtn.className = 'proc-confirm-continue';
-  continueBtn.textContent = 'CONTINUE';
+  continueBtn.textContent = 'CONFIRM';
   continueBtn.disabled = true;
 
   const refresh = () => { continueBtn.disabled = choices.size !== items.length; };
 
   for (const item of items) {
+    const confident = !item.reason;   // null reason = clear order wording
     const row = document.createElement('div');
     row.className = 'proc-confirm-row';
 
@@ -975,11 +978,15 @@ function showProcConfirm(msg, opts, items) {
     name.className = 'proc-confirm-name';
     name.textContent = item.procedure_id.replace(/_/g, ' ').toUpperCase()
       + (item.matched && item.matched !== item.procedure_id ? ` ("${item.matched}")` : '');
-    const why = document.createElement('div');
-    why.className = 'proc-confirm-why';
-    why.textContent = `“…${item.sentence}…” — ${item.reason}`;
     info.appendChild(name);
-    info.appendChild(why);
+    // Only ambiguous detections need the "why are we asking" line; confident
+    // rows stay one-line for a fast scan.
+    if (!confident) {
+      const why = document.createElement('div');
+      why.className = 'proc-confirm-why';
+      why.textContent = `“…${item.sentence}…” — ${item.reason}`;
+      info.appendChild(why);
+    }
     row.appendChild(info);
 
     const btns = document.createElement('div');
@@ -1005,7 +1012,15 @@ function showProcConfirm(msg, opts, items) {
     row.appendChild(btns);
     wrap.appendChild(row);
     rows.push(row);
+
+    // Confident detections default to ✓ so the common case is a single click
+    // on CONFIRM; flipping any row to ✗ is still one click away.
+    if (confident) {
+      choices.set(item.key, true);
+      yes.classList.add('chosen');
+    }
   }
+  refresh();
 
   const actions = document.createElement('div');
   actions.className = 'proc-confirm-actions';

@@ -3,7 +3,7 @@
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
-const { detectWithConfirmation, getProcedure } = require('./dice');
+const { detectWithConfirmation, getProcedure, PRECHARGE_RE } = require('./dice');
 const { sendTurn, sendDebrief } = require('./api');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 
@@ -666,10 +666,23 @@ class Session {
     // Mentions the player confirmed are NOT orders (or that context marked as
     // discussion/planning): tell the model explicitly, or it narrates them
     // being performed anyway ("...for intubation later" → an intubation).
-    if (suppressed.length > 0) {
-      const names = suppressed.map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
+    const prechargeSuppressed = suppressed.filter(s => s.precharge);
+    const plainSuppressed     = suppressed.filter(s => !s.precharge);
+    if (plainSuppressed.length > 0) {
+      const names = plainSuppressed.map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
       const plural = names.length > 1;
       messageText += `\n\n[SYSTEM NOTE: The provider's message MENTIONS ${names.join(', ')} but ${plural ? 'these are' : 'this is'} NOT being performed this turn — it is planning, discussion, or report content. Do NOT narrate ${plural ? 'them' : 'it'} being performed, prepared, or started. No roll occurred.]`;
+    }
+    // Pre-charging is anticipatory: the defib charges during compressions so a
+    // shock can be delivered instantly IF the next pulse/rhythm check warrants
+    // it. Narrate the charge — but no shock is delivered this turn. Belt and
+    // suspenders: also fires when precharge wording appears in the raw text with
+    // no shock roll injected (e.g. "precharge the defibrillator" matches no
+    // synonym at all), so the model never invents a shock from the wording.
+    const shockRolled = rolls.some(r => ['defibrillation', 'cardioversion'].includes(r.procedure_id));
+    if (prechargeSuppressed.length > 0
+        || (!reportMode && !skipMode && !shockRolled && PRECHARGE_RE.test(userText))) {
+      messageText += '\n\n[SYSTEM NOTE: The provider is PRE-CHARGING the defibrillator — anticipatory charging during compressions. Narrate the monitor charging and holding ready. Do NOT deliver a shock, do NOT narrate a shock, and do NOT decide to shock on the provider\'s behalf. A shock requires a separate explicit order and its own [SYSTEM ROLL]. No roll occurred this turn.]';
     }
 
     // Self-healing scene clock: if the last reply dropped the mandatory [TIME:]

@@ -369,6 +369,30 @@ function procEntryKey(procId, matchedKey) {
   return procId + '|' + (matchedKey || '');
 }
 
+// ── Pre-charge guard ─────────────────────────────────────────────────────────
+// "Pre-charging" the defib during compressions is anticipatory CHARGING, not a
+// shock order — observed: "Pulse check, pre charging defib" rolled defibrillation
+// and the model delivered a shock into asystole. When pre-charge wording precedes
+// a shock synonym in the same sentence, the entry is force-suppressed: no roll,
+// no confirm prompt, and the model is told to narrate charging only.
+const PRECHARGE_RE = /\bpre[\s-]?charg\w*/i;
+const SHOCK_PROC_IDS = new Set(['defibrillation', 'cardioversion']);
+
+function isPrecharge(text, matchStart, procId) {
+  if (!SHOCK_PROC_IDS.has(procId)) return false;
+  // The precharge wording must be DIRECTLY attached to this synonym (at most an
+  // article between): "pre charging defib" / "precharging the defib" suppress,
+  // but "defib was precharged — shock him now" leaves the shock order live.
+  const [sentStart] = sentenceBounds(text, matchStart);
+  const tail = text.slice(sentStart, matchStart);
+  let last = null;
+  const re = new RegExp(PRECHARGE_RE.source, 'gi');
+  for (let m; (m = re.exec(tail)) !== null;) last = m;
+  if (!last) return false;
+  const between = tail.slice(last.index + last[0].length);
+  return /^[\s,]*(?:(?:the|a|an|my|our|that)\s+)?$/i.test(between);
+}
+
 function detectProcedure(userText) {
   const lower = userText.toLowerCase();
 
@@ -612,6 +636,10 @@ function detectAllProcedures(userText) {
     // Post-match staging guard: e.g. "LUCAS backboard" should not roll.
     const stagingPost = hasStagingPostContext(remaining, bestMatchIndex + bestMatch.matchLen);
 
+    // Pre-charge guard: charging the defib in anticipation is not a shock order.
+    // Applies to defibrillation/cardioversion only (see PRECHARGE_RE above).
+    const precharge = isPrecharge(remaining, bestMatchIndex, bestMatch.proc.id);
+
     // Ambiguous-context classification (reports, plans, bare procedure nouns).
     // Terse command-style input is always a real order — skip the check there.
     const uncertain = commandStyle ? null
@@ -628,6 +656,7 @@ function detectAllProcedures(userText) {
         matchedKey: bestMatch.key,
         uncertain: !!uncertain,
         reason: uncertain || null,
+        precharge,
         sentence,
         key: procEntryKey(bestMatch.proc.id, bestMatch.key),
       });
@@ -672,7 +701,13 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
   const rolls = [];
   const suppressed = [];
   for (const entry of detectAllProcedures(userText)) {
-    const { proc, matchedKey, uncertain, reason, key } = entry;
+    const { proc, matchedKey, uncertain, reason, precharge, key } = entry;
+    // Pre-charge is a forced suppression — deterministic, not overridable by a
+    // confirm click: the wording itself says "charge, don't shock."
+    if (precharge) {
+      suppressed.push({ procedure_id: proc.id, matchedKey, precharge: true, reason: 'pre-charging — charging the defibrillator in anticipation, no shock ordered' });
+      continue;
+    }
     if (deny.has(key)) {
       suppressed.push({ procedure_id: proc.id, matchedKey, reason: 'player said not performed' });
       continue;
@@ -692,4 +727,4 @@ function getProcedure(id) {
   return INTERVENTIONS.find(p => p.id === id) || null;
 }
 
-module.exports = { detectProcedure, detectAllProcedures, rollProcedure, detectAndRoll, detectAllAndRoll, detectWithConfirmation, getProcedure, calcOutcome, rollD20, normalizeForDetection };
+module.exports = { detectProcedure, detectAllProcedures, rollProcedure, detectAndRoll, detectAllAndRoll, detectWithConfirmation, getProcedure, calcOutcome, rollD20, normalizeForDetection, PRECHARGE_RE };

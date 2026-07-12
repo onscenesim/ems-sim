@@ -233,18 +233,20 @@ router.post('/:id/turn', async (req, res) => {
   const VALID_SKIP_MODES = ['to_ambulance', 'to_hospital', 'to_arrival'];
   const skipMode = VALID_SKIP_MODES.includes(skip_mode) ? skip_mode : null;
 
-  // Confirm-dice pre-check: if any detected procedure sits in ambiguous wording
-  // (plans, reports, bare procedure nouns), bounce it back for a ✓/✗ before the
-  // turn runs. No model call, no clock, no state change.
+  // Confirm-dice pre-check: EVERY detected dice-rolling skill bounces back for a
+  // ✓/✗ before the turn runs — a fixed structural beat, so nothing rolls that the
+  // player didn't mean. Routine no-roll actions (pulse check, O2, vitals) pass
+  // through, as do pre-charge suppressions (deterministically not a shock).
+  // No model call, no clock, no state change.
   if (!skipMode && report_mode !== true && procs_resolved !== true) {
-    const pending = detectAllProcedures(message.trim()).filter(e => e.uncertain);
+    const pending = detectAllProcedures(message.trim()).filter(e => !e.proc.no_roll && !e.precharge);
     if (pending.length > 0) {
       return res.json({
         needs_confirmation: pending.map(e => ({
           key:          e.key,
           procedure_id: e.proc.id,
           matched:      e.matchedKey,
-          reason:       e.reason,
+          reason:       e.reason,       // null = confident detection
           sentence:     e.sentence,
         })),
       });
