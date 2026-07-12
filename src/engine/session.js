@@ -560,8 +560,12 @@ class Session {
     // Deterministic LOAD: the provider clearly ordered the patient into the rig and
     // the unit isn't already loaded or moving. The model sometimes defers this or
     // forgets [LOADING], which suppressed the destination panel — force it below.
-    const wantsLoad = !reportMode && !skipMode && !this.hasLoaded && !this.moving
+    // The confirm panel surfaces this as a LOAD PATIENT ✓/✗ row (key 'load_patient|');
+    // a player ✗ turns the load off for the turn.
+    const loadOrdered = !reportMode && !skipMode && !this.hasLoaded && !this.moving
       && LOAD_REQUEST_RE.test(userText) && !LOAD_QUESTION_RE.test(userText);
+    const loadDenied = loadOrdered && (procOverrides.deny || []).includes('load_patient|');
+    const wantsLoad = loadOrdered && !loadDenied;
     // In report mode, tell Claude this is a report/handoff turn — no procedure rolls.
     if (reportMode) {
       messageText += '\n\n[REPORT MODE: The player is giving a radio report or patient handoff. '
@@ -646,6 +650,11 @@ class Session {
     if (wantsLoad) {
       const _capStatus = (this.crewStatus && this.crewStatus.captain) || 'not_on_scene';
       messageText += '\n\n[SYSTEM NOTE: LOAD THE PATIENT NOW. The provider ordered the patient loaded into the ambulance. Resolve loading COMPLETELY this turn — narrate the crew packaging and moving the patient into the rig — and emit [LOADING]. Unless the provider ALSO explicitly named a destination to drive to in THIS same message, the unit is loaded but PARKED: do NOT emit [EN_ROUTE], do NOT narrate the rig pulling away or arriving anywhere, and keep the crew on scene ([CREW_STATUS: partner=on_scene captain=' + _capStatus + ']). The two destination options are presented to the provider by the system — the partner does NOT ask which hospital.]';
+    }
+    // Player ✗'d the LOAD PATIENT confirm row — the wording mentioned the rig but
+    // the patient is staying put this turn.
+    if (loadDenied) {
+      messageText += '\n\n[SYSTEM NOTE: The provider\'s message mentions moving the patient to the ambulance, but the provider confirmed the patient is NOT being loaded this turn. Do NOT narrate packaging or loading, and do NOT emit [LOADING].]';
     }
 
     const rollLines = rolls.filter(r => !r.no_roll).map(r => {
@@ -977,4 +986,4 @@ class Session {
   }
 }
 
-module.exports = { Session, reconcileRolls };
+module.exports = { Session, reconcileRolls, LOAD_REQUEST_RE, LOAD_QUESTION_RE };

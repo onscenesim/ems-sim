@@ -7,6 +7,7 @@ const { createSession, getSession, restoreSession } = require('../sessionStore')
 const persistence = require('../persistence');
 const { CREW } = require('../../data/crew');
 const { detectAllProcedures } = require('../../engine/dice');
+const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
 
 const COOKIE_NAME = 'ems_sid';
 const COOKIE_MAX_AGE = 30 * 24 * 3600; // 30 days in seconds
@@ -239,18 +240,30 @@ router.post('/:id/turn', async (req, res) => {
   // through, as do pre-charge suppressions (deterministically not a shock).
   // No model call, no clock, no state change.
   if (!skipMode && report_mode !== true && procs_resolved !== true) {
-    const pending = detectAllProcedures(message.trim()).filter(e => !e.proc.no_roll && !e.precharge);
-    if (pending.length > 0) {
-      return res.json({
-        needs_confirmation: pending.map(e => ({
-          key:          e.key,
-          procedure_id: e.proc.id,
-          matched:      e.matchedKey,
-          reason:       e.reason,       // null = confident detection
-          sentence:     e.sentence,
-        })),
+    const msg = message.trim();
+    const items = detectAllProcedures(msg)
+      .filter(e => !e.proc.no_roll && !e.precharge)
+      .map(e => ({
+        key:          e.key,
+        procedure_id: e.proc.id,
+        matched:      e.matchedKey,
+        reason:       e.reason,       // null = confident detection
+        sentence:     e.sentence,
+      }));
+    // Loading the patient is a state-changing event worth the same ✓/✗ beat as a
+    // dice skill: surface a LOAD PATIENT row whenever the wording orders the
+    // patient into the rig and the unit isn't already loaded or moving. The key
+    // 'load_patient|' round-trips through proc_allow/proc_deny like any other.
+    if (LOAD_REQUEST_RE.test(msg) && !LOAD_QUESTION_RE.test(msg) && !session.hasLoaded && !session.moving) {
+      items.push({
+        key:          'load_patient|',
+        procedure_id: 'load_patient',
+        matched:      null,
+        reason:       null,
+        sentence:     (msg.match(LOAD_REQUEST_RE) || [''])[0],
       });
     }
+    if (items.length > 0) return res.json({ needs_confirmation: items });
   }
 
   try {

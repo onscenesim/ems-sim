@@ -174,7 +174,7 @@ function normalizeForDetection(text) {
 // ---------------------------------------------------------------------------
 // Past-tense forms (gave, pushed, administered …) are intentionally excluded —
 // they indicate reporting ('we gave epi') rather than ordering ('give epi').
-const ADMIN_VERB_RE = /\b(give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?(?:\s+the\s+\w+)?|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|go(?:ing)?\s+for\s+(?:(?:a|an|the)\s+)?|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving|followed\s+by|in\s+addition\s+to|as\s+well\s+as|and\s+then|then\s+give|also\s+give|also\s+push|also\s+administer|along\s+with|begin(ning)?|titrat(e|ing)|connect(ing)?|run(ning)?|infus(e|ing)|drip(ping)?|bolus(ing)?)\b/i;
+const ADMIN_VERB_RE = /\b(give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?(?:\s+the\s+\w+)?|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|go(?:ing)?\s+for\s+(?:(?:a|an|the)\s+)?|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving|followed\s+by|in\s+addition\s+to|as\s+well\s+as|and\s+then|then\s+give|also\s+give|also\s+push|also\s+administer|along\s+with|begin(ning)?|titrat(e|ing)|connect(ing)?|run(ning)?|infus(e|ing)|drip(ping)?|bolus(ing)?|sedat(?:e|ing)|paralyz(?:e|ing)|premedicat(?:e|ing)|treat(?:ing)?\s+with|medicat(?:e|ing))\b/i;
 
 /**
  * Detect a procedure from user text.
@@ -424,10 +424,6 @@ function selectDC(proc, contextFlags = {}) {
       return (hypotensive || obese || pediatric) ? dcs[1] : dcs[0];
     case 'intubation':
       return difficult_airway ? dcs[dcs.length - 1] : dcs[0];
-    case 'cardioversion':
-    case 'defibrillation':
-    case 'pacing':
-      return dcs; // two rolls — equipment + clinical response
     case 'needle_decompression':
       return obese ? 13 : dcs[0];
     case 'cricothyrotomy':
@@ -668,6 +664,15 @@ function detectAllProcedures(userText) {
     }
     // If negated, leave proc.id eligible — a NON-negated mention later in the
     // same message should still fire ("no IV yet, give morphine 4mg, then try IV").
+  }
+
+  // ONE SHOCK ORDER = ONE ROLL. "Synchronized cardioversion at 200 joules"
+  // matched BOTH cardioversion ("cardiovert") and defibrillation ("200 joules"),
+  // rolling two shocks for a single order. When both fire in the same message
+  // the synchronized intent is explicit — keep cardioversion, drop the
+  // defibrillation entry (precharge suppressions are kept; they never roll).
+  if (found.some(e => e.proc.id === 'cardioversion' && !e.precharge)) {
+    return found.filter(e => !(e.proc.id === 'defibrillation' && !e.precharge));
   }
 
   return found;

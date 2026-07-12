@@ -796,6 +796,9 @@ async function sendTurn(msg, opts = {}) {
         continue;
       }
       playSound(procSound);
+      // Shocks resolve as a single roll now (no multi_roll branch) — keep the
+      // defib heart animation rather than the generic dice overlay.
+      if (DEFIB_PROCS.has(r.procedure_id)) { await animateDefib(r.procedure_id, r.outcome); continue; }
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id, r.outcome);
