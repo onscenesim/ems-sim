@@ -159,9 +159,12 @@ function formatAgeDisplay(group, ageYears) {
   return `${ageYears} year${ageYears === 1 ? '' : 's'} old`;
 }
 
-function rollSex(presentationEntry) {
+function rollSex(presentationEntry, category = null) {
   if (presentationEntry.sex_override === 'female') return 'female';
   if (presentationEntry.sex_override === 'male') return 'male';
+  // OB scenarios are pregnancies — most entries never set sex_override, and a
+  // coin-flip was rolling male patients for deliveries and eclampsia.
+  if (category === 'ob') return 'female';
   return Math.random() < 0.5 ? 'male' : 'female';
 }
 
@@ -333,7 +336,7 @@ function rollScenario(opts = {}) {
   const ageGroup = rollAgeGroup(category, presentation);
   const age = rollAgeFromGroup(ageGroup);
   const ageDisplay = formatAgeDisplay(ageGroup, age);
-  const sex = rollSex(presentation);
+  const sex = rollSex(presentation, category);
   const patientName = rollPatientName(sex);
   const trajectory = category === 'doa' ? 'stable' : rollTrajectory(difficulty);
   const decompensationClock = category === 'doa' ? null : rollDecompensationClock(difficulty, trajectory);
