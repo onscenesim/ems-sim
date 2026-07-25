@@ -1,4 +1,4 @@
-const { GoogleGenAI } = require('@google/genai');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const { buildDebriefPrompt } = require('./prompts/debrief');
 
 // Initialize the Google Gen AI client. It automatically picks up GEMINI_API_KEY from your .env
