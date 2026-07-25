@@ -1,8 +1,8 @@
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const { GoogleGenAI } = require('@google/genai');
 const { buildDebriefPrompt } = require('./prompts/debrief');
 
-// Initialize the Google Gen AI client. It automatically picks up GEMINI_API_KEY from your .env
-const ai = new GoogleGenAI({}); 
+// Initialize the Google Gen AI client explicitly passing the API key
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // We'll use the cost-effective 3.6 Flash for both turns and debriefs
 const MODEL = 'gemini-3.6-flash';
