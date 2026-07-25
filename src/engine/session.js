@@ -15,7 +15,6 @@ const DEBRIEF_TRIGGERS = [
   'transferring care',
   'patient is in ed hands',
   'patient is at the ed',
-  'we are clear from',
   "we're clear from",
   'pronounce the patient',
   'call it here',
@@ -455,6 +454,9 @@ class Session {
     this.lastReplyHadTime = true; // whether the previous reply carried a [TIME:] tag — drives a self-healing reminder
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
     this.arrivedAtHospital = false; // true once a transport skip reaches the bay — gates END server-side
+    // Add decompensation tracking
+    this.decompensationClock = seed.decompensation_clock;
+    this.decompensationTriggered = false;
   }
 
   /**
@@ -911,6 +913,16 @@ class Session {
       }
     }
 
+    // Check if decompensation should be triggered
+    if (this.decompensationClock !== null && !this.decompensationTriggered) {
+      const timeDiff = this.sceneMinute - (this.seed.timestamp_start ? new Date(this.seed.timestamp_start).getTime() / 60000 : 0);
+      if (timeDiff >= this.decompensationClock) {
+        this.decompensationTriggered = true;
+        // Add a system note to trigger deterioration
+        messageText += '\n\n[SYSTEM NOTE: The patient\'s condition has begun to deteriorate. Narrate the patient showing signs of declining status, such as changes in vital signs or clinical presentation.]';
+      }
+    }
+
     // Record the on-scene → transport boundary the first time the unit departs
     // (after the clock advance, so it carries this turn's departure timestamp).
     if (enRoute && this.departSceneMinute === null) {
@@ -943,47 +955,33 @@ class Session {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, transportDest: this.transportDest, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true };
+      const unit = this.seed.unit_name || 'Unit';
+      return {
+        reply: `${unit} is clear. — End of call —`,
+        rolls: [], suppressed: [], vitals: this.lastVitals, loading: false, enRoute: false,
+        transportEtaMin: this.transportEtaMin, baseContact: false,
+        backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource,
+        secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true,
+      };
     }
 
-    return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, transportDest: this.transportDest, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: false };
-  }
-
-  /**
-   * Request the full debrief. Call after session is closed.
-   */
-  async debrief() {
-    const context = buildDebriefContext(this.seed, this.turns, this.departSceneMinute, this._accessSummary());
-    const text = await sendDebrief(context, this.seed.provider_level);
-    updateRunDebrief(this.sessionId, text);
-    this.debriefText = text;   // kept for transcript export
-    return text;
-  }
-
-  /**
-   * Return all data needed to render a downloadable transcript.
-   */
-  getTranscriptData() {
     return {
-      seed:         this.seed,
-      // The fully-assembled seed block — literally everything injected into the
-      // model's system prompt for this run. Exported verbatim for analysis.
-      systemPrompt: this.systemPrompt || null,
-      messages:     this.messages,
-      debriefText:  this.debriefText || null,
+      reply,
+      rolls: reconciledRolls,
+      suppressed,
+      vitals: this.lastVitals,
+      loading,
+      enRoute,
+      transportEtaMin: this.transportEtaMin,
+      baseContact,
+      backup: this.backupStatus,
+      crewStatus: this.crewStatus,
+      demoSource: this.demoSource,
+      secondPatient: this.secondPatientFound,
+      arrived: this.arrivedAtHospital,
+      closed: this.closed
     };
-  }
-
-  /**
-   * Force-close without debrief (e.g., user quits mid-scenario).
-   */
-  close() {
-    if (!this.closed) {
-      closeScenario(this.seed, this.sceneMinute);
-      this.closed = true;
-      logRun(this.sessionId, this.seed, this.messages);
-    }
   }
 }
 
-module.exports = { Session, reconcileRolls, LOAD_REQUEST_RE, LOAD_QUESTION_RE };
+module.exports = { Session };
