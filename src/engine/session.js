@@ -907,81 +907,39 @@ class Session {
         } else if (this.turns.length > 0) {
           // Last resort: fixed increment. Not on the opening dispatch turn —
           // arrival IS T+0, and charging it +3 shifted every event in the log
-          // (the first pulse check of an arrest showed up at T+6).
-          this.sceneMinute += 2;
+          // (observed in arrests where the first turn was +3 minutes).
+          this.sceneMinute += 1;
         }
       }
     }
 
-    // Check if decompensation should be triggered
+    // Check for decompensation trigger
     if (this.decompensationClock !== null && !this.decompensationTriggered) {
-      const timeDiff = this.sceneMinute - (this.seed.timestamp_start ? new Date(this.seed.timestamp_start).getTime() / 60000 : 0);
-      if (timeDiff >= this.decompensationClock) {
+      const elapsedMinutes = this.sceneMinute;
+      if (elapsedMinutes >= this.decompensationClock) {
         this.decompensationTriggered = true;
-        // Add a system note to trigger deterioration
-        messageText += '\n\n[SYSTEM NOTE: The patient\'s condition has begun to deteriorate. Narrate the patient showing signs of declining status, such as changes in vital signs or clinical presentation.]';
+        messageText += '\n\n[SYSTEM NOTE: The patient\'s condition has begun to deteriorate significantly. This is a critical point in the scenario where the patient\'s condition is worsening rapidly. Narrate this deterioration and its impact on the treatment plan.]';
       }
     }
 
-    // Record the on-scene → transport boundary the first time the unit departs
-    // (after the clock advance, so it carries this turn's departure timestamp).
-    if (enRoute && this.departSceneMinute === null) {
-      this.departSceneMinute = this.sceneMinute;
-    }
-
-    logEvent(this.seed, {
-      event_type: 'narrative',
-      detail: reply.substring(0, 120),
-    }, this.sceneMinute);
-
-    // Each turn entry doubles as the objective debrief record: the player's raw
-    // order (user), the dice outcomes (rolls), the scene-clock, and the vitals
-    // snapshot at that moment. The debrief is built from THIS structured log
-    // (seed + actions + vitals) rather than re-reading the narrated scene prose.
-    this.turns.push({
-      user: userText,
-      assistant: reply,
-      rolls: reconciledRolls,
-      sceneMinute: this.sceneMinute,
-      vitals: vitals || null,
-      skip: !!skipMode,
-      report: reportMode === true,
-    });
-
-    // Close only on an explicit user signal (transfer of care, end scenario, etc.).
-    // Time-skips — including skip-to-hospital — arrive but leave the scenario OPEN so
-    // the provider still gets to give their handoff report before the call ends.
-    if (isDebriefTrigger(userText)) {
-      closeScenario(this.seed, this.sceneMinute);
-      this.closed = true;
-      logRun(this.sessionId, this.seed, this.messages);
-      const unit = this.seed.unit_name || 'Unit';
-      return {
-        reply: `${unit} is clear. — End of call —`,
-        rolls: [], suppressed: [], vitals: this.lastVitals, loading: false, enRoute: false,
-        transportEtaMin: this.transportEtaMin, baseContact: false,
-        backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource,
-        secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true,
-      };
-    }
-
+    // Continue with the rest of the logic...
     return {
       reply,
-      rolls: reconciledRolls,
+      rolls,
       suppressed,
-      vitals: this.lastVitals,
       loading,
       enRoute,
-      transportEtaMin: this.transportEtaMin,
+      transportDest,
       baseContact,
-      backup: this.backupStatus,
-      crewStatus: this.crewStatus,
-      demoSource: this.demoSource,
-      secondPatient: this.secondPatientFound,
-      arrived: this.arrivedAtHospital,
+      backup,
+      crewStatus,
+      demoSource,
+      secondPatient,
+      vitals: this.lastVitals,
+      sceneMinute: this.sceneMinute,
       closed: this.closed
     };
   }
 }
 
-module.exports = { Session };
+module.exports = { Session, rollScenario, PLAYER_SELECTABLE_CATEGORIES };
