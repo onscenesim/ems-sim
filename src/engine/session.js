@@ -15,6 +15,7 @@ const DEBRIEF_TRIGGERS = [
   'transferring care',
   'patient is in ed hands',
   'patient is at the ed',
+  'we are clear from',
   "we're clear from",
   'pronounce the patient',
   'call it here',
@@ -454,9 +455,6 @@ class Session {
     this.lastReplyHadTime = true; // whether the previous reply carried a [TIME:] tag — drives a self-healing reminder
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
     this.arrivedAtHospital = false; // true once a transport skip reaches the bay — gates END server-side
-    // Add decompensation tracking
-    this.decompensationClock = seed.decompensation_clock;
-    this.decompensationTriggered = false;
   }
 
   /**
@@ -907,39 +905,85 @@ class Session {
         } else if (this.turns.length > 0) {
           // Last resort: fixed increment. Not on the opening dispatch turn —
           // arrival IS T+0, and charging it +3 shifted every event in the log
-          // (observed in arrests where the first turn was +3 minutes).
-          this.sceneMinute += 1;
+          // (the first pulse check of an arrest showed up at T+6).
+          this.sceneMinute += 2;
         }
       }
     }
 
-    // Check for decompensation trigger
-    if (this.decompensationClock !== null && !this.decompensationTriggered) {
-      const elapsedMinutes = this.sceneMinute;
-      if (elapsedMinutes >= this.decompensationClock) {
-        this.decompensationTriggered = true;
-        messageText += '\n\n[SYSTEM NOTE: The patient\'s condition has begun to deteriorate significantly. This is a critical point in the scenario where the patient\'s condition is worsening rapidly. Narrate this deterioration and its impact on the treatment plan.]';
-      }
+    // Record the on-scene → transport boundary the first time the unit departs
+    // (after the clock advance, so it carries this turn's departure timestamp).
+    if (enRoute && this.departSceneMinute === null) {
+      this.departSceneMinute = this.sceneMinute;
     }
 
-    // Continue with the rest of the logic...
-    return {
-      reply,
-      rolls,
-      suppressed,
-      loading,
-      enRoute,
-      transportDest,
-      baseContact,
-      backup,
-      crewStatus,
-      demoSource,
-      secondPatient,
-      vitals: this.lastVitals,
+    logEvent(this.seed, {
+      event_type: 'narrative',
+      detail: reply.substring(0, 120),
+    }, this.sceneMinute);
+
+    // Each turn entry doubles as the objective debrief record: the player's raw
+    // order (user), the dice outcomes (rolls), the scene-clock, and the vitals
+    // snapshot at that moment. The debrief is built from THIS structured log
+    // (seed + actions + vitals) rather than re-reading the narrated scene prose.
+    this.turns.push({
+      user: userText,
+      assistant: reply,
+      rolls: reconciledRolls,
       sceneMinute: this.sceneMinute,
-      closed: this.closed
+      vitals: vitals || null,
+      skip: !!skipMode,
+      report: reportMode === true,
+    });
+
+    // Close only on an explicit user signal (transfer of care, end scenario, etc.).
+    // Time-skips — including skip-to-hospital — arrive but leave the scenario OPEN so
+    // the provider still gets to give their handoff report before the call ends.
+    if (isDebriefTrigger(userText)) {
+      closeScenario(this.seed, this.sceneMinute);
+      this.closed = true;
+      logRun(this.sessionId, this.seed, this.messages);
+      return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, transportDest: this.transportDest, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: true };
+    }
+
+    return { reply, rolls: reconciledRolls, suppressed, vitals: this.lastVitals, loading, enRoute, transportEtaMin: this.transportEtaMin, transportDest: this.transportDest, baseContact, backup: this.backupStatus, crewStatus: this.crewStatus, demoSource: this.demoSource, secondPatient: this.secondPatientFound, arrived: this.arrivedAtHospital, closed: false };
+  }
+
+  /**
+   * Request the full debrief. Call after session is closed.
+   */
+  async debrief() {
+    const context = buildDebriefContext(this.seed, this.turns, this.departSceneMinute, this._accessSummary());
+    const text = await sendDebrief(context, this.seed.provider_level);
+    updateRunDebrief(this.sessionId, text);
+    this.debriefText = text;   // kept for transcript export
+    return text;
+  }
+
+  /**
+   * Return all data needed to render a downloadable transcript.
+   */
+  getTranscriptData() {
+    return {
+      seed:         this.seed,
+      // The fully-assembled seed block — literally everything injected into the
+      // model's system prompt for this run. Exported verbatim for analysis.
+      systemPrompt: this.systemPrompt || null,
+      messages:     this.messages,
+      debriefText:  this.debriefText || null,
     };
+  }
+
+  /**
+   * Force-close without debrief (e.g., user quits mid-scenario).
+   */
+  close() {
+    if (!this.closed) {
+      closeScenario(this.seed, this.sceneMinute);
+      this.closed = true;
+      logRun(this.sessionId, this.seed, this.messages);
+    }
   }
 }
 
-module.exports = { Session, rollScenario, PLAYER_SELECTABLE_CATEGORIES };
+module.exports = { Session, reconcileRolls, LOAD_REQUEST_RE, LOAD_QUESTION_RE };
