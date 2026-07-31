@@ -20,6 +20,36 @@ For EMS Scenarios, in addition to provided instructions, I always want you to:
 `;
 
 /**
+ * Helper to pause execution
+ */
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Wrap the Gemini API call in an automatic retry system for rate limits.
+ */
+async function generateContentWithRetry(requestParams, maxRetries = 3) {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      return await ai.models.generateContent(requestParams);
+    } catch (error) {
+      attempt++;
+      const errorString = error.toString().toLowerCase();
+      // Look for Too Many Requests (429) or Service Unavailable (503)
+      const isRateLimit = errorString.includes('429') || errorString.includes('503') || errorString.includes('quota') || errorString.includes('too many requests');
+      
+      if (isRateLimit && attempt < maxRetries) {
+        const waitTime = attempt * 2000; // Wait 2s, then 4s...
+        console.warn(`[API] Rate limit hit. Retrying attempt ${attempt} in ${waitTime}ms...`);
+        await delay(waitTime);
+      } else {
+        throw error; // If it's a real error, or we ran out of retries, crash as normal
+      }
+    }
+  }
+}
+
+/**
  * Send a turn in an active scenario.
  *
  * @param {string} systemPrompt The assembled seed block
@@ -37,7 +67,8 @@ async function sendTurn(systemPrompt, messages) {
   }));
 
   try {
-    const response = await ai.models.generateContent({
+    // Replaced ai.models.generateContent with our new retry wrapper
+    const response = await generateContentWithRetry({
       model: MODEL,
       contents: formattedMessages,
       config: {
@@ -77,7 +108,8 @@ async function sendDebrief(debriefContext, providerLevel) {
   const fullInstruction = `${EMS_SYSTEM_RULES}\n\n${dynamicDebriefInstruction}`;
 
   try {
-     const response = await ai.models.generateContent({
+     // Replaced ai.models.generateContent with our new retry wrapper
+     const response = await generateContentWithRetry({
       model: MODEL,
       contents: [{ role: 'user', parts: [{ text: debriefContext }]}],
       config: {
