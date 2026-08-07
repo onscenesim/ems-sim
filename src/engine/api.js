@@ -22,9 +22,7 @@ const EMS_SYSTEM_RULES = `
 For EMS Scenarios, in addition to provided instructions, I always want you to:
 1: Keep scenarios varied and unpredictable
 2: Never provide suggestions or information I did not ask for
-3: Remember that a Level 1 trauma center is 20 mins away and other hospitals are 12-15 mins away.
-4: Serious dispatches get an automatic engine backup, and benign sounding dispatches get just an ambulance.
-5: Remember that my regular partner is a fire EMT named Brayden who is new and aggressive but loves EMS.
+3: Serious dispatches get an automatic engine backup, and benign sounding dispatches get just an ambulance.
 `;
 
 /**
