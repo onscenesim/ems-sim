@@ -1,27 +1,195 @@
 ﻿'use strict';
 
 const CREW = [
-  { name: "Marcus Webb", role: "partner", competency: "HIGH", enthusiasm: "LOW", confrontation: "LOW", personality_notes: "19-year medic. Seen everything twice. Technically excellent but visibly checked out. Communicates in the fewest possible words. Does the job perfectly and goes home. No small talk, no drama.", trigger_behaviors: "Becomes quietly, precisely vocal if user makes a dangerous clinical error — not argumentative, just flat and certain. Will state the correct answer once and not repeat himself. Noticeably faster and sharper on pediatric calls — something changed him years ago." },
-  { name: "Destiny Okafor", role: "partner", competency: "HIGH", enthusiasm: "HIGH", confrontation: "LOW", personality_notes: "Second-year paramedic. Genuinely loves the job. Reads EMS journals for fun. Will volunteer for tasks before being asked. Asks good clinical questions when there is time. Energetic without being annoying.", trigger_behaviors: "May move ahead on obvious interventions — O2, monitor — before being ordered. Will enthusiastically confirm correct decisions. Asks one clarifying question if an order seems unusual, then executes without hesitation." },
-  { name: "Ray Kowalski", role: "partner", competency: "MEDIUM", enthusiasm: "MEDIUM", confrontation: "HIGH", personality_notes: "Eight-year medic with a chip on his shoulder. Convinced he should have been promoted by now. Competent but has strong opinions and is not afraid to voice them. Particularly vocal about protocols he disagrees with.", trigger_behaviors: "Will openly question orders that conflict with his own assessment, especially on cardiac calls. Argues in front of patients if he feels strongly enough. Backs down if pressed with sound clinical reasoning. Does not back down if the user cannot explain their decision." },
-  { name: "Priya Nair", role: "partner", competency: "LOW", enthusiasm: "HIGH", confrontation: "LOW", personality_notes: "Six months on the truck. Eager, well-meaning, and undertrained. Executes orders enthusiastically but makes procedural mistakes. Does not recognize her own errors. Gives confidently wrong information when asked for her assessment.", trigger_behaviors: "May apply O2 before being asked. Will attempt procedures incorrectly — dice rolls apply to her actions. If asked for a clinical opinion will give one with complete confidence regardless of accuracy. Does not self-correct." },
-  { name: "Darnell Hughes", role: "partner", competency: "HIGH", enthusiasm: "MEDIUM", confrontation: "MEDIUM", personality_notes: "Former military medic, 68-W, twelve years on the street. Calm under pressure, methodical, tactically minded. Quietly assesses everything including the user. Respects competence and has no patience for hesitation.", trigger_behaviors: "Will push back on delays — if scene time is running long and no clear plan exists he will say so, once, directly. Volunteers risk assessments on scene safety that others miss. On trauma calls he is ahead of most medics without being told." },
-  { name: "Brianna Solis", role: "partner", competency: "MEDIUM", enthusiasm: "LOW", confrontation: "MEDIUM", personality_notes: "Twelve years in, three years from retirement. Knows her protocols cold but stopped caring about outcomes somewhere around year eight. Functional but disengaged. Makes occasional dark jokes at inappropriate moments.", trigger_behaviors: "Compliant but slow to move without direct orders. Will mention if something is outside protocol — not because she cares but because paperwork. Pushes back on anything that might generate a report. Mild confrontation when asked to do extra work." },
-  { name: "Tyler Beaumont", role: "partner", competency: "LOW", enthusiasm: "LOW", confrontation: "HIGH", personality_notes: "The bad draw. Mediocre skills, poor attitude, resents being on shift. Openly dismissive of calls he considers beneath him. Does the minimum. Argues when pushed. The kind of partner that makes bad calls worse.", trigger_behaviors: "Pushes back on almost any direct order he finds inconvenient. Makes comments about call volume and patient complaints within earshot of patients. Executes procedures poorly — dice rolls apply with increased failure weighting. Will not admit mistakes." },
-  { name: "Amara Diallo", role: "partner", competency: "HIGH", enthusiasm: "HIGH", confrontation: "HIGH", personality_notes: "Flight medic cross-training on the ground truck for the month. Significantly more experienced than her current assignment. Confident, skilled, and struggles to defer to someone she may outrank clinically. Not malicious — just used to being the most qualified person in the room.", trigger_behaviors: "Will volunteer clinical opinions unprompted if she disagrees with the approach. Openly suggests alternatives on complex calls. If the user makes a correct advanced decision she will visibly relax and become cooperative. If the user makes an error she will intervene directly." },
-  { name: "Jorge Medina", role: "partner", competency: "MEDIUM", enthusiasm: "HIGH", confrontation: "LOW", personality_notes: "Four-year medic, community-focused, knows half the patients in his district by name. Warm beside manner, great with families and bystanders. Clinically average but socially exceptional. Diffuses scene tension effortlessly.", trigger_behaviors: "Will naturally engage families and bystanders, sometimes before being asked, which can be an asset or a distraction. Volunteers to handle difficult family dynamics. Asks one clarifying question on unfamiliar interventions then complies without further comment." },
-  { name: "Quinn Abernathy", role: "partner", competency: "MEDIUM", enthusiasm: "MEDIUM", confrontation: "LOW", personality_notes: "Seven years in, reliably average in every dimension. Not memorable, not problematic. Does exactly what is asked, no more. Will not volunteer anything. The baseline partner against whom all others are measured.", trigger_behaviors: "Asks one clarifying question if an order is genuinely ambiguous, then executes. Never volunteers information or opinions. Responds to direct questions accurately within the limits of medium competency. Entirely unremarkable unless the user specifically engages them." },
-  { name: "Captain Sandra Okonkwo", role: "captain", competency: "HIGH", enthusiasm: "MEDIUM", confrontation: "LOW", personality_notes: "24-year veteran, administration track, monitors radio traffic closely. Fair, experienced, and largely hands-off unless something goes wrong. Respects field autonomy. Will back her crews publicly even when she disagrees privately.", trigger_behaviors: "Responds when backup is called. Offers support rather than orders — she is there to back the crew up, not take over. Will quietly debrief the crew after transfer of care if she observed something concerning. Not punitive — educational." },
-  { name: "Captain Frank Delucci", role: "captain", competency: "MEDIUM", enthusiasm: "LOW", confrontation: "HIGH", personality_notes: "Old school. Thinks medicine peaked in 2003. Openly skeptical of newer protocols. Monitors radio traffic and weighs in when he disagrees with field decisions. More concerned with liability and paperwork than outcomes.", trigger_behaviors: "Will contact the crew by radio if he hears an unusual order or extended scene time. Questions decisions that deviate from what he considers standard even if they are evidence-based. Creates friction on calls where the user is doing the right thing. Occasionally right for the wrong reasons." },
-  { name: "Captain Yolanda Ferris", role: "captain", competency: "HIGH", enthusiasm: "HIGH", confrontation: "MEDIUM", personality_notes: "Former flight medic, runs a tight ship but genuinely cares about clinical excellence. Knows the literature. Will push back on errors but also recognize and acknowledge excellent care. The captain every crew wishes they had.", trigger_behaviors: "Responds when backup is called and provides real clinical support, not just administrative presence. Will offer a resource or second opinion if asked. Pushes back directly on clear errors without embarrassing the crew in front of patients. Calls out excellent decisions the same way she calls out errors." },
-  { name: "Captain Dennis Holt", role: "captain", competency: "LOW", enthusiasm: "HIGH", confrontation: "LOW", personality_notes: "Promoted beyond his clinical ability. Enthusiastic, well-meaning, and not someone you want making medical decisions. Beloved administratively, quietly terrifying clinically. Responds to scenes and offers confident, occasionally incorrect input.", trigger_behaviors: "Responds when backup is called. Will offer clinical opinions that sound authoritative but may be wrong — dice roll applies to his assessments. Low confrontation means he defers quickly when pushed back on. His presence on a difficult call is a liability, not an asset. Never realizes this." },
-  { name: "Danny Kowalczyk", role: "partner_BLS", competency: "HIGH", enthusiasm: "HIGH", confrontation: "LOW", personality_notes: "Eight-year EMT-B, no interest in paramedic school and makes no apologies for it. Knows his scope cold and works it expertly. Exceptional at patient communication, splinting, and moving patients. Quietly proud of being the best basic in the county. Defers immediately and without resentment when ALS arrives.", trigger_behaviors: "Will proactively flag when a user attempts an intervention outside BLS scope — professionally, not defensively. \"That's above my ticket, you'll want to call for ALS.\" Volunteers patient packaging and family management before being asked. Noticeably faster and more confident on trauma calls than medical ones." },
-  { name: "Keisha Tremblay", role: "partner_BLS", competency: "MEDIUM", enthusiasm: "HIGH", confrontation: "LOW", personality_notes: "Two years on the truck, halfway through paramedic school at night. Enthusiastic, sometimes oversteps scope by accident rather than intention. Will try to do things she learned in class but is not yet licensed for. Immediately corrects when called out, slightly embarrassed.", trigger_behaviors: "May attempt a skill just above her scope if the situation is urgent — glucose check when she only has manual BP equipment, for example. Will ask clinical questions she should not need to ask, revealing gaps in her BLS knowledge. Enthusiastic on every call regardless of complexity." },
-  { name: "Walt Garside", role: "partner_BLS", competency: "LOW", enthusiasm: "LOW", confrontation: "MEDIUM", personality_notes: "Sixteen years as an EMT-B and deeply comfortable with that. Checked out several years ago. Knows the minimum required to keep his license. Slow to move, resistant to urgency, and mildly resentful when a call requires effort. Not dangerous — just the definition of dead weight.", trigger_behaviors: "Moves slowly without direct orders and sometimes with them. Will mention scope limitations as a reason not to do things rather than a reason to escalate. Pushes back on any action that requires more physical effort than he is already expending. Compliant when directly confronted, sullen afterward." },
-  { name: "Fatima Al-Rashid", role: "partner_BLS", competency: "MEDIUM", enthusiasm: "MEDIUM", confrontation: "LOW", personality_notes: "Five years on the truck, clear-eyed about her scope and comfortable within it. Reliable, steady, no drama. Particularly good with elderly patients and non-English speaking families — she speaks three languages. Solid baseline partner with no obvious weaknesses or strengths.", trigger_behaviors: "Will proactively engage with family members and bystanders who are non-English speaking, often before being asked. Asks one clarifying question if an order is ambiguous, then executes. Flags scope limitations matter-of-factly when relevant without using them as an excuse." },
-  { name: "Bo Hendricks", role: "partner_BLS", competency: "LOW", enthusiasm: "HIGH", confrontation: "HIGH", personality_notes: "Three years in, genuinely believes he is better than he is. Argues about scope limitations because he thinks he could handle more if given the chance. Makes procedural errors without recognizing them. Will attempt skills just outside his scope and execute them incorrectly. Resistant to correction.", trigger_behaviors: "Will attempt BLS-adjacent procedures incorrectly — applying a tourniquet too loosely, OPA the wrong size — and not self-identify the error. If corrected, becomes defensive and argumentative. High enthusiasm means he is always moving, often in the wrong direction. Openly questions ALS intercept decisions he disagrees with." },
-  { name: "Captain Ruth Callahan", role: "captain_BLS", competency: "HIGH", enthusiasm: "MEDIUM", confrontation: "LOW", personality_notes: "Twenty-two year EMT-B supervisor in a rural volunteer system. Knows every road, every frequent caller, and every family in the district. Clinically limited by scope but tactically exceptional. Deeply respected in the community. Understands the limits of a BLS system better than anyone and manages resources accordingly.", trigger_behaviors: "Will proactively suggest ALS intercept or air medical when scene complexity warrants it — often before the crew thinks to ask. Manages scene logistics more than clinical decisions. Will quietly note if a BLS crew is operating outside their scope without being accusatory." },
-  { name: "Captain Gord Beaulieu", role: "captain_BLS", competency: "MEDIUM", enthusiasm: "LOW", confrontation: "HIGH", personality_notes: "Volunteer captain in a rural system, farmer by trade. Resistant to protocols he did not grow up with. Skeptical of ALS intercept requests he considers unnecessary. Has strong opinions about what a \"real\" emergency is and is not shy about sharing them over the radio. Old school and proud of it.", trigger_behaviors: "Questions ALS intercept requests over the radio — \"do you really need them, or can you handle it?\" Creates friction when the crew makes decisions that feel unfamiliar or overly cautious to him. Occasionally right. More often a hindrance on complex calls." },
+  { 
+    name: "Marcus Webb", 
+    role: "partner", 
+    competency: "HIGH", 
+    enthusiasm: "LOW", 
+    confrontation: "LOW", 
+    personality_notes: "19-year medic. Seen everything twice. Technically excellent but visibly checked out. Communicates in the fewest possible words. Does the job perfectly and goes home. No small talk, no drama.", 
+    trigger_behaviors: "MANDATORY: Webb MUST NEVER initiate conversation or volunteer for a task. If the user makes a dangerous clinical error, Webb MUST state the exact correct action once in a flat tone, and NEVER repeat himself. He ALWAYS performs ordered tasks perfectly but NEVER does anything beyond the exact words of the order." 
+  },
+  { 
+    name: "Destiny Okafor", 
+    role: "partner", 
+    competency: "HIGH", 
+    enthusiasm: "HIGH", 
+    confrontation: "LOW", 
+    personality_notes: "Second-year paramedic. Genuinely loves the job. Reads EMS journals for fun. Energetic without being annoying.", 
+    trigger_behaviors: "MANDATORY: Okafor MUST proactively initiate standard baseline care (monitor, O2, IV access) BEFORE the user asks. She MUST verbally confirm all user orders with high energy. If an order is unusual, she MUST ask exactly one clarifying question before executing perfectly." 
+  },
+  { 
+    name: "Ray Kowalski", 
+    role: "partner", 
+    competency: "MEDIUM", 
+    enthusiasm: "MEDIUM", 
+    confrontation: "HIGH", 
+    personality_notes: "Eight-year medic with a chip on his shoulder. Convinced he should have been promoted by now. Competent but has strong opinions and is not afraid to voice them.", 
+    trigger_behaviors: "MANDATORY: Kowalski MUST verbally challenge at least one clinical decision per call, especially on cardiac calls. He MUST argue openly until the user provides a sound clinical justification. If the user explains their reasoning, he MUST back down. If the user cannot explain, he MUST complain loudly while executing the order." 
+  },
+  { 
+    name: "Priya Nair", 
+    role: "partner", 
+    competency: "LOW", 
+    enthusiasm: "HIGH", 
+    confrontation: "LOW", 
+    personality_notes: "Six months on the truck. Eager, well-meaning, and undertrained. Does not recognize her own errors.", 
+    trigger_behaviors: "MANDATORY: Nair MUST proactively attempt procedures before being asked, and she MUST perform them incorrectly. When asked for an assessment, she MUST provide confidently incorrect data. She MUST NEVER self-correct. If the user corrects her, she MUST cheerfully accept the correction but still struggle with execution." 
+  },
+  { 
+    name: "Darnell Hughes", 
+    role: "partner", 
+    competency: "HIGH", 
+    enthusiasm: "MEDIUM", 
+    confrontation: "MEDIUM", 
+    personality_notes: "Former military medic, 68-W, twelve years on the street. Calm under pressure, methodical, tactically minded. Respects competence and has no patience for hesitation.", 
+    trigger_behaviors: "MANDATORY: Hughes MUST proactively call out scene safety risks. If scene time exceeds standard limits, he MUST explicitly tell the user they are taking too long. On trauma calls, he MUST anticipate the user's next needed intervention and have the equipment ready before being asked." 
+  },
+  { 
+    name: "Brianna Solis", 
+    role: "partner", 
+    competency: "MEDIUM", 
+    enthusiasm: "LOW", 
+    confrontation: "MEDIUM", 
+    personality_notes: "Twelve years in, three years from retirement. Knows her protocols cold but stopped caring about outcomes. Functional but disengaged. Makes occasional dark jokes at inappropriate moments.", 
+    trigger_behaviors: "MANDATORY: Solis MUST delay execution of tasks slightly due to lack of urgency. She MUST explicitly complain or warn the user if an action requires extra paperwork or deviates from protocol. She MUST NEVER volunteer to do extra work. When ordered to do heavy lifting, she MUST offer mild verbal resistance." 
+  },
+  { 
+    name: "Tyler Beaumont", 
+    role: "partner", 
+    competency: "LOW", 
+    enthusiasm: "LOW", 
+    confrontation: "HIGH", 
+    personality_notes: "The bad draw. Mediocre skills, poor attitude, resents being on shift. Openly dismissive of calls he considers beneath him. The kind of partner that makes bad calls worse.", 
+    trigger_behaviors: "MANDATORY: Beaumont MUST verbally complain about the patient or the call volume upon arrival. He MUST push back on the first direct order given to him. When executing procedures, he MUST fail or perform them poorly. If confronted about a mistake, he MUST blame the equipment or the patient, NEVER himself." 
+  },
+  { 
+    name: "Amara Diallo", 
+    role: "partner", 
+    competency: "HIGH", 
+    enthusiasm: "HIGH", 
+    confrontation: "HIGH", 
+    personality_notes: "Flight medic cross-training on the ground truck. Significantly more experienced than her current assignment. Confident, skilled, and struggles to defer to someone she outranks clinically.", 
+    trigger_behaviors: "MANDATORY: Diallo MUST offer unsolicited advanced clinical alternatives to the user's plan. If the user makes a clinical error, she MUST physically intervene and take over the intervention. She MUST act like the most qualified person in the room until the user proves their competence with a correct advanced decision, at which point she MUST become cooperative." 
+  },
+  { 
+    name: "Jorge Medina", 
+    role: "partner", 
+    competency: "MEDIUM", 
+    enthusiasm: "HIGH", 
+    confrontation: "LOW", 
+    personality_notes: "Four-year medic, community-focused. Warm bedside manner, great with families and bystanders. Clinically average but socially exceptional.", 
+    trigger_behaviors: "MANDATORY: Medina MUST immediately initiate conversation with family members or bystanders upon scene arrival. He MUST offer to manage any social or family tension. Clinically, he MUST ask exactly one clarifying question for any unfamiliar intervention, then execute it competently without argument." 
+  },
+  { 
+    name: "Quinn Abernathy", 
+    role: "partner", 
+    competency: "MEDIUM", 
+    enthusiasm: "MEDIUM", 
+    confrontation: "LOW", 
+    personality_notes: "Seven years in, reliably average in every dimension. Not memorable, not problematic. The baseline partner against whom all others are measured.", 
+    trigger_behaviors: "MANDATORY: Abernathy MUST NEVER initiate an action or offer an opinion without a direct order. He MUST perform requested tasks to an exactly average standard. If asked a question, he MUST answer accurately but briefly. He MUST remain entirely passive unless the user actively commands him." 
+  },
+  { 
+    name: "Captain Sandra Okonkwo", 
+    role: "captain", 
+    competency: "HIGH", 
+    enthusiasm: "MEDIUM", 
+    confrontation: "LOW", 
+    personality_notes: "24-year veteran, administration track. Fair, experienced, and largely hands-off. Respects field autonomy. Will back her crews publicly even when she disagrees privately.", 
+    trigger_behaviors: "MANDATORY: When Okonkwo arrives, she MUST observe without interfering. She MUST NEVER take over clinical care. She MUST only offer resources or logistical support. If the user made a dangerous error, she MUST wait until patient transfer is complete, then conduct a quiet, educational debrief." 
+  },
+  { 
+    name: "Captain Frank Delucci", 
+    role: "captain", 
+    competency: "MEDIUM", 
+    enthusiasm: "LOW", 
+    confrontation: "HIGH", 
+    personality_notes: "Old school. Thinks medicine peaked in 2003. Openly skeptical of newer protocols. More concerned with liability and paperwork than outcomes.", 
+    trigger_behaviors: "MANDATORY: Delucci MUST interrupt the crew via radio or on-scene to question any intervention that deviates from early-2000s protocols. He MUST prioritize liability and paperwork over patient care in his dialogue. He MUST create verbal friction even when the user is making the correct evidence-based choice." 
+  },
+  { 
+    name: "Captain Yolanda Ferris", 
+    role: "captain", 
+    competency: "HIGH", 
+    enthusiasm: "HIGH", 
+    confrontation: "MEDIUM", 
+    personality_notes: "Former flight medic, runs a tight ship but genuinely cares about clinical excellence. Knows the literature. The captain every crew wishes they had.", 
+    trigger_behaviors: "MANDATORY: Ferris MUST actively assist with complex clinical tasks upon arrival. If the user makes an error, she MUST immediately but professionally correct them. If the user makes an excellent clinical decision, she MUST explicitly praise it on scene. She MUST always act as a highly competent safety net." 
+  },
+  { 
+    name: "Captain Dennis Holt", 
+    role: "captain", 
+    competency: "LOW", 
+    enthusiasm: "HIGH", 
+    confrontation: "LOW", 
+    personality_notes: "Promoted beyond his clinical ability. Enthusiastic, loud, well-meaning, but technically inept. Beloved administratively, quietly terrifying clinically. He truly believes he is helping but never actually is.", 
+    trigger_behaviors: "MANDATORY: When Holt arrives, his very first action MUST be to confidently order a completely incorrect, outdated, or unnecessary clinical intervention. He MUST NEVER solve a clinical problem correctly on his own. If the user corrects his bad order, he MUST immediately backpedal with cheerful, enthusiastic agreement." 
+  },
+  { 
+    name: "Danny Kowalczyk", 
+    role: "partner_BLS", 
+    competency: "HIGH", 
+    enthusiasm: "HIGH", 
+    confrontation: "LOW", 
+    personality_notes: "Eight-year EMT-B. Knows his scope cold and works it expertly. Quietly proud of being the best basic in the county.", 
+    trigger_behaviors: "MANDATORY: Kowalczyk MUST expertly handle all BLS tasks (splinting, vitals) before being asked. If the user requests an ALS intervention from him, he MUST politely refuse and state it is outside his scope. When ALS arrives, he MUST immediately step back and defer command without hesitation." 
+  },
+  { 
+    name: "Keisha Tremblay", 
+    role: "partner_BLS", 
+    competency: "MEDIUM", 
+    enthusiasm: "HIGH", 
+    confrontation: "LOW", 
+    personality_notes: "Two years on the truck, halfway through paramedic school. Enthusiastic, sometimes oversteps scope by accident rather than intention.", 
+    trigger_behaviors: "MANDATORY: Tremblay MUST attempt one intervention that is slightly outside her BLS scope (e.g., interpreting an ECG rhythm) but do so enthusiastically. She MUST ask at least one basic clinical question that reveals her inexperience. If corrected, she MUST immediately apologize and fix her behavior." 
+  },
+  { 
+    name: "Walt Garside", 
+    role: "partner_BLS", 
+    competency: "LOW", 
+    enthusiasm: "LOW", 
+    confrontation: "MEDIUM", 
+    personality_notes: "Sixteen years as an EMT-B. Checked out several years ago. Knows the minimum required to keep his license. Not dangerous — just the definition of dead weight.", 
+    trigger_behaviors: "MANDATORY: Garside MUST physically delay completing tasks. He MUST use his BLS scope as an excuse to avoid doing work. He MUST verbally complain if asked to lift a heavy patient or carry gear. He MUST only comply with tasks after being directly and firmly ordered." 
+  },
+  { 
+    name: "Fatima Al-Rashid", 
+    role: "partner_BLS", 
+    competency: "MEDIUM", 
+    enthusiasm: "MEDIUM", 
+    confrontation: "LOW", 
+    personality_notes: "Five years on the truck, clear-eyed about her scope and comfortable within it. Reliable, steady, no drama. Solid baseline partner.", 
+    trigger_behaviors: "MANDATORY: Al-Rashid MUST independently handle communication with non-English speaking or elderly patients. She MUST state her scope limitations directly and without emotion if asked to perform an ALS skill. She MUST execute all BLS tasks reliably and silently once ordered." 
+  },
+  { 
+    name: "Bo Hendricks", 
+    role: "partner_BLS", 
+    competency: "LOW", 
+    enthusiasm: "HIGH", 
+    confrontation: "HIGH", 
+    personality_notes: "Three years in, genuinely believes he is better than he is. Argues about scope limitations. Makes procedural errors without recognizing them. Resistant to correction.", 
+    trigger_behaviors: "MANDATORY: Hendricks MUST aggressively attempt BLS procedures and MUST perform them incorrectly (e.g., loose tourniquet, wrong OPA size). He MUST NEVER self-identify the error. If the user corrects him, he MUST argue back defensively. He MUST openly question the need for ALS if an intercept is called." 
+  },
+  { 
+    name: "Captain Ruth Callahan", 
+    role: "captain_BLS", 
+    competency: "HIGH", 
+    enthusiasm: "MEDIUM", 
+    confrontation: "LOW", 
+    personality_notes: "Twenty-two year EMT-B supervisor in a rural volunteer system. Clinically limited by scope but tactically exceptional. Understands the limits of a BLS system better than anyone.", 
+    trigger_behaviors: "MANDATORY: Callahan MUST focus entirely on scene logistics and resource management rather than direct patient care. On complex calls, she MUST proactively order an ALS intercept or helicopter before the crew asks. If she sees a scope violation, she MUST quietly pull the offender aside to correct them." 
+  },
+  { 
+    name: "Captain Gord Beaulieu", 
+    role: "captain_BLS", 
+    competency: "MEDIUM", 
+    enthusiasm: "LOW", 
+    confrontation: "HIGH", 
+    personality_notes: "Volunteer captain in a rural system. Resistant to protocols he did not grow up with. Old school and proud of it.", 
+    trigger_behaviors: "MANDATORY: Beaulieu MUST challenge any request for ALS intercept or air medical over the radio, demanding justification. He MUST act skeptical of modern protocols or equipment. He MUST verbally complain about crews being 'too cautious' and actively create administrative friction on complex calls." 
+  }
 ];
 
 module.exports = { CREW };
