@@ -1,12 +1,14 @@
+'use strict';
+
 const { GoogleGenAI, HarmCategory, HarmBlockThreshold } = require('@google/genai');
 const { buildDebriefPrompt } = require('./prompts/debrief');
 
 // Initialize the Google Gen AI client explicitly passing the API key
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// We'll use the cost-effective 3.6 Flash for both turns and debriefs
+// Model and global config
 const MODEL = 'gemini-3.6-flash';
-const MAX_TOKENS = 2048; // Bumped to prevent max-token cutoffs
+const MAX_TOKENS = 2048;
 const REQUEST_TIMEOUT_MS = 90_000;
 
 // Lower safety thresholds so trauma/clinical content isn't dropped mid-stream
@@ -17,7 +19,7 @@ const SAFETY_SETTINGS = [
   { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
-// The core rules permanently embedded in every scenario
+// The core rules permanently embedded ONLY in active scenario simulation turns
 const EMS_SYSTEM_RULES = `
 For EMS Scenarios, in addition to provided instructions, I always want you to:
 1: Keep scenarios varied and unpredictable
@@ -41,7 +43,11 @@ async function generateContentWithRetry(requestParams, maxRetries = 3) {
     } catch (error) {
       attempt++;
       const errorString = error.toString().toLowerCase();
-      const isRateLimit = errorString.includes('429') || errorString.includes('503') || errorString.includes('quota') || errorString.includes('too many requests');
+      const isRateLimit = 
+        errorString.includes('429') || 
+        errorString.includes('503') || 
+        errorString.includes('quota') || 
+        errorString.includes('too many requests');
       
       if (isRateLimit && attempt < maxRetries) {
         const waitTime = attempt * 2000;
@@ -51,36 +57,6 @@ async function generateContentWithRetry(requestParams, maxRetries = 3) {
         throw error;
       }
     }
-  }
-}
-
-/**
- * Send a turn in an active scenario.
- */
-async function sendTurn(systemPrompt, messages) {
-  const fullInstruction = `${EMS_SYSTEM_RULES}\n\n${systemPrompt}`;
-
-  const formattedMessages = messages.map(m => ({
-    role: m.role === 'assistant' ? 'model' : m.role, 
-    parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
-  }));
-
-  try {
-    const response = await generateContentWithRetry({
-      model: MODEL,
-      contents: formattedMessages,
-      config: {
-        systemInstruction: fullInstruction, 
-        maxOutputTokens: MAX_TOKENS,
-        safetySettings: SAFETY_SETTINGS, // Applied safety override
-      }
-    });
-
-    return extractText(response);
-
-  } catch (error) {
-     console.error("Gemini API Error (Turn):", error);
-     throw new Error("Failed to connect to the Gemini API during turn.");
   }
 }
 
@@ -102,19 +78,51 @@ function extractText(response) {
 }
 
 /**
+ * Send a turn in an active scenario.
+ */
+async function sendTurn(systemPrompt, messages) {
+  const fullInstruction = `${EMS_SYSTEM_RULES}\n\n${systemPrompt}`;
+
+  const formattedMessages = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : m.role, 
+    parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
+  }));
+
+  try {
+    const response = await generateContentWithRetry({
+      model: MODEL,
+      contents: formattedMessages,
+      config: {
+        systemInstruction: fullInstruction, 
+        maxOutputTokens: MAX_TOKENS,
+        safetySettings: SAFETY_SETTINGS,
+      }
+    });
+
+    return extractText(response);
+
+  } catch (error) {
+     console.error("Gemini API Error (Turn):", error);
+     throw new Error("Failed to connect to the Gemini API during turn.");
+  }
+}
+
+/**
  * Send the debrief request after scenario close.
  */
 async function sendDebrief(debriefContext, providerLevel) {
+  // Uses clean debrief instructions without EMS_SYSTEM_RULES contamination
   const dynamicDebriefInstruction = buildDebriefPrompt(providerLevel);
-  const fullInstruction = `${EMS_SYSTEM_RULES}\n\n${dynamicDebriefInstruction}`;
 
   try {
      const response = await generateContentWithRetry({
       model: MODEL,
       contents: [{ role: 'user', parts: [{ text: debriefContext }]}],
       config: {
-        systemInstruction: fullInstruction,
-        maxOutputTokens: 3000, 
+        systemInstruction: dynamicDebriefInstruction,
+        maxOutputTokens: MAX_TOKENS, 
+        temperature: 0.15, // Clamps model output to prevent rambling and self-contradiction
+        topP: 0.8,
         safetySettings: SAFETY_SETTINGS,
       }
     });
