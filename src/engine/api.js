@@ -8,7 +8,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Model and global config
 const MODEL = 'gemini-3.6-flash';
-const MAX_TOKENS = 2048;
+const MAX_TOKENS = 4000;
 const REQUEST_TIMEOUT_MS = 90_000;
 
 // Lower safety thresholds so trauma/clinical content isn't dropped mid-stream
