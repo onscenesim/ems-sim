@@ -31,7 +31,7 @@ Evaluate scene size-up, thoroughness, and assessment sequence. Maximum 3 sentenc
 Evaluate problem recognition, treatment sequence, timing, and transport decisions. Keep this concise and high-yield. Maximum 100 words.
 
 3. WHAT THIS PATIENT ACTUALLY HAD
-Explain the true diagnosis and pathophysiology using ONLY the SCENARIO GROUND TRUTH. If the ground truth uses a specific term/acronym (e.g. FOSPE), teach it exactly as defined in the case key without inventing facts. Maximum 75 words.
+Explain the true clinical picture by combining the SCENARIO GROUND TRUTH with the actual events of the RUN LOG. CRITICAL HIERARCHY: You MUST explicitly state the most lethal acute pathology that occurred (e.g., MI, Unstable VT, Tension Pneumothorax) as the primary diagnosis. Frame the baseline ground truth (e.g., dementia) strictly as underlying or contributing context. Maximum 75 words.
 
 4. KEY TAKEAWAYS
 Provide 2-3 concise, bulleted action items tied directly to events in this call. No generic EMS boilerplate.

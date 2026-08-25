@@ -58,6 +58,7 @@ const SPLASHES = [
   'Pro tip: use the REPORT button when giving a radio report!',
   'Hit REPORT before your radio handoff for cleaner analytics!',
   'REPORT mode: no more dice rolls mid-radio-report!',
+  'ATTICA! ATTICA!',
 
 ];
 
