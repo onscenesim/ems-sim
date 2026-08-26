@@ -87,11 +87,11 @@ const INTERVENTIONS = [
     "amiodarone", "give amiodarone", "amio", "300mg amiodarone", "cordarone",
     "amiodarone drip", "amio drip", "amiodarone infusion", "amio infusion", "amio maintenance",
     // Adenosine
-    "adenosine", "6mg adenosine", "adenocard",
+    "adenosine", "6mg adenosine", "adenocard","adesonine",
     // Atropine
     "atropine", "atropine sulfate", "0.5mg atropine",
     // Atropine + Pralidoxime (DuoDote)
-    "duodote", "atropine pralidoxime", "auto-injector antidote",
+    "duodote", "atropine pralidoxime", "auto-injector antidote","2pam", "pralidoxime", "2-pam", "atropine auto-injector", "pralidoxime auto-injector",
     // Dopamine
     "dopamine", "dopamine drip", "dopamine infusion", "intropin", "intropin drip",
     // Norepinephrine
@@ -132,7 +132,7 @@ const INTERVENTIONS = [
     // Furosemide
     "lasix", "furosemide",
     // Morphine
-    "morphine", "morphine sulfate", "ms contin",
+    "morphine", "morphine sulfate", "ms contin","mso4",
     // Fentanyl
     "fentanyl", "fentanyl citrate", "sublimaze",
     // Ketamine

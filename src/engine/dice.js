@@ -416,33 +416,51 @@ function detectProcedure(userText) {
 function selectDC(proc, contextFlags = {}) {
   if (!proc.dc || proc.no_roll) return null;
 
-  const { difficult_airway, hypotensive, obese, pediatric, junctional } = contextFlags;
+  const { difficult_airway, hypotensive, obese, pediatric, junctional, moving } = contextFlags;
   const dcs = proc.dc;
+  let selectedDC;
 
   switch (proc.id) {
     case 'peripheral_iv':
-      return (hypotensive || obese || pediatric) ? dcs[1] : dcs[0];
+      selectedDC = (hypotensive || obese || pediatric) ? dcs[1] : dcs[0];
+      break;
     case 'intubation':
-      return difficult_airway ? dcs[dcs.length - 1] : dcs[0];
+      selectedDC = difficult_airway ? dcs[dcs.length - 1] : dcs[0];
+      break;
     case 'needle_decompression':
-      return obese ? 13 : dcs[0];
+      selectedDC = obese ? 13 : dcs[0];
+      break;
     case 'cricothyrotomy':
-      return difficult_airway ? 13 : dcs[0];
+      selectedDC = difficult_airway ? 13 : dcs[0];
+      break;
     case 'emergency_delivery':
-      return contextFlags.complicated_delivery ? dcs[1] : dcs[0];
+      selectedDC = contextFlags.complicated_delivery ? dcs[1] : dcs[0];
+      break;
     case 'bleeding_control':
-      return junctional ? 14 : dcs[0];
+      selectedDC = junctional ? 14 : dcs[0];
+      break;
     case 'newborn_resuscitation':
-      return contextFlags.resuscitative_steps ? dcs[1] : dcs[0];
+      selectedDC = contextFlags.resuscitative_steps ? dcs[1] : dcs[0];
+      break;
     case 'cpr':
       // DC 17 in a moving ambulance — provider can't brace, compressions suffer.
       // DC 12 on scene or stationary.
-      return contextFlags.moving ? dcs[1] : dcs[0];
+      selectedDC = moving ? dcs[1] : dcs[0];
+      break;
     case 'medication_push':
-      return dcs[0];
+      selectedDC = dcs[0];
+      break;
     default:
-      return dcs[0];
+      selectedDC = dcs[0];
+      break;
   }
+
+  // Apply a +2 DC penalty for fine-motor invasive procedures in a moving ambulance
+  if (moving && ['peripheral_iv', 'intubation', 'cricothyrotomy', 'needle_decompression', 'chest_tube_insertion','foreign_body_removal','emergency_delivery','reboa','abdominal_thrusts','finger_thoracostomy','resuscitative_thoracotomy','perimortem_csection'].includes(proc.id)) {
+    selectedDC += 2;
+  }
+
+  return selectedDC;
 }
 
 function rollD20() {
