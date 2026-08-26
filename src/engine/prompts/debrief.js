@@ -25,16 +25,16 @@ EVIDENCE & CLINICAL RULES:
 REQUIRED OUTPUT FORMAT (Five sections, strictly follow length caps):
 
 1. SCENE & ASSESSMENT
-Evaluate scene size-up, thoroughness, and assessment sequence. Maximum 3 sentences.
+Evaluate scene size-up, thoroughness, and assessment sequence. Highlight specific critical findings that were either correctly identified or missed. Maximum 4 sentences.
 
 2. CLINICAL DECISION-MAKING
-Evaluate problem recognition, treatment sequence, timing, and transport decisions. Keep this concise and high-yield. Maximum 100 words.
+Evaluate problem recognition, treatment sequence, timing, and transport decisions. You MUST provide substantive clinical reasoning for why the student's actions were correct or incorrect (e.g., explaining the pharmacological or pathophysiological impact of their choices). Keep it high-yield. Maximum 150 words.
 
 3. WHAT THIS PATIENT ACTUALLY HAD
-Explain the true clinical picture by combining the SCENARIO GROUND TRUTH with the actual events of the RUN LOG. CRITICAL HIERARCHY: You MUST explicitly state the most lethal acute pathology that occurred (e.g., MI, Unstable VT, Tension Pneumothorax) as the primary diagnosis. Frame the baseline ground truth (e.g., dementia) strictly as underlying or contributing context. Maximum 75 words.
+Explain the true clinical picture by combining the SCENARIO GROUND TRUTH with the actual events of the RUN LOG. CRITICAL HIERARCHY: You MUST explicitly state the most lethal acute pathology that occurred (e.g., MI, Unstable VT, Tension Pneumothorax) as the primary diagnosis. Frame the baseline ground truth (e.g., dementia) strictly as underlying or contributing context. Maximum 100 words.
 
 4. KEY TAKEAWAYS
-Provide 2-3 concise, bulleted action items tied directly to events in this call. No generic EMS boilerplate.
+Provide 3 specific, actionable bullet points tied directly to the clinical events or decisions in this call. Briefly explain the "why" behind each takeaway to provide clinical depth. No generic EMS boilerplate.
 
 5. PROTOCOL CHECK
 Output this exact line verbatim:
