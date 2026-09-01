@@ -10,7 +10,7 @@ const REQUEST_TIMEOUT_MS = 90_000;
 
 // MINIMAL FIX: Split the token limits to fix latency.
 // Turns get a fast, strict cap. The Debrief gets the full 4000.
-const TURN_MAX_TOKENS = 1500; 
+const TURN_MAX_TOKENS = 2048; 
 const DEBRIEF_MAX_TOKENS = 4000; 
 
 // Lower safety thresholds so trauma/clinical content isn't dropped mid-stream
@@ -92,44 +92,18 @@ async function sendTurn(systemPrompt, messages) {
             contents: formattedMessages,
             config: {
                 systemInstruction: fullInstruction,
-                maxOutputTokens: TURN_MAX_TOKENS, // Uses the new 300 token limit
+                maxOutputTokens: TURN_MAX_TOKENS,
                 safetySettings: SAFETY_SETTINGS,
+                // MINIMAL thinking forces the model to skip heavy internal reasoning loops on turns
+                thinkingConfig: {
+                    thinkingLevel: 'MINIMAL'
+                }
             }
         });
         return extractText(response);
     } catch (error) {
         console.error("Gemini API Error (Turn):", error);
         throw new Error("Failed to connect to the Gemini API during turn.");
-    }
-}
-
-/**
-* Send the debrief request after scenario close.
-*/
-async function sendDebrief(debriefContext, providerLevel) {
-    // Uses clean debrief instructions without EMS_SYSTEM_RULES contamination
-    const dynamicDebriefInstruction = buildDebriefPrompt(providerLevel);
-    
-    try {
-        const response = await generateContentWithRetry({
-            model: MODEL,
-            // FIXED: Added the missing opening bracket for the array below
-            contents: [{ role: 'user', parts: [{ text: debriefContext }] }],
-            config: {
-                systemInstruction: dynamicDebriefInstruction,
-                maxOutputTokens: DEBRIEF_MAX_TOKENS, // FIXED: Corrected spelling from 'max0utputTokens'
-                temperature: 0.15, 
-                topP: 0.8,
-                safetySettings: SAFETY_SETTINGS,
-                // MINIMAL thinking forces the model to skip heavy internal reasoning loops on turns
-                thinkingConfig: {
-                    thinkingLevel: 'MINIMAL'
-            }
-        });
-        return extractText(response);
-    } catch (error) {
-        console.error("Gemini API Error (Debrief):", error);
-        throw new Error("Failed to connect to the Gemini API during debrief.");
     }
 }
 
