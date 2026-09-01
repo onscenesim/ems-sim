@@ -5,7 +5,7 @@ const { buildDebriefPrompt } = require('./prompts/debrief');
 // Initialize the Google Gen AI client explicitly passing the API key
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.1-flash-lite';
 const REQUEST_TIMEOUT_MS = 90_000;
 
 // MINIMAL FIX: Split the token limits to fix latency.
