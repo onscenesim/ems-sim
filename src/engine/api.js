@@ -5,12 +5,12 @@ const { buildDebriefPrompt } = require('./prompts/debrief');
 // Initialize the Google Gen AI client explicitly passing the API key
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const MODEL = 'gemini-3.5-flash';
+const MODEL = 'gemini-3.5-flash-lite';
 const REQUEST_TIMEOUT_MS = 90_000;
 
 // MINIMAL FIX: Split the token limits to fix latency.
 // Turns get a fast, strict cap. The Debrief gets the full 4000.
-const TURN_MAX_TOKENS = 3000; 
+const TURN_MAX_TOKENS = 2000; 
 const DEBRIEF_MAX_TOKENS = 4000; 
 
 // Lower safety thresholds so trauma/clinical content isn't dropped mid-stream
