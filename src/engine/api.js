@@ -8,7 +8,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL = 'gemini-2.5-flash';
 const REQUEST_TIMEOUT_MS = 90_000;
 
-const TURN_MAX_TOKENS = 4000; 
+// MINIMAL FIX: Split the token limits to fix latency.
+// Turns get a fast, strict cap. The Debrief gets the full 4000.
+const TURN_MAX_TOKENS = 2000; 
 const DEBRIEF_MAX_TOKENS = 4000; 
 
 // Lower safety thresholds so trauma/clinical content isn't dropped mid-stream
