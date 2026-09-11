@@ -1,26 +1,17 @@
 'use strict';
 
 const rateLimit = require('express-rate-limit');
+const { getClientIP } = require('./authStub');
 
-// Free-tier limiter: 120 requests per 15 minutes per real client IP.
-// Uses X-Forwarded-For directly so Railway's multi-hop proxy doesn't
-// collapse all users onto the same internal IP and lock them out together.
-function realIP(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (xff) return xff.split(',')[0].trim();
-  return req.ip || req.socket.remoteAddress || 'unknown';
-}
-
+// Request throttling remains in place for all users; there is no scenario cap.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 120,
-  keyGenerator: realIP,
+  keyGenerator: req => rateLimit.ipKeyGenerator(getClientIP(req)),
+  // A saturated request limit must never prevent STOP from reaching the queue.
+  skip: req => req.method === 'POST' && /^\/scenario\/[^/]+\/operations\/[^/]+\/cancel$/.test(req.path),
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  // Suppress the ERR_ERL_KEY_GEN_IPV6 validation error — our keyGenerator reads
-  // the real client IP from X-Forwarded-For (Railway multi-hop proxy) so IPv6
-  // normalisation via express-rate-limit's ipKeyGenerator is not applicable here.
-  validate: { keyGeneratorIpFallback: false },
   message: { error: 'rate_limit', message: 'Too many requests. Please wait before trying again.' },
 });
 

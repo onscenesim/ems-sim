@@ -1,6 +1,9 @@
 'use strict';
 
 const { INTERVENTIONS } = require('../data/interventions');
+const { MEDICATION_ALIASES } = require('../../public/medication-aliases');
+const MEDICATION_NAMES = new Map(Object.entries(MEDICATION_ALIASES).flatMap(
+  ([name, aliases]) => aliases.map(alias => [alias.toLowerCase(), name])));
 const { HARD_MODE_DC_PENALTY, BLACK_CLOUD_DC_PENALTY } = require('../data/config');
 
 // ---------------------------------------------------------------------------
@@ -12,6 +15,8 @@ const { HARD_MODE_DC_PENALTY, BLACK_CLOUD_DC_PENALTY } = require('../data/config
 // matching inside "sedation", "medication", "region", etc.
 // ---------------------------------------------------------------------------
 const SYNONYM_MAP = new Map();   // key → proc  (kept for rollProcedure lookups)
+const SYNONYM_WORDS = new Set(INTERVENTIONS.flatMap(proc =>
+  [proc.id, ...proc.synonyms].flatMap(s => s.toLowerCase().match(/[a-z]+/g) || [])));
 const DETECT_PATTERNS = [];      // [{ key, pattern, proc }]
 
 // Must be declared before the registration loop so isSpecificSynonym()
@@ -76,7 +81,7 @@ DETECT_PATTERNS.sort((a, b) => b.key.length - a.key.length);
 // ---------------------------------------------------------------------------
 // Fuzzy normalization — corrects misspellings before pattern matching.
 // Only single-word synonyms with length ≥ 5 are indexed.
-// Threshold: len 5-6 → edit distance 1, len 7+ → edit distance 2.
+// Threshold: one edit; ambiguous corrections are left untouched.
 // Short words (< 5 chars) are left exact-only to prevent false positives.
 // ---------------------------------------------------------------------------
 
@@ -144,25 +149,23 @@ function fuzzyThreshold(len) {
 function normalizeForDetection(text) {
   return text.replace(/\b[a-zA-Z]{5,}\b/g, token => {
     const lower = token.toLowerCase();
-    // Already an exact match — nothing to fix
-    if (SYNONYM_MAP.has(lower)) return token;
+    // Preserve all words in exact phrases, including packing, section, and delivery.
+    if (SYNONYM_WORDS.has(lower)) return token;
     // Valid word that collides with a synonym under edit distance — never rewrite
     if (FUZZY_INPUT_BLOCKLIST.has(lower)) return token;
     const threshold = fuzzyThreshold(lower.length);
     if (threshold === 0) return token;
-    // Check nearby buckets (first-two-char ± one char apart handles one-char prefix errors)
-    let bestWord = null, bestDist = threshold + 1;
-    const prefix = lower.slice(0, 2);
-    // Scan candidates whose prefix is within 1 char of ours (covers swapped/dropped first char)
-    for (const [bucket, entries] of FUZZY_INDEX) {
-      if (Math.abs(bucket.charCodeAt(0) - prefix.charCodeAt(0)) > 2) continue;
+    // Only accept a unique closest spelling.
+    let bestWord = null, bestDist = threshold + 1, ambiguous = false;
+    for (const entries of FUZZY_INDEX.values()) {
       for (const { word } of entries) {
         if (Math.abs(word.length - lower.length) > threshold) continue;
         const d = editDistance(lower, word, threshold);
-        if (d > 0 && d < bestDist) { bestWord = word; bestDist = d; }
+        if (d > 0 && d < bestDist) { bestWord = word; bestDist = d; ambiguous = false; }
+        else if (d === bestDist && word !== bestWord) ambiguous = true;
       }
     }
-    return bestWord || token;
+    return (!ambiguous && bestWord) || token;
   });
 }
 
@@ -394,20 +397,7 @@ function isPrecharge(text, matchStart, procId) {
 }
 
 function detectProcedure(userText) {
-  const lower = userText.toLowerCase();
-
-  for (const { key, pattern, proc, specific } of DETECT_PATTERNS) {
-    if (!pattern.test(lower)) continue;
-
-    // Guard: single-word plain-English synonyms require an action verb so
-    // that explanatory language ("they'll suction the air out") doesn't roll.
-    // Use the precomputed 'specific' flag (computed from the original-case raw
-    // synonym) so uppercase acronyms like BGL, SpO2, IV pass without a verb.
-    if (!specific && !ADMIN_VERB_RE.test(lower)) continue;
-
-    return proc;
-  }
-  return null;
+  return detectAllProcedures(userText)[0]?.proc || null;
 }
 
 /**
@@ -594,9 +584,11 @@ function detectAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
  */
 function detectAllProcedures(userText) {
   const normalized = normalizeForDetection(userText);
-  let remaining = normalized.toLowerCase();
+  const context = normalized.toLowerCase();
+  let remaining = context;
   const found = [];
   const usedProcIds = new Set();
+  const usedMedications = new Set();
 
   // Command-style input: the whole message is a terse list of bare keywords
   // separated by commas / "and" / "or" / "then" — no sentence structure.
@@ -623,8 +615,8 @@ function detectAllProcedures(userText) {
       // different sentence, intubating a patient the provider was only
       // planning to intubate.
       if (!specific && !commandStyle) {
-        const [s, e] = sentenceBounds(remaining, exec.index);
-        if (!ADMIN_VERB_RE.test(remaining.slice(s, e))) continue;
+        const [s, e] = sentenceBounds(context, exec.index);
+        if (!ADMIN_VERB_RE.test(context.slice(s, e))) continue;
       }
       bestMatch = { key, pattern, proc, matchLen: exec[0].length };
       bestMatchIndex = exec.index;
@@ -636,35 +628,39 @@ function detectAllProcedures(userText) {
     // Per-match negation guard: scoped to the keyword's sentence + last 3 words,
     // so an order on a different sentence isn't accidentally suppressed.
     // ("Morphine 4mg. No intubation needed yet." → morphine fires, intubation does not.)
-    const negated = isNegated(remaining, bestMatchIndex);
+    const negated = isNegated(context, bestMatchIndex);
 
     // Conditional/hedge guard: "if respiratory depression, give narcan",
     // "IV or IO if needed", "consider sedation" — contingent, not a committed
     // order this turn. Rolling them phantom-logs outcomes the action never had.
-    const conditional = isConditional(remaining, bestMatchIndex);
+    const conditional = isConditional(context, bestMatchIndex);
 
     // Route qualifier guard: "push epi through the IO" → IO synonym is a route,
     // not a new procedure order. Suppress access/device rolls in this context.
-    const routeQual = isRouteQualifier(remaining, bestMatchIndex);
+    const routeQual = isRouteQualifier(context, bestMatchIndex);
 
     // Post-match staging guard: e.g. "LUCAS backboard" should not roll.
-    const stagingPost = hasStagingPostContext(remaining, bestMatchIndex + bestMatch.matchLen);
+    const stagingPost = hasStagingPostContext(context, bestMatchIndex + bestMatch.matchLen);
 
     // Pre-charge guard: charging the defib in anticipation is not a shock order.
     // Applies to defibrillation/cardioversion only (see PRECHARGE_RE above).
-    const precharge = isPrecharge(remaining, bestMatchIndex, bestMatch.proc.id);
+    const precharge = isPrecharge(context, bestMatchIndex, bestMatch.proc.id);
 
     // Ambiguous-context classification (reports, plans, bare procedure nouns).
     // Terse command-style input is always a real order — skip the check there.
     const uncertain = commandStyle ? null
-      : uncertaintyReason(remaining, bestMatchIndex, bestMatch.key, bestMatch.proc);
-    const [uS, uE] = sentenceBounds(remaining, bestMatchIndex);
-    const sentence = remaining.slice(uS, uE).trim();
+      : uncertaintyReason(context, bestMatchIndex, bestMatch.key, bestMatch.proc);
+    const [uS, uE] = sentenceBounds(context, bestMatchIndex);
+    const sentence = context.slice(uS, uE).trim();
 
     // Always consume the matched span so we don't loop on the same hit.
-    remaining = remaining.replace(bestMatch.pattern, ' ');
+    remaining = remaining.slice(0, bestMatchIndex) + ' '.repeat(bestMatch.matchLen)
+      + remaining.slice(bestMatchIndex + bestMatch.matchLen);
 
-    if (!negated && !conditional && !routeQual && !stagingPost && !isPastContext(remaining, bestMatchIndex)) {
+    if (!negated && !conditional && !routeQual && !stagingPost && !isPastContext(context, bestMatchIndex)) {
+      const medication = bestMatch.proc.id === 'medication_push' ? MEDICATION_NAMES.get(bestMatch.key) : null;
+      if (medication && usedMedications.has(medication)) continue;
+      if (medication) usedMedications.add(medication);
       found.push({
         proc: bestMatch.proc,
         matchedKey: bestMatch.key,
@@ -675,7 +671,7 @@ function detectAllProcedures(userText) {
         key: procEntryKey(bestMatch.proc.id, bestMatch.key),
       });
       // medication_push can fire multiple times in one message (once per drug).
-      // Text consumption already prevents the same drug from re-matching.
+      // Canonical medication identities also prevent brand/generic double rolls.
       if (bestMatch.proc.id !== 'medication_push') {
         usedProcIds.add(bestMatch.proc.id);
       }

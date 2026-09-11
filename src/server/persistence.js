@@ -16,7 +16,9 @@ function sessionPath(id) {
 function save(snapshot) {
   snapshot.savedAt = Date.now();
   try {
-    fs.writeFileSync(sessionPath(snapshot.id), JSON.stringify(snapshot), 'utf8');
+    const target = sessionPath(snapshot.id);
+    fs.writeFileSync(target + '.tmp', JSON.stringify(snapshot), 'utf8');
+    fs.renameSync(target + '.tmp', target);
   } catch (err) {
     console.error('[persistence] save failed:', err.message);
   }

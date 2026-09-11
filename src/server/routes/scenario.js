@@ -3,11 +3,16 @@
 const express = require('express');
 const router  = express.Router();
 
-const { createSession, getSession, restoreSession } = require('../sessionStore');
+const { createSession, getSession, restoreSession, deleteSession } = require('../sessionStore');
 const persistence = require('../persistence');
 const { CREW } = require('../../data/crew');
+const { REGIONS } = require('../../data/regions');
+const { DIFFICULTY_POOL } = require('../../data/config');
+const { SCENARIO_POOLS } = require('../../data/scenarios');
 const { detectAllProcedures } = require('../../engine/dice');
 const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
+
+const { operationsFor } = require('../../engine/operations');
 
 const COOKIE_NAME = 'ems_sid';
 const COOKIE_MAX_AGE = 30 * 24 * 3600; // 30 days in seconds
@@ -17,7 +22,9 @@ function getCookie(req, name) {
   for (const part of raw.split(';')) {
     const eq = part.indexOf('=');
     if (eq < 1) continue;
-    if (part.slice(0, eq).trim() === name) return decodeURIComponent(part.slice(eq + 1).trim());
+    if (part.slice(0, eq).trim() === name) {
+      try { return decodeURIComponent(part.slice(eq + 1).trim()); } catch { return null; }
+    }
   }
   return null;
 }
@@ -54,28 +61,47 @@ function crewRecord(name) {
   if (!name) return null;
   return CREW.find(c => c.name === name) || null;
 }
-const {
-  detectTier,
-  getClientIP,
-  checkFreeLimit,
-  incrementFreeUsage,
-  getFreeUsageCount,
-  FREE_DAILY_LIMIT,
-} = require('../middleware/authStub');
+const { getClientIP } = require('../middleware/authStub');
 
-// ---------------------------------------------------------------------------
-// GET /api/scenario/status
-// Returns the caller's tier and free usage count. Used to prime the start screen.
-// ---------------------------------------------------------------------------
-router.get('/status', (req, res) => {
-  const tier = detectTier(req);
-  const ip   = getClientIP(req);
-  res.json({
-    tier,
-    scenarios_used:      tier === 'free' ? getFreeUsageCount(ip) : null,
-    scenarios_remaining: tier === 'free' ? Math.max(0, FREE_DAILY_LIMIT - getFreeUsageCount(ip)) : null,
-    free_daily_limit:    FREE_DAILY_LIMIT,
+router.get('/status', (_req, res) => {
+  res.json({ scenarios_remaining: null, free_daily_limit: null });
+});
+
+function validOperationId(id) {
+  return typeof id === 'string' && /^[a-zA-Z0-9_-]{16,80}$/.test(id);
+}
+
+function persistSession(id, session) {
+  persistence.update(id, {
+    seed: session.seed,
+    messages: session.messages, lastVitals: session.lastVitals,
+    sceneMinute: session.sceneMinute, closed: session.closed, turns: session.turns,
+    hasLoaded: session.hasLoaded, moving: session.moving,
+    arrivedAtHospital: session.arrivedAtHospital,
+    demo_source: session.demoSource, second_patient: session.secondPatientFound,
+    backupStatus: session.backupStatus, backupArrivalMinute: session.backupArrivalMinute,
+    crewStatus: session.crewStatus, transportEtaMin: session.transportEtaMin,
+    transportDest: session.transportDest, departSceneMinute: session.departSceneMinute,
+    access: session.access, lastReplyHadTime: session.lastReplyHadTime,
+    debriefText: session.debriefText || null,
+    operationResults: operationsFor(session).snapshot(),
   });
+}
+
+function sendOperationError(res, err) {
+  return res.status(err.status || 500).json({ error: err.code || 'api_error', message: err.message });
+}
+
+// STOP is acknowledged only after cancellation/rollback, or with the result if
+// the operation committed first. It deliberately does not abort the browser's
+// original fetch, so the UI can reconcile a completion racing with STOP.
+router.post('/:id/operations/:operationId/cancel', async (req, res) => {
+  const session = getSession(req.params.id);
+  if (!session) return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
+  if (!validOperationId(req.params.operationId)) return res.status(400).json({ error: 'invalid_operation_id' });
+  const result = await operationsFor(session).cancel(req.params.operationId);
+  persistSession(req.params.id, session);
+  res.json(result);
 });
 
 // ---------------------------------------------------------------------------
@@ -122,27 +148,26 @@ router.get('/resume', (req, res) => {
 // Rolls a scenario, creates a session, fires the dispatch turn, returns it all.
 // ---------------------------------------------------------------------------
 router.post('/new', async (req, res) => {
-  const tier = detectTier(req);
+  const tier = 'free';
   const ip   = getClientIP(req);
 
-  if (tier === 'free' && !checkFreeLimit(ip)) {
-    return res.status(429).json({
-      error: 'free_limit_reached',
-      message: `You've reached today's limit of ${FREE_DAILY_LIMIT} scenarios. It resets tomorrow.`,
-    });
-  }
-
-  if (tier === 'free') incrementFreeUsage(ip);
-
   const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name, partner_name = null, captain_name = null, category = null } = req.body;
+
+  if (!Object.hasOwn(DIFFICULTY_POOL, difficulty) || !['BLS', 'ALS'].includes(provider_level)
+      || !REGIONS.some(r => r.id === region_id)
+      || (category !== null && !Object.hasOwn(SCENARIO_POOLS, category))) {
+    return res.status(400).json({ error: 'invalid_config', message: 'Choose a valid difficulty, provider level, region, and category.' });
+  }
 
   // Sanitize unit name — strip control chars, cap at 16, fall back to default.
   const cleanUnitName = (typeof unit_name === 'string'
     ? unit_name.replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, 16)
     : '') || 'Medic 1';
 
+  let createdId = null;
   try {
     const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null }, ip, tier);
+    createdId = id;
     const session = getSession(id);
 
     // Fire the dispatch turn
@@ -200,8 +225,6 @@ router.post('/new', async (req, res) => {
         captain: captainRec,
       },
       tier,
-      scenarios_used:      tier === 'free' ? getFreeUsageCount(ip) : null,
-      scenarios_remaining: tier === 'free' ? Math.max(0, FREE_DAILY_LIMIT - getFreeUsageCount(ip)) : null,
       reply:               result.reply,
       rolls:               result.rolls || [],
       vitals:              result.vitals || null,
@@ -212,8 +235,9 @@ router.post('/new', async (req, res) => {
       multi_patient:       multiPatient,
     });
   } catch (err) {
+    if (createdId) deleteSession(createdId);
     console.error('[scenario/new]', err.message);
-    return res.status(500).json({ error: 'internal_error', message: err.message });
+    return sendOperationError(res, err);
   }
 });
 
@@ -223,12 +247,13 @@ router.post('/new', async (req, res) => {
 router.post('/:id/turn', async (req, res) => {
   const session = getSession(req.params.id);
   if (!session) {
-    return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired (30 min timeout).' });
+    return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
   }
 
-  const { message, report_mode, skip_mode, proc_allow, proc_deny, procs_resolved } = req.body;
-  if (!message || typeof message !== 'string' || !message.trim()) {
-    return res.status(400).json({ error: 'invalid_input', message: '`message` is required.' });
+  const { message, report_mode, skip_mode, proc_allow, proc_deny, procs_resolved, operation_id } = req.body;
+  if (!validOperationId(operation_id)) return res.status(400).json({ error: 'invalid_operation_id', message: 'A unique operation_id is required.' });
+  if (!message || typeof message !== 'string' || !message.trim() || message.length > 8000) {
+    return res.status(400).json({ error: 'invalid_input', message: '`message` must contain 1–8000 characters.' });
   }
 
   const VALID_SKIP_MODES = ['to_ambulance', 'to_hospital', 'to_arrival'];
@@ -267,55 +292,42 @@ router.post('/:id/turn', async (req, res) => {
   }
 
   try {
-    const result = await session.send(message.trim(), report_mode === true, skipMode, {
-      allow: Array.isArray(proc_allow) ? proc_allow : [],
-      deny:  Array.isArray(proc_deny)  ? proc_deny  : [],
-    });
+    const payload = await operationsFor(session).run(operation_id, JSON.stringify({
+      message: message.trim(), report_mode: report_mode === true, skipMode,
+      proc_allow: proc_allow || [], proc_deny: proc_deny || [],
+    }), async signal => {
+      const result = await session.send(message.trim(), report_mode === true, skipMode, {
+        allow: Array.isArray(proc_allow) ? proc_allow : [],
+        deny:  Array.isArray(proc_deny)  ? proc_deny  : [],
+      }, { signal });
 
-    // Update persisted snapshot after every turn
-    persistence.update(req.params.id, {
-      messages:          session.messages,
-      lastVitals:        session.lastVitals,
-      sceneMinute:       session.sceneMinute,
-      closed:            session.closed,
-      turns:             session.turns,
-      hasLoaded:         session.hasLoaded,
-      moving:            session.moving,
-      arrivedAtHospital: session.arrivedAtHospital || false,
-      demo_source:       session.demoSource       || null,
-      second_patient:    session.secondPatientFound || false,
-      backupStatus:        session.backupStatus        || null,
-      backupArrivalMinute: session.backupArrivalMinute ?? null,
-      crewStatus:          session.crewStatus          || null,
-      transportEtaMin:     session.transportEtaMin     ?? null,
-      transportDest:       session.transportDest       ?? null,
-      departSceneMinute:   session.departSceneMinute   ?? null,
-      access:              session.access              || [],
+      return {
+        operation_id,
+        reply:          result.reply,
+        loading:        result.loading  || false,
+        departing:          result.enRoute         || false,
+        transport_eta_min:  result.transportEtaMin ?? null,
+        transport_dest:     result.transportDest   || null,
+        rolls:          result.rolls || [],
+        suppressed:     result.suppressed || [],
+        vitals:         result.vitals || null,
+        baseContact:    result.baseContact || false,
+        backup:         result.backup     || null,
+        crewStatus:     result.crewStatus || null,
+        demo_source:    result.demoSource   || null,
+        second_patient: result.secondPatient || false,
+        arrived:        result.arrived || false,
+        closed:         result.closed,
+        scene_minute:   session.sceneMinute,
+        decompensating: session.seed.decompensation_clock !== null &&
+                        session.sceneMinute >= session.seed.decompensation_clock,
+      };
     });
-
-    return res.json({
-      reply:          result.reply,
-      loading:        result.loading  || false,
-      departing:          result.enRoute         || false,
-      transport_eta_min:  result.transportEtaMin ?? null,
-      transport_dest:     result.transportDest   || null,
-      rolls:          result.rolls || [],
-      suppressed:     result.suppressed || [],
-      vitals:         result.vitals || null,
-      baseContact:    result.baseContact || false,
-      backup:         result.backup     || null,
-      crewStatus:     result.crewStatus || null,
-      demo_source:    result.demoSource   || null,
-      second_patient: result.secondPatient || false,
-      arrived:        result.arrived || false,
-      closed:         result.closed,
-      scene_minute:   session.sceneMinute,
-      decompensating: session.seed.decompensation_clock !== null &&
-                      session.sceneMinute >= session.seed.decompensation_clock,
-    });
+    persistSession(req.params.id, session);
+    return res.json(payload);
   } catch (err) {
     console.error('[scenario/turn]', err.message);
-    return res.status(500).json({ error: 'api_error', message: err.message });
+    return sendOperationError(res, err);
   }
 });
 
@@ -328,6 +340,9 @@ router.post('/:id/debrief', async (req, res) => {
     return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
   }
 
+  const { operation_id } = req.body;
+  if (!validOperationId(operation_id)) return res.status(400).json({ error: 'invalid_operation_id', message: 'A unique operation_id is required.' });
+
   if (!session.closed) {
     return res.status(400).json({
       error: 'scenario_not_closed',
@@ -336,12 +351,15 @@ router.post('/:id/debrief', async (req, res) => {
   }
 
   try {
-    const debrief = await session.debrief();
+    const payload = await operationsFor(session).run(operation_id, 'debrief', async signal => ({
+      operation_id, debrief: await session.debrief({ signal }),
+    }));
+    persistSession(req.params.id, session);
     persistence.markDebriefed(req.params.id);
-    return res.json({ debrief });
+    return res.json(payload);
   } catch (err) {
     console.error('[scenario/debrief]', err.message);
-    return res.status(500).json({ error: 'api_error', message: err.message });
+    return sendOperationError(res, err);
   }
 });
 

@@ -260,18 +260,16 @@ function printHr() {
 // dim system tips, so players actually read how to drive the sim.
 function printBriefing() {
   const tips = [
-    { icon: 'Rx', key: 'rx',    label: 'Meds &amp; procedures',
-      text: 'Lead with an action verb — <i>“give morphine,” “push TXA,” “hang a dopamine drip,” “intubate,” “establish an IO.”</i> Passive phrasing may not register a roll.' },
-    { icon: '&gt;&gt;', key: 'move',  label: 'Moving the patient',
-      text: 'Say <i>“load the patient,” “move to the ambulance,”</i> or <i>“take her to the rig.”</i> Packages and loads — no destination needed yet.' },
-    { icon: '-&gt;', key: 'route', label: 'Going en route',
-      text: 'Say <i>“transport to [hospital]”</i> or <i>“go en route to [hospital].”</i> Your partner won’t move the unit until you name a destination.' },
-    { icon: '))', key: 'radio', label: 'Radio reports',
-      text: 'Give pre-arrival and handoff reports in <b>past tense</b> for anything already done — <i>“we cardioverted,” “patient was intubated”</i> — so the system doesn’t re-roll it.' },
-    { icon: '&gt;|', key: 'skip',  label: 'Skip ahead',
-      text: 'When the active call is over, hit <b>»</b> to fast-forward: load, transport, arrive. No treatment is applied during a skip. To end on scene (death, refusal), type <i>“end scenario.”</i>' },
-    { icon: '!!', key: 'stop',  label: 'If the AI gets stuck',
-      text: 'Click <b>STOP</b> to cancel the request, then try again.' },
+    { icon: 'Rx', key: 'rx', label: 'Order care',
+      text: 'Use direct actions: <i>“check vitals,” “place an IV,” “give [drug, dose, route].”</i> Put separate actions in separate sentences. Ask for findings you need.' },
+    { icon: '✓', key: 'confirm', label: 'Check the detected actions',
+      text: 'Review each procedure before confirming. Mark <b>✓</b> only for care you intend now; mark <b>✗</b> for mentions or plans. Edit the message if an action is missing or wrong.' },
+    { icon: '))', key: 'radio', label: 'Report completed care',
+      text: 'Turn on <b>REPORT</b> before a radio report or handoff. It applies to your next message and prevents new procedure rolls.' },
+    { icon: '-&gt;', key: 'route', label: 'Move and finish',
+      text: 'Say <i>“load the patient,”</i> then <i>“transport to [hospital].”</i> Use <b>END CALL</b> when finished, then generate your debrief.' },
+    { icon: '!!', key: 'stop', label: 'Cancel or retry',
+      text: '<b>STOP</b> cancels pending care after the server confirms. If a turn already finished, its result appears. <b>RETRY</b> recovers a dropped response without repeating care.' },
   ];
   const rows = tips.map(t =>
     `<div class="brief-row" data-k="${t.key}">` +
@@ -338,16 +336,16 @@ function authHeaders() {
   return { 'Content-Type': 'application/json' };
 }
 
-// Tracks the AbortController for the current in-flight turn or debrief request.
-// Allows the user to cancel a stuck request via the STOP button.
-let currentAbortController = null;
+// STOP targets a server operation and waits for its outcome.
+let currentOperation = null;
+let sendingTurn = false;
+let retryTurn = null;
 
 async function apiPost(path, body, signal = null) {
   let res;
   try {
     res = await fetch(path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body), signal });
   } catch (e) {
-    if (e.name === 'AbortError') throw e;            // user pressed STOP — handled upstream
     // Browser "Failed to fetch" (server asleep/restarting, connection dropped).
     throw Object.assign(new Error('Connection dropped — check your network and retry.'), { code: 'network_error' });
   }
@@ -359,6 +357,52 @@ async function apiPost(path, body, signal = null) {
   }
   if (!res.ok) throw Object.assign(new Error(data.message || `HTTP ${res.status}`), { code: data.error });
   return data;
+}
+
+function newOperationId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function apiOperation(path, body, operationId) {
+  let resolveStop, rejectStop;
+  const stopped = new Promise((resolve, reject) => { resolveStop = resolve; rejectStop = reject; });
+  const operation = { id: operationId, sessionId, resolveStop, rejectStop, stopping: false };
+  currentOperation = operation;
+  try {
+    const request = async () => {
+      // Retry transport failures with the SAME ID, including procedure choices.
+      try { return await apiPost(path, { ...body, operation_id: operationId }); }
+      catch (err) {
+        if (!['network_error', 'bad_response'].includes(err.code)) throw err;
+        return apiPost(path, { ...body, operation_id: operationId });
+      }
+    };
+    return await Promise.race([request(), stopped]);
+  } finally {
+    if (currentOperation === operation) currentOperation = null;
+    // The remaining work may be animations; STOP no longer applies then.
+    sendBtn.disabled = true;
+  }
+}
+
+async function stopCurrentOperation() {
+  const operation = currentOperation;
+  if (!operation || operation.stopping) return;
+  operation.stopping = true;
+  sendBtn.textContent = 'STOPPING…';
+  try {
+    const data = await apiPost(`/api/scenario/${operation.sessionId}/operations/${operation.id}/cancel`, {});
+    if (data.status === 'completed') operation.resolveStop(data.result);
+    else if (data.status === 'cancelled') operation.rejectStop(Object.assign(new Error('Cancelled. No changes were saved.'), { code: 'operation_cancelled' }));
+    else operation.rejectStop(Object.assign(new Error('The operation failed. Please retry.'), { code: 'api_error' }));
+  } catch (err) {
+    if (currentOperation === operation) {
+      operation.stopping = false;
+      sendBtn.textContent = 'STOP';
+      print(`[Could not confirm cancellation: ${err.message}]`, 'error');
+    }
+  }
 }
 
 async function apiGet(path) {
@@ -553,19 +597,6 @@ if (splashEl && typeof getRandomSplash === 'function') {
   splashEl.textContent = getRandomSplash();
 }
 
-// ── Daily scenario counter ───────────────────────────────────────────────
-
-async function refreshStatus() {
-  try {
-    const s = await apiGet('/api/scenario/status');
-    if (!tierMsg || s.scenarios_remaining === null || s.scenarios_remaining === undefined) return;
-    tierMsg.textContent =
-      s.scenarios_remaining > 0
-        ? `${s.scenarios_remaining} of ${s.free_daily_limit} scenarios remaining today`
-        : `Daily limit reached — resets tomorrow`;
-  } catch (_) { /* ignore */ }
-}
-
 // ── Sound toggle ─────────────────────────────────────��────────────────────
 // ── Report mode toggle ──────────────────────────────────────────────────────
 function updateReportBtn() {
@@ -622,7 +653,6 @@ if (themeToggleHdr)   themeToggleHdr.addEventListener('click',   toggleTheme);
 if (themeToggleStart) themeToggleStart.addEventListener('click', toggleTheme);
 applyTheme();
 
-refreshStatus();
 checkResume();
 
 // ── Start scenario ────────────────────────────────────────────────────────
@@ -730,26 +760,24 @@ async function startScenario() {
     setLoading(false);
     userInput.focus();
 
-    // Update the daily counter for the next visit to the start screen
-    if (tierMsg && data.scenarios_remaining !== null && data.scenarios_remaining !== undefined) {
-      tierMsg.textContent =
-        data.scenarios_remaining > 0
-          ? `${data.scenarios_remaining} of ${data.free_daily_limit} scenarios remaining today`
-          : `Daily limit reached — resets tomorrow`;
-    }
 
   } catch (err) {
     startBtn.disabled = false;
     startBtn.textContent = 'BEGIN SCENARIO';
-    if (tierMsg) tierMsg.textContent = err.code === 'free_limit_reached' ? err.message : `Error: ${err.message}`;
+    if (tierMsg) tierMsg.textContent = `Error: ${err.message}`;
   }
 }
 
 // ── Send turn ────────────────────────────────────────────────────────────
 
 async function sendTurn(msg, opts = {}) {
-  if (!sessionId) return;
+  if (!sessionId || sendingTurn || document.getElementById('proc-confirm')) return;
+  if (retryTurn) { msg = retryTurn.msg; opts = retryTurn.opts; }
+  sendingTurn = true;
+  const operationId = opts.operationId || newOperationId();
   const skipMode = opts.skipMode || null;
+  const isReport = opts.isReport !== undefined ? opts.isReport : (reportMode && !skipMode);
+  const retryOpts = { ...opts, isReport, operationId, resend: true };
 
   if (!opts.resend) {
     addHistory(msg);
@@ -758,27 +786,25 @@ async function sendTurn(msg, opts = {}) {
   setLoading(true);
   showLoadingDots();
 
-  currentAbortController = new AbortController();
   try {
     // A time-skip is never also a radio report. On a confirm-resend the report
     // toggle was already consumed — reuse the value captured the first time.
-    const isReport = opts.isReport !== undefined ? opts.isReport : (reportMode && !skipMode);
     if (reportMode) { reportMode = false; updateReportBtn(); }
-    const data = await apiPost(`/api/scenario/${sessionId}/turn`, {
+    const data = await apiOperation(`/api/scenario/${sessionId}/turn`, {
       message: msg,
       report_mode: isReport,
       skip_mode: skipMode,
       proc_allow: opts.procAllow || [],
       proc_deny: opts.procDeny || [],
       procs_resolved: !!opts.resolved,
-    }, currentAbortController.signal);
+    }, operationId);
+    retryTurn = null;
 
     // Ambiguous wording — the server wants a ✓/✗ on each uncertain procedure
     // before running the turn. Nothing has happened yet (no roll, no clock).
     if (data.needs_confirmation) {
       hideLoadingDots();
       setLoading(false);
-      currentAbortController = null;
       showProcConfirm(msg, { skipMode, isReport }, data.needs_confirmation);
       return;
     }
@@ -919,25 +945,24 @@ async function sendTurn(msg, opts = {}) {
       showCrewPanel();
       showDebriefCTA();
       setLoading(false);
-      currentAbortController = null;
+      setInputEnabled(false);
       return;
     }
   } catch (err) {
     hideLoadingDots();
-    if (err.name === 'AbortError') {
-      print('[Cancelled by user. The server may still finish the request in the background — if you re-send, your previous message may also have been processed.]', 'system');
+    if (err.code === 'operation_cancelled') {
+      retryTurn = null;
+      print('[Cancelled. No changes were saved.]', 'system');
     } else {
       print(`[Error: ${err.message}]`, 'error');
-      // Connection/parse failure — the turn never landed. Restore a genuinely
-      // typed message to the input so a dropped handoff isn't lost; skip the
-      // synthetic skip/end commands (those re-fire from their buttons).
-      const synthetic = skipMode || msg === 'end scenario' || /^\[Skip ahead/.test(msg);
-      if ((err.code === 'network_error' || err.code === 'bad_response') && !synthetic && !userInput.value) {
+      if (['network_error', 'bad_response'].includes(err.code)) {
+        retryTurn = { msg, opts: retryOpts };
         userInput.value = msg;
-      }
+        print('[Press RETRY to recover this turn before sending another action.]', 'system');
+      } else retryTurn = null;
     }
   } finally {
-    currentAbortController = null;
+    sendingTurn = false;
   }
 
   setLoading(false);
@@ -948,6 +973,8 @@ async function sendTurn(msg, opts = {}) {
 // on CONFIRM proceeds), ambiguous ones (item.reason set) require a choice.
 
 function showProcConfirm(msg, opts, items) {
+  setInputEnabled(false);
+  skipBtn.disabled = true;
   const existing = document.getElementById('proc-confirm');
   if (existing) existing.remove();
 
@@ -1206,15 +1233,16 @@ function showDebriefCTA() {
   output.appendChild(cta);
   scrollBottom();
 
+  let debriefOperationId = null;
   btn.addEventListener('click', async () => {
     showSignoffAnimation();
     btn.disabled = true;
     btn.textContent = 'generating...';
     hint.textContent = 'This takes a few seconds — reviewing the full call.';
     setLoading(true);
-    currentAbortController = new AbortController();
     try {
-      const data = await apiPost(`/api/scenario/${sessionId}/debrief`, {}, currentAbortController.signal);
+      debriefOperationId ||= newOperationId();
+      const data = await apiOperation(`/api/scenario/${sessionId}/debrief`, {}, debriefOperationId);
       if (localTranscript) localTranscript.debriefText = data.debrief;
       cta.remove();
       printHr();
@@ -1222,15 +1250,18 @@ function showDebriefCTA() {
       print(data.debrief, 'debrief');
       printHr();
     } catch (err) {
-      if (err.name === 'AbortError') {
+      if (err.code === 'operation_cancelled') {
+        debriefOperationId = null;
         btn.disabled = false;
         btn.textContent = 'GENERATE DEBRIEF';
         hint.textContent = 'Cancelled. Click to try again.';
       } else {
+        if (!['network_error', 'bad_response'].includes(err.code)) debriefOperationId = null;
+        btn.disabled = false;
+        btn.textContent = 'GENERATE DEBRIEF';
         hint.textContent = `Error: ${err.message}`;
       }
     } finally {
-      currentAbortController = null;
       setLoading(false);
     }
     showNewScenarioBtn();
@@ -1339,6 +1370,7 @@ function showNewScenarioBtn() {
 }
 
 function resetToStart() {
+  retryTurn       = null;
   sessionId       = null;
   isClosed        = false;
   waitingDebrief  = false;
@@ -1373,7 +1405,6 @@ function resetToStart() {
   setInputEnabled(true);
   setLoading(false);
 
-  refreshStatus();
   checkResume();
 }
 
@@ -1394,7 +1425,7 @@ function hideLoadingDots() {
 }
 
 function setLoading(loading) {
-  // While loading, SEND morphs into STOP — clickable, aborts the in-flight request.
+  // While loading, SEND becomes STOP and requests cancellation from the server.
   // (Input stays disabled so the user can't queue a second send mid-flight.)
   sendBtn.disabled   = false;
   userInput.disabled = loading;
@@ -1406,7 +1437,8 @@ function setLoading(loading) {
     sendBtn.classList.add('stop-mode');
   } else {
     if (!isClosed && !waitingDebrief) skipBtn.disabled = false;
-    sendBtn.textContent = 'SEND';
+    sendBtn.textContent = retryTurn ? 'RETRY' : 'SEND';
+    if (retryTurn) { userInput.disabled = true; skipBtn.disabled = true; }
     sendBtn.classList.remove('stop-mode');
   }
   if (!loading) userInput.focus();
@@ -1423,11 +1455,12 @@ function setInputEnabled(enabled) {
 // ── Event handlers ────────────────────────────────────────────────────────
 
 sendBtn.addEventListener('click', () => {
-  // If a request is in flight, the SEND button is acting as STOP — abort it.
-  if (currentAbortController) {
-    currentAbortController.abort();
+  // If a request is in flight, STOP asks the server to cancel its operation.
+  if (currentOperation) {
+    stopCurrentOperation();
     return;
   }
+  if (retryTurn) { userInput.value = ''; sendTurn(retryTurn.msg, retryTurn.opts); return; }
   const msg = userInput.value.trim();
   if (!msg) return;
   userInput.value = '';
@@ -1472,6 +1505,12 @@ function renderDrugPanel(card) {
   drugPanel.dataset.drugClass = card.drugClass || 'other';
   drugPanelBody.innerHTML = '';
 
+  if (card.referenceNote) {
+    const note = document.createElement('div');
+    note.className = 'drug-notes';
+    note.textContent = card.referenceNote;
+    drugPanelBody.appendChild(note);
+  }
   for (const d of card.doses) {
     const row = document.createElement('div');
     row.className = 'drug-dose-row';

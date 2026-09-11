@@ -2,19 +2,19 @@
 
 const fs             = require('fs');
 const path           = require('path');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('node:crypto');
 const { Session }     = require('../engine/session');
 const { rollScenario } = require('../engine/roller');
-const { RATE_LIMITS, HISTORY_WINDOWS } = require('../data/config');
+const { HISTORY_WINDOWS } = require('../data/config');
 
-const TTL_MS = 4 * 60 * 60 * 1000; // 4 hours of inactivity (free tier); paid/beta sessions never expire
+const TTL_MS = 4 * 60 * 60 * 1000; // 4 hours of inactivity
 
 // id → { session: Session, lastActive: number, userId: string, tier: string }
 const store = new Map();
 
 // userId → { categories[], presentations[], crew[], doa_positions[], arrest_positions[], total_count }
 // Tracks per-user scenario history so the roller can avoid repeats.
-// Keyed by IP for free users; would be keyed by auth user id for paid users.
+// Keyed by client IP.
 //
 // Persisted to disk so history survives server restarts.
 const HISTORY_PATH = path.join(__dirname, '../../sessions/user_history.json');
@@ -44,13 +44,13 @@ function saveHistoryToDisk(map) {
 
 const userHistory = loadHistoryFromDisk();
 
-// Prune expired free-tier sessions every 5 minutes; paid sessions never expire.
+// Prune inactive sessions every 5 minutes.
 setInterval(() => {
   const cutoff = Date.now() - TTL_MS;
   for (const [id, entry] of store) {
-    if (entry.tier !== 'paid' && entry.lastActive < cutoff) store.delete(id);
+    if (entry.lastActive < cutoff) store.delete(id);
   }
-}, 5 * 60 * 1000);
+}, 5 * 60 * 1000).unref();
 
 const HISTORY_DEFAULTS = {
   categories:       [],
@@ -84,19 +84,18 @@ function getOrInitHistory(userId) {
 
 /**
  * Update history after a scenario is rolled.
- * Respects the tier's history_stored cap.
+ * Keeps enough history for the configured repetition windows.
  */
-function updateHistory(userId, seed, tier) {
+function updateHistory(userId, seed) {
   const h = getOrInitHistory(userId);
-  const cap = (RATE_LIMITS[tier.toUpperCase()] || RATE_LIMITS.FREE).history_stored;
 
   h.categories.push(seed.category);
   if (h.categories.length > HISTORY_WINDOWS.category) h.categories.shift();
 
   const pKey = seed.presentation;
   h.presentations.push(pKey);
-  // Cap stored presentation history to the config window (or tier cap if smaller)
-  const presWindow = Math.min(HISTORY_WINDOWS.presentation, cap);
+  // Cap stored presentation history to the configured window.
+  const presWindow = HISTORY_WINDOWS.presentation;
   if (h.presentations.length > presWindow) h.presentations.shift();
 
   if (seed.crew_partner) h.crew.push(seed.crew_partner);
@@ -130,7 +129,7 @@ function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_i
   });
 
   // Record this scenario in the user's history so future rolls avoid repeats
-  updateHistory(userId, seed, tier);
+  updateHistory(userId, seed);
   saveHistoryToDisk(userHistory);
 
   const id = uuidv4();
@@ -160,6 +159,9 @@ function deleteSession(id) {
  */
 function restoreSession(snapshot) {
   const session = new Session(snapshot.seed, snapshot.id);
+  session.operationResults = snapshot.operationResults || [];
+  session.debriefText = snapshot.debriefText || null;
+  session.lastReplyHadTime = snapshot.lastReplyHadTime ?? true;
   session.messages    = snapshot.messages    || [];
   session.lastVitals  = snapshot.lastVitals  || null;
   session.sceneMinute = snapshot.sceneMinute || 0;

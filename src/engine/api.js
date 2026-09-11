@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 const { GoogleGenAI, HarmCategory, HarmBlockThreshold } = require('@google/genai');
 const { buildDebriefPrompt } = require('./prompts/debrief');
 
@@ -6,10 +6,9 @@ const { buildDebriefPrompt } = require('./prompts/debrief');
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const MODEL = 'gemini-3.7-flash';
-const REQUEST_TIMEOUT_MS = 90_000;
+const { requestModel } = require('./modelRequest');
 
-// MINIMAL FIX: Split the token limits to fix latency.
-// Turns get a fast, strict cap. The Debrief gets the full 4000.
+// Output budgets for simulation turns and debriefs.
 const TURN_MAX_TOKENS = 4000; 
 const DEBRIEF_MAX_TOKENS = 4000; 
 
@@ -26,39 +25,7 @@ const EMS_SYSTEM_RULES = `For EMS Scenarios, in addition to provided instruction
 1: Keep scenarios varied and unpredictable
 2: Never provide suggestions or information I did not ask for
 3: Serious dispatches get an automatic engine backup, and benign sounding dispatches get just an ambulance.
-4: Keep narrative updates brief, concise, and focused strictly on the immediate clinical scene.`; // Added rule 4 to enforce speed
-
-/**
-* Helper to pause execution
-*/
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
-* Wrap the Gemini API call in an automatic retry system for rate limits.
-*/
-async function generateContentWithRetry(requestParams, maxRetries = 3) {
-    let attempt = 0;
-    while (attempt < maxRetries) {
-        try {
-            return await ai.models.generateContent(requestParams);
-        } catch (error) {
-            attempt++;
-            const errorString = error.toString().toLowerCase();
-            const isRateLimit =
-                errorString.includes('429') ||
-                errorString.includes('503') ||
-                errorString.includes('quota') ||
-                errorString.includes('too many requests');
-            if (isRateLimit && attempt < maxRetries) {
-                const waitTime = attempt * 2000;
-                console.warn(`[API] Rate limit hit. Retrying attempt ${attempt} in ${waitTime}ms...`);
-                await delay(waitTime);
-            } else {
-                throw error;
-            }
-        }
-    }
-}
+4: Keep narrative updates brief, concise, and focused strictly on the immediate clinical scene.`;
 
 /**
 * Pull the text out of a Gemini response defensively and log finish reason.
@@ -79,7 +46,7 @@ function extractText(response) {
 /**
 * Send a turn in an active scenario.
 */
-async function sendTurn(systemPrompt, messages) {
+async function sendTurn(systemPrompt, messages, options = {}) {
     const fullInstruction = `${EMS_SYSTEM_RULES}\n\n${systemPrompt}`;
     const formattedMessages = messages.map(m => ({
         role: m.role === 'assistant' ? 'model' : m.role,
@@ -87,7 +54,7 @@ async function sendTurn(systemPrompt, messages) {
     }));
     
     try {
-        const response = await generateContentWithRetry({
+        const response = await requestModel(params => ai.models.generateContent(params), {
             model: MODEL,
             contents: formattedMessages,
             config: {
@@ -95,9 +62,10 @@ async function sendTurn(systemPrompt, messages) {
                 maxOutputTokens: TURN_MAX_TOKENS,
                 safetySettings: SAFETY_SETTINGS,
             }
-        });
+        }, options);
         return extractText(response);
     } catch (error) {
+        if (options.signal?.aborted || error.code === 'model_timeout') throw error;
         console.error("Gemini API Error (Turn):", error);
         throw new Error("Failed to connect to the Gemini API during turn.");
     }
@@ -106,25 +74,25 @@ async function sendTurn(systemPrompt, messages) {
 /**
 * Send the debrief request after scenario close.
 */
-async function sendDebrief(debriefContext, providerLevel) {
+async function sendDebrief(debriefContext, providerLevel, options = {}) {
     // Uses clean debrief instructions without EMS_SYSTEM_RULES contamination
     const dynamicDebriefInstruction = buildDebriefPrompt(providerLevel);
     
     try {
-        const response = await generateContentWithRetry({
+        const response = await requestModel(params => ai.models.generateContent(params), {
             model: MODEL,
-            // FIXED: Added the missing opening bracket for the array below
             contents: [{ role: 'user', parts: [{ text: debriefContext }] }],
             config: {
                 systemInstruction: dynamicDebriefInstruction,
-                maxOutputTokens: DEBRIEF_MAX_TOKENS, // FIXED: Corrected spelling from 'max0utputTokens'
+                maxOutputTokens: DEBRIEF_MAX_TOKENS,
                 temperature: 0.15, 
                 topP: 0.8,
                 safetySettings: SAFETY_SETTINGS,
             }
-        });
+        }, options);
         return extractText(response);
     } catch (error) {
+        if (options.signal?.aborted || error.code === 'model_timeout') throw error;
         console.error("Gemini API Error (Debrief):", error);
         throw new Error("Failed to connect to the Gemini API during debrief.");
     }

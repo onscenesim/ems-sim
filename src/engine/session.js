@@ -514,7 +514,18 @@ class Session {
    * confirm-dice choices on uncertain detections.
    * Returns { reply, rolls, suppressed, closed, ... }
    */
-  async send(userText, reportMode = false, skipMode = null, procOverrides = {}) {
+  async send(userText, reportMode = false, skipMode = null, procOverrides = {}, options = {}) {
+    options.signal?.throwIfAborted();
+    // Mutate a private draft. Failed/cancelled calls cannot leave phantom
+    // messages, arrivals, backup requests, dice events, or clock changes.
+    const draft = Object.assign(Object.create(Object.getPrototypeOf(this)), structuredClone(this));
+    const result = await draft._send(userText, reportMode, skipMode, procOverrides, options);
+    options.signal?.throwIfAborted();
+    Object.assign(this, draft);
+    return result;
+  }
+
+  async _send(userText, reportMode, skipMode, procOverrides, options) {
     if (this.closed) {
       return { reply: '[Scenario is closed. Start a new scenario.]', rolls: [], closed: true };
     }
@@ -741,7 +752,9 @@ class Session {
 
     this.messages.push({ role: 'user', content: messageText });
 
-    const rawReply = await sendTurn(this.systemPrompt, this.messages);
+    const rawReply = await sendTurn(this.systemPrompt, this.messages, options);
+
+    options.signal?.throwIfAborted();
 
     // Keep the raw reply (with [VITALS:] tag) in Claude's message history so it
     // remembers what it last reported. Strip the tag from the user-facing copy.
@@ -952,9 +965,12 @@ class Session {
   /**
    * Request the full debrief. Call after session is closed.
    */
-  async debrief() {
+  async debrief(options = {}) {
+    options.signal?.throwIfAborted();
+    if (this.debriefText) return this.debriefText;
     const context = buildDebriefContext(this.seed, this.turns, this.departSceneMinute, this._accessSummary());
-    const text = await sendDebrief(context, this.seed.provider_level);
+    const text = await sendDebrief(context, this.seed.provider_level, options);
+    options.signal?.throwIfAborted();
     updateRunDebrief(this.sessionId, text);
     this.debriefText = text;   // kept for transcript export
     return text;

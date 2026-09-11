@@ -1167,14 +1167,32 @@ const DRUG_CARDS = [
 
 ];
 
-/**
- * Look up a drug card by matched synonym (lowercase string from roll.matched_drug).
- * Returns the matching DRUG_CARDS entry or null.
- */
-function lookupDrug(matchedKey) {
-  if (!matchedKey) return null;
-  const key = matchedKey.toLowerCase().trim();
-  return DRUG_CARDS.find(card =>
-    card.synonyms.some(s => s.toLowerCase() === key)
-  ) || null;
+// Use the same alias groups as engine detection. Existing cards retain their
+// clinical content; recognized medications without authored doses still open
+// an explicit reference panel rather than silently disappearing.
+const medicationAliases = typeof module !== 'undefined'
+  ? require('./medication-aliases').MEDICATION_ALIASES : MEDICATION_ALIASES;
+const DRUG_LOOKUP = new Map();
+for (const card of DRUG_CARDS) {
+  for (const alias of card.synonyms) DRUG_LOOKUP.set(alias.toLowerCase(), card);
 }
+for (const [name, aliases] of Object.entries(medicationAliases)) {
+  let card = DRUG_CARDS.find(c => c.name === name);
+  if (!card) {
+    card = {
+      name, drugClass: 'other', synonyms: [], doses: [], packaging: null,
+      referenceNote: name.includes('(specify')
+        ? 'Specify the medication or formulation to select its reference.'
+        : 'This medication is recognized, but a dosing reference has not been configured.',
+    };
+    DRUG_CARDS.push(card);
+  }
+  for (const alias of aliases) DRUG_LOOKUP.set(alias.toLowerCase(), card);
+}
+
+function lookupDrug(matchedKey) {
+  return typeof matchedKey === 'string'
+    ? DRUG_LOOKUP.get(matchedKey.toLowerCase().trim()) || null : null;
+}
+
+if (typeof module !== 'undefined') module.exports = { DRUG_CARDS, lookupDrug };

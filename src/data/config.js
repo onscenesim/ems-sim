@@ -62,25 +62,6 @@ const HISTORY_WINDOWS = {
   zoo_spacing:  12,  // zoo scenarios span categories — space them globally
 };
 
-const RATE_LIMITS = {
-  FREE: {
-    scenarios_per_day: 3,
-    debrief: 'partial',
-    protocol_injection: false,
-    custom_uploads: false,
-    history_stored: 10,
-    max_api_spend_usd: 0.50,
-  },
-  PAID: {
-    scenarios_per_day: Infinity,
-    debrief: 'full',
-    protocol_injection: true,
-    custom_uploads: true,
-    history_stored: Infinity,
-    max_api_spend_usd: 2.00,
-  },
-};
-
 const NIGHT_HOURS = [22, 23, 0, 1, 2, 3, 4, 5];
 
 module.exports = {
@@ -92,6 +73,5 @@ module.exports = {
   BLACK_CLOUD_DC_PENALTY,
   CURVEBALL_WEIGHTS,
   HISTORY_WINDOWS,
-  RATE_LIMITS,
   NIGHT_HOURS,
 };
