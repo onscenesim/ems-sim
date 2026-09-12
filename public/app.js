@@ -2579,7 +2579,7 @@ let stalenessInterval  = null;
 
 const RHYTHM_RATE_DEFAULT = {
   sinus: 80, sinus_tach: 125, sinus_brad: 45, afib: 95, aflutter: 140,
-  svt: 180, vt: 185, vf: 0, asystole: 0, pea: 45, paced: 70,
+  svt: 180, vt: 185, torsades: 220, vf: 0, asystole: 0, pea: 45, paced: 70,
   junctional: 45, idioventricular: 35, hyperk: 70,
   av_block_1: 70, av_block_2_i: 55, av_block_2_ii: 45, av_block_3: 35,
 };
@@ -2593,7 +2593,7 @@ const rhythmStrip = {
   active: false, type: null, rate: 80,
   clock: 0, x: 0, penY: null, lastTs: null, raf: null,
   beats: [], horizon: 0, beatCount: 0,
-  vfPhase: [Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28],
+  waveSeed: Math.random() * 10000,
 };
 if (rhythmStrip.canvas) rhythmStrip.ctx = rhythmStrip.canvas.getContext('2d');
 
@@ -2602,8 +2602,12 @@ if (rhythmStrip.canvas) rhythmStrip.ctx = rhythmStrip.canvas.getContext('2d');
 function normalizeRhythm(raw) {
   const k = String(raw).toLowerCase().replace(/[^a-z0-9]+/g, '_');
   if (k in RHYTHM_RATE_DEFAULT) return k;
+  // Torsades is polymorphic VT, but needs its own twisting morphology. Match it
+  // before the generic ventricular-tachycardia aliases below.
+  if (/torsad|(?:^|_)tdp(?:_|$)|polymorphic_(?:v_?t|ventricular_tach)/.test(k)) return 'torsades';
   if (/^v_?fib|ventricular_fib/.test(k))            return 'vf';
   if (/^v_?tach|ventricular_tach/.test(k))          return 'vt';
+  if (/monomorphic_(?:v_?t|ventricular_tach)/.test(k)) return 'vt';
   // Any wide/broad-complex tachycardia (VT, SVT w/ aberrancy, Na-channel tox)
   // draws as VT morphology — WIDE QRS. Catches invented tokens the prompt
   // vocabulary lacks (wide_complex_tach, WCT) before the /tach/ narrow fallback.
@@ -2644,7 +2648,7 @@ function stripSizeCanvas() {
 /* Schedule QRS complexes out to `until` seconds of strip time. */
 function stripSchedule(until) {
   const s = rhythmStrip, type = s.type;
-  if (type === 'vf' || type === 'asystole') { s.horizon = until; return; }
+  if (type === 'vf' || type === 'torsades' || type === 'asystole') { s.horizon = until; return; }
   const hr = s.rate || RHYTHM_RATE_DEFAULT[type] || 75;
   while (s.horizon < until) {
     let interval = 60 / Math.max(hr, 15);
@@ -2692,6 +2696,20 @@ function stripSchedule(until) {
 
 function gaus(dt, sigma) { return Math.exp(-(dt * dt) / (2 * sigma * sigma)); }
 
+// Smooth deterministic noise. Unlike a short sum of fixed-frequency sine
+// waves, this does not settle into an obvious repeating motif on the monitor.
+function stripNoise(t, frequency, seed) {
+  const x = t * frequency;
+  const i = Math.floor(x);
+  const f = x - i;
+  const smooth = f * f * f * (f * (f * 6 - 15) + 10);
+  const hash = n => {
+    const v = Math.sin((n + seed) * 12.9898 + seed * 78.233) * 43758.5453;
+    return 2 * (v - Math.floor(v)) - 1;
+  };
+  return hash(i) + (hash(i + 1) - hash(i)) * smooth;
+}
+
 /* One beat's contribution at time offset dt from its QRS. */
 function stripBeatY(dt, b) {
   let y = 0;
@@ -2731,12 +2749,27 @@ function stripY(t) {
   if (type === 'asystole') {
     return 0.02 * Math.sin(t * 1.7) + 0.012 * Math.sin(t * 4.3);
   }
+  if (type === 'torsades') {
+    // Rapid, broad polymorphic complexes whose amplitude waxes, narrows to the
+    // baseline, and returns with the opposite axis: the classic "twisting of
+    // the points" appearance. A small quadrature component prevents an
+    // implausibly dead-flat instant at each axis crossing.
+    const hz = Math.max(150, Math.min(260, s.rate || 220)) / 60;
+    const carrier = 2 * Math.PI * (hz * t + 0.055 * stripNoise(t, 0.7, s.waveSeed + 3));
+    const twist = Math.sin(2 * Math.PI * 0.18 * t + s.waveSeed);
+    const complex = 0.78 * Math.sin(carrier) + 0.22 * Math.sin(2 * carrier - 0.45);
+    return 0.92 * twist * complex + 0.08 * Math.sin(carrier + Math.PI / 2);
+  }
   if (type === 'vf') {
-    const [p1, p2, p3] = s.vfPhase;
-    const mod = 0.65 + 0.35 * Math.sin(t * 1.1 + p1);
-    return mod * (0.42 * Math.sin(2 * Math.PI * 4.6 * t + p1)
-                + 0.30 * Math.sin(2 * Math.PI * 7.4 * t + p2)
-                + 0.18 * Math.sin(2 * Math.PI * 11.3 * t + p3));
+    // Aperiodic, band-limited noise gives VF continuously changing cycle
+    // length and morphology. The old fixed sine stack formed a conspicuous
+    // short loop that could be mistaken for organized polymorphic VT.
+    const seed = s.waveSeed;
+    const warpedT = t + 0.035 * stripNoise(t, 1.15, seed + 41);
+    const envelope = 0.72 + 0.24 * stripNoise(t, 0.62, seed + 67);
+    return envelope * (0.68 * stripNoise(warpedT, 6.6, seed + 11)
+                     + 0.30 * stripNoise(warpedT, 12.7, seed + 23)
+                     + 0.14 * stripNoise(warpedT, 22.9, seed + 37));
   }
   let y = 0;
   if (type === 'aflutter') y += 0.13 - 0.26 * ((t * 5) % 1);              // sawtooth F waves
@@ -2830,11 +2863,15 @@ function setRhythmStrip(rhythmRaw, hr) {
   const s = rhythmStrip;
   if (!s.canvas) return;
   const type = normalizeRhythm(rhythmRaw);
-  const rate = (hr && hr > 0) ? hr : (RHYTHM_RATE_DEFAULT[type] || 75);
+  const rate = (hr && hr > 0) ? hr : (RHYTHM_RATE_DEFAULT[type] ?? 75);
   if (s.active && type === s.type && Math.abs(rate - s.rate) < 1) return;  // unchanged
   const wasActive = s.active;
+  const previousType = s.type;
   s.type = type;
   s.rate = rate;
+  if (type !== previousType && (type === 'vf' || type === 'torsades')) {
+    s.waveSeed = Math.random() * 10000;
+  }
   s.beats = [];
   s.beatCount = 0;
   s.horizon = s.clock + 0.2;   // new rhythm picks up just ahead of the pen

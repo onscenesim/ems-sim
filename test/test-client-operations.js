@@ -69,3 +69,46 @@ test('browser loads the shared aliases before drug cards, without Node globals',
   vm.runInContext(fs.readFileSync(require.resolve('../public/drug-cards'),'utf8'),c);
   assert.equal(c.lookupDrug('epi').name,'Epinephrine');
 });
+
+function ecgHelpers() {
+  const start=source.indexOf('const RHYTHM_RATE_DEFAULT =');
+  const end=source.indexOf('function stripFrame(ts)');
+  const context=vm.createContext({
+    document:{getElementById(){return null;}},
+    Math,
+  });
+  vm.runInContext(source.slice(start,end)+'\nthis.ecg={normalizeRhythm,stripY,stripSchedule,rhythmStrip};',context);
+  return context.ecg;
+}
+
+test('ECG recognizes torsades aliases before generic VT', () => {
+  const {normalizeRhythm}=ecgHelpers();
+  for (const token of ['torsades','Torsades de Pointes','TdP','polymorphic VT','polymorphic ventricular tachycardia']) {
+    assert.equal(normalizeRhythm(token),'torsades',token);
+  }
+  assert.equal(normalizeRhythm('monomorphic VT'),'vt');
+  assert.equal(normalizeRhythm('ventricular fibrillation'),'vf');
+});
+
+test('torsades twists across the baseline while VF remains aperiodic', () => {
+  const {stripY,stripSchedule,rhythmStrip}=ecgHelpers();
+  rhythmStrip.waveSeed=12.345;
+  rhythmStrip.rate=220;
+  rhythmStrip.type='torsades';
+  stripSchedule(8);
+  assert.equal(rhythmStrip.beats.length,0,'torsades should not receive monomorphic QRS overlays');
+  const windowRms=[];
+  for(let start=0;start<6;start+=0.25){
+    let power=0;
+    for(let i=0;i<50;i++){const y=stripY(start+i/200);power+=y*y;}
+    windowRms.push(Math.sqrt(power/50));
+  }
+  assert.ok(Math.max(...windowRms)>Math.min(...windowRms)*2.5,'torsades should wax and wane');
+
+  rhythmStrip.type='vf';
+  const segment=(start)=>Array.from({length:200},(_,i)=>stripY(start+i/100));
+  const a=segment(0),b=segment(2),c=segment(4);
+  const meanDifference=(x,y)=>x.reduce((sum,v,i)=>sum+Math.abs(v-y[i]),0)/x.length;
+  assert.ok(meanDifference(a,b)>0.20,'VF repeated after two seconds');
+  assert.ok(meanDifference(a,c)>0.20,'VF repeated after four seconds');
+});
