@@ -2847,10 +2847,10 @@ html, body {
 }
 
 #cpr-svg {
-  width: 130px;
+  width: min(220px, 62vw, 43vh);
   height: auto;
+  flex-shrink: 0;
   color: rgba(190, 205, 220, 0.92);
-  filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.22));
 }
 #bvm-svg {
   width: 188px;
@@ -2859,14 +2859,42 @@ html, body {
   filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.22));
 }
 
-/* CPR: hands + arms bob downward to mime compressions */
-#cpr-press { transform-box: fill-box; transform-origin: center bottom; }
-#cpr-overlay.visible #cpr-press {
+/* Overhead compression: hands recede toward the sternum as the chest
+   draws inward and the abdomen gives slightly. All layers fully recoil together.
+   Three 500ms cycles finish before animateCPR's 1650ms hold ends. */
+#cpr-overlay .cpr-hand-motion,
+#cpr-chest,
+#cpr-abdomen {
+  transform-box: view-box;
+  transform-origin: 110px 113px;
+}
+#cpr-overlay.visible .cpr-hand-motion {
   animation: cprPress 0.5s ease-in-out 0.05s 3;
 }
+#cpr-overlay.visible #cpr-chest {
+  animation: cprChest 0.5s ease-in-out 0.05s 3;
+}
+#cpr-overlay.visible #cpr-abdomen {
+  animation: cprAbdomen 0.5s ease-in-out 0.05s 3;
+}
 @keyframes cprPress {
-  0%, 100% { transform: translateY(0); }
-  45%      { transform: translateY(5px); }
+  0%, 100% { transform: scale(1); }
+  45%      { transform: scale(0.95); }
+}
+@keyframes cprChest {
+  0%, 100% { transform: scale(1); }
+  45%      { transform: scale(0.97, 0.955); }
+}
+@keyframes cprAbdomen {
+  0%, 100% { transform: scale(1); }
+  45%      { transform: scale(1.025, 0.99); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #cpr-overlay.visible .cpr-hand-motion,
+  #cpr-overlay.visible #cpr-chest,
+  #cpr-overlay.visible #cpr-abdomen {
+    animation: none;
+  }
 }
 
 /* BVM: self-inflating bag squeezes */

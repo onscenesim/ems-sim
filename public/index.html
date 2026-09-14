@@ -425,31 +425,69 @@
     <!-- CPR (chest compressions) animation overlay -->
     <div id="cpr-overlay" aria-hidden="true">
       <div id="cpr-header">CHEST COMPRESSIONS</div>
-      <svg id="cpr-svg" viewBox="0 0 130 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Ground -->
-          <line x1="10" y1="82" x2="122" y2="82" stroke-width="1.4" opacity="0.35"/>
-          <!-- Patient head -->
-          <circle cx="22" cy="64" r="9"/>
-          <!-- Body: shoulder → chest (under hands) → belly → hip → bent knee → shin -->
-          <path d="M31 59 Q41 51 55 51 Q66 52 74 57 Q88 64 98 56 Q106 50 112 60 L116 78"/>
-          <!-- Back/ground contact under torso -->
-          <path d="M31 71 Q60 78 95 76" stroke-width="1.6" opacity="0.5"/>
-          <!-- Compression motion arrows (push down onto chest) -->
-          <g stroke="#88ccff">
-            <line x1="36" y1="30" x2="36" y2="44"/>
-            <polyline points="31,39 36,45 41,39"/>
-            <line x1="88" y1="30" x2="88" y2="44"/>
-            <polyline points="83,39 88,45 93,39"/>
+      <svg id="cpr-svg" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <!-- Two overlapping hands, approached from the patient's side. -->
+          <path id="cpr-lower-hand" d="M18 126 L72 108 C81 103 88 100 98 101
+            L129 103 C136 103 140 105 140 108 C140 111 137 112 133 112
+            L143 113 C150 114 150 121 143 122 L138 122
+            C145 123 145 130 138 131 L130 131 C136 133 133 139 128 139
+            L104 137 C92 137 86 132 77 134 L26 153 Z"/>
+          <path id="cpr-upper-hand" d="M20 74 L77 94 C85 96 89 91 96 89
+            L108 84 C113 82 117 85 115 89 L108 96
+            L135 100 C142 101 143 108 136 109 L117 107
+            L144 111 C151 112 151 119 144 119 L116 115
+            L142 121 C149 123 147 129 141 129 L113 123
+            L133 130 C139 132 136 138 131 137 L103 129
+            C93 127 87 118 77 117 L14 100 Z"/>
+          <!-- Knock out anatomy behind the hands without a colored fill. -->
+          <mask id="cpr-anatomy-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="220" height="240">
+            <rect width="220" height="240" fill="white"/>
+            <g class="cpr-hand-motion" fill="black" stroke="black" stroke-width="4">
+              <use href="#cpr-lower-hand"/>
+              <use href="#cpr-upper-hand"/>
+            </g>
+          </mask>
+          <mask id="cpr-lower-hand-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="220" height="240">
+            <rect width="220" height="240" fill="white"/>
+            <use href="#cpr-upper-hand" fill="black" stroke="black" stroke-width="3"/>
+          </mask>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <g mask="url(#cpr-anatomy-mask)">
+            <!-- Neck, shoulders and upper arms anchor the overhead perspective. -->
+            <path d="M89 12 L88 25 C81 33 61 31 47 42 C33 54 31 74 28 92 L24 117
+              M131 12 L132 25 C139 33 159 31 173 42 C187 54 189 74 192 92 L196 117"/>
+            <path d="M57 57 C52 75 53 94 57 111 M163 57 C168 75 167 94 163 111" opacity="0.6" stroke-width="1.5"/>
+            <g id="cpr-chest">
+              <!-- Clavicles, sternum, pectorals and lower rib margins. -->
+              <path d="M65 43 Q86 37 103 48 M155 43 Q134 37 117 48" stroke-width="1.6" opacity="0.65"/>
+              <path d="M106 52 Q110 49 114 52 L116 104 Q116 114 110 120 Q104 114 104 104 Z" stroke-width="1.4" opacity="0.4"/>
+              <path d="M62 62 C72 55 93 59 101 69 M158 62 C148 55 127 59 119 69
+                M59 91 C68 106 88 108 101 97 M161 91 C152 106 132 108 119 97" stroke-width="1.7" opacity="0.75"/>
+              <path d="M57 112 C61 132 77 140 89 143 Q99 129 104 126
+                M163 112 C159 132 143 140 131 143 Q121 129 116 126" stroke-width="1.6" opacity="0.5"/>
+            </g>
+            <g id="cpr-abdomen">
+              <!-- A soft abdominal contour and navel shift with each compression. -->
+              <path d="M57 111 C59 137 67 149 65 173 C64 190 60 206 61 222
+                M163 111 C161 137 153 149 155 173 C156 190 160 206 159 222"/>
+              <path d="M83 151 C78 169 80 188 86 201 M137 151 C142 169 140 188 134 201" stroke-width="1.4" opacity="0.35"/>
+              <path d="M108 174 Q112 178 109 181" stroke-width="1.6" opacity="0.65"/>
+              <path d="M71 214 Q87 209 99 219 M149 214 Q133 209 121 219" stroke-width="1.5" opacity="0.45"/>
+            </g>
           </g>
-          <!-- Rescuer arms + stacked hands (this group bobs to mime compressions) -->
-          <g id="cpr-press">
-            <line x1="55" y1="43" x2="52" y2="15"/>
-            <line x1="65" y1="43" x2="68" y2="15"/>
-            <line x1="50" y1="15" x2="70" y2="15" stroke-width="2"/>
-            <rect x="48" y="43" width="24" height="11" rx="4.5"/>
-            <line x1="53" y1="46.5" x2="69" y2="46.5" stroke-width="1.3" opacity="0.55"/>
-            <line x1="53" y1="50" x2="69" y2="50" stroke-width="1.3" opacity="0.55"/>
+          <g id="cpr-press" class="cpr-hand-motion">
+            <g mask="url(#cpr-lower-hand-mask)">
+              <use href="#cpr-lower-hand"/>
+              <path d="M127 113 L137 114 M126 122 L137 123 M121 130 L130 132
+                M71 113 Q77 121 76 130" stroke-width="1.3" opacity="0.55"/>
+            </g>
+            <use href="#cpr-upper-hand"/>
+            <!-- Thumb web, knuckles and wrist creases keep the hands readable. -->
+            <path d="M108 96 Q99 100 101 108 M117 107 L111 105
+              M116 115 L110 113 M113 123 L108 121
+              M76 98 Q72 104 73 111 M81 99 Q78 105 79 110" stroke-width="1.3" opacity="0.6"/>
           </g>
         </g>
       </svg>
