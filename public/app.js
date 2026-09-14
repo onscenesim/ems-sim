@@ -2944,6 +2944,42 @@ window.addEventListener('resize', () => {
   if (!rhythmStrip.active) stripIdle();
 });
 
+// ── Pulse ox pleth and compact monitor selection ────────────────────────────
+const plethStrip = PlethWaveform.createStrip(document.getElementById('pleth-strip'));
+const waveformToggle = document.getElementById('waveform-toggle');
+
+function selectMonitorWaveform(value) {
+  const state = PlethWaveform.selection(value);
+  document.getElementById('rhythm-cell').dataset.waveform = state.selected;
+  waveformToggle.textContent = state.text;
+  waveformToggle.setAttribute('aria-label', state.label);
+  waveformToggle.setAttribute('aria-pressed', state.pressed);
+  // A previously hidden idle canvas had no dimensions until this selection.
+  if (!rhythmStrip.active) stripIdle();
+  plethStrip.resize();
+}
+waveformToggle.addEventListener('click', () => {
+  selectMonitorWaveform(waveformToggle.getAttribute('aria-pressed') === 'true' ? 'ecg' : 'pleth');
+});
+window.addEventListener('resize', () => plethStrip.resize());
+
+function updatePlethStrip(vitals) {
+  // Old saved sessions still have plain SpO2 without the structured signal.
+  const legacy = vitals?.SpO2;
+  const legacyValue = legacy && typeof legacy === 'object' ? legacy.value : legacy;
+  const signal = vitals?.PulseOx || (typeof legacyValue === 'number' ? {
+    quality: 'good', reliable: true, reason: 'reliable', pulseRate: Number(vitals.HR?.value ?? vitals.HR) || 75,
+  } : null);
+  plethStrip.update(signal);
+  const description = PlethWaveform.description(signal);
+  document.getElementById('pleth-strip').setAttribute('aria-label', `SpO₂ pleth: ${description}`);
+  document.getElementById('pulse-ox-status').textContent = description;
+  const badge = document.getElementById('spo2-signal-badge');
+  badge.textContent = !signal || signal.reason === 'unplaced' || signal.reliable ? '' : signal.quality === 'absent' ? 'NO SIG' : 'CHECK';
+  badge.setAttribute('aria-label', description);
+  badge.title = description;
+}
+
 function formatVitalDisplay(name, raw) {
   // raw is either a primitive (HR/SpO2/etc.) or { value, t, tMin } for episodic
   const value = (raw && typeof raw === 'object' && 'value' in raw) ? raw.value : raw;
@@ -3003,6 +3039,7 @@ function applyVitals(vitals) {
 
   // Drive the ECG strip from the same snapshot
   updateRhythmStrip(currentVitals);
+  updatePlethStrip(currentVitals);
 }
 
 /**
@@ -3121,6 +3158,8 @@ function resetVitals() {
   currentVitals = null;
   currentSceneMinute = 0;
   stopRhythmStrip();
+  updatePlethStrip(null);
+  selectMonitorWaveform('ecg');
   for (const name of VITAL_FIELDS) {
     for (const el of document.querySelectorAll(`[data-vital="${name}"]`)) {
       el.textContent = '\u2014\u2014';
@@ -3209,6 +3248,7 @@ function setMultiPatientVitalsNotice(active) {
     vitalsBar.dataset.multiPatient = '1';
     vitalsBar.classList.add('multi-patient');
     stopRhythmStrip();
+    updatePlethStrip(null);
   } else {
     delete vitalsBar.dataset.multiPatient;
     vitalsBar.classList.remove('multi-patient');

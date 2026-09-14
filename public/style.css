@@ -2128,6 +2128,43 @@ html, body {
   height: 30px;
 }
 
+/* Stack traces on wide monitors so the ECG keeps its original sweep width. */
+#pleth-waveform { margin-top: 5px; }
+#pleth-waveform .vital-label { color: #4ab8ff; }
+#pleth-strip { display: block; width: 100%; height: 30px; }
+#waveform-toggle { display: none; }
+#spo2-signal-badge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  line-height: 1.2;
+  margin-top: 3px;
+  color: #ffd54a;
+}
+#spo2-signal-badge:empty { display: none; }
+
+@media (max-width: 900px) {
+  #waveform-toggle {
+    display: block;
+    width: 100%;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 4px 2px;
+    border: 1px solid #46515b;
+    border-radius: 4px;
+    background: #101820;
+    color: #2ee76a;
+    font: bold 10px var(--font-mono);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  #waveform-toggle[aria-pressed="true"] { color: #4ab8ff; border-color: #4ab8ff; }
+  #waveform-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  #ecg-waveform .vital-label, #pleth-waveform .vital-label { display: none; }
+  #pleth-waveform { margin-top: 0; }
+  #rhythm-cell[data-waveform="ecg"] #pleth-waveform,
+  #rhythm-cell[data-waveform="pleth"] #ecg-waveform { display: none; }
+}
+
 .vital-label {
   font-family: var(--font-block);
   font-size: 9px;
@@ -2298,6 +2335,7 @@ html, body {
   }
   #rhythm-cell { flex: 1.6 1 0; padding: 3px 4px 4px; }
   #rhythm-strip { height: 24px; }
+  #pleth-strip { height: 24px; }
   #vitals-expand {
     font-size: 16px;
     padding: 0 10px;

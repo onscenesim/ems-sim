@@ -19,6 +19,7 @@ EVIDENCE & CLINICAL RULES:
 3. STRICT CONSISTENCY: Never flag an action as an error in one section and praise it as correct elsewhere in the debrief.
 4. ARREST DOCTRINE: Medical arrests (PEA, Asystole, VF/pVT) are worked ON SCENE. Never fault a student for refusing to transport an active medical arrest.
 5. IMMERSION: Write directly to the student ("You did X..."). NEVER cite section numbers, "the log", "ground truth", or "SCENE text" in your output.
+6. PULSE OX: True SpO2 is hidden physiology; displayed SpO2 and pleth quality are monitor observations available to the student. Never equate a false or missing reading with hypoxemia, and never assume the student knew the hidden true saturation. Explain signal artifacts separately from actual oxygenation changes when relevant.
 
 ---
 
