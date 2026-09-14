@@ -17,11 +17,15 @@
  *   8. rollScenario — end-to-end: no duplicates in adjacent rolls, all fields present
  *   9. rollDecompensationClock — values in spec range
  *  10. rollComplication — EASY always returns none
+ *  11. rollScenario — unique scenario IDs
+ *  12. specialCircumstanceEligible — compound eligibility rules
+ *  13. curveball safety — HINTS interpretation guardrail
  */
 
-const { rollScenario }           = require('../src/engine/roller');
-const { TIME_OF_DAY }            = require('../src/data/modifiers');
+const { rollScenario, specialCircumstanceEligible } = require('../src/engine/roller');
+const { TIME_OF_DAY, SPECIAL_CIRCUMSTANCES } = require('../src/data/modifiers');
 const { CATEGORY_WEIGHTS, HISTORY_WINDOWS } = require('../src/data/config');
+const { CURVEBALLS } = require('../src/data/scenarios/curveballs');
 
 // ── Test harness ─────────────────────────────────────────────────────────────
 
@@ -352,6 +356,52 @@ console.log('\n=== 11. Unique scenario IDs ===');
     ids.add(seed.scenario_id);
   }
   assert(ids.size === N, `All ${N} scenario IDs are unique (got ${ids.size})`);
+}
+
+// ── 12. Special-circumstance compound eligibility ───────────────────────────────────
+
+console.log('\n=== 12. Special-circumstance eligibility ===');
+{
+  const dnr = SPECIAL_CIRCUMSTANCES.find(sc => sc.text.includes('family is contesting'));
+  const pet = SPECIAL_CIRCUMSTANCES.find(sc => sc.text.includes('pet they are'));
+  const minor = SPECIAL_CIRCUMSTANCES.find(sc => sc.text.includes('no guardian present'));
+  const preNaloxone = SPECIAL_CIRCUMSTANCES.find(sc => sc.text.includes('naloxone before EMS'));
+
+  assert(specialCircumstanceEligible(dnr, { category: 'doa' }), 'DNR conflict is eligible on DOA calls');
+  assert(specialCircumstanceEligible(dnr, { category: 'arrest' }), 'DNR conflict is eligible on arrest calls');
+  assert(!specialCircumstanceEligible(dnr, { category: 'medical' }), 'DNR conflict is excluded from ordinary medical calls');
+  assert(specialCircumstanceEligible(pet, { category: 'medical' }), 'pet concern is eligible on a normal patient call');
+  assert(!specialCircumstanceEligible(pet, { category: 'doa' }), 'pet concern is excluded from DOA calls');
+  assert(specialCircumstanceEligible(minor, { category: 'trauma', ageGroup: 'young_adult' }), 'guardian rule follows patient age, not category');
+  assert(!specialCircumstanceEligible(minor, { category: 'pediatric', ageGroup: 'middle_aged' }), 'guardian rule excludes non-qualifying ages');
+  assert(specialCircumstanceEligible(preNaloxone, {
+    category: 'toxicology', presentation: { presentation: 'Illicit opioid overdose — fentanyl suspected' },
+  }), 'pre-arrival naloxone is eligible on opioid overdose cases');
+  assert(!specialCircumstanceEligible(preNaloxone, {
+    category: 'toxicology', presentation: { presentation: 'Aspirin overdose' },
+  }), 'pre-arrival naloxone is excluded from unrelated toxicology cases');
+}
+
+// ── 13. HINTS interpretation guardrail ───────────────────────────────────────
+
+console.log('\n=== 13. HINTS interpretation guardrail ===');
+{
+  const vertigoCase = CURVEBALLS.find(item => item.surface_presentation.includes('posterior stroke'));
+  assert(Boolean(vertigoCase), 'posterior-stroke curveball is present');
+  assert(
+    vertigoCase.hint.includes('normal head impulse') && vertigoCase.hint.includes('CENTRAL warning sign'),
+    'normal head impulse is identified as a central warning sign'
+  );
+  assert(
+    vertigoCase.hint.includes('abnormal head impulse') &&
+      vertigoCase.hint.includes('unidirectional nystagmus') &&
+      vertigoCase.hint.includes('no skew'),
+    'peripheral HINTS pattern requires all three peripheral findings'
+  );
+  assert(
+    vertigoCase.hint.includes('Do not use HINTS for brief episodic positional dizziness'),
+    'HINTS is limited to continuous acute vestibular syndrome'
+  );
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────

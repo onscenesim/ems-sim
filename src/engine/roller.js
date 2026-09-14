@@ -258,19 +258,39 @@ function rollWeather(difficulty, region) {
   }).text;
 }
 
-function rollSpecialCircumstance(difficulty, category) {
+function specialCircumstanceEligible(sc, { category, ageGroup, presentation, trajectory } = {}) {
+  if (!sc.requires) return true;
+
+  const req = sc.requires.toLowerCase();
+  const patientGroup = String(ageGroup || '').split('—')[0].trim().toLowerCase().replace(/\s+/g, '_');
+  const caseText = String(
+    presentation && (presentation.presentation || presentation.surface_presentation) || ''
+  ).toLowerCase();
+
+  // `requires` is human-readable data, so handle its compound rules explicitly.
+  // In particular, "DOA or cardiac arrest" is an OR condition; treating every
+  // keyword as an independent required category made both DNR modifiers
+  // impossible to select.
+  if (req.includes('doa or cardiac arrest')) return ['doa', 'arrest'].includes(category);
+  if (req.includes('normal, not arrest or doa')) return !['arrest', 'doa'].includes(category);
+  if (req.includes('pediatric or young adult')) return ['pediatric', 'young_adult'].includes(patientGroup);
+  if (req.includes('cardiac arrest calls with rapidly deteriorating trajectory')) {
+    return category === 'arrest' && trajectory === 'rapidly_deteriorating';
+  }
+  if (req.includes('only on cardiac arrest calls')) return category === 'arrest';
+  if (req.includes('only on opioid overdose calls')) {
+    return category === 'toxicology' && /opioid|fentanyl|heroin/.test(caseText);
+  }
+
+  return true;
+}
+
+function rollSpecialCircumstance(difficulty, category, ageGroup, presentation, trajectory) {
   const rates = MODIFIER_FIRE_RATES[difficulty];
   if (Math.random() > rates.special_circumstances) return null;
-  const eligible = SPECIAL_CIRCUMSTANCES.filter(sc => {
-    if (!sc.requires) return true;
-    const req = sc.requires.toLowerCase();
-    if (req.includes('cardiac arrest') && category !== 'arrest') return false;
-    if (req.includes('doa') && category !== 'doa') return false;
-    if (req.includes('opioid') && category !== 'toxicology') return false;
-    if (req.includes('pediatric') && category !== 'pediatric') return false;
-    if (req.includes('arrest') && !['arrest', 'cardiac'].includes(category)) return false;
-    return true;
-  });
+  const eligible = SPECIAL_CIRCUMSTANCES.filter(sc => specialCircumstanceEligible(sc, {
+    category, ageGroup, presentation, trajectory,
+  }));
   return eligible.length > 0 ? pickRandom(eligible).text : null;
 }
 
@@ -347,7 +367,9 @@ function rollScenario(opts = {}) {
   const region = REGIONS.find(r => r.id === region_id);
   const regionLabel = region ? region.id : region_id;
   const weather = rollWeather(difficulty, regionLabel);
-  const specialCircumstance = rollSpecialCircumstance(difficulty, category);
+  const specialCircumstance = rollSpecialCircumstance(
+    difficulty, category, ageGroup, presentation, trajectory
+  );
   const comorbidityBundle = rollComorbidity(difficulty, category, ageGroup);
   let crew = pickCrew(region_id, history);
   if (partner_name) {
@@ -423,4 +445,4 @@ function generateId() {
   });
 }
 
-module.exports = { rollScenario, PLAYER_SELECTABLE_CATEGORIES };
+module.exports = { rollScenario, PLAYER_SELECTABLE_CATEGORIES, specialCircumstanceEligible };
