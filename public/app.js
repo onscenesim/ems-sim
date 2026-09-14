@@ -813,7 +813,10 @@ async function sendTurn(msg, opts = {}) {
 
     // Animate each real single roll in sequence, then print all to the log
     for (const r of (data.rolls || [])) {
-      if (r.no_roll) continue;
+      if (r.no_roll) {
+        if (r.procedure_id === 'medication_push') await animateMedicationAdministration(r);
+        continue;
+      }
       const procSound = getProcedureSound(r.procedure_id, r.outcome);
       console.log('[roll]', r.procedure_id, r.outcome, '→ sound:', procSound);
       if (r.multi_roll) {
@@ -842,9 +845,7 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'needle_decompression') await animateNCD(r.outcome, 'needle_decompression');
       if (r.procedure_id === 'needle_cricothyrotomy') await animateNCD(r.outcome, 'needle_cricothyrotomy');
       if (r.procedure_id === 'medication_push') {
-        // No-roll pushes work by default → show the green (SUCCESS) syringe.
-        await animateMedPush(r.no_roll ? 'SUCCESS' : r.outcome);
-        if (r.matched_drug) showDrugPanel(r.matched_drug);
+        await animateMedicationAdministration(r);
       }
     }
     for (const r of (data.rolls || [])) printRoll(r);
@@ -1864,7 +1865,7 @@ function animateLoading() {
 
 function animateDrill(outcome) {
   return new Promise(resolve => {
-    const HOLD_MS = 1800;
+    const HOLD_MS = 2200; // insertion, driver separation, then result
     const FADE_MS = 180;
     const overlay = document.getElementById('io-overlay');
     const label   = document.getElementById('io-label');
@@ -2037,7 +2038,7 @@ function animateSGA(outcome) {
 
 function animateIV(outcome) {
   return new Promise(resolve => {
-    const HOLD_MS = 1700;
+    const HOLD_MS = 2500; // insertion, flashback, threading, safety retraction, result
     const FADE_MS = 220;
     const overlay = document.getElementById('iv-overlay');
     const label   = document.getElementById('iv-label');
@@ -2056,7 +2057,7 @@ function animateIV(outcome) {
 
 function animateMedPush(outcome) {
   return new Promise(resolve => {
-    const HOLD_MS = 1800;
+    const HOLD_MS = 2500; // connection, plunger stroke, fluid path, result
     const FADE_MS = 220;
     const overlay = document.getElementById('medpush-overlay');
     const label   = document.getElementById('medpush-label');
@@ -2070,6 +2071,34 @@ function animateMedPush(outcome) {
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
     }, HOLD_MS);
+  });
+}
+
+// Route metadata comes from the same detected order as this medication roll.
+// Drug identity alone never chooses a route; unspecified/legacy rolls retain IV push.
+async function animateMedicationAdministration(roll) {
+  const outcome = roll.no_roll ? 'SUCCESS' : roll.outcome;
+  const routes = { PO: ['oralmed', 2600], IN: ['inmed', 2300], IM: ['immed', 2600] };
+  const scene = Object.hasOwn(routes, roll.administration_route) ? routes[roll.administration_route] : null;
+  if (scene) await animateRouteMedication(scene[0], outcome, scene[1]);
+  else await animateMedPush(outcome);
+  if (roll.matched_drug) showDrugPanel(roll.matched_drug);
+}
+
+function animateRouteMedication(id, outcome, holdMs) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById(`${id}-overlay`);
+    const label = document.getElementById(`${id}-label`);
+    if (!overlay || !label) { resolve(); return; }
+    label.textContent = outcome || '';
+    overlay.className = 'route-med-overlay';
+    void overlay.offsetWidth;
+    overlay.classList.add('visible');
+    if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, 220);
+    }, holdMs);
   });
 }
 

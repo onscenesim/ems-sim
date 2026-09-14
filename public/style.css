@@ -3076,38 +3076,73 @@ html, body {
   text-transform: uppercase;
 }
 #iv-svg {
-  width: 270px;
+  width: min(340px, 88vw, 65vh);
   height: auto;
-  color: rgba(235, 235, 235, 0.95);   /* black-and-white line art */
+  flex-shrink: 0;
+  color: rgba(190, 205, 220, 0.92);
 }
-/* Cannula advances forward */
-#iv-device { opacity: 0; }
+#iv-overlay { --iv-advance: 58px; --iv-thread: 14px; }
+#iv-overlay.outcome-FAILURE,
+#iv-overlay.outcome-COMPLICATION { --iv-advance: 38px; --iv-thread: 0px; }
+/* Enter the vein, thread the flexible catheter, then retract the sharp
+   inside its housing before separating the introducer from the hub. */
 #iv-overlay.visible #iv-device {
-  animation: ivAdvance 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s forwards;
+  animation: ivAdvance 0.65s ease-in-out 0.15s both;
+}
+#iv-overlay.visible #iv-catheter {
+  animation: ivThread 0.3s ease-in-out 1s both;
+}
+#iv-overlay.visible #iv-needle {
+  animation: ivNeedleRetract 0.25s ease-in 1.25s both;
+}
+#iv-overlay.visible #iv-introducer {
+  animation: ivSeparate 0.3s ease-in-out 1.5s both;
 }
 @keyframes ivAdvance {
-  0%   { opacity: 0; transform: translateX(26px); }
-  40%  { opacity: 1; }
-  100% { opacity: 1; transform: translateX(0); }
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--iv-advance)); }
 }
-/* Flashback fills the chamber — colour set by outcome */
+@keyframes ivThread {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--iv-thread)); }
+}
+@keyframes ivNeedleRetract {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-108px); }
+}
+@keyframes ivSeparate {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-32px); }
+}
+#iv-overlay.outcome-SUCCESS #iv-fill,
+#medpush-overlay.outcome-SUCCESS #medpush-fill { fill: #3dcc66; }
+#iv-overlay.outcome-MARGINAL #iv-fill,
+#medpush-overlay.outcome-MARGINAL #medpush-fill { fill: #ccaa33; }
+#iv-overlay.outcome-FAILURE #iv-fill,
+#medpush-overlay.outcome-FAILURE #medpush-fill { fill: #cc4040; }
+#iv-overlay.outcome-COMPLICATION #iv-fill,
+#medpush-overlay.outcome-COMPLICATION #medpush-fill { fill: #cc5522; }
+#medpush-fill { fill-opacity: 1; }
+/* Outcome fill is a deliberate color accent shared with the result mark. */
 #iv-fill {
   transform-box: fill-box;
-  transform-origin: left center;
+  transform-origin: right center;
   transform: scaleX(0);
-  fill: #888;
 }
-#iv-overlay.outcome-SUCCESS      #iv-fill { fill: #3dcc66; }
-#iv-overlay.outcome-MARGINAL     #iv-fill { fill: #ccaa33; }
-#iv-overlay.outcome-FAILURE      #iv-fill { fill: #cc4040; }
-#iv-overlay.outcome-COMPLICATION #iv-fill { fill: #cc5522; }
 #iv-overlay.visible #iv-fill {
-  animation: ivFill 0.45s ease-out 0.5s forwards;
+  animation: ivFlashback 0.25s ease-out 0.8s forwards;
 }
-@keyframes ivFill {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
+@keyframes ivFlashback {
+  to { transform: scaleX(1); }
 }
+#iv-dressing { opacity: 0; }
+#iv-overlay.outcome-SUCCESS.visible #iv-dressing,
+#iv-overlay.outcome-MARGINAL.visible #iv-dressing {
+  animation: accessReveal 0.25s ease 1.7s forwards;
+}
+#iv-overlay.visible .om-check,
+#iv-overlay.visible .om-x1 { animation-delay: 1.8s; }
+#iv-overlay.visible .om-x2 { animation-delay: 1.95s; }
 #iv-label {
   font-family: var(--font-block, monospace);
   font-size: 0.5rem;
@@ -3140,53 +3175,208 @@ html, body {
   text-transform: uppercase;
 }
 #medpush-svg {
-  width: 270px;
+  width: min(360px, 92vw, 68vh);
   height: auto;
-  color: rgba(235, 235, 235, 0.95);   /* black-and-white line art */
+  flex-shrink: 0;
+  color: rgba(190, 205, 220, 0.92);
 }
-/* Dose fluid — colour set by outcome */
+/* Couple the luer tip to the fixed needle-free connector before the push. */
+#medpush-overlay.visible #medpush-syringe {
+  animation: medConnect 0.4s ease-in-out 0.15s both;
+}
+@keyframes medConnect {
+  from { transform: translateX(-18px); }
+  to   { transform: translateX(0); }
+}
 #medpush-fill {
   transform-box: fill-box;
-  transform-origin: left center;   /* needle side fixed; empties toward needle */
-  transform: scaleX(1);
-  fill: #888;
+  transform-origin: right center;
 }
-#medpush-overlay.outcome-SUCCESS      #medpush-fill { fill: #3dcc66; }
-#medpush-overlay.outcome-MARGINAL     #medpush-fill { fill: #ccaa33; }
-#medpush-overlay.outcome-FAILURE      #medpush-fill { fill: #cc4040; }
-#medpush-overlay.outcome-COMPLICATION #medpush-fill { fill: #cc5522; }
+/* Identical timing keeps the fluid boundary flush with the rubber stopper. */
 #medpush-overlay.visible #medpush-fill {
-  animation: medFill 0.7s ease-in 0.55s forwards;
+  animation: medFill 1s cubic-bezier(0.4, 0, 0.4, 1) 0.65s both;
+}
+#medpush-overlay.visible #medpush-plunger {
+  animation: medPlunger 1s cubic-bezier(0.4, 0, 0.4, 1) 0.65s both;
 }
 @keyframes medFill {
   from { transform: scaleX(1); }
-  to   { transform: scaleX(0.16); }
-}
-/* Plunger drives the dose in */
-#medpush-plunger { opacity: 0; }
-#medpush-overlay.visible #medpush-plunger {
-  animation: medPlunger 0.7s cubic-bezier(0.4, 0.0, 0.4, 1) 0.55s forwards;
+  to   { transform: scaleX(0); }
 }
 @keyframes medPlunger {
-  0%   { opacity: 1; transform: translateX(0); }
-  100% { opacity: 1; transform: translateX(-94px); }
+  from { transform: translateX(0); }
+  to   { transform: translateX(106px); }
 }
-/* The whole syringe eases in before the push */
-#medpush-svg { opacity: 0; }
-#medpush-overlay.visible #medpush-svg {
-  animation: medSlide 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s forwards;
+/* A short, neutral highlight traces the closed fluid path during the push. */
+#medpush-flow { opacity: 0; stroke-dasharray: 22 122; stroke-dashoffset: 22; }
+#medpush-overlay.visible #medpush-flow {
+  animation: medFlow 1.05s ease-in-out 0.65s both;
 }
-@keyframes medSlide {
-  0%   { opacity: 0; transform: translateX(18px); }
-  100% { opacity: 1; transform: translateX(0); }
+@keyframes medFlow {
+  0%   { stroke-dashoffset: 22; opacity: 0; }
+  15%  { opacity: 0.85; }
+  85%  { opacity: 0.85; }
+  100% { stroke-dashoffset: -100; opacity: 0; }
 }
-#medpush-plunger { opacity: 1; }
+#medpush-overlay.visible .om-check,
+#medpush-overlay.visible .om-x1 { animation-delay: 1.8s; }
+#medpush-overlay.visible .om-x2 { animation-delay: 1.95s; }
 #medpush-label {
   font-family: var(--font-block, monospace);
   font-size: 0.5rem;
   letter-spacing: 0.2em;
   color: rgba(180, 200, 220, 0.90);
   text-transform: uppercase;
+}
+
+/* Keep result text with its mark instead of revealing the outcome early. */
+#iv-label, #medpush-label { opacity: 0; }
+#iv-overlay.visible #iv-label,
+#medpush-overlay.visible #medpush-label {
+  animation: accessReveal 0.25s ease 1.8s forwards;
+}
+@keyframes accessReveal {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #iv-overlay.visible #iv-device { animation: none; transform: translateX(var(--iv-advance)); }
+  #iv-overlay.visible #iv-catheter { animation: none; transform: translateX(var(--iv-thread)); }
+  #iv-overlay.visible #iv-needle { animation: none; transform: translateX(-108px); }
+  #iv-overlay.visible #iv-introducer { animation: none; transform: translateX(-32px); }
+  #medpush-overlay.visible #medpush-syringe { animation: none; transform: none; }
+  #medpush-overlay.visible #medpush-plunger { animation: none; transform: translateX(106px); }
+  #medpush-overlay.visible #medpush-fill { animation: none; transform: scaleX(0); }
+  #medpush-overlay.visible #medpush-flow { animation: none; opacity: 0; }
+}
+
+/* ── Oral, intranasal and intramuscular medication overlays ─────────── */
+.route-med-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 14, 0.84);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  --route-med-color: #888;
+  --route-result-delay: 1.9s;
+}
+.route-med-overlay.visible { opacity: 1; }
+.route-med-overlay.outcome-SUCCESS { --route-med-color: #3dcc66; }
+.route-med-overlay.outcome-MARGINAL { --route-med-color: #ccaa33; }
+.route-med-overlay.outcome-FAILURE { --route-med-color: #cc4040; }
+.route-med-overlay.outcome-COMPLICATION { --route-med-color: #cc5522; }
+.route-med-header, .route-med-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+  color: rgba(180, 200, 220, 0.75);
+  text-transform: uppercase;
+}
+.route-med-label { opacity: 0; font-size: 0.5rem; }
+.route-med-overlay.visible .route-med-label {
+  animation: accessReveal 0.25s ease var(--route-result-delay) forwards;
+}
+.route-med-svg {
+  width: min(340px, 88vw, 65vh);
+  height: auto;
+  flex-shrink: 0;
+  color: rgba(190, 205, 220, 0.92);
+}
+.route-med-fill { fill: var(--route-med-color); }
+.route-med-stroke { stroke: var(--route-med-color); }
+.route-med-overlay.visible .om-check,
+.route-med-overlay.visible .om-x1 { animation-delay: var(--route-result-delay); }
+.route-med-overlay.visible .om-x2 { animation-delay: calc(var(--route-result-delay) + 0.15s); }
+
+#oralmed-bottle, #oralmed-cap { transform-box: view-box; }
+#oralmed-bottle { transform-origin: 119px 123px; }
+#oralmed-cap { transform-origin: 119px 55px; }
+#oralmed-overlay.visible #oralmed-cap { animation: oralCap 0.45s ease-out 0.15s both; }
+#oralmed-overlay.visible #oralmed-bottle { animation: oralShake 1.65s ease-in-out 0.5s both; }
+@keyframes oralCap {
+  from { transform: translate(0, 0) rotate(0); }
+  to { transform: translate(28px, -24px) rotate(24deg); }
+}
+@keyframes oralShake {
+  0% { transform: rotate(0); }
+  25%, 45%, 65% { transform: rotate(64deg); }
+  35%, 55% { transform: rotate(56deg); }
+  75%, 100% { transform: rotate(60deg); }
+}
+.oralmed-pill { opacity: 0; }
+#oralmed-overlay.visible #oralmed-pill-one { animation: oralPillOne 0.8s linear 0.95s both; }
+#oralmed-overlay.visible #oralmed-pill-two { animation: oralPillTwo 0.75s linear 1.13s both; }
+#oralmed-overlay.visible #oralmed-pill-three { animation: oralPillThree 0.72s linear 1.3s both; }
+@keyframes oralPillOne {
+  0% { opacity: 0; transform: translate(0, 0) rotate(-20deg); }
+  10% { opacity: 1; }
+  35% { transform: translate(22px, 6px) rotate(45deg); }
+  78% { transform: translate(40px, 90px) rotate(170deg); }
+  90% { transform: translate(40px, 83px) rotate(185deg); }
+  100% { opacity: 1; transform: translate(40px, 89px) rotate(190deg); }
+}
+@keyframes oralPillTwo {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0); }
+  10% { opacity: 1; }
+  35% { transform: translate(39px, 0) rotate(70deg); }
+  78% { transform: translate(78px, 90px) rotate(150deg); }
+  90% { transform: translate(78px, 85px) rotate(175deg); }
+  100% { opacity: 1; transform: translate(78px, 90px) rotate(185deg); }
+}
+@keyframes oralPillThree {
+  0% { opacity: 0; transform: translate(0, 0) rotate(20deg); }
+  10% { opacity: 1; }
+  35% { transform: translate(49px, -4px) rotate(-60deg); }
+  80% { transform: translate(108px, 91px) rotate(-165deg); }
+  90% { transform: translate(110px, 85px) rotate(-180deg); }
+  100% { opacity: 1; transform: translate(110px, 91px) rotate(-190deg); }
+}
+
+#inmed-overlay { --route-result-delay: 1.55s; }
+#inmed-overlay.visible #inmed-device { animation: inApproach 0.4s ease-in-out 0.15s both; }
+@keyframes inApproach { from { transform: translateX(-14px); } to { transform: translateX(0); } }
+#inmed-fill, #immed-fill { transform-box: fill-box; transform-origin: right center; }
+#inmed-overlay.visible #inmed-plunger { animation: inPush 0.55s ease-in-out 0.75s both; }
+#inmed-overlay.visible #inmed-fill { animation: medFill 0.55s ease-in-out 0.75s both; }
+@keyframes inPush { from { transform: translateX(0); } to { transform: translateX(70px); } }
+#inmed-mist { opacity: 0; }
+#inmed-overlay.visible #inmed-mist { animation: inMist 0.65s ease-out 0.8s both; }
+@keyframes inMist {
+  0% { opacity: 0; stroke-dashoffset: 7; }
+  20%, 65% { opacity: 0.85; }
+  100% { opacity: 0; stroke-dashoffset: -7; }
+}
+
+#immed-overlay.visible #immed-device { animation: imInjection 1.85s ease-in-out 0.15s both; }
+@keyframes imInjection {
+  0%, 5% { transform: translateX(-52px); }
+  32%, 76% { transform: translateX(0); }
+  100% { transform: translateX(-52px); }
+}
+#immed-overlay.visible #immed-plunger { animation: imPush 0.6s ease-in-out 0.85s both; }
+#immed-overlay.visible #immed-fill { animation: medFill 0.6s ease-in-out 0.85s both; }
+@keyframes imPush { from { transform: translateX(0); } to { transform: translateX(49px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  #oralmed-overlay.visible #oralmed-bottle { animation: none; transform: rotate(60deg); }
+  #oralmed-overlay.visible #oralmed-cap { animation: none; transform: translate(28px, -24px) rotate(24deg); }
+  #oralmed-overlay.visible .oralmed-pill { animation: none; opacity: 1; }
+  #oralmed-pill-one { transform: translate(40px, 89px) rotate(190deg); }
+  #oralmed-pill-two { transform: translate(78px, 90px) rotate(185deg); }
+  #oralmed-pill-three { transform: translate(110px, 91px) rotate(-190deg); }
+  #inmed-overlay.visible #inmed-device { animation: none; transform: none; }
+  #inmed-overlay.visible #inmed-plunger { animation: none; transform: translateX(70px); }
+  #inmed-overlay.visible #inmed-mist { animation: none; opacity: 0; }
+  #immed-overlay.visible #immed-device { animation: none; transform: translateX(-52px); }
+  #immed-overlay.visible #immed-plunger { animation: none; transform: translateX(49px); }
+  #inmed-overlay.visible #inmed-fill, #immed-overlay.visible #immed-fill { animation: none; transform: scaleX(0); }
 }
 
 /* ── 12-lead EKG overlay ─────────────────────────────────────────────── */
@@ -3398,29 +3588,61 @@ html, body {
   opacity: 0;
 }
 #io-overlay.visible #io-header {
-  animation: ioLabelFade 1.6s ease 0.1s forwards;
+  animation: ioReveal 0.25s ease 0.05s both;
 }
 
 #io-drill-svg {
-  width: 148px;
+  width: min(340px, 88vw, 65vh);
   height: auto;
+  flex-shrink: 0;
   color: rgba(190, 205, 220, 0.92);
-  filter: drop-shadow(0 2px 10px rgba(80, 140, 200, 0.28));
   opacity: 0;
 }
 #io-overlay.visible #io-drill-svg {
-  animation: ioSlide 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s forwards;
+  animation: ioReveal 0.25s ease 0.05s forwards;
 }
-/* Driver jolts/shakes as it drives the needle in */
-#io-driver { transform-box: fill-box; transform-origin: center; }
+/* Advance driver and needle together, then detach only the driver.
+   Unsuccessful attempts stop short of the marrow space. */
+#io-overlay { --io-depth: 60px; }
+#io-overlay.outcome-FAILURE,
+#io-overlay.outcome-COMPLICATION { --io-depth: 35px; }
+#io-overlay.visible #io-insertion {
+  animation: ioInsert 1.1s ease-in-out 0.2s both;
+}
+#io-overlay.visible #io-driver-withdraw {
+  animation: ioWithdraw 0.38s ease-in-out 1.3s both;
+}
+#io-driver { transform-box: view-box; transform-origin: 135px 79px; }
 #io-overlay.visible #io-driver {
-  animation: ioJolt 0.42s linear 0.5s 3;
+  animation: ioJolt 0.42s linear 0.35s 2;
 }
-
-@keyframes ioSlide {
-  0%   { opacity: 0; transform: translateX(70px); }
-  60%  { opacity: 1; transform: translateX(0); }
-  100% { opacity: 1; transform: translateX(0); }
+@keyframes ioReveal {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ioInsert {
+  0%   { transform: translateX(0); }
+  30%  { transform: translateX(16px); }
+  100% { transform: translateX(var(--io-depth)); }
+}
+@keyframes ioWithdraw {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-38px); }
+}
+/* Let placement and detachment read before drawing the result mark. */
+#io-overlay.visible .om-check,
+#io-overlay.visible .om-x1 { animation-delay: 1.5s; }
+#io-overlay.visible .om-x2 { animation-delay: 1.65s; }
+@media (prefers-reduced-motion: reduce) {
+  #io-overlay.visible #io-driver { animation: none; }
+  #io-overlay.visible #io-insertion {
+    animation: none;
+    transform: translateX(var(--io-depth));
+  }
+  #io-overlay.visible #io-driver-withdraw {
+    animation: none;
+    transform: translateX(-38px);
+  }
 }
 @keyframes ioJolt {
   0%   { transform: translate(0, 0) rotate(0); }
@@ -3443,15 +3665,8 @@ html, body {
   opacity: 0;
 }
 #io-overlay.visible #io-label {
-  animation: ioLabelFade 1.4s ease 0.35s forwards;
+  animation: ioReveal 0.25s ease 1.5s forwards;
 }
-@keyframes ioLabelFade {
-  0%   { opacity: 0; }
-  30%  { opacity: 1; }
-  80%  { opacity: 1; }
-  100% { opacity: 0; }
-}
-
 /* ── Defibrillation / cardioversion overlay ─────────────────────────── */
 #defib-overlay {
   position: fixed;

@@ -4,7 +4,7 @@
   "description": "EMS training simulation \u2014 data layer",
   "main": "src/engine/roller.js",
   "scripts": {
-    "test": "node test/test-roller.js && node test/test-randomness.js && node --test test/test-safety.js test/test-client-operations.js",
+    "test": "node test/test-roller.js && node test/test-randomness.js && node --test test/test-safety.js test/test-client-operations.js test/test-medication-routes.js",
     "play": "node bin/play.js",
     "play:easy": "node bin/play.js EASY",
     "play:hard": "node bin/play.js HARD",

@@ -1,6 +1,7 @@
 'use strict';
 
 const { INTERVENTIONS } = require('../data/interventions');
+const { medicationRouteAt } = require('./medication-route');
 const { MEDICATION_ALIASES } = require('../../public/medication-aliases');
 const MEDICATION_NAMES = new Map(Object.entries(MEDICATION_ALIASES).flatMap(
   ([name, aliases]) => aliases.map(alias => [alias.toLowerCase(), name])));
@@ -664,6 +665,8 @@ function detectAllProcedures(userText) {
       found.push({
         proc: bestMatch.proc,
         matchedKey: bestMatch.key,
+        administration_route: bestMatch.proc.id === 'medication_push'
+          ? medicationRouteAt(normalized, bestMatchIndex, bestMatch.matchLen) : null,
         uncertain: !!uncertain,
         reason: uncertain || null,
         precharge,
@@ -694,10 +697,11 @@ function detectAllProcedures(userText) {
 
 function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
   const entries = detectAllProcedures(userText);
-  return entries.map(({ proc, matchedKey }) => {
+  return entries.map(({ proc, matchedKey, administration_route }) => {
     const result = rollProcedure(proc, contextFlags, difficulty);
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
+      if (administration_route) result.administration_route = administration_route;
     }
     return result;
   });
@@ -736,7 +740,10 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
       continue;
     }
     const result = rollProcedure(proc, contextFlags, difficulty);
-    if (proc.id === 'medication_push' && matchedKey) result.matched_drug = matchedKey;
+    if (proc.id === 'medication_push' && matchedKey) {
+      result.matched_drug = matchedKey;
+      if (entry.administration_route) result.administration_route = entry.administration_route;
+    }
     rolls.push(result);
   }
   return { rolls, suppressed };

@@ -393,25 +393,68 @@
     <!-- IO drill animation overlay -->
     <div id="io-overlay" aria-hidden="true">
       <div id="io-header">IO ACCESS</div>
-      <svg id="io-drill-svg" viewBox="0 0 210 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <!-- EZ-IO power driver, line art (this group jolts/shakes while drilling) -->
-        <g id="io-driver" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Motor body -->
-          <path d="M32 58 L142 58 Q158 58 160 72 L160 82 Q158 96 142 96 L54 96 Q36 96 33 80 Q32 72 32 58 Z"/>
-          <!-- Cooling vents -->
-          <line x1="46" y1="67" x2="46" y2="87" stroke-width="1.3" opacity="0.45"/>
-          <line x1="55" y1="67" x2="55" y2="87" stroke-width="1.3" opacity="0.45"/>
-          <line x1="64" y1="67" x2="64" y2="87" stroke-width="1.3" opacity="0.45"/>
-          <!-- Chuck + IO needle -->
-          <rect x="160" y="66" width="14" height="24" rx="3"/>
-          <line x1="174" y1="78" x2="204" y2="78" stroke-width="2.2"/>
-          <line x1="197" y1="71" x2="204" y2="78" stroke-width="1.4" opacity="0.6"/>
-          <!-- Pistol grip -->
-          <path d="M66 96 L100 96 L90 154 Q88 168 73 168 Q59 168 60 152 L63 104 Q64 97 66 96 Z"/>
-          <line x1="67" y1="112" x2="92" y2="112" stroke-width="1.3" opacity="0.45"/>
-          <line x1="66" y1="126" x2="89" y2="126" stroke-width="1.3" opacity="0.45"/>
-          <!-- Trigger -->
-          <path d="M106 100 Q118 104 116 116 Q114 124 104 122"/>
+      <svg id="io-drill-svg" viewBox="0 0 340 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <pattern id="io-bone-hatch" width="7" height="9" patternUnits="userSpaceOnUse">
+            <path d="M0 7 L7 2" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+          </pattern>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Cutaway: thin skin, soft tissue, dense cortex, then marrow space. -->
+          <g id="io-tissue">
+            <path d="M213 34 Q209 68 212 104 T213 185 L320 185 L320 34 Z" fill="currentColor" fill-opacity="0.025" stroke-opacity="0.4"/>
+            <path d="M213 34 Q209 68 212 104 T213 185 L221 185 Q218 147 220 105 T221 34 Z" fill="currentColor" fill-opacity="0.08" stroke-width="1.3"/>
+            <path d="M237 34 Q233 75 237 112 T237 185 L253 185 Q249 145 253 105 T253 34 Z" fill="currentColor" fill-opacity="0.12" stroke-width="1.5"/>
+            <path d="M237 34 Q233 75 237 112 T237 185 L253 185 Q249 145 253 105 T253 34 Z" fill="url(#io-bone-hatch)" stroke="none"/>
+            <!-- Sparse trabeculae distinguish marrow from solid cortical bone. -->
+            <path d="M255 43 L267 51 L277 42 M267 51 L264 64
+              M312 51 L299 62 L308 75 M299 62 L285 59
+              M257 115 L267 123 L279 115 L291 127 L307 119 L319 128
+              M267 123 L263 140 L274 151 L287 146 L291 127
+              M307 119 L305 143 L317 153 M287 146 L298 161 L311 166
+              M254 169 L267 163 L276 177 M298 161 L293 179" stroke-width="1.2" opacity="0.3"/>
+            <g stroke-width="1" opacity="0.5">
+              <path d="M216 188 L216 204 M244 188 L244 204 M286 188 L286 204"/>
+            </g>
+            <g fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing="0.6" text-anchor="middle" opacity="0.65">
+              <text x="214" y="218">SKIN</text>
+              <text x="245" y="218">BONE</text>
+              <text x="290" y="218">MARROW</text>
+            </g>
+          </g>
+          <g id="io-insertion">
+            <!-- Catheter and hub stay seated after the power driver disconnects. -->
+            <g id="io-needle">
+              <path d="M150 77 L205 77 L201 81 L150 81 Z" fill="#b9c7d1" stroke-width="1"/>
+              <path d="M174 77 L174 81 M184 77 L184 81" stroke="#333c46" stroke-width="1.5"/>
+              <path d="M136 70 L146 70 L152 74 L152 84 L146 88 L136 88 Z" fill="#111923" stroke-width="1.8"/>
+              <path d="M141 73 L141 85 M146 75 L146 83" stroke-width="1.2" opacity="0.6"/>
+              <path d="M151 73 L155 73 M151 85 L155 85" stroke-width="2"/>
+            </g>
+            <g id="io-driver-withdraw">
+              <!-- Compact EZ-IO profile: rounded motor, broad molded grip,
+                   short drive shaft and prominent dark paddle trigger. -->
+              <g id="io-driver">
+                <path d="M123 75 L136 75 L136 83 L123 83 Z" fill="#b9c7d1" stroke-width="1.3"/>
+                <path d="M31 51 C23 52 20 60 21 73 L22 84 C23 93 31 97 37 101
+                  C42 118 37 142 34 164 C33 173 39 178 49 179
+                  L90 179 C104 179 111 175 108 166
+                  C101 151 99 140 102 126 L106 108
+                  C106 103 112 100 119 98 C127 95 129 86 129 77
+                  L129 68 C129 57 123 51 114 51 L89 51
+                  C72 47 49 47 31 51 Z" fill="#b9363e" stroke="#df777b" stroke-width="2.2"/>
+                <!-- Housing seam and softly outlined grip contour. -->
+                <path d="M89 53 Q85 71 90 91 M29 91 Q52 97 77 91
+                  M46 107 C49 128 42 151 43 166 Q64 173 94 168" stroke="#f19a9c" stroke-width="1.3" opacity="0.45"/>
+                <path d="M107 96 Q118 93 123 98 L122 124 Q121 130 112 131
+                  L104 130 Q99 128 100 122 L101 104 Q101 98 107 96 Z" fill="#20252b" stroke="#899099" stroke-width="1.5"/>
+                <path d="M106 104 L105 122" stroke-width="1.2" opacity="0.35"/>
+                <rect x="48" y="66" width="31" height="15" rx="3" fill="#8e2932" stroke="none"/>
+                <text x="63.5" y="76.5" fill="#f3dfe1" stroke="none" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" letter-spacing="0.3">EZ-IO</text>
+                <circle cx="84" cy="101" r="2.2" fill="#b9c7d1" stroke="none"/>
+              </g>
+            </g>
+          </g>
         </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
@@ -427,19 +470,19 @@
       <div id="cpr-header">CHEST COMPRESSIONS</div>
       <svg id="cpr-svg" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
-          <!-- Two overlapping hands, approached from the patient's side. -->
-          <path id="cpr-lower-hand" d="M18 126 L72 108 C81 103 88 100 98 101
+          <!-- Stacked palms with foreshortened wrists: pressure comes from above. -->
+          <path id="cpr-lower-hand" d="M85 113 L94 108 C100 103 105 101 112 102
             L129 103 C136 103 140 105 140 108 C140 111 137 112 133 112
             L143 113 C150 114 150 121 143 122 L138 122
             C145 123 145 130 138 131 L130 131 C136 133 133 139 128 139
-            L104 137 C92 137 86 132 77 134 L26 153 Z"/>
-          <path id="cpr-upper-hand" d="M20 74 L77 94 C85 96 89 91 96 89
-            L108 84 C113 82 117 85 115 89 L108 96
+            L108 138 C100 137 95 132 92 127 L83 130 Q80 122 85 113 Z"/>
+          <path id="cpr-upper-hand" d="M85 91 L96 96 C100 96 100 91 105 89
+            L114 85 C119 84 122 88 118 92 L111 98
             L135 100 C142 101 143 108 136 109 L117 107
             L144 111 C151 112 151 119 144 119 L116 115
             L142 121 C149 123 147 129 141 129 L113 123
-            L133 130 C139 132 136 138 131 137 L103 129
-            C93 127 87 118 77 117 L14 100 Z"/>
+            L133 130 C139 132 136 138 131 137 L108 129
+            C99 127 96 117 92 113 L80 109 Q79 99 85 91 Z"/>
           <!-- Knock out anatomy behind the hands without a colored fill. -->
           <mask id="cpr-anatomy-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="220" height="240">
             <rect width="220" height="240" fill="white"/>
@@ -480,14 +523,13 @@
           <g id="cpr-press" class="cpr-hand-motion">
             <g mask="url(#cpr-lower-hand-mask)">
               <use href="#cpr-lower-hand"/>
-              <path d="M127 113 L137 114 M126 122 L137 123 M121 130 L130 132
-                M71 113 Q77 121 76 130" stroke-width="1.3" opacity="0.55"/>
+              <path d="M86 116 Q85 122 88 126 M100 132 Q110 138 121 136" stroke-width="1.3" opacity="0.55"/>
             </g>
             <use href="#cpr-upper-hand"/>
-            <!-- Thumb web, knuckles and wrist creases keep the hands readable. -->
-            <path d="M108 96 Q99 100 101 108 M117 107 L111 105
-              M116 115 L110 113 M113 123 L108 121
-              M76 98 Q72 104 73 111 M81 99 Q78 105 79 110" stroke-width="1.3" opacity="0.6"/>
+            <!-- Thumb web, knuckles and a short curved wrist crease. -->
+            <path d="M111 98 Q103 101 105 108 M117 107 L113 106
+              M116 115 L112 114 M113 123 L110 122
+              M89 96 Q85 101 86 106" stroke-width="1.3" opacity="0.6"/>
           </g>
         </g>
       </svg>
@@ -632,22 +674,51 @@
     <!-- IV start (peripheral cannula) animation overlay -->
     <div id="iv-overlay" aria-hidden="true">
       <div id="iv-header">IV ACCESS</div>
-      <svg id="iv-svg" viewBox="0 0 260 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <!-- Cannula advances forward as one group; chamber fills with flashback -->
-        <g id="iv-device" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Needle -->
-          <line x1="22" y1="46" x2="96" y2="46"/>
-          <!-- Catheter hub -->
-          <path d="M96 36 L124 32 L124 60 L96 56 Z"/>
-          <!-- Flash chamber (barrel) -->
-          <rect x="124" y="28" width="74" height="34" rx="7"/>
-          <!-- Flashback blood fill -->
-          <rect id="iv-fill" x="127" y="31" width="68" height="28" rx="5" stroke="none"/>
-          <!-- Luer / flashback cap -->
-          <rect x="198" y="32" width="32" height="26" rx="4"/>
-          <line x1="206" y1="34" x2="206" y2="56"/>
-          <line x1="214" y1="34" x2="214" y2="56"/>
-          <line x1="222" y1="34" x2="222" y2="56"/>
+      <svg id="iv-svg" viewBox="0 0 340 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <clipPath id="iv-safety-clip"><rect x="26" y="-13" width="170" height="26" rx="3"/></clipPath>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- A shallow cutaway keeps the skin entry and vein lumen visible. -->
+          <g id="iv-tissue">
+            <path d="M93 126 C156 116 242 121 323 126 L323 194 C247 187 166 187 93 194 Z" fill="currentColor" fill-opacity="0.025" stroke-opacity="0.3"/>
+            <path d="M93 126 C156 116 242 121 323 126 M93 132 C158 122 242 127 323 132" stroke-width="1.4" opacity="0.65"/>
+            <path d="M99 151 C153 146 192 150 224 144 C258 138 293 141 323 145
+              L323 163 C292 159 260 156 228 163 C192 170 148 164 99 170 Z" fill="currentColor" fill-opacity="0.045" stroke-width="1.5" opacity="0.8"/>
+            <path d="M114 140 L125 139 M148 178 L159 177 M277 178 L288 180" stroke-width="1" opacity="0.25"/>
+            <g stroke-width="1" opacity="0.5"><path d="M306 126 L319 111 M296 157 L319 207"/></g>
+            <g fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing="0.6" text-anchor="end" opacity="0.65">
+              <text x="325" y="105">SKIN</text><text x="325" y="220">VEIN</text>
+            </g>
+          </g>
+          <!-- The access axis stays shallow and fixed relative to the skin. -->
+          <g transform="translate(10 52) rotate(22)">
+            <g id="iv-device">
+              <g id="iv-catheter">
+                <!-- Flexible catheter extends over the introducer needle. -->
+                <path d="M132 -2.6 L180 -2 L184 0 L180 2 L132 2.6 Z" fill="#18212b" stroke-width="1.3"/>
+                <path d="M109 -9 L125 -9 L135 -4 L135 4 L125 9 L109 9 Z" fill="#151e28" stroke-width="1.8"/>
+                <path d="M112 -9 L110 -16 L121 -16 L125 -9 M112 9 L110 16 L121 16 L125 9" fill="currentColor" fill-opacity="0.08" stroke-width="1.3"/>
+                <path d="M115 -6 L115 6 M121 -5 L121 5" stroke-width="1.2" opacity="0.6"/>
+              </g>
+              <g id="iv-introducer">
+                <!-- Needle retracts inside the housing; the catheter stays put. -->
+                <g clip-path="url(#iv-safety-clip)">
+                  <path id="iv-needle" d="M82 -0.9 L191 -0.9 L187 1.2 L82 1.2 Z" fill="#c1ccd5" stroke="none"/>
+                </g>
+                <path d="M28 -12 L80 -12 Q88 -12 91 -8 L106 -5 L106 5 L91 8 Q88 12 80 12 L28 12 Q23 12 23 7 L23 -7 Q23 -12 28 -12 Z" fill="#101923" stroke-width="1.8"/>
+                <!-- Clear flash chamber and textured rear grip. -->
+                <rect x="45" y="-7" width="38" height="14" rx="3" fill="currentColor" fill-opacity="0.04" stroke-width="1" stroke-opacity="0.5"/>
+                <rect id="iv-fill" x="48" y="-4" width="32" height="8" rx="2" fill="#b85b61" stroke="none"/>
+                <path d="M29 -8 L29 8 M34 -8 L34 8 M39 -8 L39 8" stroke-width="1.2" opacity="0.6"/>
+                <path d="M88 -11 L89 -16 L99 -16 L100 -7" fill="#28333f" stroke-width="1.2"/>
+              </g>
+            </g>
+          </g>
+          <!-- A light dressing outline settles over the retained hub. -->
+          <g id="iv-dressing" stroke-width="1.2">
+            <path d="M161 115 L198 119 Q203 120 204 125 L208 139 L172 134 Q168 133 167 129 Z" fill="currentColor" fill-opacity="0.035" stroke-dasharray="3 3" opacity="0.6"/>
+          </g>
         </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
@@ -661,31 +732,52 @@
     <!-- Medication push animation overlay -->
     <div id="medpush-overlay" aria-hidden="true">
       <div id="medpush-header">MEDICATION</div>
-      <svg id="medpush-svg" viewBox="0 0 260 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <!-- Syringe points left; plunger pushes the dose in from the right -->
+      <svg id="medpush-svg" viewBox="0 0 360 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Needle -->
-          <line x1="8" y1="45" x2="42" y2="45" stroke-width="1.6"/>
-          <!-- Needle hub (cone) -->
-          <path d="M42 39 L58 33 L58 57 L42 51 Z"/>
-          <!-- Barrel -->
-          <rect x="58" y="33" width="120" height="24" rx="3"/>
-          <!-- Finger flange ears at the barrel mouth -->
-          <line x1="178" y1="27" x2="178" y2="63"/>
-          <line x1="178" y1="30" x2="186" y2="28"/>
-          <line x1="178" y1="60" x2="186" y2="62"/>
-          <!-- Graduation ticks -->
-          <line x1="86" y1="33" x2="86" y2="39" stroke-width="1" opacity="0.5"/>
-          <line x1="114" y1="33" x2="114" y2="39" stroke-width="1" opacity="0.5"/>
-          <line x1="142" y1="33" x2="142" y2="39" stroke-width="1" opacity="0.5"/>
-        </g>
-        <!-- Dose fluid — colour set by outcome, emptied as the plunger advances -->
-        <rect id="medpush-fill" x="60" y="36" width="112" height="18" rx="2" stroke="none"/>
-        <!-- Plunger assembly: rubber stopper + rod + thumb rest -->
-        <g id="medpush-plunger" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="170" y="34" width="6" height="22" rx="1.5" fill="currentColor" stroke="none"/>
-          <line x1="176" y1="45" x2="226" y2="45" stroke-width="3"/>
-          <line x1="226" y1="29" x2="226" y2="61"/>
+          <!-- The same catheter and dressing, now connected to an extension set. -->
+          <g id="medpush-access">
+            <path d="M40 148 Q146 131 255 149 L255 201 Q147 188 40 202 Z" fill="currentColor" fill-opacity="0.025" stroke-opacity="0.3"/>
+            <path d="M40 148 Q146 131 255 149 M40 154 Q146 137 255 155" stroke-width="1.3" opacity="0.6"/>
+            <path d="M48 173 Q121 159 174 168 T249 174 L249 189 Q210 191 172 183 T48 188 Z" fill="currentColor" fill-opacity="0.045" stroke-width="1.4" opacity="0.7"/>
+            <path d="M194 148 L164 175 L166 178 L198 152" fill="#18212b" stroke-width="1.2"/>
+            <path d="M200 137 L211 140 L211 150 L200 154 L189 151 L187 144 Z" fill="#151e28" stroke-width="1.8"/>
+            <path d="M196 141 L202 144 M195 146 L201 149" stroke-width="1.2" opacity="0.6"/>
+            <path d="M177 132 L219 137 Q224 138 223 143 L222 166 L174 159 Z" fill="currentColor" fill-opacity="0.035" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.55"/>
+          </g>
+          <!-- Extension tubing: continuous fluid path with no exposed needle. -->
+          <path id="medpush-tube" d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C257 127 258 145 238 145 L212 145" stroke-width="5.5" opacity="0.3"/>
+          <path d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C257 127 258 145 238 145 L212 145" stroke="#0b121a" stroke-width="2.5"/>
+          <path id="medpush-flow" d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C257 127 258 145 238 145 L212 145" pathLength="100" stroke-width="2"/>
+          <!-- Needle-free connector with a flat septum and luer-lock collar. -->
+          <path d="M284 60 L297 60 L306 65 L306 75 L297 80 L284 80 Z" fill="#151e28" stroke-width="1.8"/>
+          <path d="M289 63 L289 77 M295 64 L295 76 M302 67 L302 73" stroke-width="1.1" opacity="0.65"/>
+          <path d="M284 64 L284 76" stroke-width="3"/>
+          <g id="medpush-syringe">
+            <!-- Transparent barrel, tapered nozzle and threaded luer collar. -->
+            <path d="M142 53 L258 53 Q266 53 266 61 L266 79 Q266 87 258 87 L142 87 Z" fill="currentColor" fill-opacity="0.025" stroke-width="1.8"/>
+            <rect id="medpush-fill" x="155" y="57" width="106" height="26" rx="1" fill="currentColor" fill-opacity="0.18" stroke="none"/>
+            <path d="M266 61 L275 66 L284 66 L284 74 L275 74 L266 79 M271 61 L279 61 L279 79 L271 79" stroke-width="1.5"/>
+            <path d="M276 63 L279 65 M276 75 L279 77" stroke-width="1" opacity="0.6"/>
+            <!-- Barrel graduations stay above the clear fluid. -->
+            <path d="M160 54 L160 62 M170 54 L170 59 M180 54 L180 62 M190 54 L190 59
+              M200 54 L200 62 M210 54 L210 59 M220 54 L220 62 M230 54 L230 59 M240 54 L240 62 M250 54 L250 59" stroke-width="1" opacity="0.7"/>
+            <g fill="currentColor" stroke="none" font-family="monospace" font-size="6" opacity="0.6">
+              <text x="157" y="71">10</text><text x="198" y="71">6</text><text x="238" y="71">2</text><text x="248" y="79">mL</text>
+            </g>
+            <!-- Finger flange and a full-length plunger rod: thumb pad stops
+                 outside the barrel even at the end of the stroke. -->
+            <path d="M142 53 L141 44 L135 43 L135 97 L141 96 L142 87" fill="#151e28" stroke-width="1.6"/>
+            <g id="medpush-plunger">
+              <path d="M28 67 L148 67 L148 73 L28 73 Z" fill="#151e28" stroke-width="1.4"/>
+              <path d="M30 70 L146 70" stroke-width="1" opacity="0.3"/>
+              <rect x="148" y="55" width="7" height="30" rx="2" fill="#34404c" stroke-width="1.3"/>
+              <path d="M151 58 L151 82" stroke-width="1" opacity="0.5"/>
+              <rect x="20" y="51" width="8" height="38" rx="3" fill="#151e28" stroke-width="1.6"/>
+            </g>
+          </g>
+          <g fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing="0.6" opacity="0.6">
+            <text x="271" y="44">IV PORT</text><text x="80" y="222">PERIPHERAL IV</text>
+          </g>
         </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
@@ -694,6 +786,136 @@
         <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
       </svg>
       <div id="medpush-label"></div>
+    </div>
+
+    <!-- Route-specific medication administration: oral medication. -->
+    <div id="oralmed-overlay" class="route-med-overlay" aria-hidden="true">
+      <div class="route-med-header">ORAL MEDICATION</div>
+      <svg id="oralmed-svg" class="route-med-svg" viewBox="0 0 340 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M180 197 L306 197" stroke-width="1.2" opacity="0.3"/>
+          <g id="oralmed-bottle">
+            <!-- Wide prescription bottle, threaded neck and paper label. -->
+            <path d="M94 64 L144 64 L144 80 C144 87 160 88 160 103 L160 176 Q160 184 152 184 L86 184 Q78 184 78 176 L78 103 C78 88 94 87 94 80 Z" fill="currentColor" fill-opacity="0.035"/>
+            <path d="M93 69 L145 69 M93 76 L145 76" stroke-width="1.3" opacity="0.65"/>
+            <rect x="83" y="108" width="72" height="49" rx="2" fill="#101923" stroke-width="1.2" stroke-opacity="0.65"/>
+            <text x="92" y="131" fill="currentColor" stroke="none" font-family="serif" font-size="22">℞</text>
+            <path d="M121 119 L146 119 M121 125 L140 125 M93 143 L144 143 M93 149 L133 149" stroke-width="1" opacity="0.45"/>
+            <path d="M85 168 Q91 176 99 177 M147 167 L147 173" stroke-width="1.2" opacity="0.4"/>
+          </g>
+          <g id="oralmed-cap">
+            <rect x="89" y="44" width="60" height="21" rx="4" fill="#1d2732" stroke-width="1.8"/>
+            <path d="M94 49 L94 59 M101 49 L101 59 M108 49 L108 59 M115 49 L115 59 M122 49 L122 59 M129 49 L129 59 M136 49 L136 59 M143 49 L143 59" stroke-width="1" opacity="0.6"/>
+            <path d="M93 46 L145 46" stroke-width="1" opacity="0.4"/>
+          </g>
+          <!-- Three separately timed pills leave the tilted neck and settle. -->
+          <g transform="translate(177 100)">
+            <g id="oralmed-pill-one" class="oralmed-pill">
+              <rect class="route-med-fill" x="-11" y="-5" width="22" height="10" rx="5"/>
+              <path d="M0 -4 L0 4" stroke="#111923" stroke-width="1.4"/>
+            </g>
+            <g id="oralmed-pill-two" class="oralmed-pill">
+              <circle class="route-med-fill" r="7"/><path d="M-4 0 L4 0" stroke="#111923" stroke-width="1.4"/>
+            </g>
+            <g id="oralmed-pill-three" class="oralmed-pill">
+              <rect class="route-med-fill" x="-10" y="-5" width="20" height="10" rx="5"/>
+              <path d="M0 -4 L0 4" stroke="#111923" stroke-width="1.4"/>
+            </g>
+          </g>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="oralmed-label" class="route-med-label"></div>
+    </div>
+
+    <!-- Route-specific medication administration: intranasal medication. -->
+    <div id="inmed-overlay" class="route-med-overlay" aria-hidden="true">
+      <div class="route-med-header">INTRANASAL MEDICATION</div>
+      <svg id="inmed-svg" class="route-med-svg" viewBox="0 0 340 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Side profile with a nostril and a lightly drawn nasal passage. -->
+          <path d="M267 26 C245 34 244 57 245 76 C242 91 230 106 222 115 Q218 121 228 124 L238 124 Q240 131 233 136 L240 141 Q233 147 240 154 L248 158 C247 178 262 187 278 187 L290 214" opacity="0.85"/>
+          <path d="M257 77 Q265 73 272 78 M258 80 L264 81" stroke-width="1.4" opacity="0.65"/>
+          <path d="M239 119 C247 109 255 104 264 100 Q276 95 281 106 M244 126 Q256 117 276 115" stroke-width="1.3" opacity="0.3"/>
+          <path d="M231 125 Q234 119 240 122" stroke-width="2.2"/>
+          <path d="M241 143 L249 144 M262 185 L257 211" stroke-width="1.3" opacity="0.4"/>
+          <!-- MAD atomizer and syringe enter the nostril on one common axis. -->
+          <g transform="translate(12 206) rotate(-20)">
+            <g id="inmed-device">
+              <path d="M98 -15 L176 -15 Q184 -15 184 -8 L184 8 Q184 15 176 15 L98 15 Z" fill="currentColor" fill-opacity="0.025" stroke-width="1.8"/>
+              <rect id="inmed-fill" class="route-med-fill" x="110" y="-11" width="70" height="22" rx="1" stroke="none"/>
+              <path d="M120 -14 L120 -7 M131 -14 L131 -10 M142 -14 L142 -7 M153 -14 L153 -10 M164 -14 L164 -7" stroke-width="1" opacity="0.7"/>
+              <path d="M98 -15 L96 -23 L91 -23 L91 23 L96 23 L98 15" fill="#151e28" stroke-width="1.5"/>
+              <path d="M184 -7 L194 -4 L194 4 L184 7 M188 -9 L198 -9 L198 9 L188 9" fill="#151e28" stroke-width="1.4"/>
+              <path d="M198 -3 L208 -3 L208 3 L198 3" stroke-width="1.6"/>
+              <!-- Soft conical nasal plug and the recessed atomizing tip. -->
+              <path d="M205 -13 Q209 -17 216 -13 L233 -4 Q237 0 233 4 L216 13 Q209 17 205 13 Z" fill="#b9c7d1" fill-opacity="0.2" stroke-width="1.7"/>
+              <path d="M211 -10 L213 -8 M211 9 L213 7 M219 -6 L222 -4 M219 5 L222 3 M232 -2 L232 2" stroke-width="1" opacity="0.5"/>
+              <g id="inmed-plunger">
+                <path d="M20 -3 L104 -3 L104 3 L20 3 Z" fill="#151e28" stroke-width="1.3"/>
+                <rect x="104" y="-13" width="6" height="26" rx="1.5" fill="#34404c" stroke-width="1.2"/>
+                <rect x="13" y="-19" width="7" height="38" rx="2.5" fill="#151e28" stroke-width="1.5"/>
+              </g>
+            </g>
+          </g>
+          <!-- Fine short strokes suggest atomized mist inside the nasal cavity. -->
+          <g id="inmed-mist" class="route-med-stroke" stroke-width="1.5" stroke-dasharray="1 5">
+            <path d="M238 121 Q249 109 262 103 M239 123 Q254 116 274 112 M240 125 Q257 125 276 120"/>
+          </g>
+          <text x="132" y="218" fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing="0.7" opacity="0.6">MAD ATOMIZER</text>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="inmed-label" class="route-med-label"></div>
+    </div>
+
+    <!-- Route-specific medication administration: intramuscular medication. -->
+    <div id="immed-overlay" class="route-med-overlay" aria-hidden="true">
+      <div class="route-med-header">INTRAMUSCULAR MEDICATION</div>
+      <svg id="immed-svg" class="route-med-svg" viewBox="0 0 340 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Skin, subcutaneous tissue and parallel muscle fibers. -->
+          <path d="M214 37 Q211 81 214 124 T214 190 L323 190 L323 37 Z" fill="currentColor" fill-opacity="0.025" stroke-opacity="0.4"/>
+          <path d="M214 37 Q211 81 214 124 T214 190 M222 37 Q219 81 222 124 T222 190" stroke-width="1.3" opacity="0.65"/>
+          <path d="M245 37 Q241 83 245 124 T245 190" stroke-width="1.4" opacity="0.65"/>
+          <path d="M228 53 Q234 49 237 56 M226 77 Q232 72 238 78 M228 145 Q235 139 238 148 M227 172 Q233 166 238 173" stroke-width="1" opacity="0.3"/>
+          <g stroke-width="1.1" opacity="0.35">
+            <path d="M253 42 L315 64 M251 56 L315 78 M251 70 L315 92 M251 84 L315 106 M251 98 L315 120 M253 112 L315 134 M253 126 L315 148 M253 140 L315 162 M253 154 L315 176 M253 168 L302 186"/>
+          </g>
+          <g id="immed-device">
+            <!-- A fine beveled needle passes through the skin into muscle. -->
+            <path d="M201 96 L259 96 L255 99 L201 99 Z" fill="#c1ccd5" stroke-width="0.8"/>
+            <path d="M185 90 L196 92 L201 95 L201 100 L196 103 L185 105 Z" fill="#151e28" stroke-width="1.5"/>
+            <path d="M116 83 L178 83 Q185 83 185 90 L185 105 Q185 112 178 112 L116 112 Z" fill="currentColor" fill-opacity="0.025" stroke-width="1.8"/>
+            <rect id="immed-fill" class="route-med-fill" x="132" y="87" width="49" height="21" rx="1" stroke="none"/>
+            <path d="M136 84 L136 91 M144 84 L144 88 M152 84 L152 91 M160 84 L160 88 M168 84 L168 91 M176 84 L176 88" stroke-width="1" opacity="0.7"/>
+            <path d="M116 83 L114 76 L110 76 L110 119 L114 119 L116 112" fill="#151e28" stroke-width="1.4"/>
+            <g id="immed-plunger">
+              <path d="M60 94 L125 94 L125 101 L60 101 Z" fill="#151e28" stroke-width="1.3"/>
+              <rect x="125" y="85" width="7" height="25" rx="1.5" fill="#34404c" stroke-width="1.2"/>
+              <rect x="52" y="80" width="8" height="35" rx="2.5" fill="#151e28" stroke-width="1.5"/>
+            </g>
+          </g>
+          <g stroke-width="1" opacity="0.5"><path d="M216 193 L216 205 M233 193 L233 211 M280 193 L280 205"/></g>
+          <g fill="currentColor" stroke="none" font-family="monospace" font-size="7" text-anchor="middle" letter-spacing="0.6" opacity="0.65">
+            <text x="211" y="216">SKIN</text><text x="236" y="229">FAT</text><text x="285" y="216">MUSCLE</text>
+          </g>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="immed-label" class="route-med-label"></div>
     </div>
 
     <!-- 12-lead EKG animation overlay -->
