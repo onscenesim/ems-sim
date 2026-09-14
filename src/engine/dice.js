@@ -31,6 +31,9 @@ const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exem
   // Equipment & devices
   'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
   'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
+  // Hemorrhage-control equipment and the common spellings users type for it.
+  'tourniquet', 'tourniqet', 'tournquet', 'torniket', 'tourniquite',
+  'tourniket', 'torniquet', 'turniquet',
   'pacing', 'pacer',
   // Drug abbreviations — specific enough to fire without an admin verb
   'io',       // bare IO order — firefighter shorthand

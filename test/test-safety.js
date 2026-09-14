@@ -29,6 +29,18 @@ test('known dangerous misroutes and rhythm analysis are corrected', () => {
   assert.equal(detectWithConfirmation('AED analyze').rolls[0].no_roll, true);
 });
 
+test('common field abbreviations and intervention misspellings still trigger the intended procedure', () => {
+  for (const [phrase, id] of [
+    ['TQ', 'bleeding_control'], ['apply a TQ', 'bleeding_control'], ['TQ time', 'tourniquet_time'], ['tourniquet time', 'tourniquet_time'],
+    ['tourniquet to the left leg', 'bleeding_control'],
+    ['tourniqet to the left leg', 'bleeding_control'], ['tournquet', 'bleeding_control'],
+    ['CPR', 'cpr'], ['EZIO', 'io_access'], ['ET tube', 'intubation'],
+    ['12L', 'twelve_lead'], ['FSBG', 'glucometry'], ['med control', 'radio_contact'],
+  ]) {
+    assert.deepEqual(detectAllProcedures(phrase).map(e => e.proc.id), [id], phrase);
+  }
+});
+
 test('typos still work and context survives consumption of longer matches', () => {
   assert.equal(normalizeForDetection('give epinephrin'), 'give epinephrine');
   for (const phrase of ['No wound packing.', 'If needed, give epi.', 'We gave epinephrine.', 'Stop CPR.']) {

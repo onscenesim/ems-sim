@@ -4025,3 +4025,26 @@ body.light-mode .proc-confirm-name { color: #5a4408; }
 body.light-mode .proc-confirm-why  { color: #8a7030; }
 body.light-mode .proc-confirm-btns button,
 body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666; border-color: #aaa; }
+
+/* CPAP / BiPAP shares the profile and outcome palette of the route scenes. */
+#niv-overlay { --route-result-delay: 2.55s; }
+#niv-overlay.visible #niv-assembly { animation: nivSeat 0.45s ease-out 0.1s both; }
+@keyframes nivSeat {
+  from { transform: translate(-17px, 3px); opacity: 0; }
+  to { transform: translate(0, 0); opacity: 1; }
+}
+#niv-pressure, #niv-air, #niv-hose-air { opacity: 0; }
+#niv-overlay.visible #niv-pressure { animation: nivPressure 1s ease-in-out 0.55s 2 forwards; }
+#niv-overlay.visible #niv-air, #niv-overlay.visible #niv-hose-air {
+  animation: nivAir 1s linear 0.55s 2 forwards;
+}
+#niv-chest { transform-origin: 277px 187px; }
+#niv-overlay.visible #niv-chest { animation: nivBreath 1s ease-in-out 0.55s 2; }
+@keyframes nivPressure { 0%,100% { opacity: 0.1; } 45% { opacity: 0.32; } }
+@keyframes nivAir { from { stroke-dashoffset: 42; opacity: 0.45; } 45% { opacity: 0.95; } to { stroke-dashoffset: 0; opacity: 0.45; } }
+@keyframes nivBreath { 0%,100% { transform: none; } 45% { transform: translateY(-2px) rotate(-2deg); } }
+@media (prefers-reduced-motion: reduce) {
+  #niv-overlay.visible #niv-assembly, #niv-overlay.visible #niv-chest { animation: none; transform: none; }
+  #niv-overlay.visible #niv-pressure { animation: none; opacity: 0.2; }
+  #niv-overlay.visible #niv-air, #niv-overlay.visible #niv-hose-air { animation: none; opacity: 0.65; }
+}

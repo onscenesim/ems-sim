@@ -836,6 +836,7 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
       if (r.procedure_id === 'cpr') await animateCPR(r.outcome);
       if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
+      if (r.procedure_id === 'cpap') await animateNIV(r);
       if (r.procedure_id === 'lucas') await animateLUCAS(r.outcome);
       if (r.procedure_id === 'suction') await animateSuction(r.outcome);
       if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
@@ -2101,6 +2102,10 @@ function animateRouteMedication(id, outcome, holdMs) {
       setTimeout(resolve, 220);
     }, holdMs);
   });
+}
+
+function animateNIV(roll) {
+  return animateRouteMedication('niv', roll.no_roll ? 'SUCCESS' : roll.outcome, 3200);
 }
 
 function animateNCD(outcome, procedureId = 'needle_decompression') {
