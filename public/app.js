@@ -2074,12 +2074,13 @@ function animateMedPush(outcome) {
   });
 }
 
-// Route metadata comes from the same detected order as this medication roll.
-// Drug identity alone never chooses a route; unspecified/legacy rolls retain IV push.
+// Explicit routes take precedence over server-provided drug animation defaults.
+// Legacy rolls without either field retain the existing IV-push scene.
 async function animateMedicationAdministration(roll) {
   const outcome = roll.no_roll ? 'SUCCESS' : roll.outcome;
-  const routes = { PO: ['oralmed', 2600], IN: ['inmed', 2300], IM: ['immed', 2600] };
-  const scene = Object.hasOwn(routes, roll.administration_route) ? routes[roll.administration_route] : null;
+  const routes = { PO: ['oralmed', 2600], SL: ['oralmed', 2600], IN: ['inmed', 2300], IM: ['immed', 2600], NEB: ['nebmed', 2800] };
+  const route = roll.administration_route || roll.medication_animation_route;
+  const scene = Object.hasOwn(routes, route) ? routes[route] : null;
   if (scene) await animateRouteMedication(scene[0], outcome, scene[1]);
   else await animateMedPush(outcome);
   if (roll.matched_drug) showDrugPanel(roll.matched_drug);

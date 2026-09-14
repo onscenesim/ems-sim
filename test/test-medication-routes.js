@@ -20,7 +20,10 @@ test('explicit medication routes survive detection and confirmation as presentat
     ['Give naloxone into each nostril.', 'IN'],
     ['Give epinephrine 0.3 mg IM.', 'IM'], ['Give epinephrine intramuscularly.', 'IM'],
     ['Give epinephrine 0.3 mg i.m.', 'IM'],
-    ['Give morphine IV.', 'IV'], ['Give epinephrine through the IO.', 'IO'],
+    ['Give morphine IV.', 'IV'], ['Give Narcan Intravenous.', 'IV'],
+    ['Give aspirin Oral.', 'PO'], ['Give naloxone Intranasal.', 'IN'],
+    ['Give epinephrine Intramuscular.', 'IM'], ['Give nitroglycerin sublingually.', 'SL'],
+    ['Give albuterol nebulized.', 'NEB'], ['Give epinephrine through the IO.', 'IO'],
   ]) {
     const rolls = medications(text);
     assert.equal(rolls.length, 1, text);
@@ -47,7 +50,7 @@ test('ordinary prose, unsupported routes and drug identity do not invent a new r
     'Give aspirin.', 'Give naloxone.', 'Give morphine in the ambulance.',
     'GIVE MORPHINE IN AMBULANCE.', 'Give naloxone in 2 minutes.',
     'Give morphine after oral airway placement.', 'Give midazolam to the mad patient.',
-    'Give nitroglycerin sublingually.', 'Give aspirin not orally.',
+    'Give aspirin not orally.',
     'Give naloxone IN or IM.',
   ]) {
     for (const r of medications(text)) assert.equal(r.administration_route,undefined,text);
@@ -61,7 +64,7 @@ test('route metadata does not bypass negation or denied medication orders', () =
   assert.equal(detectWithConfirmation('Give aspirin PO.', {}, 'NORMAL', {deny:['medication_push|aspirin']}).rolls.length,0);
 });
 
-test('client selects PO, IN and IM scenes and retains the existing default and reference panel', async () => {
+test('client selects explicit or default route scenes and retains outcomes and reference panel', async () => {
   const source=fs.readFileSync(require.resolve('../public/app.js'),'utf8');
   const helper=source.slice(source.indexOf('async function animateMedicationAdministration('),source.indexOf('function animateRouteMedication('));
   const calls=[];
@@ -71,18 +74,62 @@ test('client selects PO, IN and IM scenes and retains the existing default and r
     showDrugPanel:drug=>calls.push(['card',drug]),
   });
   vm.runInContext(helper,context);
-  for(const [route,id] of [['PO','oralmed'],['IN','inmed'],['IM','immed']]) {
+  for(const [route,id] of [['PO','oralmed'],['SL','oralmed'],['IN','inmed'],['IM','immed'],['NEB','nebmed']]) {
     calls.length=0;
     await context.animateMedicationAdministration({administration_route:route,outcome:'MARGINAL',matched_drug:'test-drug'});
     assert.equal(calls[0][0],'route'); assert.equal(calls[0][1],id); assert.equal(calls[0][2],'MARGINAL');
     assert.deepEqual(calls[1],['card','test-drug']);
   }
-  for(const route of [undefined,'IV','IO','SL','constructor']) {
+  for(const route of [undefined,'IV','IO','constructor']) {
     calls.length=0;
     await context.animateMedicationAdministration({administration_route:route,outcome:'FAILURE'});
     assert.deepEqual(calls,[['iv','FAILURE']]);
   }
+  for (const [route,id] of [['PO','oralmed'],['IN','inmed'],['NEB','nebmed']]) {
+    calls.length=0;
+    await context.animateMedicationAdministration({medication_animation_route:route,outcome:'COMPLICATION'});
+    assert.equal(calls[0][1],id); assert.equal(calls[0][2],'COMPLICATION');
+  }
+  calls.length=0;
+  await context.animateMedicationAdministration({administration_route:'IV',medication_animation_route:'IN',outcome:'SUCCESS'});
+  assert.deepEqual(calls,[['iv','SUCCESS']]);
   calls.length=0;
   await context.animateMedicationAdministration({administration_route:'PO',no_roll:true});
   assert.equal(calls[0][1],'oralmed'); assert.equal(calls[0][2],'SUCCESS');
+});
+
+
+test('drug and formulation defaults select artwork without prescribing a route', () => {
+  for (const [drug,route] of [
+    ['nitro','PO'],['nitroglycerin','PO'],['aspirin','PO'],['ASA','PO'],
+    ['Narcan','IN'],['naloxone','IN'],['oral glucose','PO'],
+    ['activated charcoal','PO'],['charcoal','PO'],['Actidose','PO'],
+    ['albuterol','NEB'],['DuoNeb','NEB'],['levalbuterol','NEB'],['racemic epi','NEB'],
+  ]) {
+    const text=`Give ${drug}.`;
+    for (const rolls of [medications(text),detectAllAndRoll(text).filter(r=>r.procedure_id==='medication_push')]) {
+      assert.equal(rolls.length,1,text);
+      assert.equal(rolls[0].medication_animation_route,route,text);
+      if(drug!=='oral glucose') assert.equal(rolls[0].administration_route,undefined,text);
+    }
+  }
+});
+
+test('explicit routes override defaults and unsupported or ambiguous routes block them', () => {
+  for (const [text,route] of [
+    ['Give Narcan Intravenous.','IV'], ['Give naloxone Intramuscular.','IM'],
+    ['Give nitro IV.','IV'], ['Give nitro SL.','SL'], ['Give albuterol Intranasal.','IN'],
+  ]) {
+    const [roll]=medications(text);
+    assert.equal(roll.administration_route,route,text);
+    assert.equal(roll.medication_animation_route,route,text);
+  }
+  for (const text of ['Give nitro paste.','Give albuterol MDI.','Give epinephrine.',
+    'Give aspirin not orally.','Give naloxone IN or IM.','Give morphine.']) {
+    const [roll]=medications(text);
+    assert.ok(roll,text);
+    assert.equal(roll.medication_animation_route,undefined,text);
+  }
+  const mixed=medications('Give aspirin and Narcan Intravenous and albuterol.');
+  assert.deepEqual(Object.fromEntries(mixed.map(r=>[r.matched_drug.toLowerCase(),r.medication_animation_route])),{aspirin:'PO',narcan:'IV',albuterol:'NEB'});
 });

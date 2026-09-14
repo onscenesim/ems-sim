@@ -3379,6 +3379,40 @@ html, body {
   #inmed-overlay.visible #inmed-fill, #immed-overlay.visible #immed-fill { animation: none; transform: scaleX(0); }
 }
 
+/* Nebulizer mask settles over the shared face profile, then mist builds
+   from the medicine cup and pulses gently inside the mask. */
+#nebmed-overlay { --route-result-delay: 2.1s; }
+#nebmed-overlay.visible #nebmed-device {
+  animation: nebSeat 0.35s ease-in-out 0.1s both;
+}
+@keyframes nebSeat {
+  from { transform: translateX(-12px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+#nebmed-cloud, #nebmed-mist, #nebmed-jet { opacity: 0; }
+#nebmed-overlay.visible #nebmed-cloud {
+  animation: nebCloud 0.9s ease-in-out 0.45s 2 forwards;
+}
+#nebmed-overlay.visible #nebmed-mist,
+#nebmed-overlay.visible #nebmed-jet {
+  animation: nebMist 0.9s linear 0.45s 2 forwards;
+}
+@keyframes nebCloud {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.3; }
+}
+@keyframes nebMist {
+  0% { stroke-dashoffset: 24; opacity: 0.25; }
+  50% { opacity: 0.85; }
+  100% { stroke-dashoffset: 0; opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #nebmed-overlay.visible #nebmed-device { animation: none; opacity: 1; transform: none; }
+  #nebmed-overlay.visible #nebmed-cloud { animation: none; opacity: 0.2; }
+  #nebmed-overlay.visible #nebmed-mist,
+  #nebmed-overlay.visible #nebmed-jet { animation: none; opacity: 0.55; }
+}
+
 /* ── 12-lead EKG overlay ─────────────────────────────────────────────── */
 #ekg-overlay {
   position: fixed;

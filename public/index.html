@@ -918,6 +918,58 @@
       <div id="immed-label" class="route-med-label"></div>
     </div>
 
+    <!-- Nebulized medication: nasal/oral mask, medicine cup and gas tubing. -->
+    <div id="nebmed-overlay" class="route-med-overlay" aria-hidden="true">
+      <div class="route-med-header">NEBULIZED MEDICATION</div>
+      <svg id="nebmed-svg" class="route-med-svg" viewBox="0 0 340 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <clipPath id="nebmed-mask-clip">
+            <path d="M247 87 C231 84 211 99 200 119 C193 132 198 150 213 164 Q233 179 249 163 L254 151 L247 87 Z"/>
+          </clipPath>
+        </defs>
+        <g transform="translate(-35 0)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Same face profile used by the MAD administration scene. -->
+          <path d="M267 26 C245 34 244 57 245 76 C242 91 230 106 222 115 Q218 121 228 124 L238 124 Q240 131 233 136 L240 141 Q233 147 240 154 L248 158 C247 178 262 187 278 187 L290 214" opacity="0.85"/>
+          <path d="M257 77 Q265 73 272 78 M258 80 L264 81" stroke-width="1.4" opacity="0.65"/>
+          <path d="M239 119 C247 109 255 104 264 100 Q276 95 281 106 M244 126 Q256 117 276 115" stroke-width="1.3" opacity="0.3"/>
+          <path d="M231 125 Q234 119 240 122" stroke-width="2.2"/>
+          <path d="M241 143 L249 144 M262 185 L257 211" stroke-width="1.3" opacity="0.4"/>
+          <g id="nebmed-device">
+            <!-- Elastic strap and a transparent mask surrounding nose and mouth. -->
+            <path d="M249 102 L307 88 M250 108 L308 94" stroke-width="1.3" opacity="0.45"/>
+            <path d="M247 87 C231 84 211 99 200 119 C193 132 198 150 213 164 Q233 179 249 163 L254 151" fill="currentColor" fill-opacity="0.035" stroke-width="2"/>
+            <path d="M244 94 C233 93 217 108 207 125 C202 135 207 148 219 158 Q232 169 243 158" stroke-width="1.2" opacity="0.55"/>
+            <!-- Mist remains inside the translucent mask; soft ribbons pulse. -->
+            <g clip-path="url(#nebmed-mask-clip)">
+              <path id="nebmed-cloud" class="route-med-fill" d="M195 140 C201 127 206 126 213 128 C213 116 226 113 232 122 C240 112 249 121 247 132 C256 138 249 153 238 152 C234 166 218 164 214 151 C204 156 197 150 195 140 Z" stroke="none"/>
+              <g id="nebmed-mist" class="route-med-stroke" stroke-width="1.6" stroke-dasharray="2 6">
+                <path d="M194 141 C209 140 215 121 237 121 M194 141 C210 144 222 133 242 132 M194 141 C209 148 223 147 243 144"/>
+              </g>
+            </g>
+            <!-- Small exhalation vents and the mask's lower inlet elbow. -->
+            <path d="M224 155 L224 159 M230 158 L230 162 M236 157 L236 161" stroke-width="1.2" opacity="0.6"/>
+            <path d="M185 132 L199 132 L199 146 L188 146 L184 154 L174 154 L176 143 L185 140 Z" fill="#151e28" stroke-width="1.6"/>
+            <!-- Removable medication cup with a jet rising through the reservoir. -->
+            <rect x="162" y="153" width="29" height="7" rx="2" fill="#151e28" stroke-width="1.5"/>
+            <path d="M165 160 L165 185 Q165 195 173 198 L182 198 Q189 195 189 185 L189 160 Z" fill="currentColor" fill-opacity="0.025" stroke-width="1.7"/>
+            <path class="route-med-fill" d="M168 180 Q174 177 186 180 L186 185 Q186 192 181 195 L174 195 Q168 192 168 185 Z" stroke="none"/>
+            <path d="M177 191 L177 166 M171 173 L175 173 M171 168 L175 168" stroke-width="1.2" opacity="0.6"/>
+            <path id="nebmed-jet" class="route-med-stroke" d="M178 180 L178 163 Q178 151 189 142" stroke-width="1.4" stroke-dasharray="2 4"/>
+            <rect x="173" y="198" width="9" height="9" rx="2" fill="#151e28" stroke-width="1.4"/>
+            <!-- Flexible gas tubing loops away below the cup. -->
+            <path d="M177 207 L177 214 C177 232 156 232 152 218 C148 204 127 203 117 214" stroke-width="4" opacity="0.3"/>
+            <path d="M177 207 L177 214 C177 232 156 232 152 218 C148 204 127 203 117 214" stroke="#0b121a" stroke-width="1.5"/>
+          </g>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="nebmed-label" class="route-med-label"></div>
+    </div>
+
     <!-- 12-lead EKG animation overlay -->
     <div id="ekg-overlay" aria-hidden="true">
       <div id="ekg-header">12-LEAD EKG</div>
