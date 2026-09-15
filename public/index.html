@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=66">
+  <link rel="stylesheet" href="style.css?v=67">
 </head>
 <body>
 
@@ -850,12 +850,19 @@
                 <rect x="145" y="74" width="16" height="15" rx="3"/>
                 <path d="M142 75 L164 75 M146 98 L159 98" stroke-width="3"/>
               </g>
+              <!-- Gloved grip remains attached to the tube for the forward push,
+                   then releases after seating. No free-floating device travel. -->
+              <g id="sga-grip" fill="#243c50" stroke="#8aafc7" stroke-width="1.6">
+                <path d="M163 94 Q175 89 180 96 L191 114 L180 123 L165 114 L151 111
+                  Q146 110 147 106 Q147 103 153 104 L164 106 L156 100 Q152 97 155 95 Q158 92 163 94 Z"/>
+                <path d="M169 101 L175 111 M165 108 L172 116 M181 116 L185 113" fill="none" stroke-width="1.1"/>
+              </g>
             </g>
           </g>
           <path id="sga-flow" d="M153 94 C151 136 168 157 195 171 Q207 176 221 170 L270 170" fill="none" stroke="#8ee8c0" stroke-width="2.5" stroke-dasharray="5 7"/>
           <path id="sga-seat-accent" d="M222 188 Q227 199 218 205" stroke="var(--procedure-color)" stroke-width="3"/>
           <g class="airway-phases" fill="currentColor" stroke="none" text-anchor="middle" font-family="monospace" font-size="12" letter-spacing="1">
-            <text id="sga-phase-insert" x="205" y="267">SLIDE ALONG THE AIRWAY</text>
+            <text id="sga-phase-insert" x="205" y="267">ADVANCE THROUGH THE MOUTH</text>
             <text id="sga-phase-seat" x="205" y="267">SEAT THE CUFF</text>
           </g>
         </g>

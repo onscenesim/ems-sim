@@ -4160,35 +4160,46 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
   --seat-x: 0px; --seat-y: 0px; --seat-angle: 0deg;
   --tongue-angle: -16deg; --flow-opacity: 0.85;
 }
-#sga-overlay.outcome-MARGINAL { --seat-x: -6px; --seat-y: -12px; --seat-angle: -6deg; --tongue-angle: -8deg; --flow-opacity: 0; }
-#sga-overlay.outcome-FAILURE { --seat-x: -17px; --seat-y: -35px; --seat-angle: -12deg; --tongue-angle: 0deg; --flow-opacity: 0; }
-#sga-overlay.outcome-COMPLICATION { --seat-x: -6px; --seat-y: -9px; --seat-angle: 19deg; --tongue-angle: -4deg; --flow-opacity: 0; }
+#sga-overlay { --sga-stop-x: 0px; --sga-stop-y: 0px; --sga-stop-angle: 0deg; }
+#sga-overlay.outcome-MARGINAL { --sga-stop-x: 0px; --sga-stop-y: -16px; --sga-stop-angle: 5deg; --tongue-angle: -8deg; --flow-opacity: 0; }
+#sga-overlay.outcome-FAILURE { --sga-stop-x: 2px; --sga-stop-y: -48px; --sga-stop-angle: 15deg; --tongue-angle: 0deg; --flow-opacity: 0; }
+#sga-overlay.outcome-COMPLICATION { --sga-stop-x: -6px; --sga-stop-y: -10px; --sga-stop-angle: 12deg; --tongue-angle: -4deg; --flow-opacity: 0; }
 #opa-overlay.outcome-MARGINAL { --seat-x: -4px; --seat-y: -19px; --tongue-angle: -5deg; --flow-opacity: 0.25; }
 #opa-overlay:is(.outcome-FAILURE, .outcome-COMPLICATION) { --tongue-angle: -10deg; --flow-opacity: 0; }
 #sga-placement, #sga-device, #opa-placement, #opa-device,
 #sga-tongue, #opa-tongue { transform-box: view-box; }
-#sga-placement { transform-origin: 194px 173px; transform: translate(var(--seat-x), var(--seat-y)) rotate(var(--seat-angle)); }
-#sga-device { transform-origin: 153px 86px; }
+#sga-placement { transform: none; }
+#sga-device { transform-origin: 153px 86px; transform: translate(var(--sga-stop-x), var(--sga-stop-y)) rotate(var(--sga-stop-angle)); }
 #opa-placement { transform: translate(var(--seat-x), var(--seat-y)); }
 #opa-device { transform-origin: 157px 111px; }
 #sga-tongue, #opa-tongue { transform-origin: 165px 123px; transform: rotate(var(--tongue-angle)); }
 #sga-overlay.visible #sga-device { animation: sgaAdvance var(--procedure-duration) linear both; }
 #sga-overlay.visible :is(#sga-stem, #sga-lumen) { animation: sgaBend var(--procedure-duration) linear both; }
 #sga-overlay.visible #sga-tongue { animation: sgaTongue var(--procedure-duration) ease-in-out both; }
+/* Tip enters at (156,120), then advances down/right inside the oral passage.
+   Every outcome shares the approach; only the final depth/orientation differs.
+   A supported entry, accelerated push and quick deceleration convey resistance. */
 @keyframes sgaAdvance {
-  0%, 4% { opacity: 0; transform: translate(-28px, -82px) rotate(-22deg); }
-  10% { opacity: 1; }
-  26% { transform: translate(-19px, -48px) rotate(-15deg); }
-  50% { transform: translate(-6px, -16px) rotate(-5deg); }
-  65%, 100% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  0%, 4% { opacity: 0; transform: translate(4px, -102px) rotate(30deg); }
+  10%, 16% { opacity: 1; transform: translate(4px, -102px) rotate(30deg); }
+  24%, 28% { transform: translate(4px, -94px) rotate(30deg); animation-timing-function: cubic-bezier(0.55, 0, 0.8, 0.65); }
+  40% { transform: translate(2px, -65px) rotate(22deg); animation-timing-function: cubic-bezier(0.12, 0.5, 0.24, 1); }
+  58%, 100% { opacity: 1; transform: translate(var(--sga-stop-x), var(--sga-stop-y)) rotate(var(--sga-stop-angle)); }
 }
-/* Matching path commands keep this a continuous single bend. The endpoint
-   stays attached to the cuff; the proximal end stays attached to the connector. */
+/* Matching commands preserve one bend, with both ends attached throughout. */
 @keyframes sgaBend {
-  0%, 16% { d: path('M153 86 C168 115 183 146 194 173'); }
-  65%, 100% { d: path('M153 86 C151 134 162 157 194 173'); }
+  0%, 28% { d: path('M153 86 C168 115 183 146 194 173'); animation-timing-function: cubic-bezier(0.55, 0, 0.8, 0.65); }
+  40% { d: path('M153 86 C160 125 174 152 194 173'); animation-timing-function: cubic-bezier(0.12, 0.5, 0.24, 1); }
+  58%, 100% { d: path('M153 86 C151 134 162 157 194 173'); }
 }
-@keyframes sgaTongue { 0%, 28% { transform: rotate(0); } 65%, 100% { transform: rotate(var(--tongue-angle)); } }
+@keyframes sgaTongue { 0%, 28% { transform: rotate(0); } 58%, 100% { transform: rotate(var(--tongue-angle)); } }
+#sga-grip { opacity: 0; }
+#sga-overlay.visible #sga-grip { animation: sgaGrip var(--procedure-duration) linear both; }
+@keyframes sgaGrip {
+  0%, 4%, 76%, 100% { opacity: 0; }
+  10%, 64% { opacity: 1; transform: translate(0, 0); }
+  76%, 100% { transform: translate(14px, -22px); }
+}
 #opa-overlay.visible #opa-device { animation: opaAdvance var(--procedure-duration) linear both; }
 #opa-overlay.visible #opa-tongue { animation: opaTongue var(--procedure-duration) ease-in-out both; }
 /* scaleX is the side projection of a half-turn about the insertion axis:

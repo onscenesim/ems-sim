@@ -77,7 +77,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
             placementOpacity: Number(css(`${id}-placement`).opacity),
             orientation: matrix(`${id}-device`).a,
             flow: Number(css(`${id}-flow`).opacity),
-            ...(id === 'sga' ? { bend: css('sga-stem').d, lumenBend: css('sga-lumen').d, cuff: css('sga-cuff').transform } : {}),
+            ...(id === 'sga' ? { bend: css('sga-stem').d, lumenBend: css('sga-lumen').d, cuff: css('sga-cuff').transform, grip: Number(css('sga-grip').opacity), connectorPoint: point('sga-device', 153, 86) } : {}),
           } : {}),
           ...(id === 'scalpel' ? { blade: matrix('scalpel-blade').a, impact: Number(css('scalpel-impact').opacity), trail: Number(css('scalpel-trail').opacity) } : {}),
         };
@@ -237,6 +237,26 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.equal(sgaEntry.cuff, sgaSeated.cuff, 'preformed cuff never inflates');
     assert.ok(sgaSeated.tip.x > 210 && sgaSeated.tip.y > 191 && sgaSeated.tip.y < 205, 'distal tip seats at the upper esophagus');
     assert.ok(sgaSeated.flow > 0.8);
+    const mouthEntry = await sample('sga', 'SUCCESS', 816);
+    assert.ok(mouthEntry.tip.x >= 150 && mouthEntry.tip.x <= 162 && mouthEntry.tip.y >= 116 && mouthEntry.tip.y <= 124, 'cuff enters through the mouth, not through the face');
+    const pushStart = await sample('sga', 'SUCCESS', 952);
+    const pushEnd = await sample('sga', 'SUCCESS', 1360);
+    assert.equal(pushStart.grip, 1); assert.equal(pushEnd.grip, 1, 'gloved grip stays attached during forward insertion');
+    assert.ok(pushEnd.tip.x > pushStart.tip.x + 12 && pushEnd.tip.y > pushStart.tip.y + 20, 'firm forward/downward push follows the oral passage');
+    assert.ok(pushEnd.connectorPoint.y > pushStart.connectorPoint.y + 25, 'provider drives the proximal end forward');
+    assert.equal(sgaSeated.grip, 0, 'release the grip after seating');
+    for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
+      const entry = await sample('sga', outcome, 816);
+      assert.ok(distance(entry.tip, mouthEntry.tip) < 0.01, 'outcome offsets must not displace mouth entry');
+      for (const time of [952, 1088, 1224, 1360, 1496, 1632, 1768, 1972]) {
+        const { tip } = await sample('sga', outcome, time);
+        assert.ok(tip.y >= 120 && tip.y <= 202, 'tip stays within insertion depth');
+        const left = 150 + Math.max(0, tip.y - 130) * 0.45;
+        const right = tip.y < 130 ? 169 : tip.y < 150 ? 185 : 222;
+        assert.ok(tip.x >= left && tip.x <= right, `cuff follows the mouth/pharynx corridor: ${outcome} at ${time}: ${JSON.stringify(tip)}`);
+      }
+    }
+
     const sgaMarginal = await sample('sga', 'MARGINAL', 3000);
     const sgaFailure = await sample('sga', 'FAILURE', 3000);
     const sgaComplication = await sample('sga', 'COMPLICATION', 3000);
@@ -304,7 +324,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       await page.screenshot({ path: path.join(output, `intubation-${outcome.toLowerCase()}-${time}.png`) });
     }
     for (const id of ['sga', 'opa']) {
-      for (const [outcome, fraction] of [['SUCCESS', 0.28], ['SUCCESS', 0.38], ['SUCCESS', 0.5], ['SUCCESS', 0.9], ['MARGINAL', 0.9], ['FAILURE', 0.9], ['COMPLICATION', 0.9]]) {
+      for (const [outcome, fraction] of [['SUCCESS', 0.24], ['SUCCESS', 0.28], ['SUCCESS', 0.38], ['SUCCESS', 0.5], ['SUCCESS', 0.9], ['MARGINAL', 0.9], ['FAILURE', 0.9], ['COMPLICATION', 0.9]]) {
         await page.setViewportSize({ width: 390, height: 844 });
         await sample(id, outcome, (id === 'sga' ? 3400 : 3600) * fraction);
         await page.screenshot({ path: path.join(output, `${id}-${outcome.toLowerCase()}-${fraction}.png`) });
