@@ -31,8 +31,8 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       return page.evaluate(({ id, outcome, time }) => {
         document.querySelectorAll('[id$="-overlay"]').forEach(e => { e.classList.remove('visible'); e.style.display = 'none'; });
         const overlay = document.getElementById(`${id}-overlay`);
-        overlay.style.display = 'flex';
-        animateProcedureScene(id, id === 'scalpel' ? 'resuscitative_thoracotomy' : id, outcome);
+        overlay.style.display = ''; // Use the scene's responsive flex/grid layout.
+        animateProcedureScene(id, id === 'scalpel' ? 'resuscitative_thoracotomy' : id === 'laryngoscope' ? 'intubation' : id, outcome);
         const animations = overlay.getAnimations({ subtree: true });
         animations.forEach(animation => { animation.pause(); animation.currentTime = time; });
         const css = target => getComputedStyle(document.getElementById(target));
@@ -50,6 +50,13 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
           strokeOffset: getComputedStyle(overlay.querySelector(outcome === 'SUCCESS' || outcome === 'MARGINAL' ? '.om-check' : '.om-x1')).strokeDashoffset,
           ...(id === 'bvm' ? { chest: matrix('bvm-chest').d, bag: matrix('bvm-bag').d, leak: Number(css('bvm-leak').opacity), air: Number(css('bvm-air').opacity) } : {}),
           ...(id === 'lucas' ? { chest: matrix('lucas-chest').d, piston: matrix('lucas-piston').f, frame: css('lucas-frame').transform } : {}),
+          ...(id === 'laryngoscope' ? {
+            tubes: ['tracheal', 'esophageal', 'failed'].map(route => ({ route, display: css(`lx-tube-${route}`).display, opacity: css(`lx-tube-${route}`).opacity, pathOpacity: Number(getComputedStyle(document.querySelector(`#lx-tube-${route} use`)).opacity), offset: Number.parseFloat(getComputedStyle(document.querySelector(`#lx-tube-${route} use`)).strokeDashoffset) })),
+            cuffs: ['tracheal', 'esophageal'].map(route => ({ route, display: css(`lx-${route}-cuff`).display, opacity: Number(css(`lx-${route}-cuff`).opacity) })),
+            ring: Number(css('lx-success-ring').opacity),
+            macOpacity: Number(css('lx-mac').opacity),
+            connector: Number(css('lx-tube-connector').opacity),
+          } : {}),
           ...(id === 'scalpel' ? { blade: matrix('scalpel-blade').a, impact: Number(css('scalpel-impact').opacity), trail: Number(css('scalpel-trail').opacity) } : {}),
         };
       }, { id, outcome, time });
@@ -60,9 +67,9 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       await page.setViewportSize(viewport);
       for (const reduced of [false, true]) {
         await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
-        for (const id of ['bvm', 'lucas', 'scalpel']) {
+        for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope']) {
           for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
-            const state = await sample(id, outcome, 2300);
+            const state = await sample(id, outcome, 3000);
             assert.equal(state.pointerEvents, 'none');
             assert.ok(state.width >= 240, `${id} remains legible`);
             for (const box of state.children) {
@@ -102,22 +109,78 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     const recovery = await sample('scalpel', 'SUCCESS', 1000);
     assert.equal(anticipation.trail, 0); assert.equal(impact.trail, 1); assert.equal(impact.impact, 1);
     assert.equal(recovery.trail, 0); assert.notEqual(anticipation.blade, recovery.blade);
+    const airwayView = await sample('laryngoscope', 'SUCCESS', 980);
+    assert.equal(airwayView.macOpacity, 1);
+    assert.equal(airwayView.tubes[0].offset, 100, 'blade lift precedes tube pass');
+    assert.equal(airwayView.tubes[0].pathOpacity, 0, 'no floating tube endcaps before entry');
+    const airwayPass = await sample('laryngoscope', 'SUCCESS', 1500);
+    assert.ok(airwayPass.tubes[0].offset > 0 && airwayPass.tubes[0].offset < 100);
+    const airwaySuccess = await sample('laryngoscope', 'SUCCESS', 2350);
+    assert.equal(airwaySuccess.tubes[0].display, 'block');
+    assert.equal(airwaySuccess.tubes[0].offset, 0);
+    assert.equal(airwaySuccess.tubes[1].display, 'none');
+    assert.equal(airwaySuccess.cuffs[0].opacity, 1);
+    assert.ok(airwaySuccess.ring > 0);
+    const airwayMarginal = await sample('laryngoscope', 'MARGINAL', 2350);
+    assert.equal(airwayMarginal.tubes[0].offset, 0);
+    assert.equal(airwayMarginal.ring, 0, 'marginal does not get the success celebration');
+    const failedAttempt = await sample('laryngoscope', 'FAILURE', 1700);
+    const withdrawing = await sample('laryngoscope', 'FAILURE', 2000);
+    const withdrawn = await sample('laryngoscope', 'FAILURE', 2300);
+    assert.equal(failedAttempt.tubes[2].offset, 0);
+    assert.ok(withdrawing.tubes[2].offset > 0 && withdrawing.tubes[2].offset < 100);
+    assert.equal(withdrawn.tubes[2].offset, 100);
+    assert.equal(withdrawn.tubes[2].pathOpacity, 0, 'withdrawal leaves no tube tip or endcaps behind');
+    assert.equal(withdrawn.connector, 0);
+    assert.equal(withdrawn.cuffs[0].display, 'none');
+    const misplaced = await sample('laryngoscope', 'COMPLICATION', 3000);
+    assert.equal(misplaced.tubes[0].display, 'none');
+    assert.equal(misplaced.tubes[1].offset, 0);
+    assert.equal(misplaced.cuffs[1].opacity, 1);
+    assert.equal(misplaced.ring, 0);
+    // Endpoints stay in separate lumens; the failed path stops above the cords.
+    const ends = await page.evaluate(() => ['tracheal', 'esophageal', 'failed'].map(route => {
+      const path = document.getElementById(`lx-${route}-route`);
+      const point = path.getPointAtLength(path.getTotalLength());
+      return { x: point.x, y: point.y };
+    }));
+    assert.ok(ends[0].x > 213 && ends[0].x < 239 && ends[0].y > 210);
+    assert.ok(ends[1].x > 252 && ends[1].x < 268 && ends[1].y > 210);
+    assert.ok(ends[2].y < 201);
     // Save reviewable fixed frames. Screenshots don't require a live scenario.
     for (const width of [320, 1280]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 800 });
-      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460]]) {
+      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 2350]]) {
         await sample(id, 'SUCCESS', time);
         await page.screenshot({ path: path.join(output, `${id}-${width}.png`) });
       }
     }
+    for (const [outcome, time] of [['SUCCESS', 1600], ['FAILURE', 1700], ['FAILURE', 2000], ['FAILURE', 3000], ['COMPLICATION', 3000]]) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await sample('laryngoscope', outcome, time);
+      await page.screenshot({ path: path.join(output, `intubation-${outcome.toLowerCase()}-${time}.png`) });
+    }
+    await page.setViewportSize({ width: 568, height: 320 });
+    await sample('laryngoscope', 'SUCCESS', 3000);
+    await page.screenshot({ path: path.join(output, 'intubation-landscape.png') });
     // Shared <use> anatomy must also render in the three original upright scenes.
     const anatomy = await page.evaluate(() => ['inmed', 'nebmed', 'niv'].map(id => {
       document.getElementById(`${id}-overlay`).style.display = 'flex';
       return document.querySelector(`#${id}-overlay use[href="#patient-face-profile"]`).getBBox().width;
     }));
     anatomy.forEach(width => assert.ok(width > 50));
+    // Defibrillation still uses the legacy label fade formerly housed in the
+    // laryngoscope styles; replacing that scene must not remove the shared keyframe.
+    const defibLabelOpacity = await page.evaluate(() => {
+      const overlay = document.getElementById('defib-overlay');
+      overlay.style.display = '';
+      overlay.classList.add('visible', 'outcome-SUCCESS');
+      overlay.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = 850; });
+      return Number(getComputedStyle(document.getElementById('defib-label')).opacity);
+    });
+    assert.equal(defibLabelOpacity, 1);
     assert.deepEqual(errors, []);
-    console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases and shared anatomy verified. Screenshots: ${output}`);
+    console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes and shared anatomy verified. Screenshots: ${output}`);
   } finally {
     await browser.close();
   }

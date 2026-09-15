@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=62">
+  <link rel="stylesheet" href="style.css?v=63">
 </head>
 <body>
 
@@ -366,40 +366,84 @@
     <!-- Laryngoscope animation overlay — intubation outcomes -->
     <div id="laryngoscope-overlay" aria-hidden="true">
       <div id="laryngoscope-header"></div>
-      <svg id="laryngoscope-svg" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Handle (lower-left) + hinge connector -->
-          <g transform="rotate(32 66 130)">
-            <rect x="50" y="70" width="30" height="118" rx="6"/>
-            <rect x="50" y="174" width="30" height="14" rx="3"/>
-            <line x1="60" y1="82" x2="60" y2="172" stroke-width="1.2" opacity="0.4"/>
-            <line x1="70" y1="82" x2="70" y2="172" stroke-width="1.2" opacity="0.4"/>
-            <rect x="56" y="54" width="18" height="18" rx="3"/>
+      <svg id="laryngoscope-svg" viewBox="0 0 360 310" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <!-- Keep the established face; replace only the closed mouth/jaw for laryngoscopy. -->
+          <mask id="lx-open-mouth" maskUnits="userSpaceOnUse" x="0" y="0" width="360" height="310">
+            <rect width="360" height="310" fill="white"/>
+            <rect x="150" y="132" width="92" height="100" fill="black"/>
+          </mask>
+          <!-- The anterior and posterior routes share the oral approach. These
+               normalized paths drive both walls of each tube, including withdrawal. -->
+          <path id="lx-tracheal-route" pathLength="100" d="M81 111 C105 99 125 111 153 139 C168 152 197 142 224 155 C244 164 246 184 233 199 Q225 211 225 233 L225 253"/>
+          <path id="lx-esophageal-route" pathLength="100" d="M81 111 C105 99 125 111 153 139 C168 152 197 142 224 155 C248 166 258 188 260 213 L260 257"/>
+          <path id="lx-failed-route" pathLength="100" d="M81 111 C105 99 125 111 153 139 C168 152 197 142 224 155 C240 163 244 178 237 191"/>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <g id="lx-anatomy">
+            <g mask="url(#lx-open-mouth)"><use href="#patient-face-profile" transform="translate(-75 0)"/></g>
+            <path d="M192 26 C228 6 284 27 291 79 L291 169 Q293 200 276 218 L298 275" opacity="0.55"/>
+            <path d="M158 133 L175 136 M158 156 L169 158 C170 179 185 195 203 196 L200 215 L177 275" opacity="0.85"/>
+            <path d="M261 119 Q273 112 276 125 Q274 139 264 135 M265 123 Q271 120 271 130" opacity="0.4" stroke-width="1.5"/>
+            <!-- Hard/soft palate and posterior pharyngeal wall. -->
+            <path d="M167 131 Q188 125 210 136 Q230 142 237 152 M237 145 Q253 145 259 163 L268 198" opacity="0.7"/>
+            <path d="M169 133 L168 142 L176 143 L178 136" fill="#b9c7d1" fill-opacity="0.12" stroke-width="1.5"/>
+            <g id="lx-tongue">
+              <path d="M166 156 C180 150 195 153 208 167 Q219 177 224 189 Q209 189 199 177 C189 168 177 169 170 167 Z" fill="currentColor" fill-opacity="0.08" stroke-opacity="0.65"/>
+              <path d="M181 161 Q197 161 209 177" opacity="0.25" stroke-width="1.2"/>
+            </g>
+            <!-- Epiglottis hinges anteriorly as the curved blade lifts from the vallecula. -->
+            <path id="lx-epiglottis" d="M238 204 Q228 197 225 181 Q234 180 238 204 Z" fill="#d7bc75" fill-opacity="0.12" stroke="#d7bc75" stroke-width="1.8"/>
+            <g id="lx-trachea" stroke="#8caec1">
+              <path d="M214 202 Q211 218 213 232 L213 274 M239 205 L239 274"/>
+              <path d="M214 228 L220 228 M232 228 L238 228 M214 241 L220 241 M232 241 L238 241 M214 254 L220 254 M232 254 L238 254 M214 267 L238 267" stroke-width="1.5" opacity="0.6"/>
+            </g>
+            <g id="lx-esophagus" stroke="#89949f">
+              <path d="M254 194 Q250 214 252 237 L252 274 M268 198 L268 274"/>
+              <path d="M264 221 Q259 230 264 239 M264 252 Q259 259 264 267" opacity="0.25" stroke-width="1.2"/>
+            </g>
+            <!-- Cord margins leave a clear central opening into the anterior lumen. -->
+            <path id="lx-cords" d="M214 201 L220 210 M237 202 L230 210" stroke="#dce9f1" stroke-width="3"/>
+            <g stroke-width="1" opacity="0.5"><path d="M215 275 L203 285 L174 285 M263 275 L271 285 L297 285"/></g>
+            <g fill="currentColor" stroke="none" font-family="monospace" font-size="12" letter-spacing="0.5" text-anchor="middle" opacity="0.85">
+              <text x="182" y="302">TRACHEA</text><text x="284" y="302">ESOPHAGUS</text>
+            </g>
           </g>
-          <!-- MAC blade: outer edge sweeps up-right then down to the tip -->
-          <path d="M100 74 C112 52 152 50 176 82 C194 105 191 140 178 160" stroke-width="2.6"/>
-          <!-- inner concave edge / flange -->
-          <path d="M97 88 C122 80 152 82 169 105 C183 125 181 146 173 158" stroke-width="2.6"/>
-          <!-- tip cap + light bulb -->
-          <path d="M178 160 Q177 166 173 158" stroke-width="2.6"/>
-          <path d="M108 78 C140 64 162 70 178 92" stroke-width="1" opacity="0.4"/>
-          <circle cx="177" cy="163" r="4" fill="#ffe27a" stroke="none"/>
+          <!-- Simple Macintosh: straight knurled handle, hinge, curved blade. -->
+          <g id="lx-mac">
+            <rect x="110" y="54" width="23" height="78" rx="4" fill="#202c36"/>
+            <path d="M115 64 L128 64 M115 72 L128 72 M115 80 L128 80 M115 88 L128 88 M115 96 L128 96 M115 104 L128 104 M115 112 L128 112" opacity="0.5" stroke-width="1.3"/>
+            <rect x="112" y="127" width="24" height="13" rx="2" fill="#34404c"/>
+            <path d="M132 133 C153 140 172 162 194 173 Q209 181 224 177 L225 181 Q210 188 194 181 C169 167 151 152 128 145 Z" fill="#8d9fac" stroke="#d2dfe8"/>
+            <path d="M139 142 Q182 177 213 180" opacity="0.6" stroke-width="1"/>
+            <circle cx="209" cy="178" r="2" fill="#ffe6a1" stroke="none"/>
+            <path id="lx-light" d="M208 178 L247 195 Q246 210 221 213 Z" fill="#ffe6a1" fill-opacity="0.07" stroke="none"/>
+          </g>
+          <!-- A tube has two walls and an open lumen, rather than a moving tracer. -->
+          <g id="lx-tube-tracheal" class="lx-tube">
+            <use class="lx-tube-wall" href="#lx-tracheal-route"/><use class="lx-tube-lumen" href="#lx-tracheal-route"/>
+          </g>
+          <g id="lx-tube-esophageal" class="lx-tube">
+            <use class="lx-tube-wall" href="#lx-esophageal-route"/><use class="lx-tube-lumen" href="#lx-esophageal-route"/>
+          </g>
+          <g id="lx-tube-failed" class="lx-tube">
+            <use class="lx-tube-wall" href="#lx-failed-route"/><use class="lx-tube-lumen" href="#lx-failed-route"/>
+          </g>
+          <g id="lx-tube-connector" transform="translate(80 111) rotate(-17)">
+            <rect x="-10" y="-6" width="13" height="12" rx="2" fill="#7fd0ff" fill-opacity="0.25" stroke="#7fd0ff"/>
+            <path d="M-9 -9 L-9 9" stroke-width="3"/>
+          </g>
+          <ellipse id="lx-tracheal-cuff" class="lx-cuff" cx="225" cy="238" rx="9" ry="9"/>
+          <ellipse id="lx-esophageal-cuff" class="lx-cuff" cx="260" cy="242" rx="7" ry="9"/>
+          <!-- Local, single success accent at the airway; no screen flash. -->
+          <ellipse id="lx-success-ring" cx="225" cy="213" rx="22" ry="28" stroke="#66e898" stroke-width="2.5"/>
+          <path id="lx-success-rays" d="M202 204 L193 200 M246 203 L254 198 M211 188 L207 181 M241 188 L245 181" stroke="#93efb3" stroke-width="2"/>
         </g>
       </svg>
-      <svg id="laryngoscope-outcome-svg" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <!-- Checkmark (success / marginal) -->
-        <path id="lx-check" d="M 7 22 L 18 33 L 37 10"
-              fill="none" stroke="currentColor" stroke-width="4.5"
-              stroke-linecap="round" stroke-linejoin="round"
-              stroke-dasharray="50" stroke-dashoffset="50"/>
-        <!-- X line 1 (failure / complication) -->
-        <line id="lx-x1" x1="9" y1="9" x2="35" y2="35"
-              stroke="currentColor" stroke-width="4.5" stroke-linecap="round"
-              stroke-dasharray="40" stroke-dashoffset="40"/>
-        <!-- X line 2 -->
-        <line id="lx-x2" x1="35" y1="9" x2="9" y2="35"
-              stroke="currentColor" stroke-width="4.5" stroke-linecap="round"
-              stroke-dasharray="40" stroke-dashoffset="40"/>
+      <svg id="laryngoscope-outcome-svg" class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
       </svg>
       <div id="laryngoscope-label"></div>
     </div>
@@ -1328,6 +1372,6 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-    <script src="app.js?v=53"></script>
+    <script src="app.js?v=54"></script>
 </body>
 </html>

@@ -1889,11 +1889,12 @@ function animateDrill(outcome) {
 const PROCEDURE_TIMING = Object.freeze({
   bvm: Object.freeze({ hold: 2500, start: 350, cycle: 1500, result: 1900, sound: 350 }),
   lucas: Object.freeze({ hold: 1900, start: 100, cycle: 600, result: 1450, sound: 100 }),
+  laryngoscope: Object.freeze({ hold: 3400, start: 0, cycle: 3400, result: 2200, sound: 2200 }),
   scalpel: Object.freeze({ hold: 1150, start: 0, cycle: 1150, result: 650, sound: 345 }),
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return id === 'bvm' || id === 'lucas' || SCALPEL_PROCS.has(id);
+  return id === 'bvm' || id === 'lucas' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
 function animateProcedureScene(id, procedureId, outcome) {
   const timing = PROCEDURE_TIMING[id];
@@ -1904,11 +1905,12 @@ function animateProcedureScene(id, procedureId, outcome) {
   if (!overlay || !label) { playSound(sound); return Promise.resolve(); }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const labels = {
+    laryngoscope: { SUCCESS: 'SUCCESS · TUBE THROUGH THE CORDS', MARGINAL: 'MARGINAL · TRACHEAL PLACEMENT', FAILURE: 'FAILURE · TUBE WITHDRAWN', COMPLICATION: 'COMPLICATION · ESOPHAGEAL PLACEMENT' },
     bvm: { SUCCESS: 'SUCCESS · CHEST RISE', MARGINAL: 'MARGINAL · LIMITED CHEST RISE', FAILURE: 'FAILURE · INEFFECTIVE VENTILATION', COMPLICATION: 'COMPLICATION · INEFFECTIVE VENTILATION' },
   };
   label.textContent = labels[id]?.[outcome] || outcome || '';
   const header = document.getElementById(`${id}-header`);
-  if (id === 'scalpel' && header) header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
+  if ((id === 'scalpel' || id === 'laryngoscope') && header) header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
   overlay.className = '';
   overlay.style.setProperty('--procedure-start', `${timing.start}ms`);
   overlay.style.setProperty('--procedure-cycle', `${timing.cycle}ms`);
@@ -2167,24 +2169,7 @@ function animateTwelveLead(outcome) {
 }
 
 function animateLaryngoscope(procedureId, outcome) {
-  return new Promise(resolve => {
-    const HOLD_MS = 1500;
-    const FADE_MS = 220;
-    const overlay = document.getElementById('laryngoscope-overlay');
-    const header  = document.getElementById('laryngoscope-header');
-    const label   = document.getElementById('laryngoscope-label');
-    if (!overlay) { resolve(); return; }
-    header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
-    label.textContent  = outcome;
-    // Reset all outcome classes and force animation restart
-    overlay.className = '';
-    void overlay.offsetWidth;
-    overlay.classList.add('visible', `outcome-${outcome}`);
-    setTimeout(() => {
-      overlay.classList.remove('visible');
-      setTimeout(resolve, FADE_MS);
-    }, HOLD_MS);
-  });
+  return animateProcedureScene('laryngoscope', procedureId, outcome);
 }
 
 function animateDepart() {

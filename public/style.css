@@ -2624,75 +2624,15 @@ html, body {
 }
 #laryngoscope-overlay.visible { opacity: 1; }
 
-#laryngoscope-header {
-  font-family: var(--font-block, monospace);
-  font-size: 0.48rem;
-  letter-spacing: 0.24em;
-  color: rgba(180, 200, 220, 0.75);
-  text-transform: uppercase;
-}
-
-#laryngoscope-svg {
-  width: 150px;
-  height: auto;
-  color: rgba(180, 200, 220, 0.85);
-  filter: drop-shadow(0 1px 8px rgba(80, 140, 200, 0.25));
-  opacity: 0;
-}
-#laryngoscope-overlay.visible #laryngoscope-svg {
-  animation: lxFadeIn 0.35s ease 0.05s forwards;
-}
-@keyframes lxFadeIn {
-  from { opacity: 0; transform: translateX(-14px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
-#laryngoscope-outcome-svg {
-  width: 56px;
-  height: 56px;
-}
-
-/* ── Outcome colours ─────── */
-#laryngoscope-overlay.outcome-SUCCESS   #laryngoscope-outcome-svg { color: #3dcc66; }
-#laryngoscope-overlay.outcome-MARGINAL  #laryngoscope-outcome-svg { color: #ccaa33; }
-#laryngoscope-overlay.outcome-FAILURE   #laryngoscope-outcome-svg { color: #cc4040; }
-#laryngoscope-overlay.outcome-COMPLICATION #laryngoscope-outcome-svg { color: #cc5522; }
-
-#laryngoscope-overlay.outcome-SUCCESS   #laryngoscope-label { color: #3dcc66; }
-#laryngoscope-overlay.outcome-MARGINAL  #laryngoscope-label { color: #ccaa33; }
-#laryngoscope-overlay.outcome-FAILURE   #laryngoscope-label { color: #cc4040; }
-#laryngoscope-overlay.outcome-COMPLICATION #laryngoscope-label { color: #cc5522; }
-
-/* ── Checkmark — draw in on success/marginal ── */
-#lx-check { display: none; }
-#laryngoscope-overlay.outcome-SUCCESS  #lx-check,
-#laryngoscope-overlay.outcome-MARGINAL #lx-check { display: block; }
-
-#laryngoscope-overlay.outcome-SUCCESS.visible  #lx-check,
-#laryngoscope-overlay.outcome-MARGINAL.visible #lx-check {
-  animation: drawCheck 0.55s ease-out 0.38s forwards;
-}
-@keyframes drawCheck {
-  to { stroke-dashoffset: 0; }
-}
-
-/* ── X lines — draw in on failure/complication ── */
-#lx-x1, #lx-x2 { display: none; }
-#laryngoscope-overlay.outcome-FAILURE      #lx-x1,
-#laryngoscope-overlay.outcome-FAILURE      #lx-x2,
-#laryngoscope-overlay.outcome-COMPLICATION #lx-x1,
-#laryngoscope-overlay.outcome-COMPLICATION #lx-x2 { display: block; }
-
-#laryngoscope-overlay.outcome-FAILURE.visible      #lx-x1,
-#laryngoscope-overlay.outcome-COMPLICATION.visible #lx-x1 {
-  animation: drawX 0.3s ease-out 0.38s forwards;
-}
-#laryngoscope-overlay.outcome-FAILURE.visible      #lx-x2,
-#laryngoscope-overlay.outcome-COMPLICATION.visible #lx-x2 {
-  animation: drawX 0.3s ease-out 0.55s forwards;
-}
-@keyframes drawX {
-  to { stroke-dashoffset: 0; }
+/* Shared result drawing is also used by the other procedure overlays. */
+@keyframes drawCheck { to { stroke-dashoffset: 0; } }
+@keyframes drawX { to { stroke-dashoffset: 0; } }
+/* Retained for the defibrillation label, which shares this fade. */
+@keyframes lxLabelFade {
+  0%   { opacity: 0; }
+  40%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* ── Reusable outcome check / X (shared across procedure overlays) ── */
@@ -2712,23 +2652,6 @@ html, body {
 .outcome-COMPLICATION.visible .om-x1 { animation: drawX 0.26s ease-out 0.5s forwards; }
 .outcome-FAILURE.visible      .om-x2,
 .outcome-COMPLICATION.visible .om-x2 { animation: drawX 0.22s ease-out 0.7s forwards; }
-
-#laryngoscope-label {
-  font-family: var(--font-block, monospace);
-  font-size: 0.5rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  opacity: 0;
-}
-#laryngoscope-overlay.visible #laryngoscope-label {
-  animation: lxLabelFade 0.8s ease 0.42s forwards;
-}
-@keyframes lxLabelFade {
-  0%   { opacity: 0; }
-  40%  { opacity: 1; }
-  85%  { opacity: 1; }
-  100% { opacity: 0; }
-}
 
 /* ── Precordial Thump — Thor's hammer overlay ───────────────────────── */
 #thump-overlay {
@@ -4007,51 +3930,52 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
 
 /* Shared procedure scenes: the same SVG linework, palette and outcome marks. */
 .procedure-defs { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
-#scalpel-overlay, #bvm-overlay, #lucas-overlay {
+#scalpel-overlay, #bvm-overlay, #lucas-overlay, #laryngoscope-overlay {
   padding: 16px;
   gap: 12px;
   background: rgba(4, 8, 14, 0.84);
   --procedure-color: #bccddd;
   transition: opacity var(--procedure-fade, 220ms) ease;
 }
-#scalpel-overlay.outcome-SUCCESS, #bvm-overlay.outcome-SUCCESS, #lucas-overlay.outcome-SUCCESS { --procedure-color: #3dcc66; }
-#scalpel-overlay.outcome-MARGINAL, #bvm-overlay.outcome-MARGINAL, #lucas-overlay.outcome-MARGINAL { --procedure-color: #ccaa33; }
-#scalpel-overlay.outcome-FAILURE, #bvm-overlay.outcome-FAILURE, #lucas-overlay.outcome-FAILURE { --procedure-color: #cc4040; }
-#scalpel-overlay.outcome-COMPLICATION, #bvm-overlay.outcome-COMPLICATION, #lucas-overlay.outcome-COMPLICATION { --procedure-color: #cc5522; }
-#bvm-svg, #lucas-svg, #scalpel-svg {
+#scalpel-overlay.outcome-SUCCESS, #bvm-overlay.outcome-SUCCESS, #lucas-overlay.outcome-SUCCESS, #laryngoscope-overlay.outcome-SUCCESS { --procedure-color: #3dcc66; }
+#scalpel-overlay.outcome-MARGINAL, #bvm-overlay.outcome-MARGINAL, #lucas-overlay.outcome-MARGINAL, #laryngoscope-overlay.outcome-MARGINAL { --procedure-color: #ccaa33; }
+#scalpel-overlay.outcome-FAILURE, #bvm-overlay.outcome-FAILURE, #lucas-overlay.outcome-FAILURE, #laryngoscope-overlay.outcome-FAILURE { --procedure-color: #cc4040; }
+#scalpel-overlay.outcome-COMPLICATION, #bvm-overlay.outcome-COMPLICATION, #lucas-overlay.outcome-COMPLICATION, #laryngoscope-overlay.outcome-COMPLICATION { --procedure-color: #cc5522; }
+#bvm-svg, #lucas-svg, #scalpel-svg, #laryngoscope-svg {
   width: min(420px, 90vw, 85vh);
   max-width: 100%;
   height: auto;
   flex-shrink: 0;
   color: rgba(190, 205, 220, 0.92);
 }
-#scalpel-header, #scalpel-label {
+#scalpel-header, #scalpel-label, #laryngoscope-header, #laryngoscope-label {
   font-family: var(--font-block, monospace);
   font-size: 0.5rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
 }
-#scalpel-header { color: rgba(180, 200, 220, 0.75); }
-#scalpel-header, #scalpel-label, #bvm-label, #lucas-label {
+#scalpel-header, #laryngoscope-header { color: rgba(180, 200, 220, 0.75); }
+#scalpel-header, #scalpel-label, #bvm-label, #lucas-label, #laryngoscope-header, #laryngoscope-label {
   max-width: 100%;
   text-align: center;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
-#scalpel-label, #bvm-label, #lucas-label { color: var(--procedure-color); opacity: 0; }
+#scalpel-label, #bvm-label, #lucas-label, #laryngoscope-label { color: var(--procedure-color); opacity: 0; }
 #scalpel-overlay.visible #scalpel-label,
 #bvm-overlay.visible #bvm-label,
-#lucas-overlay.visible #lucas-label {
+#lucas-overlay.visible #lucas-label,
+#laryngoscope-overlay.visible #laryngoscope-label {
   animation: accessReveal 120ms ease var(--procedure-result) both;
 }
-:is(#scalpel-overlay, #bvm-overlay, #lucas-overlay).visible :is(.om-check, .om-x1, .om-x2) {
+:is(#scalpel-overlay, #bvm-overlay, #lucas-overlay, #laryngoscope-overlay).visible :is(.om-check, .om-x1, .om-x2) {
   animation-delay: var(--procedure-result);
   animation-duration: 180ms;
 }
-:is(#scalpel-overlay, #bvm-overlay, #lucas-overlay) .outcome-mark { flex-shrink: 0; }
+:is(#scalpel-overlay, #bvm-overlay, #lucas-overlay, #laryngoscope-overlay) .outcome-mark { flex-shrink: 0; }
 
 /* Keep the block-font captions readable at the scene's smallest supported size. */
-:is(#scalpel-overlay, #bvm-overlay, #lucas-overlay) > div {
+:is(#scalpel-overlay, #bvm-overlay, #lucas-overlay, #laryngoscope-overlay) > div {
   font-size: 12px;
   letter-spacing: 0.14em;
 }
@@ -4128,4 +4052,110 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
   #scalpel-label, #bvm-label, #lucas-label, #scalpel-incision { opacity: 1; }
   #scalpel-blade { transform: rotate(-60deg); }
   #bvm-leak { opacity: var(--leak-opacity); }
+}
+
+/* Direct laryngoscopy: seat a curved Mac blade, lift, then pass the ETT.
+   All phases share the scene's deterministic 3400ms presentation clock. */
+#laryngoscope-svg { width: min(420px, 90vw, 70vh); }
+#laryngoscope-outcome-svg { width: 60px; height: 60px; }
+#lx-mac, #lx-tongue, #lx-epiglottis { transform-box: view-box; }
+#lx-mac { transform-origin: 132px 138px; }
+#lx-epiglottis { transform-origin: 238px 204px; }
+#laryngoscope-overlay.visible #lx-mac { animation: lxMacLift var(--procedure-duration) ease-in-out both; }
+#laryngoscope-overlay.visible #lx-tongue { animation: lxTongueLift var(--procedure-duration) ease-in-out both; }
+#laryngoscope-overlay.visible #lx-epiglottis { animation: lxEpiglottisLift var(--procedure-duration) ease-in-out both; }
+#lx-light { opacity: 0; }
+#laryngoscope-overlay.visible #lx-light { animation: lxLight var(--procedure-duration) linear both; }
+@keyframes lxMacLift {
+  0% { transform: translate(-58px, -26px); opacity: 0; }
+  8% { opacity: 1; }
+  18% { transform: translate(0, 0); }
+  28%, 64% { transform: translate(-3px, -5px); opacity: 1; }
+  82%, 100% { transform: translate(-64px, -38px); opacity: 0; }
+}
+@keyframes lxTongueLift {
+  0%, 18%, 84%, 100% { transform: translate(0, 0); }
+  28%, 64% { transform: translate(-3px, -5px); }
+}
+@keyframes lxEpiglottisLift {
+  0%, 18%, 84%, 100% { transform: rotate(0); }
+  28%, 64% { transform: rotate(-18deg); }
+}
+@keyframes lxLight { 0%, 17%, 78%, 100% { opacity: 0; } 28%, 64% { opacity: 1; } }
+
+/* Each tube's distal end advances along its anatomical route. Failure never
+   reaches the cords and reverses the same path until completely withdrawn. */
+.lx-tube { display: none; }
+#laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tube-tracheal,
+#laryngoscope-overlay.outcome-COMPLICATION #lx-tube-esophageal,
+#laryngoscope-overlay.outcome-FAILURE #lx-tube-failed { display: block; }
+.lx-tube use { stroke-dasharray: 100; stroke-dashoffset: 100; }
+.lx-tube-wall { stroke: #c1d8e5; stroke-width: 8; }
+.lx-tube-lumen { stroke: #507d94; stroke-width: 3.5; }
+#laryngoscope-overlay.visible .lx-tube use { animation: lxTubePass var(--procedure-duration) linear both; }
+#laryngoscope-overlay.outcome-FAILURE.visible .lx-tube use { animation-name: lxTubeWithdraw; }
+@keyframes lxTubePass {
+  0%, 29% { opacity: 0; }
+  31%, 100% { opacity: 1; }
+  0%, 30% { stroke-dashoffset: 100; }
+  40% { stroke-dashoffset: 49; }
+  48%, 51% { stroke-dashoffset: 25; }
+  60%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes lxTubeWithdraw {
+  0%, 29%, 64%, 100% { opacity: 0; }
+  31%, 63% { opacity: 1; }
+  0%, 30% { stroke-dashoffset: 100; }
+  48%, 54% { stroke-dashoffset: 0; }
+  64%, 100% { stroke-dashoffset: 100; }
+}
+#lx-tube-connector { opacity: 0; }
+#laryngoscope-overlay.visible #lx-tube-connector { animation: lxConnector var(--procedure-duration) linear both; }
+#laryngoscope-overlay.outcome-FAILURE.visible #lx-tube-connector { animation-name: lxConnectorWithdraw; }
+@keyframes lxConnector { 0%, 29% { opacity: 0; } 31%, 100% { opacity: 1; } }
+@keyframes lxConnectorWithdraw { 0%, 29%, 64%, 100% { opacity: 0; } 31%, 59% { opacity: 1; } }
+.lx-cuff { display: none; opacity: 0; fill: #b9e6ff; fill-opacity: 0.13; stroke: #b9d8e9; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; }
+#laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tracheal-cuff,
+#laryngoscope-overlay.outcome-COMPLICATION #lx-esophageal-cuff { display: block; }
+#laryngoscope-overlay.visible .lx-cuff { animation: lxCuffSeat var(--procedure-duration) ease-out both; }
+@keyframes lxCuffSeat { 0%, 60% { opacity: 0; transform: scaleX(0.4); } 67%, 100% { opacity: 1; transform: scaleX(1); } }
+
+/* The payoff: a clean green airway accent, one expanding ring and a check
+   that lands with the existing success sound. Marginal retains a quiet amber result. */
+#lx-success-ring, #lx-success-rays { opacity: 0; transform-box: fill-box; transform-origin: center; }
+#laryngoscope-overlay.outcome-SUCCESS.visible #lx-success-ring { animation: lxSuccessRing 650ms ease-out var(--procedure-result) both; }
+#laryngoscope-overlay.outcome-SUCCESS.visible #lx-success-rays { animation: lxSuccessRays 440ms ease-out var(--procedure-result) both; }
+#laryngoscope-overlay.outcome-SUCCESS.visible #laryngoscope-outcome-svg { animation: lxResultLand 440ms cubic-bezier(0.16, 1, 0.3, 1) var(--procedure-result) both; }
+#laryngoscope-overlay.outcome-SUCCESS.visible #lx-tube-tracheal { animation: lxTubeGlow 220ms ease-out var(--procedure-result) both; }
+#laryngoscope-overlay.outcome-COMPLICATION.visible #lx-tube-esophageal { animation: lxTubeError 220ms ease-out var(--procedure-result) both; }
+#laryngoscope-overlay.outcome-SUCCESS.visible .om-check { animation-duration: 280ms; }
+@keyframes lxSuccessRing { 0% { opacity: 0; transform: scale(0.7); } 18% { opacity: 0.85; } 100% { opacity: 0; transform: scale(1.6); } }
+@keyframes lxSuccessRays { 0% { opacity: 0; transform: scale(0.85); } 25% { opacity: 0.9; } 100% { opacity: 0; transform: scale(1.2); } }
+@keyframes lxResultLand { 0% { transform: scale(0.75); } 45% { transform: scale(1.17); } 100% { transform: scale(1); } }
+@keyframes lxTubeGlow { from { filter: none; } to { filter: drop-shadow(0 0 3px #3dcc66); } }
+@keyframes lxTubeError { from { filter: none; } to { filter: drop-shadow(0 0 2px #cc5522); } }
+
+/* Short landscape uses the available width instead of shrinking the anatomy. */
+@media (max-height: 450px) and (min-aspect-ratio: 5/4) {
+  #laryngoscope-overlay {
+    display: grid;
+    grid-template-columns: minmax(0, 320px) minmax(100px, 180px);
+    grid-template-rows: 1fr auto 1fr;
+    column-gap: 20px;
+    row-gap: 8px;
+    justify-content: center;
+  }
+  #laryngoscope-svg { grid-column: 1; grid-row: 1 / 4; width: min(100%, calc((100vh - 32px) * 1.16)); }
+  #laryngoscope-header { grid-column: 2; grid-row: 1; align-self: end; }
+  #laryngoscope-outcome-svg { grid-column: 2; grid-row: 2; justify-self: center; }
+  #laryngoscope-label { grid-column: 2; grid-row: 3; align-self: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #laryngoscope-overlay { transition: none; }
+  #laryngoscope-overlay.visible * { animation: none !important; }
+  #laryngoscope-overlay.visible :is(.om-check, .om-x1, .om-x2),
+  #laryngoscope-overlay.visible .lx-tube use { stroke-dashoffset: 0; }
+  #laryngoscope-label, #lx-tube-connector, .lx-cuff { opacity: 1; }
+  #lx-mac, #lx-light, #lx-success-ring, #lx-success-rays { opacity: 0; }
+  #laryngoscope-overlay.outcome-FAILURE :is(#lx-tube-failed, #lx-tube-connector) { opacity: 0; }
 }
