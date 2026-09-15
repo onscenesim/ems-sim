@@ -32,7 +32,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
         document.querySelectorAll('[id$="-overlay"]').forEach(e => { e.classList.remove('visible'); e.style.display = 'none'; });
         const overlay = document.getElementById(`${id}-overlay`);
         overlay.style.display = ''; // Use the scene's responsive flex/grid layout.
-        animateProcedureScene(id, id === 'scalpel' ? 'resuscitative_thoracotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id, outcome);
+        animateProcedureScene(id, id === 'scalpel' ? 'resuscitative_thoracotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id, outcome);
         const animations = overlay.getAnimations({ subtree: true });
         animations.forEach(animation => { animation.pause(); animation.currentTime = time; });
         const css = target => getComputedStyle(document.getElementById(target));
@@ -91,6 +91,18 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
             jam: Number(css('suction-jam').opacity),
             jamImpact: Number(css('suction-jam-impact').opacity),
           } : {}),
+          ...(id === 'ncd' ? {
+            needle: matrix('ncd-needle').e,
+            catheter: point('ncd-catheter', 243, 0),
+            introducer: Number(css('ncd-introducer').opacity),
+            air: Number(css('ncd-puff').opacity),
+            airSize: matrix('ncd-air-size').a,
+            blood: Number(css('ncd-drips').opacity),
+            drips: [...document.querySelectorAll('.ncd-drip')].map(e => Number(getComputedStyle(e).opacity)),
+            ooze: Number(css('ncd-ooze').opacity),
+            oozeOffset: Number.parseFloat(css('ncd-ooze-stream').strokeDashoffset),
+            ring: Number(css('ncd-success-ring').opacity),
+          } : {}),
           ...(id === 'scalpel' ? { blade: matrix('scalpel-blade').a, impact: Number(css('scalpel-impact').opacity), trail: Number(css('scalpel-trail').opacity) } : {}),
         };
       }, { id, outcome, time });
@@ -101,7 +113,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       await page.setViewportSize(viewport);
       for (const reduced of [false, true]) {
         await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
-        for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction']) {
+        for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction', 'ncd']) {
           for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
             const state = await sample(id, outcome, id === 'laryngoscope' || id === 'suction' ? 3300 : 3000);
             assert.equal(state.pointerEvents, 'none');
@@ -344,6 +356,24 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.ok(distance(jammed.particles[2].position, jammed.tip) < 0.01, 'large particle physically plugs the tip');
     assert.ok(distance(jammed.particles[2].position, heldJam.particles[2].position) < 0.01, 'serious jam stays lodged');
     assert.equal(heldJam.flow, 0, 'suction cannot restart through a blocked tip');
+    const ncdSeated = await sample('ncd', 'SUCCESS', 1200);
+    const ncdWithdrawn = await sample('ncd', 'SUCCESS', 2160);
+    assert.equal(ncdSeated.needle, 0); assert.equal(ncdSeated.air, 0);
+    assert.equal(ncdWithdrawn.needle, -168); assert.equal(ncdWithdrawn.air, 0, 'no burst until the needle and housing clear the hub');
+    assert.ok(distance(ncdSeated.catheter, ncdWithdrawn.catheter) < 0.01, 'catheter remains seated during needle withdrawal');
+    const ncdRelease = await sample('ncd', 'SUCCESS', 2400);
+    const ncdLimited = await sample('ncd', 'MARGINAL', 2400);
+    assert.equal(ncdRelease.introducer, 0); assert.equal(ncdRelease.air, 1);
+    assert.ok(ncdRelease.ring > 0);
+    assert.ok(ncdLimited.air < ncdRelease.air && ncdLimited.airSize < ncdRelease.airSize);
+    assert.equal(ncdRelease.blood, 0); assert.equal(ncdRelease.ooze, 0);
+    const ncdFailed = await sample('ncd', 'FAILURE', 2450);
+    assert.equal(ncdFailed.air, 0); assert.equal(ncdFailed.blood, 1);
+    assert.ok(ncdFailed.drips.some(opacity => opacity > 0)); assert.equal(ncdFailed.ooze, 0);
+    const earlyOoze = await sample('ncd', 'COMPLICATION', 2450);
+    const lateOoze = await sample('ncd', 'COMPLICATION', 3400);
+    assert.equal(earlyOoze.air, 0); assert.equal(earlyOoze.blood, 0); assert.equal(earlyOoze.ooze, 1);
+    assert.ok(earlyOoze.oozeOffset > lateOoze.oozeOffset && lateOoze.oozeOffset === 0, 'ooze continues after a few isolated drops would stop');
     // Starting the fade must not restart the tube or blade animation.
     await sample('laryngoscope', 'SUCCESS', 4000);
     const fade = await page.evaluate(() => {
@@ -360,7 +390,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     // Save reviewable fixed frames. Screenshots don't require a live scenario.
     for (const width of [320, 1280]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 800 });
-      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 3150], ['sga', 3000], ['opa', 3200], ['suction', 3300]]) {
+      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 3150], ['sga', 3000], ['opa', 3200], ['suction', 3300], ['ncd', 2400]]) {
         await sample(id, 'SUCCESS', time);
         await page.screenshot({ path: path.join(output, `${id}-${width}.png`) });
       }
@@ -370,7 +400,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       await sample('laryngoscope', outcome, time);
       await page.screenshot({ path: path.join(output, `intubation-${outcome.toLowerCase()}-${time}.png`) });
     }
-    for (const id of ['sga', 'opa', 'suction']) {
+    for (const id of ['sga', 'opa', 'suction', 'ncd']) {
       for (const [outcome, fraction] of [['SUCCESS', 0.24], ['SUCCESS', 0.28], ['SUCCESS', 0.38], ['SUCCESS', 0.5], ['SUCCESS', 0.9], ['MARGINAL', 0.9], ['FAILURE', 0.9], ['COMPLICATION', 0.9]]) {
         await page.setViewportSize({ width: 390, height: 844 });
         await sample(id, outcome, (id === 'sga' ? 3400 : 3600) * fraction);
@@ -405,6 +435,27 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       return Number(getComputedStyle(document.getElementById('defib-label')).opacity);
     });
     assert.equal(defibLabelOpacity, 1);
+    // Shared IV geometry must still render in both procedures after extraction.
+    await page.setViewportSize({ width: 390, height: 844 });
+    const ivShared = await page.evaluate(() => {
+      document.querySelectorAll('[id$="-overlay"]').forEach(e => { e.classList.remove('visible'); e.style.display = 'none'; });
+      const overlay = document.getElementById('iv-overlay'); overlay.style.display = '';
+      animateIV('SUCCESS');
+      overlay.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = 1100; });
+      return ['access-catheter-hub', 'access-introducer-housing'].map(id => document.querySelector(`#iv-overlay use[href="#${id}"]`).getBBox().width);
+    });
+    assert.ok(ivShared[0] > 20 && ivShared[1] > 80, 'original IV retains the full hub and introducer');
+    await page.screenshot({ path: path.join(output, 'iv-shared-access.png') });
+    const legacyNcric = await page.evaluate(() => {
+      document.querySelectorAll('[id$="-overlay"]').forEach(e => { e.classList.remove('visible'); e.style.display = 'none'; });
+      const overlay = document.getElementById('ncric-overlay'); overlay.style.display = '';
+      animateNCD('SUCCESS', 'needle_cricothyrotomy');
+      overlay.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = 850; });
+      return { header: document.getElementById('ncric-header').textContent, visible: overlay.classList.contains('visible'), chestVisible: document.getElementById('ncd-overlay').classList.contains('visible'), device: document.getElementById('ncric-device').getBBox().width };
+    });
+    assert.equal(legacyNcric.header, 'NEEDLE CRICOTHYROTOMY');
+    assert.equal(legacyNcric.visible, true); assert.equal(legacyNcric.chestVisible, false); assert.ok(legacyNcric.device > 100);
+    await page.screenshot({ path: path.join(output, 'needle-cric-legacy.png') });
     // Transport cards retain their own visual style and caller-owned sound.
     async function transportSample(id, time) {
       return page.evaluate(({ id, time }) => {
@@ -492,7 +543,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     }
     console.log(`${transportLayouts} transport layout/motion checks passed; rotating wheels, parallax, departure lurch, and fade verified.`);
     assert.deepEqual(errors, []);
-    console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes, i-gel seating, OPA turnover/withdrawal, suction clearance/jam and shared anatomy verified. Screenshots: ${output}`);
+    console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes, i-gel seating, OPA turnover/withdrawal, suction clearance/jam, NCD withdrawal/release and shared anatomy verified. Screenshots: ${output}`);
   } finally {
     await browser.close();
   }

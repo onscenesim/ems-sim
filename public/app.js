@@ -1910,13 +1910,14 @@ const PROCEDURE_TIMING = Object.freeze({
   lucas: Object.freeze({ hold: 1900, start: 100, cycle: 600, result: 1450, sound: 100 }),
   laryngoscope: Object.freeze({ hold: 4000, start: 0, cycle: 4000, result: 3000, sound: 3000 }),
   sga: Object.freeze({ hold: 3400, start: 0, cycle: 3400, result: 2652, sound: 2652 }),
+  ncd: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2280, sound: 2160 }),
   suction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2880, sound: 2880 }),
   opa: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2808, sound: 2808 }),
   scalpel: Object.freeze({ hold: 1150, start: 0, cycle: 1150, result: 650, sound: 345 }),
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
+  return id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
 function animateProcedureScene(id, procedureId, outcome) {
   const timing = PROCEDURE_TIMING[id];
@@ -1927,6 +1928,7 @@ function animateProcedureScene(id, procedureId, outcome) {
   if (!overlay || !label) { playSound(sound); return Promise.resolve(); }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const labels = {
+    ncd: { SUCCESS: 'SUCCESS · AIR RELEASED', MARGINAL: 'MARGINAL · LIMITED AIR RELEASE', FAILURE: 'FAILURE · NO AIR RETURN', COMPLICATION: 'COMPLICATION · BLOOD RETURN' },
     suction: { SUCCESS: 'SUCCESS · AIRWAY CLEARED', MARGINAL: 'MARGINAL · PARTIAL CLEARANCE', FAILURE: 'FAILURE · MINIMAL CLEARANCE', COMPLICATION: 'COMPLICATION · SUCTION JAMMED' },
     sga: { SUCCESS: 'SUCCESS · CUFF SEATED', MARGINAL: 'MARGINAL · SHALLOW SEAT', FAILURE: 'FAILURE · NOT SEATED', COMPLICATION: 'COMPLICATION · CUFF MISALIGNED' },
     opa: { SUCCESS: 'SUCCESS · TONGUE SUPPORTED', MARGINAL: 'MARGINAL · SHORT OF POSITION', FAILURE: 'FAILURE · AIRWAY WITHDRAWN', COMPLICATION: 'COMPLICATION · AIRWAY WITHDRAWN' },
@@ -2111,12 +2113,13 @@ function animateNIV(roll) {
 }
 
 function animateNCD(outcome, procedureId = 'needle_decompression') {
+  if (procedureId === 'needle_decompression') return animateProcedureScene('ncd', procedureId, outcome);
   return new Promise(resolve => {
     const HOLD_MS = 2600;   // needle advance + the air-puff bursts + outcome mark
     const FADE_MS = 220;
-    const overlay = document.getElementById('ncd-overlay');
-    const label   = document.getElementById('ncd-label');
-    const header  = document.getElementById('ncd-header');
+    const overlay = document.getElementById('ncric-overlay');
+    const label   = document.getElementById('ncric-label');
+    const header  = document.getElementById('ncric-header');
     if (!overlay) { resolve(); return; }
     if (header) header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
     label.textContent = outcome || '';

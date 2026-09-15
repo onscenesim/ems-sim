@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=70">
+  <link rel="stylesheet" href="style.css?v=71">
 </head>
 <body>
 
@@ -88,6 +88,18 @@
         <g fill="currentColor" stroke="none" font-family="monospace" font-size="12" letter-spacing="0.5" opacity="0.85">
           <text x="325" y="161">TRACHEA</text><text x="317" y="223">ESOPHAGUS</text>
         </g>
+      </g>
+      <g id="access-catheter-hub">
+                <path d="M109 -9 L125 -9 L135 -4 L135 4 L125 9 L109 9 Z" fill="#151e28" stroke-width="1.8"/>
+                <path d="M112 -9 L110 -16 L121 -16 L125 -9 M112 9 L110 16 L121 16 L125 9" fill="currentColor" fill-opacity="0.08" stroke-width="1.3"/>
+                <path d="M115 -6 L115 6 M121 -5 L121 5" stroke-width="1.2" opacity="0.6"/>
+      </g>
+      <g id="access-introducer-housing">
+                <path d="M28 -12 L80 -12 Q88 -12 91 -8 L106 -5 L106 5 L91 8 Q88 12 80 12 L28 12 Q23 12 23 7 L23 -7 Q23 -12 28 -12 Z" fill="#101923" stroke-width="1.8"/>
+                <!-- Clear flash chamber and textured rear grip. -->
+                <rect x="45" y="-7" width="38" height="14" rx="3" fill="currentColor" fill-opacity="0.04" stroke-width="1" stroke-opacity="0.5"/>
+                <path d="M29 -8 L29 8 M34 -8 L34 8 M39 -8 L39 8" stroke-width="1.2" opacity="0.6"/>
+                <path d="M88 -11 L89 -16 L99 -16 L100 -7" fill="#28333f" stroke-width="1.2"/>
       </g>
     </defs>
   </svg>
@@ -975,21 +987,15 @@
               <g id="iv-catheter">
                 <!-- Flexible catheter extends over the introducer needle. -->
                 <path d="M132 -2.6 L180 -2 L184 0 L180 2 L132 2.6 Z" fill="#18212b" stroke-width="1.3"/>
-                <path d="M109 -9 L125 -9 L135 -4 L135 4 L125 9 L109 9 Z" fill="#151e28" stroke-width="1.8"/>
-                <path d="M112 -9 L110 -16 L121 -16 L125 -9 M112 9 L110 16 L121 16 L125 9" fill="currentColor" fill-opacity="0.08" stroke-width="1.3"/>
-                <path d="M115 -6 L115 6 M121 -5 L121 5" stroke-width="1.2" opacity="0.6"/>
+                <use href="#access-catheter-hub"/>
               </g>
               <g id="iv-introducer">
                 <!-- Needle retracts inside the housing; the catheter stays put. -->
                 <g clip-path="url(#iv-safety-clip)">
                   <path id="iv-needle" d="M82 -0.9 L191 -0.9 L187 1.2 L82 1.2 Z" fill="#c1ccd5" stroke="none"/>
                 </g>
-                <path d="M28 -12 L80 -12 Q88 -12 91 -8 L106 -5 L106 5 L91 8 Q88 12 80 12 L28 12 Q23 12 23 7 L23 -7 Q23 -12 28 -12 Z" fill="#101923" stroke-width="1.8"/>
-                <!-- Clear flash chamber and textured rear grip. -->
-                <rect x="45" y="-7" width="38" height="14" rx="3" fill="currentColor" fill-opacity="0.04" stroke-width="1" stroke-opacity="0.5"/>
+                <use href="#access-introducer-housing"/>
                 <rect id="iv-fill" x="48" y="-4" width="32" height="8" rx="2" fill="#b85b61" stroke="none"/>
-                <path d="M29 -8 L29 8 M34 -8 L34 8 M39 -8 L39 8" stroke-width="1.2" opacity="0.6"/>
-                <path d="M88 -11 L89 -16 L99 -16 L100 -7" fill="#28333f" stroke-width="1.2"/>
               </g>
             </g>
           </g>
@@ -1381,7 +1387,68 @@
     <!-- Needle chest decompression overlay (reuses the IV needle framework) -->
     <div id="ncd-overlay" aria-hidden="true">
       <div id="ncd-header">NEEDLE DECOMPRESSION</div>
-      <svg id="ncd-svg" viewBox="0 0 290 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <svg id="ncd-svg" viewBox="0 0 440 250" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs><clipPath id="ncd-safety-clip"><rect x="26" y="-13" width="230" height="26" rx="3"/></clipPath></defs>
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Stylized chest-wall section, using the IV cutaway's muted linework. -->
+          <path d="M261 34 Q255 97 262 185 L316 185 Q310 100 316 34 Z" fill="#526b7d" fill-opacity="0.2" stroke="#9cadb9"/>
+          <path d="M268 34 Q263 97 269 185 M310 34 Q304 96 310 185" stroke-width="1.2" opacity="0.45"/>
+          <path d="M317 34 H421 V185 H317" fill="#7fd0ff" fill-opacity="0.035" stroke-opacity="0.2"/>
+          <path d="M282 46 Q300 41 303 52 L304 64 Q302 74 282 70 Z M282 130 Q302 126 304 138 L305 150 Q302 161 283 157 Z" fill="#899ba9" fill-opacity="0.18" stroke-width="1.5"/>
+          <path d="M327 166 Q361 125 417 138" stroke="#7d9caa" stroke-width="1.4" opacity="0.4"/>
+          <g fill="currentColor" stroke="none" font-family="monospace" font-size="12" text-anchor="middle" opacity="0.8">
+            <text x="285" y="210">CHEST WALL</text><text x="375" y="29">PLEURAL SPACE</text>
+          </g>
+          <g transform="translate(110 95)">
+            <g id="ncd-device">
+              <g id="ncd-catheter">
+                <path d="M132 -3 L239 -2.5 L243 0 L239 2.5 L132 3 Z" fill="#18212b" stroke="#b0c9d8" stroke-width="1.4"/>
+                <use href="#access-catheter-hub"/>
+              </g>
+              <g id="ncd-introducer">
+                <g clip-path="url(#ncd-safety-clip)">
+                  <path id="ncd-needle" d="M82 -1 L250 -1 L246 1.2 L82 1.2 Z" fill="#dae5eb" stroke="none"/>
+                </g>
+                <use href="#access-introducer-housing"/>
+              </g>
+            </g>
+          </g>
+          <g id="ncd-air-size">
+            <g id="ncd-puff" stroke="#a9e3f4" stroke-width="2.8">
+              <path pathLength="100" d="M216 92 C190 90 189 70 166 72 Q151 74 158 84"/>
+              <path pathLength="100" d="M216 98 C193 104 178 95 150 107"/>
+              <path class="ncd-air-extra" pathLength="100" d="M210 88 Q199 61 176 55 M209 105 Q188 124 164 119" stroke-width="1.8"/>
+              <path class="ncd-air-extra" pathLength="100" d="M182 93 L145 91 M173 103 L130 117" stroke-width="1.5"/>
+            </g>
+          </g>
+          <g id="ncd-drips" fill="#b85b61" stroke="#d78083" stroke-width="1">
+            <path class="ncd-drip" style="--drip-delay: 0ms" d="M216 98 Q212 106 215 110 Q221 114 220 106 Z"/>
+            <path class="ncd-drip" style="--drip-delay: 150ms" d="M219 99 Q215 107 218 111 Q224 115 223 107 Z"/>
+            <path class="ncd-drip" style="--drip-delay: 300ms" d="M215 98 Q211 106 214 110 Q220 114 219 106 Z"/>
+          </g>
+          <g id="ncd-ooze" stroke="#b85b61" fill="#b85b61">
+            <path id="ncd-ooze-stream" pathLength="100" d="M217 99 C213 115 220 120 217 136 Q214 147 218 160" fill="none" stroke-width="5"/>
+            <ellipse id="ncd-ooze-pool" cx="218" cy="163" rx="11" ry="4" stroke="none"/>
+          </g>
+          <circle id="ncd-success-ring" cx="220" cy="95" r="18" stroke="#66e898" stroke-width="2"/>
+          <g class="airway-phases" fill="currentColor" stroke="none" text-anchor="middle" font-family="monospace" font-size="12" letter-spacing="1">
+            <text id="ncd-phase-insert" x="220" y="239">ADVANCE THE CATHETER</text>
+            <text id="ncd-phase-withdraw" x="220" y="239">WITHDRAW THE NEEDLE</text>
+          </g>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="ncd-label"></div>
+    </div>
+
+    <!-- Existing needle-cricothyrotomy scene -->
+    <div id="ncric-overlay" aria-hidden="true">
+      <div id="ncric-header">NEEDLE CRICOTHYROTOMY</div>
+      <svg id="ncric-svg" viewBox="0 0 290 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <!-- Chest wall the needle pierces -->
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M30 12 Q21 50 30 88"/>
@@ -1389,7 +1456,7 @@
           <line x1="12" y1="66" x2="30" y2="60" stroke-width="1.4" opacity="0.5"/>
         </g>
         <!-- Large-bore decompression needle (same framework as the IV cannula) -->
-        <g id="ncd-device" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <g id="ncric-device" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="34" y1="50" x2="110" y2="50"/>
           <path d="M110 40 L138 36 L138 64 L110 60 Z"/>
           <rect x="138" y="33" width="70" height="34" rx="7"/>
@@ -1399,7 +1466,7 @@
           <line x1="229" y1="39" x2="229" y2="61"/>
         </g>
         <!-- Puff of air escaping the hub on success (tension released) -->
-        <g id="ncd-puff" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+        <g id="ncric-puff" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
           <path d="M244 42 Q254 50 244 58"/>
           <path d="M252 39 Q265 50 252 61"/>
           <path d="M260 36 Q276 50 260 64"/>
@@ -1410,7 +1477,7 @@
         <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
         <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
       </svg>
-      <div id="ncd-label"></div>
+      <div id="ncric-label"></div>
     </div>
 
     <!-- Ambulance departure animation overlay -->
@@ -1553,6 +1620,6 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-    <script src="app.js?v=69"></script>
+    <script src="app.js?v=70"></script>
 </body>
 </html>
