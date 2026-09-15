@@ -32,7 +32,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
         document.querySelectorAll('[id$="-overlay"]').forEach(e => { e.classList.remove('visible'); e.style.display = 'none'; });
         const overlay = document.getElementById(`${id}-overlay`);
         overlay.style.display = ''; // Use the scene's responsive flex/grid layout.
-        animateProcedureScene(id, id === 'scalpel' ? 'resuscitative_thoracotomy' : id === 'laryngoscope' ? 'intubation' : id, outcome);
+        animateProcedureScene(id, id === 'scalpel' ? 'resuscitative_thoracotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id, outcome);
         const animations = overlay.getAnimations({ subtree: true });
         animations.forEach(animation => { animation.pause(); animation.currentTime = time; });
         const css = target => getComputedStyle(document.getElementById(target));
@@ -69,6 +69,16 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
             macRotation: matrix('lx-mac').b,
             phaseSeat: Number(css('lx-phase-seat').opacity),
           } : {}),
+          ...(['sga', 'opa'].includes(id) ? {
+            tip: point(`${id}-device`, id === 'sga' ? 216 : 194, id === 'sga' ? 198 : 173),
+            tongue: point(`${id}-tongue`, 193, 170),
+            anchor: point(`${id}-tongue`, 165, 123),
+            deviceOpacity: Number(css(`${id}-device`).opacity),
+            placementOpacity: Number(css(`${id}-placement`).opacity),
+            orientation: matrix(`${id}-device`).a,
+            flow: Number(css(`${id}-flow`).opacity),
+            ...(id === 'sga' ? { bend: css('sga-stem').d, lumenBend: css('sga-lumen').d, cuff: css('sga-cuff').transform } : {}),
+          } : {}),
           ...(id === 'scalpel' ? { blade: matrix('scalpel-blade').a, impact: Number(css('scalpel-impact').opacity), trail: Number(css('scalpel-trail').opacity) } : {}),
         };
       }, { id, outcome, time });
@@ -79,7 +89,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       await page.setViewportSize(viewport);
       for (const reduced of [false, true]) {
         await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
-        for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope']) {
+        for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa']) {
           for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
             const state = await sample(id, outcome, id === 'laryngoscope' ? 3600 : 3000);
             assert.equal(state.pointerEvents, 'none');
@@ -217,6 +227,56 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
         lastAngle = angle;
       }
     }
+    // Insertion mechanism and outcome poses use exact CSS-clock seeks.
+    const sgaEntry = await sample('sga', 'SUCCESS', 544);
+    const sgaMiddle = await sample('sga', 'SUCCESS', 1530);
+    const sgaSeated = await sample('sga', 'SUCCESS', 3000);
+    assert.ok(sgaEntry.tip.y < sgaMiddle.tip.y && sgaMiddle.tip.y < sgaSeated.tip.y);
+    assert.notEqual(sgaEntry.bend, sgaSeated.bend, 'stem bends along the airway');
+    assert.equal(sgaMiddle.bend, sgaMiddle.lumenBend, 'walls and lumen bend together');
+    assert.equal(sgaEntry.cuff, sgaSeated.cuff, 'preformed cuff never inflates');
+    assert.ok(sgaSeated.tip.x > 210 && sgaSeated.tip.y > 191 && sgaSeated.tip.y < 205, 'distal tip seats at the upper esophagus');
+    assert.ok(sgaSeated.flow > 0.8);
+    const sgaMarginal = await sample('sga', 'MARGINAL', 3000);
+    const sgaFailure = await sample('sga', 'FAILURE', 3000);
+    const sgaComplication = await sample('sga', 'COMPLICATION', 3000);
+    assert.ok(sgaFailure.tip.y < sgaMarginal.tip.y && sgaMarginal.tip.y < sgaSeated.tip.y, 'different seating depths');
+    assert.ok(sgaComplication.tip.x < sgaMarginal.tip.x, 'complication visibly misaligns the cuff');
+    assert.equal(sgaFailure.flow, 0); assert.equal(sgaComplication.flow, 0);
+    const opaEntry = await sample('opa', 'SUCCESS', 1080);
+    const opaEdge = await sample('opa', 'SUCCESS', 1368);
+    const opaTurned = await sample('opa', 'SUCCESS', 1584);
+    const opaSeated = await sample('opa', 'SUCCESS', 3200);
+    assert.equal(opaEntry.orientation, -1, 'OPA enters inverted');
+    assert.ok(opaEntry.tip.x >= 145 && opaEntry.tip.x <= 160 && opaEntry.tip.y >= 115 && opaEntry.tip.y <= 125, 'inverted tip enters at the lips, before turning into the pharynx');
+    assert.ok(Math.abs(opaEdge.orientation) < 0.07, 'half-turn passes through edge-on');
+    assert.equal(opaTurned.orientation, 1, 'turn completes before final advancement');
+    assert.ok(opaTurned.tip.y < opaSeated.tip.y);
+    assert.ok(opaSeated.tip.x < 201, 'OPA ends at tongue base, never in the trachea');
+    assert.ok(opaSeated.tongue.y < opaEntry.tongue.y - 5, 'seated OPA supports tongue clear of airway');
+    assert.ok(distance(opaSeated.anchor, opaEntry.anchor) < 0.01, 'tongue remains anchored');
+    const opaMarginal = await sample('opa', 'MARGINAL', 3200);
+    assert.ok(opaMarginal.tip.y < opaSeated.tip.y - 15, 'marginal does not reach the full depth');
+    assert.ok(opaMarginal.tongue.y > opaSeated.tongue.y, 'short OPA supports less tongue');
+    for (const outcome of ['FAILURE', 'COMPLICATION']) {
+      const attempted = await sample('opa', outcome, 2304);
+      const withdrawing = await sample('opa', outcome, 2520);
+      const withdrawn = await sample('opa', outcome, 2808);
+      assert.equal(attempted.placementOpacity, 1);
+      assert.ok(withdrawing.tip.y < attempted.tip.y && withdrawing.placementOpacity > 0 && withdrawing.placementOpacity < 1);
+      assert.equal(withdrawn.placementOpacity, 0); assert.equal(withdrawn.flow, 0);
+      assert.ok(distance(withdrawn.tongue, opaEntry.tongue) < 0.01, 'tongue relaxes after withdrawal');
+    }
+    for (const id of ['sga', 'opa']) {
+      for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
+        const animated = await sample(id, outcome, 3600);
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        const still = await sample(id, outcome, 3600);
+        assert.ok(distance(animated.tip, still.tip) < 0.01 || still.placementOpacity === 0, 'reduced motion preserves the outcome placement');
+        assert.equal(animated.placementOpacity, still.placementOpacity);
+        await page.emulateMedia({ reducedMotion: 'no-preference' });
+      }
+    }
     // Starting the fade must not restart the tube or blade animation.
     await sample('laryngoscope', 'SUCCESS', 4000);
     const fade = await page.evaluate(() => {
@@ -233,7 +293,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     // Save reviewable fixed frames. Screenshots don't require a live scenario.
     for (const width of [320, 1280]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 800 });
-      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 3150]]) {
+      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 3150], ['sga', 3000], ['opa', 3200]]) {
         await sample(id, 'SUCCESS', time);
         await page.screenshot({ path: path.join(output, `${id}-${width}.png`) });
       }
@@ -243,9 +303,25 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       await sample('laryngoscope', outcome, time);
       await page.screenshot({ path: path.join(output, `intubation-${outcome.toLowerCase()}-${time}.png`) });
     }
+    for (const id of ['sga', 'opa']) {
+      for (const [outcome, fraction] of [['SUCCESS', 0.28], ['SUCCESS', 0.38], ['SUCCESS', 0.5], ['SUCCESS', 0.9], ['MARGINAL', 0.9], ['FAILURE', 0.9], ['COMPLICATION', 0.9]]) {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await sample(id, outcome, (id === 'sga' ? 3400 : 3600) * fraction);
+        await page.screenshot({ path: path.join(output, `${id}-${outcome.toLowerCase()}-${fraction}.png`) });
+      }
+    }
     await page.setViewportSize({ width: 568, height: 320 });
     await sample('laryngoscope', 'SUCCESS', 3600);
     await page.screenshot({ path: path.join(output, 'intubation-landscape.png') });
+    // All three airway scenes must resolve the shared supine head, including its
+    // full cranium. A missing definition can silently render an empty <use>.
+    const sharedHeads = await page.evaluate(() => ['laryngoscope', 'sga', 'opa'].map(id => {
+      document.getElementById(`${id}-overlay`).style.display = 'flex';
+      const prefix = id === 'laryngoscope' ? 'lx' : id;
+      const head = document.querySelector(`#${prefix}-head use`).getBBox();
+      return { width: head.width, height: head.height };
+    }));
+    sharedHeads.forEach(head => assert.ok(head.width > 180 && head.height > 100, 'complete shared head renders'));
     // Shared <use> anatomy must also render in the three original upright scenes.
     const anatomy = await page.evaluate(() => ['inmed', 'nebmed', 'niv'].map(id => {
       document.getElementById(`${id}-overlay`).style.display = 'flex';
@@ -263,7 +339,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     });
     assert.equal(defibLabelOpacity, 1);
     assert.deepEqual(errors, []);
-    console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes and shared anatomy verified. Screenshots: ${output}`);
+    console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes, i-gel seating, OPA turnover/withdrawal and shared anatomy verified. Screenshots: ${output}`);
   } finally {
     await browser.close();
   }
