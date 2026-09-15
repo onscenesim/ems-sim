@@ -1,0 +1,121 @@
+'use strict';
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync(require.resolve('../public/app.js'), 'utf8');
+const sounds = source.slice(source.indexOf('const SURGICAL_PROCS'), source.indexOf('// ── Mobile audio unlock'));
+const scenes = source.slice(source.indexOf('const PROCEDURE_TIMING'), source.indexOf('function animateDefib'));
+function fixture({ reduced = false, missing = false } = {}) {
+  let now = 0;
+  const timers = [], played = [], elements = new Map();
+  for (const scene of ['bvm', 'lucas', 'scalpel']) {
+    for (const suffix of ['overlay', 'label', 'header']) {
+      const classes = new Set(), properties = {};
+      elements.set(`${scene}-${suffix}`, {
+        textContent: '', offsetWidth: 100, properties,
+        set className(value) { classes.clear(); value.split(' ').filter(Boolean).forEach(c => classes.add(c)); },
+        classList: { add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c) },
+        style: { setProperty: (key, value) => { properties[key] = value; } },
+      });
+    }
+  }
+  const context = vm.createContext({
+    window: { matchMedia: () => ({ matches: reduced }) }, localTranscript: null,
+    document: { getElementById: id => missing ? null : elements.get(id) },
+    playSound: sound => played.push({ sound, time: now }),
+    setTimeout: (fn, ms) => { timers.push({ fn, at: now + ms }); },
+  });
+  vm.runInContext(sounds + scenes + '\nthis.timing = PROCEDURE_TIMING;', context);
+  function advance(ms) {
+    const end = now + ms;
+    while (true) {
+      timers.sort((a, b) => a.at - b.at);
+      if (!timers.length || timers[0].at > end) break;
+      const timer = timers.shift(); now = timer.at; timer.fn();
+    }
+    now = end;
+  }
+  return { context, elements, played, timers, advance };
+}
+
+for (const id of ['bvm', 'lucas', 'scalpel']) {
+  test(`${id}: action sound fires once, result timing is shared with CSS, and cleanup resolves after fade`, async () => {
+    const f = fixture();
+    const procedure = id === 'scalpel' ? 'cricothyrotomy' : id;
+    const t = f.context.timing[id];
+    let complete = false;
+    const promise = f.context.animateProcedureScene(id, procedure, 'SUCCESS').then(() => { complete = true; });
+    const overlay = f.elements.get(`${id}-overlay`);
+    assert.equal(overlay.classList.contains('visible'), true);
+    assert.equal(overlay.classList.contains('outcome-SUCCESS'), true);
+    assert.equal(overlay.properties['--procedure-cycle'], `${t.cycle}ms`);
+    assert.equal(overlay.properties['--procedure-result'], `${t.result}ms`);
+    assert.ok(t.result + 180 <= t.hold, 'result is readable before fade');
+    f.advance(t.sound - 1); assert.equal(f.played.length, 0);
+    f.advance(1); assert.deepEqual(f.played, [{ sound: id === 'bvm' ? 'bvm_success' : id === 'lucas' ? 'lucas' : 'sword', time: t.sound }]);
+    f.advance(t.hold - t.sound); assert.equal(overlay.classList.contains('visible'), false);
+    await Promise.resolve(); assert.equal(complete, false);
+    f.advance(219); await Promise.resolve(); assert.equal(complete, false);
+    f.advance(1); await promise; assert.equal(complete, true); assert.equal(f.timers.length, 0);
+  });
+}
+
+test('replaying scenes clears previous outcomes and preserves all sound mappings', async () => {
+  for (const id of ['bvm', 'lucas', 'scalpel']) {
+    const f = fixture();
+    const proc = id === 'scalpel' ? 'finger_thoracostomy' : id;
+    for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION', 'SUCCESS']) {
+      const p = f.context.animateProcedureScene(id, proc, outcome);
+      const overlay = f.elements.get(`${id}-overlay`);
+      for (const possible of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
+        assert.equal(overlay.classList.contains(`outcome-${possible}`), outcome === possible);
+      }
+      f.advance(f.context.timing[id].hold + 220); await p;
+      const good = outcome === 'SUCCESS' || outcome === 'MARGINAL';
+      assert.equal(f.played.at(-1).sound, id === 'scalpel' ? 'sword' : id === 'bvm' ? good ? 'bvm_success' : 'bvm_fail' : good ? 'lucas' : 'fail');
+    }
+    assert.equal(f.played.length, 5);
+  }
+});
+
+test('reduced motion and missing scenes retain sounds and always release the turn', async () => {
+  for (const id of ['bvm', 'lucas', 'scalpel']) {
+    const procedure = id === 'scalpel' ? 'resuscitative_thoracotomy' : id;
+    for (const options of [{ reduced: true }, { missing: true }]) {
+      const f = fixture(options);
+      const p = f.context.animateProcedureScene(id, procedure, 'FAILURE');
+      assert.equal(f.played.length, 1); assert.equal(f.played[0].time, 0);
+      f.advance(f.context.timing[id].hold + 220); await p;
+      assert.equal(f.played.length, 1); assert.equal(f.timers.length, 0);
+    }
+  }
+});
+
+test('the real roll loop defers only scene-owned sounds and waits for animations before continuing', async () => {
+  const events = [];
+  let release, entered;
+  const started = new Promise(r => { entered = r; });
+  const c = fixture().context;
+  Object.assign(c, {
+    console: { log() {} },
+    playSound: sound => events.push(sound),
+    animateDiceRoll: async id => events.push(`dice:${id}`),
+    animateBVM: async () => { events.push('bvm'); entered(); await new Promise(r => { release = r; }); },
+    animateLUCAS: async () => events.push('lucas'),
+    animateScalpel: async id => events.push(id),
+    animateDefib: async () => events.push('defib'),
+    animateCPR: async () => events.push('cpr'),
+  });
+  const a = source.indexOf('    for (const r of (data.rolls || [])) {');
+  const b = source.indexOf('    for (const r of (data.rolls || [])) printRoll', a);
+  vm.runInContext('async function rolls(data) {\n' + source.slice(a, b) + '\n}', c);
+  const p = c.rolls({ rolls: ['bvm', 'lucas', 'cricothyrotomy', 'resuscitative_thoracotomy', 'cpr', 'defibrillation'].map(procedure_id => ({ procedure_id, outcome: 'SUCCESS', roll: 18, dc: 12 })) });
+  await started;
+  assert.deepEqual(events, ['dice:bvm', 'bvm']);
+  release(); await p;
+  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'cpr_outside', 'dice:cpr', 'cpr', 'defib_outside', 'defib']);
+  events.length = 0;
+  await c.rolls({ rolls: [{ procedure_id: 'lucas', outcome: 'FAILURE', multi_roll: true }, { procedure_id: 'bvm', no_roll: true }] });
+  assert.deepEqual(events, ['fail'], 'legacy multi/no-roll routing remains unchanged');
+});

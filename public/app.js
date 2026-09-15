@@ -824,7 +824,8 @@ async function sendTurn(msg, opts = {}) {
         if (DEFIB_PROCS.has(r.procedure_id)) await animateDefib(r.procedure_id, r.outcome);
         continue;
       }
-      playSound(procSound);
+      // These scenes own their sound cues after the dice, at the action beat.
+      if (!hasProcedureAnimationSound(r.procedure_id)) playSound(procSound);
       // Shocks resolve as a single roll now (no multi_roll branch) — keep the
       // defib heart animation rather than the generic dice overlay.
       if (DEFIB_PROCS.has(r.procedure_id)) { await animateDefib(r.procedure_id, r.outcome); continue; }
@@ -1883,24 +1884,52 @@ function animateDrill(outcome) {
   });
 }
 
-function animateScalpel(procedureId, outcome) {
+// Presentation clocks only: simulation outcomes and elapsed time stay server-owned.
+// CSS receives these values so sound, result and cleanup have one timing source.
+const PROCEDURE_TIMING = Object.freeze({
+  bvm: Object.freeze({ hold: 2500, start: 350, cycle: 1500, result: 1900, sound: 350 }),
+  lucas: Object.freeze({ hold: 1900, start: 100, cycle: 600, result: 1450, sound: 100 }),
+  scalpel: Object.freeze({ hold: 1150, start: 0, cycle: 1150, result: 650, sound: 345 }),
+});
+const PROCEDURE_FADE_MS = 220;
+function hasProcedureAnimationSound(id) {
+  return id === 'bvm' || id === 'lucas' || SCALPEL_PROCS.has(id);
+}
+function animateProcedureScene(id, procedureId, outcome) {
+  const timing = PROCEDURE_TIMING[id];
+  const overlay = document.getElementById(`${id}-overlay`);
+  const label = document.getElementById(`${id}-label`);
+  const sound = getProcedureSound(procedureId, outcome);
+  // A missing optional scene must never stall the turn or swallow its sound.
+  if (!overlay || !label) { playSound(sound); return Promise.resolve(); }
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const labels = {
+    bvm: { SUCCESS: 'SUCCESS · CHEST RISE', MARGINAL: 'MARGINAL · LIMITED CHEST RISE', FAILURE: 'FAILURE · INEFFECTIVE VENTILATION', COMPLICATION: 'COMPLICATION · INEFFECTIVE VENTILATION' },
+  };
+  label.textContent = labels[id]?.[outcome] || outcome || '';
+  const header = document.getElementById(`${id}-header`);
+  if (id === 'scalpel' && header) header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
+  overlay.className = '';
+  overlay.style.setProperty('--procedure-start', `${timing.start}ms`);
+  overlay.style.setProperty('--procedure-cycle', `${timing.cycle}ms`);
+  overlay.style.setProperty('--procedure-duration', `${timing.hold}ms`);
+  overlay.style.setProperty('--procedure-result', `${timing.result}ms`);
+  overlay.style.setProperty('--procedure-fade', `${PROCEDURE_FADE_MS}ms`);
+  void overlay.offsetWidth; // Restart every layer, including consecutive identical rolls.
+  if (outcome) overlay.classList.add(`outcome-${outcome}`);
+  overlay.classList.add('visible');
   return new Promise(resolve => {
-    const HOLD_MS = 1150;
-    const FADE_MS = 220;
-    const overlay = document.getElementById('scalpel-overlay');
-    const label   = document.getElementById('scalpel-label');
-    if (!overlay) { resolve(); return; }
-    label.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
-    // Force CSS animation restart on repeated calls
-    overlay.className = '';
-    void overlay.offsetWidth;
-    overlay.classList.add('visible');
-    if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    // Reduced motion shows a still result, keeping the same bounded turn lifecycle.
+    if (reduced) playSound(sound);
+    else setTimeout(() => playSound(sound), timing.sound);
     setTimeout(() => {
       overlay.classList.remove('visible');
-      setTimeout(resolve, FADE_MS);
-    }, HOLD_MS);
+      setTimeout(resolve, PROCEDURE_FADE_MS);
+    }, timing.hold);
   });
+}
+function animateScalpel(procedureId, outcome) {
+  return animateProcedureScene('scalpel', procedureId, outcome);
 }
 
 function animateDefib(procedureId, outcome) {
@@ -1962,41 +1991,11 @@ function animateCPR(outcome) {
 }
 
 function animateBVM(outcome) {
-  return new Promise(resolve => {
-    const HOLD_MS = 1500;
-    const FADE_MS = 220;
-    const overlay = document.getElementById('bvm-overlay');
-    const label   = document.getElementById('bvm-label');
-    if (!overlay) { resolve(); return; }
-    label.textContent = outcome || '';
-    overlay.className = '';
-    void overlay.offsetWidth;
-    overlay.classList.add('visible');
-    if (outcome) overlay.classList.add(`outcome-${outcome}`);
-    setTimeout(() => {
-      overlay.classList.remove('visible');
-      setTimeout(resolve, FADE_MS);
-    }, HOLD_MS);
-  });
+  return animateProcedureScene('bvm', 'bvm', outcome);
 }
 
 function animateLUCAS(outcome) {
-  return new Promise(resolve => {
-    const HOLD_MS = 1900;
-    const FADE_MS = 220;
-    const overlay = document.getElementById('lucas-overlay');
-    const label   = document.getElementById('lucas-label');
-    if (!overlay) { resolve(); return; }
-    label.textContent = outcome || '';
-    overlay.className = '';
-    void overlay.offsetWidth;
-    overlay.classList.add('visible');
-    if (outcome) overlay.classList.add(`outcome-${outcome}`);
-    setTimeout(() => {
-      overlay.classList.remove('visible');
-      setTimeout(resolve, FADE_MS);
-    }, HOLD_MS);
-  });
+  return animateProcedureScene('lucas', 'lucas', outcome);
 }
 
 function animateSuction(outcome) {

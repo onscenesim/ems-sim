@@ -2600,62 +2600,12 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 18px;
-  background: rgba(6, 2, 2, 0.78);
+  background: rgba(4, 8, 14, 0.84);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 #scalpel-overlay.visible { opacity: 1; }
-
-#scalpel-svg {
-  width: 260px;
-  height: auto;
-  filter: drop-shadow(0 0 14px rgba(255, 40, 60, 0.35));
-}
-/* The arc draws across fast (the slash), then the streak lingers dim */
-#scalpel-overlay .slash-g { opacity: 0; }
-#scalpel-overlay.visible .slash-g {
-  animation: slashFade 0.7s ease 0.1s forwards;
-}
-#scalpel-overlay.visible .slash-line {
-  animation: slashDraw 0.2s cubic-bezier(0.2, 0.7, 0.3, 1) 0.1s forwards;
-}
-@keyframes slashDraw {
-  from { stroke-dashoffset: 100; }
-  to   { stroke-dashoffset: 0; }
-}
-@keyframes slashFade {
-  0%   { opacity: 0; }
-  10%  { opacity: 1; }
-  45%  { opacity: 1; }
-  100% { opacity: 0.25; }
-}
-/* Red flash at the moment of the cut */
-#scalpel-overlay.visible {
-  animation: scalpelFlash 0.6s ease forwards;
-}
-@keyframes scalpelFlash {
-  0%, 100% { background: rgba(6, 2, 2, 0.78); }
-  16%      { background: rgba(60, 8, 12, 0.92); }
-}
-
-#scalpel-label {
-  font-family: var(--font-block, monospace);
-  font-size: 0.5rem;
-  letter-spacing: 0.24em;
-  color: rgba(210, 160, 160, 0.9);
-  text-transform: uppercase;
-  opacity: 0;
-}
-#scalpel-overlay.visible #scalpel-label {
-  animation: scalpelLabel 0.9s ease 0.28s forwards;
-}
-@keyframes scalpelLabel {
-  0%   { opacity: 0; }
-  40%  { opacity: 1; }
-  85%  { opacity: 1; }
-  100% { opacity: 0; }
-}
 
 /* ── Laryngoscope overlay — intubation outcomes ─────────────────────── */
 #laryngoscope-overlay {
@@ -2890,13 +2840,6 @@ html, body {
   flex-shrink: 0;
   color: rgba(190, 205, 220, 0.92);
 }
-#bvm-svg {
-  width: 188px;
-  height: auto;
-  color: rgba(190, 205, 220, 0.92);
-  filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.22));
-}
-
 /* Overhead compression: hands recede toward the sternum as the chest
    draws inward and the abdomen gives slightly. All layers fully recoil together.
    Three 500ms cycles finish before animateCPR's 1650ms hold ends. */
@@ -2933,16 +2876,6 @@ html, body {
   #cpr-overlay.visible #cpr-abdomen {
     animation: none;
   }
-}
-
-/* BVM: self-inflating bag squeezes */
-#bvm-bag { transform-box: fill-box; transform-origin: center; }
-#bvm-overlay.visible #bvm-bag {
-  animation: bvmSqueeze 0.7s ease-in-out 0.1s 2;
-}
-@keyframes bvmSqueeze {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(0.84, 0.9); }
 }
 
 #cpr-label, #bvm-label {
@@ -2986,26 +2919,11 @@ html, body {
   text-transform: uppercase;
 }
 
-#lucas-svg {
-  width: 168px;
-  height: auto;
-  color: rgba(190, 205, 220, 0.92);
-  filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.22));
-}
 #suction-svg {
   width: 180px;
   height: auto;
   color: rgba(190, 205, 220, 0.92);
   filter: drop-shadow(0 2px 12px rgba(100, 160, 255, 0.22));
-}
-
-/* LUCAS piston pumps up and down */
-#lucas-overlay.visible #lucas-piston {
-  animation: lucasPump 0.6s ease-in-out 0.1s 3;
-}
-@keyframes lucasPump {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(9px); }
 }
 
 /* Suction: catheter waves gently while particles are drawn into the tip */
@@ -4085,4 +4003,129 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
   #niv-overlay.visible #niv-assembly, #niv-overlay.visible #niv-chest { animation: none; transform: none; }
   #niv-overlay.visible #niv-pressure { animation: none; opacity: 0.2; }
   #niv-overlay.visible #niv-air, #niv-overlay.visible #niv-hose-air { animation: none; opacity: 0.65; }
+}
+
+/* Shared procedure scenes: the same SVG linework, palette and outcome marks. */
+.procedure-defs { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+#scalpel-overlay, #bvm-overlay, #lucas-overlay {
+  padding: 16px;
+  gap: 12px;
+  background: rgba(4, 8, 14, 0.84);
+  --procedure-color: #bccddd;
+  transition: opacity var(--procedure-fade, 220ms) ease;
+}
+#scalpel-overlay.outcome-SUCCESS, #bvm-overlay.outcome-SUCCESS, #lucas-overlay.outcome-SUCCESS { --procedure-color: #3dcc66; }
+#scalpel-overlay.outcome-MARGINAL, #bvm-overlay.outcome-MARGINAL, #lucas-overlay.outcome-MARGINAL { --procedure-color: #ccaa33; }
+#scalpel-overlay.outcome-FAILURE, #bvm-overlay.outcome-FAILURE, #lucas-overlay.outcome-FAILURE { --procedure-color: #cc4040; }
+#scalpel-overlay.outcome-COMPLICATION, #bvm-overlay.outcome-COMPLICATION, #lucas-overlay.outcome-COMPLICATION { --procedure-color: #cc5522; }
+#bvm-svg, #lucas-svg, #scalpel-svg {
+  width: min(420px, 90vw, 85vh);
+  max-width: 100%;
+  height: auto;
+  flex-shrink: 0;
+  color: rgba(190, 205, 220, 0.92);
+}
+#scalpel-header, #scalpel-label {
+  font-family: var(--font-block, monospace);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+#scalpel-header { color: rgba(180, 200, 220, 0.75); }
+#scalpel-header, #scalpel-label, #bvm-label, #lucas-label {
+  max-width: 100%;
+  text-align: center;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+#scalpel-label, #bvm-label, #lucas-label { color: var(--procedure-color); opacity: 0; }
+#scalpel-overlay.visible #scalpel-label,
+#bvm-overlay.visible #bvm-label,
+#lucas-overlay.visible #lucas-label {
+  animation: accessReveal 120ms ease var(--procedure-result) both;
+}
+:is(#scalpel-overlay, #bvm-overlay, #lucas-overlay).visible :is(.om-check, .om-x1, .om-x2) {
+  animation-delay: var(--procedure-result);
+  animation-duration: 180ms;
+}
+:is(#scalpel-overlay, #bvm-overlay, #lucas-overlay) .outcome-mark { flex-shrink: 0; }
+
+/* Keep the block-font captions readable at the scene's smallest supported size. */
+:is(#scalpel-overlay, #bvm-overlay, #lucas-overlay) > div {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+}
+
+/* One deliberately paced ventilation: mask first, then squeeze / chest rise,
+   followed by complete recoil. All moving parts use the same cycle clock. */
+#bvm-overlay { --chest-expansion: 1.18; --air-opacity: 0.9; --leak-opacity: 0; }
+#bvm-overlay.outcome-MARGINAL { --chest-expansion: 1.07; --air-opacity: 0.45; --leak-opacity: 0.65; }
+#bvm-overlay.outcome-FAILURE, #bvm-overlay.outcome-COMPLICATION {
+  --chest-expansion: 1; --air-opacity: 0; --leak-opacity: 1;
+}
+#bvm-overlay.visible #bvm-assembly { animation: bvmSeat var(--procedure-start) ease-out both; }
+@keyframes bvmSeat { from { transform: translateY(-14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+#bvm-bag { transform-box: view-box; transform-origin: 252px 73px; }
+#bvm-chest { transform-box: view-box; transform-origin: 0 164px; }
+#bvm-overlay.visible #bvm-bag { animation: bvmSqueeze var(--procedure-cycle) ease-in-out var(--procedure-start) both; }
+#bvm-overlay.visible #bvm-chest { animation: bvmChest var(--procedure-cycle) ease-in-out var(--procedure-start) both; }
+#bvm-overlay.visible #bvm-grip-top { animation: bvmGripTop var(--procedure-cycle) ease-in-out var(--procedure-start) both; }
+#bvm-overlay.visible #bvm-grip-bottom { animation: bvmGripBottom var(--procedure-cycle) ease-in-out var(--procedure-start) both; }
+@keyframes bvmSqueeze { 0%, 100% { transform: scaleY(1); } 48%, 58% { transform: scaleY(0.56); } }
+@keyframes bvmChest { 0%, 100% { transform: scaleY(1); } 48%, 58% { transform: scaleY(var(--chest-expansion)); } }
+@keyframes bvmGripTop { 0%, 100% { transform: translateY(0); } 48%, 58% { transform: translateY(12px); } }
+@keyframes bvmGripBottom { 0%, 100% { transform: translateY(0); } 48%, 58% { transform: translateY(-12px); } }
+#bvm-air, #bvm-leak, #bvm-rise-cue { opacity: 0; }
+#bvm-overlay.visible #bvm-air, #bvm-overlay.visible #bvm-rise-cue {
+  animation: bvmAir var(--procedure-cycle) linear var(--procedure-start) both;
+}
+#bvm-overlay.visible #bvm-leak { animation: bvmLeak var(--procedure-cycle) ease-in-out var(--procedure-start) both; }
+@keyframes bvmAir { 0%, 70%, 100% { opacity: 0; } 20%, 58% { opacity: var(--air-opacity); } 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
+@keyframes bvmLeak { 0%, 75%, 100% { opacity: 0; } 25%, 58% { opacity: var(--leak-opacity); } }
+#bvm-overlay:is(.outcome-FAILURE, .outcome-COMPLICATION) #bvm-seal { stroke: var(--procedure-color); stroke-dasharray: 4 5; }
+
+/* Keep the original 100ms lead-in and three 600ms LUCAS cycles. The chest
+   drops by the same 9 units as the pad; the back plate and support stay fixed. */
+#lucas-chest { transform-box: view-box; transform-origin: 0 164px; }
+#lucas-bellows { transform-box: view-box; transform-origin: 213px 68px; }
+#lucas-status { color: var(--procedure-color); }
+#lucas-overlay.visible #lucas-piston { animation: lucasPump var(--procedure-cycle) linear var(--procedure-start) 3 both; }
+#lucas-overlay.visible #lucas-chest { animation: lucasChest var(--procedure-cycle) linear var(--procedure-start) 3 both; }
+#lucas-overlay.visible #lucas-bellows { animation: lucasBellows var(--procedure-cycle) linear var(--procedure-start) 3 both; }
+@keyframes lucasPump { 0%, 90%, 100% { transform: translateY(0); } 42%, 50% { transform: translateY(9px); } }
+@keyframes lucasChest { 0%, 90%, 100% { transform: scaleY(1); } 42%, 50% { transform: scaleY(0.8125); } }
+@keyframes lucasBellows { 0%, 90%, 100% { transform: scaleY(1); } 42%, 50% { transform: scaleY(1.375); } }
+
+/* Anticipation 0–28%, fast sweep 28–44%, impact hold, controlled recovery.
+   The blade tip sweeps the same circle as the trail; no screen-wide flash. */
+#scalpel-blade { transform-box: view-box; transform-origin: 170px 45px; }
+#scalpel-overlay.visible #scalpel-blade { animation: scalpelSweep var(--procedure-duration) linear both; }
+@keyframes scalpelSweep {
+  0% { transform: rotate(-8deg); }
+  22%, 28% { transform: rotate(12deg); }
+  30% { transform: rotate(0); }
+  37% { transform: rotate(-60deg); }
+  44%, 50% { transform: rotate(-120deg); }
+  78%, 100% { transform: translate(12px, -13px) rotate(-109deg); }
+}
+#scalpel-trail, #scalpel-impact, #scalpel-incision { opacity: 0; }
+#scalpel-overlay.visible .slash-line { animation: scalpelArc var(--procedure-duration) linear both; }
+#scalpel-overlay.visible #scalpel-trail { animation: scalpelTrail var(--procedure-duration) linear both; }
+#scalpel-overlay.visible #scalpel-target { animation: scalpelTarget var(--procedure-duration) linear both; }
+#scalpel-overlay.visible #scalpel-impact { animation: scalpelImpact var(--procedure-duration) linear both; }
+#scalpel-overlay.visible #scalpel-incision { animation: scalpelIncision var(--procedure-duration) linear both; }
+#scalpel-incision { stroke: var(--procedure-color); }
+#scalpel-overlay:is(.outcome-FAILURE, .outcome-COMPLICATION) #scalpel-incision { stroke-dasharray: 3 5; }
+@keyframes scalpelArc { 0%, 30% { stroke-dashoffset: 100; } 44%, 100% { stroke-dashoffset: 0; } }
+@keyframes scalpelTrail { 0%, 29% { opacity: 0; } 31%, 48% { opacity: 1; } 72%, 100% { opacity: 0; } }
+@keyframes scalpelTarget { 0%, 36%, 60%, 100% { transform: translateY(0); } 40%, 48% { transform: translateY(3px); } }
+@keyframes scalpelImpact { 0%, 36%, 54%, 100% { opacity: 0; } 39%, 44% { opacity: 1; } }
+@keyframes scalpelIncision { 0%, 36% { opacity: 0; } 44%, 100% { opacity: 0.85; } }
+@media (prefers-reduced-motion: reduce) {
+  #scalpel-overlay, #bvm-overlay, #lucas-overlay { transition: none; }
+  :is(#scalpel-overlay, #bvm-overlay, #lucas-overlay).visible * { animation: none !important; }
+  :is(#scalpel-overlay, #bvm-overlay, #lucas-overlay).visible :is(.om-check, .om-x1, .om-x2) { stroke-dashoffset: 0; }
+  #scalpel-label, #bvm-label, #lucas-label, #scalpel-incision { opacity: 1; }
+  #scalpel-blade { transform: rotate(-60deg); }
+  #bvm-leak { opacity: var(--leak-opacity); }
 }

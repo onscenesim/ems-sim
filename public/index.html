@@ -4,9 +4,39 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=61">
+  <link rel="stylesheet" href="style.css?v=62">
 </head>
 <body>
+
+  <!-- Shared airway anatomy: the original MAD / nebulizer / NIV face paths. -->
+  <svg class="procedure-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <g id="patient-face-profile">
+          <path d="M267 26 C245 34 244 57 245 76 C242 91 230 106 222 115 Q218 121 228 124 L238 124 Q240 131 233 136 L240 141 Q233 147 240 154 L248 158 C247 178 262 187 278 187 L290 214" opacity="0.85"/>
+          <path d="M257 77 Q265 73 272 78 M258 80 L264 81" stroke-width="1.4" opacity="0.65"/>
+          <path d="M239 119 C247 109 255 104 264 100 Q276 95 281 106 M244 126 Q256 117 276 115" stroke-width="1.3" opacity="0.3"/>
+          <path d="M231 125 Q234 119 240 122" stroke-width="2.2"/>
+          <path d="M241 143 L249 144 M262 185 L257 211" stroke-width="1.3" opacity="0.4"/>
+      </g>
+      <!-- Rotate the established profile into a supine side view. -->
+      <g id="procedure-patient-head">
+        <g transform="translate(365 -4) rotate(90) scale(0.48)" stroke-width="3.4">
+          <use href="#patient-face-profile"/>
+          <path d="M267 26 C297 14 327 34 329 76 L328 151 Q324 183 290 214" opacity="0.65"/>
+          <path d="M300 115 Q313 109 315 122 Q313 133 303 130" stroke-width="1.4" opacity="0.45"/>
+        </g>
+        <path d="M264 135 Q254 137 245 131 M265 150 Q251 163 235 164"/>
+      </g>
+      <g id="procedure-patient-body">
+        <!-- Chest, lower ribs and arm in the same sparse contour style as CPR. -->
+        <path d="M29 145 Q67 132 108 141 Q131 146 151 136 C170 118 185 116 205 116
+          C225 116 237 121 249 134"/>
+        <path d="M31 164 L235 164 M136 150 Q156 154 173 149 Q192 143 226 146" opacity="0.65"/>
+        <path d="M177 125 Q183 132 181 139 M189 122 Q197 129 194 138 M204 124 Q213 130 210 137" stroke-width="1.3" opacity="0.3"/>
+      </g>
+    </defs>
+  </svg>
+
 
   <!-- ── Start screen ──────────────────────────────────────────────────── -->
   <div id="start-screen">
@@ -271,12 +301,34 @@
 
     <!-- Scalpel animation overlay — surgical procedures -->
     <div id="scalpel-overlay" aria-hidden="true">
-      <svg id="scalpel-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <!-- Blade slash: a curved arc sweeps across (glow + core + bright edge) -->
-        <g class="slash-g">
-          <path class="slash-line" d="M40 48 Q120 92 182 178" fill="none" stroke="#ff2740" stroke-width="17" stroke-linecap="round" opacity="0.32" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
-          <path class="slash-line" d="M40 48 Q120 92 182 178" fill="none" stroke="#ff6b7a" stroke-width="7" stroke-linecap="round" opacity="0.8" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
-          <path class="slash-line" d="M40 48 Q120 92 182 178" fill="none" stroke="#ffe6ea" stroke-width="2.5" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+      <div id="scalpel-header"></div>
+      <svg id="scalpel-svg" viewBox="0 0 340 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Draped target, kept abstract for the different surgical procedures. -->
+          <g id="scalpel-target">
+            <path d="M53 171 Q75 108 131 115 Q175 104 216 124 Q262 128 286 171 L296 200 L43 200 Z" fill="currentColor" fill-opacity="0.025" opacity="0.55"/>
+            <path d="M58 173 L92 159 M283 174 L253 161" opacity="0.3"/>
+            <ellipse cx="170" cy="147" rx="53" ry="28" fill="#151e28" opacity="0.8"/>
+            <path d="M129 149 Q168 164 211 147" stroke-dasharray="3 5" opacity="0.35"/>
+            <path id="scalpel-incision" d="M138 153 Q170 163 203 151" stroke="#7fd0ff" stroke-width="2.5"/>
+          </g>
+          <!-- Original circular sweep: blade tip and trail share pivot (170,45), radius 116. -->
+          <g id="scalpel-trail">
+            <path class="slash-line" d="M70 103 A116 116 0 0 0 270 103" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" stroke="#7fd0ff" stroke-width="13" opacity="0.15"/>
+            <path class="slash-line" d="M70 103 A116 116 0 0 0 270 103" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" stroke="#c5e8ff" stroke-width="4"/>
+            <path class="slash-line" d="M70 103 A116 116 0 0 0 270 103" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" stroke="#f2f7fb" stroke-width="1.3"/>
+          </g>
+          <g id="scalpel-blade">
+            <g transform="translate(170 45) rotate(60)">
+              <path d="M-4 37 L-5 -4 Q0 -13 5 -4 L4 64 L-4 64 Z" fill="#34404c"/>
+              <path d="M-2 13 L2 13 M-2 21 L2 21 M-2 29 L2 29 M-2 37 L2 37 M-2 45 L2 45" stroke-width="1" opacity="0.65"/>
+              <path d="M-4 64 L8 64 L8 90 Q7 106 0 116 L-4 81 Z" fill="#d4e1ea" stroke="#eef5fa" stroke-width="1.3"/>
+              <path d="M0 72 L0 98" stroke="#627586" stroke-width="1"/>
+            </g>
+          </g>
+          <g id="scalpel-impact" stroke="#d9eeff">
+            <path d="M162 139 L157 129 M178 139 L184 130 M156 149 L145 146 M184 150 L195 147"/>
+          </g>
         </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
@@ -553,30 +605,36 @@
     <!-- BVM (bag-valve-mask ventilation) animation overlay -->
     <div id="bvm-overlay" aria-hidden="true">
       <div id="bvm-header">BAG-VALVE MASK</div>
-      <svg id="bvm-svg" viewBox="0 0 150 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Mask cushion (face seal) -->
-          <ellipse cx="24" cy="40" rx="11" ry="20"/>
-          <!-- Mask hard shell dome -->
-          <path d="M30 26 Q44 30 44 40 Q44 50 30 54"/>
-          <!-- Patient valve body -->
-          <rect x="43" y="33" width="14" height="14" rx="2.5"/>
-          <!-- Exhalation port -->
-          <line x1="50" y1="33" x2="50" y2="26"/>
-          <rect x="46" y="21" width="8" height="6" rx="1.5"/>
-          <!-- Neck to bag -->
-          <line x1="57" y1="40" x2="64" y2="40"/>
-          <!-- Self-inflating bag (this group squeezes) -->
-          <g id="bvm-bag">
-            <ellipse cx="92" cy="40" rx="30" ry="19"/>
-            <path d="M78 23 Q74 40 78 57" stroke-width="1.5" opacity="0.6"/>
-            <path d="M90 21 Q86 40 90 59" stroke-width="1.5" opacity="0.6"/>
-            <path d="M102 22 Q99 40 102 58" stroke-width="1.5" opacity="0.6"/>
+      <svg id="bvm-svg" viewBox="0 0 380 210" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#procedure-patient-head"/>
+          <use id="bvm-chest" href="#procedure-patient-body"/>
+          <path d="M24 170 L356 170" opacity="0.2"/>
+          <g id="bvm-assembly">
+            <!-- Double cushion wraps the existing nose and mouth profile. -->
+            <path id="bvm-seal" d="M289 115 Q286 106 293 98 L320 97 Q326 101 324 114"
+              stroke="#7fd0ff" stroke-width="4" opacity="0.65"/>
+            <path d="M288 110 Q282 88 299 82 L309 82 Q327 88 325 110 Z" fill="currentColor" fill-opacity="0.045"/>
+            <path d="M292 105 Q293 91 301 88 M315 89 L320 99" opacity="0.45" stroke-width="1.2"/>
+            <!-- Elbow, non-rebreathing valve and exhalation port. -->
+            <path d="M299 83 L299 67 L278 67 L278 78 L289 78 L289 85 Z" fill="#151e28"/>
+            <rect x="262" y="65" width="17" height="15" rx="3" fill="#151e28"/>
+            <path d="M269 65 L269 58 M264 57 L274 57 M262 73 L252 73"/>
+            <!-- The bag deforms around a fixed valve axis: connectors stay attached. -->
+            <g id="bvm-bag">
+              <path d="M166 73 C168 50 184 43 207 44 C231 44 248 53 252 73 C249 92 231 101 208 102 C184 102 168 94 166 73 Z" fill="#7fd0ff" fill-opacity="0.09"/>
+              <path d="M184 51 Q174 72 184 95 M205 48 Q198 73 205 98 M226 49 Q237 73 226 96" opacity="0.5" stroke-width="1.3"/>
+            </g>
+            <rect x="154" y="67" width="12" height="12" rx="2" fill="#151e28"/>
+            <path d="M154 73 L145 73 Q122 64 103 74 Q123 86 145 77" opacity="0.5"/>
+            <path d="M157 79 C148 97 135 96 123 98" opacity="0.5" stroke-width="1.5"/>
+            <!-- Gloved finger and thumb follow the bag's squeeze. -->
+            <g id="bvm-grip-top" stroke="#b9c7d1"><path d="M179 35 Q193 30 208 36 L224 43 Q229 47 226 50 Q223 52 216 48 L199 43" fill="#151e28"/></g>
+            <g id="bvm-grip-bottom" stroke="#b9c7d1"><path d="M186 110 Q201 118 216 109 L231 97 Q235 92 231 90 Q227 89 222 96 L207 102" fill="#151e28"/></g>
+            <path id="bvm-air" d="M272 73 L305 73 L305 99" stroke="#7fd0ff" stroke-width="2.5" stroke-dasharray="4 6"/>
+            <path id="bvm-leak" d="M327 104 L337 96 M328 110 L342 108 M288 111 L278 105" stroke="#ccaa33" stroke-width="2.5"/>
           </g>
-          <!-- Intake valve + reservoir tail -->
-          <line x1="122" y1="40" x2="130" y2="40"/>
-          <rect x="129" y="34" width="9" height="12" rx="2"/>
-          <line x1="138" y1="40" x2="146" y2="40" stroke-width="1.6" opacity="0.7"/>
+          <path id="bvm-rise-cue" d="M187 108 L198 101 L208 108 M198 101 L198 112" stroke="#7fd0ff"/>
         </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
@@ -590,23 +648,40 @@
     <!-- LUCAS / mechanical CPR animation overlay -->
     <div id="lucas-overlay" aria-hidden="true">
       <div id="lucas-header">MECHANICAL CPR</div>
-      <svg id="lucas-svg" viewBox="0 0 150 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Backboard -->
-          <line x1="18" y1="120" x2="132" y2="120" stroke-width="3"/>
-          <!-- Patient chest mound -->
-          <path d="M42 120 Q75 98 108 120" stroke-width="1.8" opacity="0.6"/>
-          <!-- Frame legs -->
-          <path d="M34 120 L40 48"/>
-          <path d="M116 120 L110 48"/>
-          <!-- Top motor housing -->
-          <path d="M40 48 Q75 26 110 48 Z"/>
-          <rect x="62" y="34" width="26" height="12" rx="4" opacity="0.7" stroke-width="1.6"/>
-          <!-- Piston shaft + suction-cup pad (pumps up and down) -->
+      <svg id="lucas-svg" viewBox="0 0 380 210" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Far support stays behind the patient; small depth offset clarifies the frame. -->
+          <path d="M184 62 L173 157 L183 167 L193 161 L199 66 Z" fill="#293c2a" stroke="#87a77b" opacity="0.45"/>
+          <g id="lucas-backplate">
+            <path d="M144 166 L250 166 L259 173 L251 179 L141 179 L136 173 Z" fill="#29333d"/>
+            <path d="M151 173 L244 173" opacity="0.5"/>
+          </g>
+          <use href="#procedure-patient-head"/>
+          <use id="lucas-chest" href="#procedure-patient-body"/>
+          <!-- Piston and pressure pad stay in contact through compression and recoil. -->
           <g id="lucas-piston">
-            <rect x="69" y="46" width="12" height="40" rx="3"/>
-            <path d="M58 86 L92 86 L86 98 L64 98 Z"/>
-            <line x1="75" y1="98" x2="75" y2="104" stroke-width="3"/>
+            <rect x="207" y="67" width="12" height="37" rx="2" fill="#b9c7d1" stroke="#e0e7eb"/>
+            <path d="M201 99 L225 99 L230 112 Q214 119 196 112 Z" fill="#7fd0ff" fill-opacity="0.13"/>
+            <path d="M197 115 Q214 118 229 115" stroke-width="3.2"/>
+          </g>
+          <g id="lucas-bellows" fill="#202932">
+            <path d="M201 68 L225 68 L227 73 L201 77 L227 82 L201 87 L225 92 L201 92 Z"/>
+          </g>
+          <!-- Near support arm, broad curved hood, battery and control panel. -->
+          <g id="lucas-frame">
+            <path d="M164 61 L177 64 L177 157 L169 169 L153 166 L156 151 Z" fill="#789767" stroke="#bad0a8"/>
+            <path d="M164 86 L164 149" stroke="#34482f" stroke-width="3"/>
+            <path d="M159 158 L175 158 L173 171 L156 171 Z" fill="#29333d"/>
+            <path d="M160 49 Q171 29 200 30 L228 32 Q243 35 248 50 L246 69 L180 72 L161 64 Z" fill="#9ab580" stroke="#c4d6b3"/>
+            <path d="M180 72 L247 69 L243 79 L191 79 Z" fill="#29333d"/>
+            <path d="M167 50 Q176 39 190 39 L190 49 Q179 50 176 57 L167 57 Z" fill="#151e28" stroke-width="1.5"/>
+            <rect x="202" y="25" width="28" height="9" rx="2" fill="#29333d"/>
+            <path d="M209 27 L222 27" opacity="0.5"/>
+            <rect x="211" y="40" width="27" height="14" rx="3" fill="#151e28" stroke-width="1.2"/>
+            <circle id="lucas-status" cx="218" cy="47" r="2.5" fill="currentColor" stroke="none"/>
+            <path d="M226 45 L232 45 M226 49 L230 49" stroke-width="1.2"/>
+            <text x="208" y="65" fill="#16251b" stroke="none" font-family="sans-serif" font-size="9" font-weight="700" letter-spacing="1">LUCAS</text>
+            <path d="M156 148 Q146 141 147 151 Q148 159 156 153" stroke="#d7bc75" stroke-width="2.5"/>
           </g>
         </g>
       </svg>
@@ -847,11 +922,7 @@
       <svg id="inmed-svg" class="route-med-svg" viewBox="0 0 340 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <!-- Side profile with a nostril and a lightly drawn nasal passage. -->
-          <path d="M267 26 C245 34 244 57 245 76 C242 91 230 106 222 115 Q218 121 228 124 L238 124 Q240 131 233 136 L240 141 Q233 147 240 154 L248 158 C247 178 262 187 278 187 L290 214" opacity="0.85"/>
-          <path d="M257 77 Q265 73 272 78 M258 80 L264 81" stroke-width="1.4" opacity="0.65"/>
-          <path d="M239 119 C247 109 255 104 264 100 Q276 95 281 106 M244 126 Q256 117 276 115" stroke-width="1.3" opacity="0.3"/>
-          <path d="M231 125 Q234 119 240 122" stroke-width="2.2"/>
-          <path d="M241 143 L249 144 M262 185 L257 211" stroke-width="1.3" opacity="0.4"/>
+          <use href="#patient-face-profile"/>
           <!-- MAD atomizer and syringe enter the nostril on one common axis. -->
           <g transform="translate(12 206) rotate(-20)">
             <g id="inmed-device">
@@ -938,11 +1009,7 @@
         </defs>
         <g transform="translate(-35 0)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <!-- Same face profile used by the MAD administration scene. -->
-          <path d="M267 26 C245 34 244 57 245 76 C242 91 230 106 222 115 Q218 121 228 124 L238 124 Q240 131 233 136 L240 141 Q233 147 240 154 L248 158 C247 178 262 187 278 187 L290 214" opacity="0.85"/>
-          <path d="M257 77 Q265 73 272 78 M258 80 L264 81" stroke-width="1.4" opacity="0.65"/>
-          <path d="M239 119 C247 109 255 104 264 100 Q276 95 281 106 M244 126 Q256 117 276 115" stroke-width="1.3" opacity="0.3"/>
-          <path d="M231 125 Q234 119 240 122" stroke-width="2.2"/>
-          <path d="M241 143 L249 144 M262 185 L257 211" stroke-width="1.3" opacity="0.4"/>
+          <use href="#patient-face-profile"/>
           <g id="nebmed-device">
             <!-- Elastic strap and a transparent mask surrounding nose and mouth. -->
             <path d="M249 102 L307 88 M250 108 L308 94" stroke-width="1.3" opacity="0.45"/>
@@ -988,11 +1055,7 @@
         </defs>
         <g transform="translate(-27 0)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <!-- Same face profile used by the MAD administration scene. -->
-          <path d="M267 26 C245 34 244 57 245 76 C242 91 230 106 222 115 Q218 121 228 124 L238 124 Q240 131 233 136 L240 141 Q233 147 240 154 L248 158 C247 178 262 187 278 187 L290 214" opacity="0.85"/>
-          <path d="M257 77 Q265 73 272 78 M258 80 L264 81" stroke-width="1.4" opacity="0.65"/>
-          <path d="M239 119 C247 109 255 104 264 100 Q276 95 281 106 M244 126 Q256 117 276 115" stroke-width="1.3" opacity="0.3"/>
-          <path d="M231 125 Q234 119 240 122" stroke-width="2.2"/>
-          <path d="M241 143 L249 144 M262 185 L257 211" stroke-width="1.3" opacity="0.4"/>
+          <use href="#patient-face-profile"/>
 
           <!-- A restrained shoulder rise accompanies two assisted breaths. -->
           <path id="niv-chest" d="M277 187 C292 190 311 203 319 222 M288 205 Q299 206 305 215" opacity="0.5"/>
@@ -1265,6 +1328,6 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-    <script src="app.js?v=52"></script>
+    <script src="app.js?v=53"></script>
 </body>
 </html>
