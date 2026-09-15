@@ -54,10 +54,14 @@ for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope']) {
     assert.ok(t.result + 180 <= t.hold, 'result is readable before fade');
     f.advance(t.sound - 1); assert.equal(f.played.length, 0);
     f.advance(1); assert.deepEqual(f.played, [{ sound: id === 'bvm' ? 'bvm_success' : id === 'lucas' ? 'lucas' : id === 'laryngoscope' ? 'success' : 'sword', time: t.sound }]);
-    f.advance(t.hold - t.sound); assert.equal(overlay.classList.contains('visible'), false);
+    f.advance(t.hold - t.sound);
+    assert.equal(overlay.classList.contains('visible'), true, 'keep final CSS pose throughout the fade');
+    assert.equal(overlay.classList.contains('is-fading'), true);
     await Promise.resolve(); assert.equal(complete, false);
     f.advance(219); await Promise.resolve(); assert.equal(complete, false);
     f.advance(1); await promise; assert.equal(complete, true); assert.equal(f.timers.length, 0);
+    assert.equal(overlay.classList.contains('visible'), false);
+    assert.equal(overlay.classList.contains('is-fading'), false);
   });
 }
 

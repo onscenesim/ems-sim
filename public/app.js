@@ -1925,8 +1925,14 @@ function animateProcedureScene(id, procedureId, outcome) {
     if (reduced) playSound(sound);
     else setTimeout(() => playSound(sound), timing.sound);
     setTimeout(() => {
-      overlay.classList.remove('visible');
-      setTimeout(resolve, PROCEDURE_FADE_MS);
+      // Keep the finished CSS pose during the fade. Removing `visible` here
+      // restarted the artwork before the overlay had become transparent.
+      overlay.classList.add('is-fading');
+      setTimeout(() => {
+        overlay.classList.remove('visible');
+        overlay.classList.remove('is-fading');
+        resolve();
+      }, PROCEDURE_FADE_MS);
     }, timing.hold);
   });
 }

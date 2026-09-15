@@ -147,6 +147,59 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.ok(ends[0].x > 213 && ends[0].x < 239 && ends[0].y > 210);
     assert.ok(ends[1].x > 252 && ends[1].x < 268 && ends[1].y > 210);
     assert.ok(ends[2].y < 201);
+    // Continuous travel through the old mid-pass pause: fixed geometry and no
+    // speed changes masquerading as dropped frames.
+    const advances = [];
+    for (const time of [1600, 1640, 1680, 1720, 1760]) {
+      advances.push((await sample('laryngoscope', 'SUCCESS', time)).tubes[0].offset);
+    }
+    for (let i = 1; i < advances.length; i++) {
+      assert.ok(advances[i] < advances[i - 1], 'the pass never stalls midway');
+      assert.ok(Math.abs((advances[i - 1] - advances[i]) - (advances[0] - advances[1])) < 0.01, 'constant advancement speed');
+    }
+    const geometry = await page.evaluate(() => {
+      const profile = document.querySelector('#procedure-patient-head > g').getBBox();
+      const handle = document.getElementById('lx-mac-handle').getBoundingClientRect();
+      const hinge = document.getElementById('lx-mac-hinge').getBoundingClientRect();
+      return {
+        headDepthRatio: profile.width / profile.height,
+        handleBelowHinge: (handle.top + handle.bottom) / 2 > hinge.bottom + 20,
+        routes: ['tracheal', 'esophageal', 'failed'].map(route => {
+          const path = document.getElementById(`lx-${route}-route`);
+          return Array.from({ length: 51 }, (_, i) => {
+            const p = path.getPointAtLength(path.getTotalLength() * i / 50);
+            return { x: p.x, y: p.y };
+          });
+        }),
+        tubeFilter: getComputedStyle(document.getElementById('lx-tube-tracheal')).filter,
+      };
+    });
+    assert.ok(geometry.headDepthRatio > 0.7, 'the cranium has human depth rather than a flattened profile');
+    assert.ok(geometry.handleBelowHinge, 'Mac handle projects below the mouth');
+    assert.equal(geometry.tubeFilter, 'none', 'no animated SVG blur during tube advancement');
+    for (const points of geometry.routes) {
+      let lastAngle = -Infinity;
+      for (let i = 1; i < points.length; i++) {
+        const dx = points[i].x - points[i - 1].x, dy = points[i].y - points[i - 1].y;
+        assert.ok(dx >= -0.05 && dy >= -0.05, 'the tube never doubles back');
+        const angle = Math.atan2(dy, dx);
+        assert.ok(angle >= lastAngle - 0.04, 'one smooth bend, without alternating snake-like curves');
+        lastAngle = angle;
+      }
+    }
+    // Starting the fade must not restart the tube or blade animation.
+    await sample('laryngoscope', 'SUCCESS', 3400);
+    const fade = await page.evaluate(() => {
+      const overlay = document.getElementById('laryngoscope-overlay');
+      const tube = document.querySelector('#lx-tube-tracheal use');
+      const before = getComputedStyle(tube).strokeDashoffset;
+      overlay.classList.add('is-fading');
+      overlay.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = 3620; });
+      return { before, after: getComputedStyle(tube).strokeDashoffset, opacity: getComputedStyle(overlay).opacity };
+    });
+    assert.equal(fade.before, '0px');
+    assert.equal(fade.after, fade.before, 'keep the seated tube during fade-out');
+    assert.equal(fade.opacity, '0');
     // Save reviewable fixed frames. Screenshots don't require a live scenario.
     for (const width of [320, 1280]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 800 });

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=63">
+  <link rel="stylesheet" href="style.css?v=64">
 </head>
 <body>
 
@@ -18,14 +18,25 @@
           <path d="M231 125 Q234 119 240 122" stroke-width="2.2"/>
           <path d="M241 143 L249 144 M262 185 L257 211" stroke-width="1.3" opacity="0.4"/>
       </g>
-      <!-- Rotate the established profile into a supine side view. -->
+      <!-- A full cranial vault and short hairline, shared by the supine and
+           intubation views. Keep the face landmarks separate for mask seating. -->
+      <g id="patient-cranium">
+        <path d="M267 26 C303 -3 351 10 365 52 C378 85 375 123 362 153 Q354 174 341 186" opacity="0.8"/>
+        <path id="patient-hair" d="M267 26 C303 -3 351 10 365 52 Q375 77 371 103
+          L359 111 L356 84 Q340 73 337 51 Q309 53 287 37 L275 45 Z"
+          fill="#34404c" stroke="#8b9ba8" stroke-width="2.2"/>
+        <path d="M290 25 Q316 17 340 35 M322 26 Q343 31 353 52 M354 62 L363 84" opacity="0.35" stroke-width="1.5"/>
+        <path d="M342 107 Q355 103 355 117 Q352 132 344 127 M346 110 Q351 108 351 118" opacity="0.6" stroke-width="2.2"/>
+      </g>
+      <!-- More depth behind the face, with the occiput still resting on the
+           patient plane. The airway landmarks move up eight units together. -->
       <g id="procedure-patient-head">
-        <g transform="translate(365 -4) rotate(90) scale(0.48)" stroke-width="3.4">
+        <g transform="translate(365 -12) rotate(90) scale(0.48)" stroke-width="3.4">
           <use href="#patient-face-profile"/>
-          <path d="M267 26 C297 14 327 34 329 76 L328 151 Q324 183 290 214" opacity="0.65"/>
-          <path d="M300 115 Q313 109 315 122 Q313 133 303 130" stroke-width="1.4" opacity="0.45"/>
+          <use href="#patient-cranium"/>
+          <path d="M341 186 Q319 205 290 214" opacity="0.8"/>
         </g>
-        <path d="M264 135 Q254 137 245 131 M265 150 Q251 163 235 164"/>
+        <path d="M264 127 Q254 132 245 131 M265 142 Q251 163 235 164"/>
       </g>
       <g id="procedure-patient-body">
         <!-- Chest, lower ribs and arm in the same sparse contour style as CPR. -->
@@ -375,16 +386,16 @@
           </mask>
           <!-- The anterior and posterior routes share the oral approach. These
                normalized paths drive both walls of each tube, including withdrawal. -->
-          <path id="lx-tracheal-route" pathLength="100" d="M81 111 C105 99 125 111 153 139 C168 152 197 142 224 155 C244 164 246 184 233 199 Q225 211 225 233 L225 253"/>
-          <path id="lx-esophageal-route" pathLength="100" d="M81 111 C105 99 125 111 153 139 C168 152 197 142 224 155 C248 166 258 188 260 213 L260 257"/>
-          <path id="lx-failed-route" pathLength="100" d="M81 111 C105 99 125 111 153 139 C168 152 197 142 224 155 C240 163 244 178 237 191"/>
+          <path id="lx-tracheal-route" pathLength="100" d="M84 143 C180 143 225 151 225 213 L225 253"/>
+          <path id="lx-esophageal-route" pathLength="100" d="M84 143 C184 143 260 154 260 213 L260 257"/>
+          <path id="lx-failed-route" pathLength="100" d="M84 143 C174 143 223 149 225 192"/>
         </defs>
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <g id="lx-anatomy">
             <g mask="url(#lx-open-mouth)"><use href="#patient-face-profile" transform="translate(-75 0)"/></g>
-            <path d="M192 26 C228 6 284 27 291 79 L291 169 Q293 200 276 218 L298 275" opacity="0.55"/>
+            <use href="#patient-cranium" transform="translate(-75 0)"/>
+            <path d="M266 186 Q263 204 266 218 L290 275" opacity="0.65"/>
             <path d="M158 133 L175 136 M158 156 L169 158 C170 179 185 195 203 196 L200 215 L177 275" opacity="0.85"/>
-            <path d="M261 119 Q273 112 276 125 Q274 139 264 135 M265 123 Q271 120 271 130" opacity="0.4" stroke-width="1.5"/>
             <!-- Hard/soft palate and posterior pharyngeal wall. -->
             <path d="M167 131 Q188 125 210 136 Q230 142 237 152 M237 145 Q253 145 259 163 L268 198" opacity="0.7"/>
             <path d="M169 133 L168 142 L176 143 L178 136" fill="#b9c7d1" fill-opacity="0.12" stroke-width="1.5"/>
@@ -411,9 +422,12 @@
           </g>
           <!-- Simple Macintosh: straight knurled handle, hinge, curved blade. -->
           <g id="lx-mac">
+            <!-- The handle extends below the mouth, opposite the blade's concavity. -->
+            <g id="lx-mac-handle" transform="translate(0 270) scale(1 -1)">
             <rect x="110" y="54" width="23" height="78" rx="4" fill="#202c36"/>
             <path d="M115 64 L128 64 M115 72 L128 72 M115 80 L128 80 M115 88 L128 88 M115 96 L128 96 M115 104 L128 104 M115 112 L128 112" opacity="0.5" stroke-width="1.3"/>
-            <rect x="112" y="127" width="24" height="13" rx="2" fill="#34404c"/>
+            </g>
+            <rect id="lx-mac-hinge" x="112" y="127" width="24" height="13" rx="2" fill="#34404c"/>
             <path d="M132 133 C153 140 172 162 194 173 Q209 181 224 177 L225 181 Q210 188 194 181 C169 167 151 152 128 145 Z" fill="#8d9fac" stroke="#d2dfe8"/>
             <path d="M139 142 Q182 177 213 180" opacity="0.6" stroke-width="1"/>
             <circle cx="209" cy="178" r="2" fill="#ffe6a1" stroke="none"/>
@@ -429,9 +443,16 @@
           <g id="lx-tube-failed" class="lx-tube">
             <use class="lx-tube-wall" href="#lx-failed-route"/><use class="lx-tube-lumen" href="#lx-failed-route"/>
           </g>
-          <g id="lx-tube-connector" transform="translate(80 111) rotate(-17)">
+          <g id="lx-tube-connector" transform="translate(84 143)">
             <rect x="-10" y="-6" width="13" height="12" rx="2" fill="#7fd0ff" fill-opacity="0.25" stroke="#7fd0ff"/>
             <path d="M-9 -9 L-9 9" stroke-width="3"/>
+          </g>
+          <!-- Depth bands and a beveled distal edge distinguish an ETT from a soft trace. -->
+          <g id="lx-tracheal-detail" class="lx-tube-detail" stroke="#506473" stroke-width="1.6">
+            <path d="M222 213 L228 213 M222 222 L228 222 M222 253 L228 249"/>
+          </g>
+          <g id="lx-esophageal-detail" class="lx-tube-detail" stroke="#506473" stroke-width="1.6">
+            <path d="M257 214 L263 214 M257 223 L263 223 M257 257 L263 253"/>
           </g>
           <ellipse id="lx-tracheal-cuff" class="lx-cuff" cx="225" cy="238" rx="9" ry="9"/>
           <ellipse id="lx-esophageal-cuff" class="lx-cuff" cx="260" cy="242" rx="7" ry="9"/>
@@ -654,6 +675,7 @@
           <use href="#procedure-patient-head"/>
           <use id="bvm-chest" href="#procedure-patient-body"/>
           <path d="M24 170 L356 170" opacity="0.2"/>
+          <g transform="translate(0 -8)">
           <g id="bvm-assembly">
             <!-- Double cushion wraps the existing nose and mouth profile. -->
             <path id="bvm-seal" d="M289 115 Q286 106 293 98 L320 97 Q326 101 324 114"
@@ -677,6 +699,7 @@
             <g id="bvm-grip-bottom" stroke="#b9c7d1"><path d="M186 110 Q201 118 216 109 L231 97 Q235 92 231 90 Q227 89 222 96 L207 102" fill="#151e28"/></g>
             <path id="bvm-air" d="M272 73 L305 73 L305 99" stroke="#7fd0ff" stroke-width="2.5" stroke-dasharray="4 6"/>
             <path id="bvm-leak" d="M327 104 L337 96 M328 110 L342 108 M288 111 L278 105" stroke="#ccaa33" stroke-width="2.5"/>
+          </g>
           </g>
           <path id="bvm-rise-cue" d="M187 108 L198 101 L208 108 M198 101 L198 112" stroke="#7fd0ff"/>
         </g>
@@ -1372,6 +1395,6 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-    <script src="app.js?v=54"></script>
+    <script src="app.js?v=55"></script>
 </body>
 </html>
