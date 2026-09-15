@@ -134,10 +134,10 @@ test('intubation and RSI use the same anatomical scene with distinct outcome cap
       const promise = f.context.animateLaryngoscope(procedure, outcome);
       assert.equal(f.elements.get('laryngoscope-header').textContent, procedure.toUpperCase());
       assert.equal(f.elements.get('laryngoscope-label').textContent, `${outcome} · ${caption}`);
-      f.advance(2200);
+      f.advance(f.context.timing.laryngoscope.sound);
       assert.equal(f.played.at(-1).sound, outcome === 'SUCCESS' || outcome === 'MARGINAL' ? 'success' : 'fail');
       assert.equal(f.elements.get('laryngoscope-overlay').classList.contains('visible'), true);
-      f.advance(1420); await promise;
+      f.advance(f.context.timing.laryngoscope.hold - f.context.timing.laryngoscope.sound + 220); await promise;
       assert.equal(f.elements.get('laryngoscope-overlay').classList.contains('visible'), false);
     }
   }

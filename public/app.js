@@ -1889,7 +1889,7 @@ function animateDrill(outcome) {
 const PROCEDURE_TIMING = Object.freeze({
   bvm: Object.freeze({ hold: 2500, start: 350, cycle: 1500, result: 1900, sound: 350 }),
   lucas: Object.freeze({ hold: 1900, start: 100, cycle: 600, result: 1450, sound: 100 }),
-  laryngoscope: Object.freeze({ hold: 3400, start: 0, cycle: 3400, result: 2200, sound: 2200 }),
+  laryngoscope: Object.freeze({ hold: 4000, start: 0, cycle: 4000, result: 3000, sound: 3000 }),
   scalpel: Object.freeze({ hold: 1150, start: 0, cycle: 1150, result: 650, sound: 345 }),
 });
 const PROCEDURE_FADE_MS = 220;
