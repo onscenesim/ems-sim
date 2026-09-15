@@ -1891,12 +1891,13 @@ const PROCEDURE_TIMING = Object.freeze({
   lucas: Object.freeze({ hold: 1900, start: 100, cycle: 600, result: 1450, sound: 100 }),
   laryngoscope: Object.freeze({ hold: 4000, start: 0, cycle: 4000, result: 3000, sound: 3000 }),
   sga: Object.freeze({ hold: 3400, start: 0, cycle: 3400, result: 2652, sound: 2652 }),
+  suction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2880, sound: 2880 }),
   opa: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2808, sound: 2808 }),
   scalpel: Object.freeze({ hold: 1150, start: 0, cycle: 1150, result: 650, sound: 345 }),
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
+  return id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
 function animateProcedureScene(id, procedureId, outcome) {
   const timing = PROCEDURE_TIMING[id];
@@ -1907,6 +1908,7 @@ function animateProcedureScene(id, procedureId, outcome) {
   if (!overlay || !label) { playSound(sound); return Promise.resolve(); }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const labels = {
+    suction: { SUCCESS: 'SUCCESS · AIRWAY CLEARED', MARGINAL: 'MARGINAL · PARTIAL CLEARANCE', FAILURE: 'FAILURE · MINIMAL CLEARANCE', COMPLICATION: 'COMPLICATION · SUCTION JAMMED' },
     sga: { SUCCESS: 'SUCCESS · CUFF SEATED', MARGINAL: 'MARGINAL · SHALLOW SEAT', FAILURE: 'FAILURE · NOT SEATED', COMPLICATION: 'COMPLICATION · CUFF MISALIGNED' },
     opa: { SUCCESS: 'SUCCESS · TONGUE SUPPORTED', MARGINAL: 'MARGINAL · SHORT OF POSITION', FAILURE: 'FAILURE · AIRWAY WITHDRAWN', COMPLICATION: 'COMPLICATION · AIRWAY WITHDRAWN' },
     laryngoscope: { SUCCESS: 'SUCCESS · TUBE THROUGH THE CORDS', MARGINAL: 'MARGINAL · TRACHEAL PLACEMENT', FAILURE: 'FAILURE · TUBE WITHDRAWN', COMPLICATION: 'COMPLICATION · ESOPHAGEAL PLACEMENT' },
@@ -2011,22 +2013,7 @@ function animateLUCAS(outcome) {
 }
 
 function animateSuction(outcome) {
-  return new Promise(resolve => {
-    const HOLD_MS = 1600;
-    const FADE_MS = 220;
-    const overlay = document.getElementById('suction-overlay');
-    const label   = document.getElementById('suction-label');
-    if (!overlay) { resolve(); return; }
-    label.textContent = outcome || '';
-    overlay.className = '';
-    void overlay.offsetWidth;
-    overlay.classList.add('visible');
-    if (outcome) overlay.classList.add(`outcome-${outcome}`);
-    setTimeout(() => {
-      overlay.classList.remove('visible');
-      setTimeout(resolve, FADE_MS);
-    }, HOLD_MS);
-  });
+  return animateProcedureScene('suction', 'suction', outcome);
 }
 
 function animateSGA(outcome) {

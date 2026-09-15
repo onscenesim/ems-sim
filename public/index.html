@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=67">
+  <link rel="stylesheet" href="style.css?v=68">
 </head>
 <body>
 
@@ -793,22 +793,54 @@
     <!-- Suction (Yankauer) animation overlay -->
     <div id="suction-overlay" aria-hidden="true">
       <div id="suction-header">SUCTION</div>
-      <svg id="suction-svg" viewBox="0 0 196 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Rigid Yankauer: bulbous tip, curved wand, ribbed handle, tubing tail (waves gently) -->
+      <svg id="suction-svg" viewBox="0 -30 410 310" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <g id="suction-head"><use href="#airway-head"/></g>
+          <g id="suction-body"><use href="#airway-body"/></g>
+          <g id="suction-tongue"><use href="#airway-tongue"/></g>
+          <g id="suction-epiglottis"><use href="#airway-epiglottis"/></g>
+          <g id="suction-trachea"><use href="#airway-trachea"/></g>
+          <g id="suction-esophagus"><use href="#airway-esophagus"/></g>
+          <g id="suction-cords"><use href="#airway-cords"/></g>
+          <g id="suction-labels"><use href="#airway-labels"/></g>
           <g id="yankauer">
-            <circle cx="22" cy="30" r="5.5" stroke-width="2.4"/>
-            <path d="M26 34 Q44 46 70 52 Q100 58 128 58"/>
-            <path d="M128 50 L156 50 Q163 53 163 58 Q163 63 156 66 L128 66 Z" stroke-width="2.4"/>
-            <line x1="137" y1="50" x2="137" y2="66" stroke-width="1.4" opacity="0.5"/>
-            <line x1="146" y1="50" x2="146" y2="66" stroke-width="1.4" opacity="0.5"/>
-            <path d="M163 58 Q175 58 179 65 Q184 73 189 71" stroke-width="2.2" opacity="0.8"/>
+            <!-- The rigid tip enters the mouth first. The hose stays attached
+                 to the ribbed handle throughout insertion. -->
+            <path d="M152 71 C181 53 237 58 281 72 L340 72" stroke="#678b9f" stroke-width="9"/>
+            <path d="M152 71 C181 53 237 58 281 72 L340 72" stroke="#243c4c" stroke-width="4"/>
+            <path d="M152 98 C150 126 161 147 182 161" stroke="#c2d7e2" stroke-width="7"/>
+            <path d="M152 98 C150 126 161 147 182 161" stroke="#657f90" stroke-width="2.5"/>
+            <rect x="146" y="70" width="12" height="30" rx="4" fill="#263e50" stroke="#b4ccd9"/>
+            <path d="M148 77 L156 77 M148 83 L156 83 M148 89 L156 89" stroke-width="1.2"/>
+            <circle id="suction-tip" cx="185" cy="164" r="5" fill="#a9c7d7" stroke="#e1edf3" stroke-width="1.5"/>
+            <path d="M181 163 L183 166 M186 161 L188 164" stroke="#304d60" stroke-width="1.7"/>
           </g>
-          <!-- Secretion particles drawn into the tip -->
-          <g id="suction-drops" stroke="none" fill="#7fd0ff">
-            <circle class="sdrop" cx="6" cy="12" r="2.4"/>
-            <circle class="sdrop" cx="16" cy="6" r="1.9"/>
-            <circle class="sdrop" cx="2" cy="22" r="1.7"/>
+          <!-- Fixed particles and stagger values make replay and reduced-motion
+               outcomes identical. Every cleared path goes through the tip. -->
+          <g id="suction-debris" fill="#d2b278" stroke="#f0d7a9" stroke-width="1">
+            <g id="suction-particle-0" class="suction-particle suction-early" style="offset-path: path('M173 151 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 0ms; --tip-distance: 17.6918px"><ellipse rx="3.0" ry="2.4"/></g>
+            <g id="suction-particle-1" class="suction-particle suction-early" style="offset-path: path('M181 155 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 36ms; --tip-distance: 9.8489px"><ellipse rx="3.4" ry="3.0999999999999996"/></g>
+            <g id="suction-particle-2" class="suction-particle suction-partial suction-blocker" style="offset-path: path('M196 188 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 72ms; --tip-distance: 26.4008px"><path d="M-5 -3 L0 -5 L5 -2 L4 3 L0 5 L-5 2 Z"/></g>
+            <g id="suction-particle-3" class="suction-particle suction-partial" style="offset-path: path('M165 155 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 108ms; --tip-distance: 21.9317px"><ellipse rx="3.0" ry="3.0999999999999996"/></g>
+            <g id="suction-particle-4" class="suction-particle suction-partial" style="offset-path: path('M174 164 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 144ms; --tip-distance: 11.0000px"><ellipse rx="3.4" ry="2.4"/></g>
+            <g id="suction-particle-5" class="suction-particle suction-partial" style="offset-path: path('M183 176 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 180ms; --tip-distance: 12.1655px"><ellipse rx="3.8" ry="3.0999999999999996"/></g>
+            <g id="suction-particle-6" class="suction-particle suction-full" style="offset-path: path('M168 171 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 216ms; --tip-distance: 18.3848px"><ellipse rx="3.0" ry="2.4"/></g>
+            <g id="suction-particle-7" class="suction-particle suction-full" style="offset-path: path('M177 181 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 252ms; --tip-distance: 18.7883px"><ellipse rx="3.4" ry="3.0999999999999996"/></g>
+            <g id="suction-particle-8" class="suction-particle suction-full" style="offset-path: path('M187 187 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 288ms; --tip-distance: 23.0868px"><ellipse rx="3.8" ry="2.4"/></g>
+            <g id="suction-particle-9" class="suction-particle suction-full" style="offset-path: path('M200 181 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 324ms; --tip-distance: 22.6716px"><ellipse rx="3.0" ry="3.0999999999999996"/></g>
+            <g id="suction-particle-10" class="suction-particle suction-full" style="offset-path: path('M163 146 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 360ms; --tip-distance: 28.4253px"><ellipse rx="3.4" ry="2.4"/></g>
+            <g id="suction-particle-11" class="suction-particle suction-full" style="offset-path: path('M191 194 L185 164 C161 147 150 126 152 98 L152 71 C181 53 237 58 281 72 L340 72'); --stagger: 396ms; --tip-distance: 30.5941px"><ellipse rx="3.8" ry="3.0999999999999996"/></g>
+          </g>
+          <path id="suction-flow" d="M178 151 C161 133 153 119 152 101 M178 62 Q226 58 278 72 L329 72" stroke="#7fd0ff" stroke-width="1.6" stroke-dasharray="4 6"/>
+          <g id="suction-jam" stroke="#ef9653" stroke-width="2.5">
+            <circle cx="185" cy="164" r="9"/>
+            <path d="M194 156 L222 113 L239 113" stroke-width="1.2"/>
+            <text x="244" y="117" fill="#efae73" stroke="none" font-family="monospace" font-size="12" letter-spacing="0.5">TIP BLOCKED</text>
+          </g>
+          <path id="suction-jam-impact" d="M171 154 L166 150 M197 153 L203 148 M199 175 L205 180" stroke="#f3be7d" stroke-width="2.5"/>
+          <g class="airway-phases" fill="currentColor" stroke="none" text-anchor="middle" font-family="monospace" font-size="12" letter-spacing="1">
+            <text id="suction-phase-insert" x="205" y="267">POSITION THE SUCTION TIP</text>
+            <text id="suction-phase-clear" x="205" y="267">CLEAR THE AIRWAY</text>
           </g>
         </g>
       </svg>
@@ -833,17 +865,16 @@
           <g id="sga-esophagus"><use href="#airway-esophagus"/></g>
           <g id="sga-cords"><use href="#airway-cords"/></g>
           <g id="sga-labels"><use href="#airway-labels"/></g>
-          <!-- A preformed cuff, never inflated: its bowl faces the laryngeal inlet
-               and its distal tip rests at the upper esophageal opening. -->
+          <!-- Closed lateral silhouette of the preformed cuff; its opening faces
+               away from this view. The distal tip rests at the upper esophagus. -->
           <g id="sga-placement">
             <g id="sga-device">
               <path id="sga-stem" d="M153 86 C151 134 162 157 194 173" fill="none" stroke="#a9d3de" stroke-width="13"/>
               <path id="sga-lumen" d="M153 86 C151 134 162 157 194 173" fill="none" stroke="#344d5c" stroke-width="5"/>
               <g id="sga-cuff">
-                <path d="M188 155 C200 150 216 163 219 181 Q223 197 216 201
-                  Q203 197 192 187 C181 177 178 160 188 155 Z" fill="#83b5bc" fill-opacity="0.55" stroke="#c4e4de" stroke-width="2.3"/>
-                <path d="M194 161 Q205 160 212 176 Q216 188 214 193 Q203 189 196 178 Q189 168 194 161 Z" fill="#1a303b" stroke="#9ac8cb" stroke-width="1.5"/>
-                <path d="M213 188 L216 197" stroke="#e0efdc" stroke-width="2.5"/>
+                <path d="M190 160 C199 156 207 167 211 178 L219 195 Q222 202 216 201
+                  C207 197 197 185 192 176 Q186 166 190 160 Z" fill="#83b5bc" stroke="#c4e4de" stroke-width="2.3"/>
+                <path d="M192 164 Q191 176 207 190" fill="none" stroke="#d5eae5" stroke-width="1.5" opacity="0.55"/>
                 <circle id="sga-tip" cx="216" cy="198" r="1.5" fill="#d9ecdc" stroke="none"/>
               </g>
               <g id="sga-connector" fill="#70b9c9" stroke="#c9e8ed">
@@ -859,7 +890,7 @@
               </g>
             </g>
           </g>
-          <path id="sga-flow" d="M153 94 C151 136 168 157 195 171 Q207 176 221 170 L270 170" fill="none" stroke="#8ee8c0" stroke-width="2.5" stroke-dasharray="5 7"/>
+          <path id="sga-flow" d="M153 94 C151 130 160 148 178 160 M227 170 L270 170" fill="none" stroke="#8ee8c0" stroke-width="2.5" stroke-dasharray="5 7"/>
           <path id="sga-seat-accent" d="M222 188 Q227 199 218 205" stroke="var(--procedure-color)" stroke-width="3"/>
           <g class="airway-phases" fill="currentColor" stroke="none" text-anchor="middle" font-family="monospace" font-size="12" letter-spacing="1">
             <text id="sga-phase-insert" x="205" y="267">ADVANCE THROUGH THE MOUTH</text>
@@ -1467,6 +1498,6 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-    <script src="app.js?v=66"></script>
+    <script src="app.js?v=67"></script>
 </body>
 </html>

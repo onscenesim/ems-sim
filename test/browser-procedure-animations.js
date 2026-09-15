@@ -79,6 +79,18 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
             flow: Number(css(`${id}-flow`).opacity),
             ...(id === 'sga' ? { bend: css('sga-stem').d, lumenBend: css('sga-lumen').d, cuff: css('sga-cuff').transform, grip: Number(css('sga-grip').opacity), connectorPoint: point('sga-device', 153, 86) } : {}),
           } : {}),
+          ...(id === 'suction' ? {
+            tip: point('yankauer', 185, 164),
+            particles: [...document.querySelectorAll('.suction-particle')].map(e => ({
+              opacity: Number(getComputedStyle(e).opacity),
+              position: point(e.id, 0, 0),
+              distance: getComputedStyle(e).offsetDistance,
+            })),
+            flow: Number(css('suction-flow').opacity),
+            flowOffset: Number.parseFloat(css('suction-flow').strokeDashoffset),
+            jam: Number(css('suction-jam').opacity),
+            jamImpact: Number(css('suction-jam-impact').opacity),
+          } : {}),
           ...(id === 'scalpel' ? { blade: matrix('scalpel-blade').a, impact: Number(css('scalpel-impact').opacity), trail: Number(css('scalpel-trail').opacity) } : {}),
         };
       }, { id, outcome, time });
@@ -89,9 +101,9 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       await page.setViewportSize(viewport);
       for (const reduced of [false, true]) {
         await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
-        for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa']) {
+        for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction']) {
           for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
-            const state = await sample(id, outcome, id === 'laryngoscope' ? 3600 : 3000);
+            const state = await sample(id, outcome, id === 'laryngoscope' || id === 'suction' ? 3300 : 3000);
             assert.equal(state.pointerEvents, 'none');
             assert.ok(state.width >= 240, `${id} remains legible`);
             for (const box of state.children) {
@@ -297,6 +309,34 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
         await page.emulateMedia({ reducedMotion: 'no-preference' });
       }
     }
+    // Debris removal is finite and depends on the outcome. Exact clock seeks
+    // verify actual motion, retention and a persistent plug after the jam.
+    const suctionEntry = await sample('suction', 'SUCCESS', 504);
+    assert.ok(suctionEntry.tip.x >= 150 && suctionEntry.tip.x <= 160 && suctionEntry.tip.y >= 115 && suctionEntry.tip.y <= 124, 'Yankauer enters at the lips');
+    assert.equal(suctionEntry.particles.filter(p => p.opacity === 1).length, 12);
+    assert.ok(distance(suctionEntry.particles[0].position, { x: 173, y: 151 }) < 0.01, 'debris starts in the airway');
+    const suctionDrawing = await sample('suction', 'SUCCESS', 1240);
+    assert.ok(suctionDrawing.particles[0].position.y < suctionEntry.particles[0].position.y, 'particles travel out through the wand');
+    assert.ok(suctionDrawing.flow > 0);
+    assert.ok(suctionDrawing.flowOffset < 0, 'flow cue travels outward with the particles');
+    for (const [outcome, remaining] of [['SUCCESS', 0], ['MARGINAL', 6], ['FAILURE', 10], ['COMPLICATION', 10]]) {
+      const end = await sample('suction', outcome, 3300);
+      assert.equal(end.particles.filter(p => p.opacity > 0).length, remaining);
+      assert.equal(end.jam, outcome === 'COMPLICATION' ? 1 : 0);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const still = await sample('suction', outcome, 3300);
+      assert.equal(still.particles.filter(p => p.opacity > 0).length, remaining, 'reduced motion preserves cleared amount');
+      assert.equal(still.jam, end.jam);
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+    }
+    const preJam = await sample('suction', 'COMPLICATION', 1656);
+    const jammed = await sample('suction', 'COMPLICATION', 1900);
+    const heldJam = await sample('suction', 'COMPLICATION', 3300);
+    assert.ok(preJam.flow > 0); assert.equal(preJam.jam, 0);
+    assert.equal(jammed.flow, 0); assert.equal(jammed.jam, 1); assert.equal(jammed.jamImpact, 1);
+    assert.ok(distance(jammed.particles[2].position, jammed.tip) < 0.01, 'large particle physically plugs the tip');
+    assert.ok(distance(jammed.particles[2].position, heldJam.particles[2].position) < 0.01, 'serious jam stays lodged');
+    assert.equal(heldJam.flow, 0, 'suction cannot restart through a blocked tip');
     // Starting the fade must not restart the tube or blade animation.
     await sample('laryngoscope', 'SUCCESS', 4000);
     const fade = await page.evaluate(() => {
@@ -313,7 +353,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     // Save reviewable fixed frames. Screenshots don't require a live scenario.
     for (const width of [320, 1280]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 800 });
-      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 3150], ['sga', 3000], ['opa', 3200]]) {
+      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 3150], ['sga', 3000], ['opa', 3200], ['suction', 3300]]) {
         await sample(id, 'SUCCESS', time);
         await page.screenshot({ path: path.join(output, `${id}-${width}.png`) });
       }
@@ -323,7 +363,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       await sample('laryngoscope', outcome, time);
       await page.screenshot({ path: path.join(output, `intubation-${outcome.toLowerCase()}-${time}.png`) });
     }
-    for (const id of ['sga', 'opa']) {
+    for (const id of ['sga', 'opa', 'suction']) {
       for (const [outcome, fraction] of [['SUCCESS', 0.24], ['SUCCESS', 0.28], ['SUCCESS', 0.38], ['SUCCESS', 0.5], ['SUCCESS', 0.9], ['MARGINAL', 0.9], ['FAILURE', 0.9], ['COMPLICATION', 0.9]]) {
         await page.setViewportSize({ width: 390, height: 844 });
         await sample(id, outcome, (id === 'sga' ? 3400 : 3600) * fraction);
@@ -335,7 +375,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     await page.screenshot({ path: path.join(output, 'intubation-landscape.png') });
     // All three airway scenes must resolve the shared supine head, including its
     // full cranium. A missing definition can silently render an empty <use>.
-    const sharedHeads = await page.evaluate(() => ['laryngoscope', 'sga', 'opa'].map(id => {
+    const sharedHeads = await page.evaluate(() => ['laryngoscope', 'sga', 'opa', 'suction'].map(id => {
       document.getElementById(`${id}-overlay`).style.display = 'flex';
       const prefix = id === 'laryngoscope' ? 'lx' : id;
       const head = document.querySelector(`#${prefix}-head use`).getBBox();
@@ -359,7 +399,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     });
     assert.equal(defibLabelOpacity, 1);
     assert.deepEqual(errors, []);
-    console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes, i-gel seating, OPA turnover/withdrawal and shared anatomy verified. Screenshots: ${output}`);
+    console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes, i-gel seating, OPA turnover/withdrawal, suction clearance/jam and shared anatomy verified. Screenshots: ${output}`);
   } finally {
     await browser.close();
   }
