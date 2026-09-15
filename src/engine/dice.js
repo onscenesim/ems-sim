@@ -27,10 +27,11 @@ const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exem
   // Word-boundary regex means these only fire on the exact infinitive
   // ("intubate" yes, "intubated"/"intubating" no — protects against
   // descriptive past-tense narration accidentally rolling).
-  'intubate', 'defibrillate', 'cardiovert', 'decompress', 'ventilate',
+  'intubate', 'defibrillate', 'cardiovert', 'decompress', 'ventilate', 'suction',
   // Equipment & devices
   'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
   'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
+  'mainstem',
   // Hemorrhage-control equipment and the common spellings users type for it.
   'tourniquet', 'tourniqet', 'tournquet', 'torniket', 'tourniquite',
   'tourniket', 'torniquet', 'turniquet',
@@ -410,7 +411,7 @@ function detectProcedure(userText) {
 function selectDC(proc, contextFlags = {}) {
   if (!proc.dc || proc.no_roll) return null;
 
-  const { difficult_airway, hypotensive, obese, pediatric, junctional, moving } = contextFlags;
+  const { difficult_airway, hypotensive, obese, pediatric, junctional, moving, suction_assisted } = contextFlags;
   const dcs = proc.dc;
   let selectedDC;
 
@@ -420,6 +421,9 @@ function selectDC(proc, contextFlags = {}) {
       break;
     case 'intubation':
       selectedDC = difficult_airway ? dcs[dcs.length - 1] : dcs[0];
+      // SALAD: active suction in the same turn improves the intubation view,
+      // regardless of whether the suction roll itself succeeds.
+      if (suction_assisted) selectedDC -= 2;
       break;
     case 'needle_decompression':
       selectedDC = obese ? 13 : dcs[0];
@@ -573,9 +577,11 @@ function hasStagingPostContext(text, matchEnd) {
  * Returns null if nothing detected.
  */
 function detectAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
-  const proc = detectProcedure(userText);
+  const entries = detectAllProcedures(userText);
+  const proc = entries[0]?.proc || null;
   if (!proc) return null;
-  return rollProcedure(proc, contextFlags, difficulty);
+  const suction_assisted = entries.some(e => e.proc.id === 'suction' && !e.precharge);
+  return rollProcedure(proc, { ...contextFlags, suction_assisted }, difficulty);
 }
 
 
@@ -700,8 +706,9 @@ function detectAllProcedures(userText) {
 
 function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
   const entries = detectAllProcedures(userText);
+  const suction_assisted = entries.some(e => e.proc.id === 'suction' && !e.precharge);
   return entries.map(({ proc, matchedKey, administration_route, medication_animation_route }) => {
-    const result = rollProcedure(proc, contextFlags, difficulty);
+    const result = rollProcedure(proc, { ...contextFlags, suction_assisted }, difficulty);
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
       if (administration_route) result.administration_route = administration_route;
@@ -725,9 +732,16 @@ function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
 function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMAL', overrides = {}) {
   const allow = new Set(overrides.allow || []);
   const deny  = new Set(overrides.deny  || []);
+  const entries = detectAllProcedures(userText);
+  // The benefit comes from suction being attempted in this turn, not from its
+  // outcome. Respect confirmation choices so a rejected/uncertain suction
+  // mention cannot lower an unrelated intubation roll.
+  const suction_assisted = entries.some(entry =>
+    entry.proc.id === 'suction' && !entry.precharge && !deny.has(entry.key)
+    && (!entry.uncertain || allow.has(entry.key)));
   const rolls = [];
   const suppressed = [];
-  for (const entry of detectAllProcedures(userText)) {
+  for (const entry of entries) {
     const { proc, matchedKey, uncertain, reason, precharge, key } = entry;
     // Pre-charge is a forced suppression — deterministic, not overridable by a
     // confirm click: the wording itself says "charge, don't shock."
@@ -743,7 +757,7 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
       suppressed.push({ procedure_id: proc.id, matchedKey, reason });
       continue;
     }
-    const result = rollProcedure(proc, contextFlags, difficulty);
+    const result = rollProcedure(proc, { ...contextFlags, suction_assisted }, difficulty);
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
       if (entry.administration_route) result.administration_route = entry.administration_route;

@@ -2,7 +2,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { INTERVENTIONS } = require('../src/data/interventions');
-const { normalizeForDetection, detectAllProcedures, detectWithConfirmation } = require('../src/engine/dice');
+const { normalizeForDetection, detectAllProcedures, detectWithConfirmation, rollProcedure } = require('../src/engine/dice');
 const { lookupDrug } = require('../public/drug-cards');
 const { MEDICATION_ALIASES } = require('../public/medication-aliases');
 const { OperationQueue } = require('../src/engine/operations');
@@ -31,14 +31,30 @@ test('known dangerous misroutes and rhythm analysis are corrected', () => {
 
 test('common field abbreviations and intervention misspellings still trigger the intended procedure', () => {
   for (const [phrase, id] of [
-    ['TQ', 'bleeding_control'], ['apply a TQ', 'bleeding_control'], ['TQ time', 'tourniquet_time'], ['tourniquet time', 'tourniquet_time'],
-    ['tourniquet to the left leg', 'bleeding_control'],
-    ['tourniqet to the left leg', 'bleeding_control'], ['tournquet', 'bleeding_control'],
+    ['TQ', 'tourniquet'], ['apply a TQ', 'tourniquet'], ['TQ time', 'tourniquet_time'], ['tourniquet time', 'tourniquet_time'],
+    ['tourniquet to the left leg', 'tourniquet'],
+    ['tourniqet to the left leg', 'tourniquet'], ['tournquet', 'tourniquet'],
     ['CPR', 'cpr'], ['EZIO', 'io_access'], ['ET tube', 'intubation'],
     ['12L', 'twelve_lead'], ['FSBG', 'glucometry'], ['med control', 'radio_contact'],
   ]) {
     assert.deepEqual(detectAllProcedures(phrase).map(e => e.proc.id), [id], phrase);
   }
+  assert.equal(rollProcedure('tourniquet').dc, 5);
+  assert.equal(rollProcedure('bleeding_control').dc, 12);
+});
+
+test('same-turn suction lowers intubation DC and mainstem obstruction gets its own roll', () => {
+  const dryIntubation = detectWithConfirmation('intubate').rolls.find(r => r.procedure_id === 'intubation');
+  const suctionedIntubation = detectWithConfirmation('suction and intubate').rolls.find(r => r.procedure_id === 'intubation');
+  const suction = detectWithConfirmation('suction and intubate').rolls.find(r => r.procedure_id === 'suction');
+  assert.equal(dryIntubation.dc, 10);
+  assert.equal(suctionedIntubation.dc, 8);
+  assert.equal(suction.procedure_id, 'suction');
+
+  for (const phrase of ['right mainstem', 'left main stem', 'tube too deep']) {
+    assert.deepEqual(detectWithConfirmation(phrase).rolls.map(r => r.procedure_id), ['foreign_body_removal'], phrase);
+  }
+  assert.equal(rollProcedure('intubation', { suction_assisted: true }).dc, 8);
 });
 
 test('typos still work and context survives consumption of longer matches', () => {

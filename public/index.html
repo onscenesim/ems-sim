@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=71">
+  <link rel="stylesheet" href="style.css?v=72">
 </head>
 <body>
 
@@ -359,13 +359,19 @@
           </g>
           <g id="loading-cart">
             <g id="loading-platform" stroke-width="2.4">
-              <!-- Reuse the same patient contours and head proportions as BVM/LUCAS. -->
-              <g transform="translate(10 -20) scale(0.75)" stroke="#43535b" stroke-width="2.4">
-                <use href="#procedure-patient-body"/><use href="#procedure-patient-head"/>
+              <!-- Smaller shared upper body leaves room for legs on the mattress. -->
+              <g id="loading-patient" stroke="#43535b" stroke-width="1.5">
+                <g transform="translate(120 34) scale(0.42)" stroke-width="2.8">
+                  <use href="#procedure-patient-body"/><use href="#procedure-patient-head"/>
+                </g>
+                <!-- Tapered trouser legs, a subtle seam, and simple feet. -->
+                <path d="M133 95 Q115 92 97 95 L65 98 L60 89 Q56 87 54 91 L53 102 H133"
+                  fill="#80949d"/>
+                <path d="M126 99 L70 101 M61 99 L59 102" opacity="0.65"/>
               </g>
               <path d="M42 103 H278 Q286 103 286 109 V115 H35 V109 Q35 103 42 103 Z" fill="#527f91" stroke="#294f61"/>
               <path d="M41 107 H279" stroke="#a9c7d0" stroke-width="1.5"/>
-              <path d="M119 87 L126 105 H143 L140 82 M202 76 L206 105 H217 L215 81" fill="#394f5b" stroke="#394f5b" stroke-width="1.5"/>
+              <path d="M119 94 L123 105 H132 L130 94 M202 83 L205 105 H214 L212 83" fill="#394f5b" stroke="#394f5b" stroke-width="1.5"/>
               <path d="M72 105 V90 Q72 86 77 86 H177 Q182 86 182 90 V105 M78 92 H175" stroke="#486371"/>
               <path d="M35 110 H24 V102 M286 110 H298 V102" stroke="#4b606c"/>
               <path d="M80 117 L250 147 M249 117 L79 147" stroke="#a57530" stroke-width="6"/>
@@ -392,6 +398,71 @@
         </g>
       </svg>
       <div id="loading-label">PACKAGING</div>
+    </div>
+
+    <!-- Hemorrhage scenes: illustrative outcome feedback, driven by the server roll. -->
+    <div id="bleeding_control-overlay" aria-hidden="true">
+      <div id="bleeding_control-header">BLEEDING CONTROL</div>
+      <svg id="bleeding_control-svg" viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <pattern id="gauze-weave" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 0 H6 M0 0 V6" stroke="#8da0a8" stroke-width="0.6"/></pattern>
+          <clipPath id="gauze-clip"><rect x="117" y="119" width="130" height="70" rx="9"/></clipPath>
+        </defs>
+        <g stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 151 Q79 124 120 132 L268 137 Q312 141 342 166 L342 209 Q290 190 246 198 L96 195 Q48 202 18 192" fill="#354652" stroke="#8d9ea9" stroke-width="2"/>
+          <ellipse class="pressure-pool" cx="185" cy="187" rx="93" ry="23" fill="#a52c40"/>
+          <g id="pressure-contact">
+            <rect x="113" y="124" width="139" height="69" rx="9" fill="#aebdc4" stroke="#71858f" stroke-width="2"/>
+            <rect x="117" y="119" width="130" height="70" rx="9" fill="#d5dfe0" stroke="#edf2ed" stroke-width="2"/>
+            <g clip-path="url(#gauze-clip)"><ellipse class="pressure-stain" cx="181" cy="151" rx="81" ry="51" fill="#b92f43"/></g>
+            <rect x="117" y="119" width="130" height="70" rx="9" fill="url(#gauze-weave)" opacity="0.55"/>
+            <!-- Two overlapping gloved palms; the separated fingers leave visible channels. -->
+            <g id="pressure-hands" fill="#769aaa" stroke="#c0d5df" stroke-width="2">
+              <path d="M112 33 L153 34 L168 87 Q183 94 201 100 L227 107 Q235 110 232 117 Q230 122 222 120 L197 115 L231 125 Q238 128 234 135 Q232 139 225 137 L195 129 L225 141 Q231 145 226 151 Q223 154 216 151 L188 141 L207 153 Q213 157 208 163 Q205 166 197 163 L158 145 Q143 138 137 123 L125 99 Z"/>
+              <path d="M240 30 L202 31 L187 82 Q178 86 162 94 L138 108 Q131 113 135 119 Q139 124 147 120 L168 110 L141 130 Q135 135 140 141 Q144 146 151 141 L178 123 L154 145 Q149 151 155 156 Q160 160 166 154 L190 136 L174 155 Q170 162 176 166 Q182 169 188 162 L218 137 Q230 124 229 110 L227 90 Z"/>
+              <path d="M127 91 L163 82 M193 80 L228 89 M163 105 Q174 110 177 120 M201 98 Q212 104 214 115" fill="none" stroke="#4c7185"/>
+            </g>
+            <g class="pressure-ooze" fill="none" stroke="#d23b50" stroke-width="4">
+              <path d="M155 143 Q148 153 154 166 T146 187 M179 153 Q172 166 181 177 T178 193 M213 145 Q221 157 214 173 T228 188"/>
+              <path d="M131 161 Q124 171 129 180 M235 154 Q245 168 241 183" stroke-width="2"/>
+            </g>
+          </g>
+          <path d="M97 76 L91 88 M259 74 L265 85" stroke="#a8c4d2" opacity="0.5"/>
+        </g>
+      </svg>
+      <div id="bleeding_control-label"></div>
+    </div>
+
+    <div id="tourniquet-overlay" aria-hidden="true">
+      <div id="tourniquet-header">TOURNIQUET</div>
+      <svg id="tourniquet-svg" viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g stroke-linecap="round" stroke-linejoin="round">
+          <!-- Side view of an amputated limb; the band is proximal to the wound. -->
+          <path d="M18 105 Q82 91 138 106 L238 123 L245 137 L236 146 L246 157 L238 177 L129 185 Q68 190 18 179" fill="#536573" stroke="#a5b7c2" stroke-width="2"/>
+          <path d="M238 123 Q219 137 230 150 Q220 164 238 177 L246 157 L236 146 L245 137 Z" fill="#922d40" stroke="#d45460" stroke-width="2"/>
+          <ellipse cx="237" cy="146" rx="4" ry="6" fill="#f07377"/>
+          <ellipse class="tq-pool" cx="278" cy="211" rx="57" ry="12" fill="#a52c40"/>
+          <g class="tq-flow"><g class="tq-pulse" fill="none" stroke="#e14756" stroke-width="3.5">
+            <path d="M240 145 Q281 101 330 135 M242 149 Q283 127 318 168"/>
+            <path d="M328 145 L334 150 M316 178 L321 186 M287 117 L292 114" stroke-width="3"/>
+            <circle cx="340" cy="159" r="2" fill="#e14756"/><circle cx="327" cy="197" r="2" fill="#e14756"/>
+          </g></g>
+          <g id="tq-band">
+            <path d="M136 100 Q152 96 170 104 L165 186 Q148 193 130 185 Z" fill="#1b2833" stroke="#9aaebd" stroke-width="2"/>
+            <path d="M142 104 L136 182 M162 106 L156 184" stroke="#566c7b" stroke-width="2"/>
+            <rect x="135" y="123" width="33" height="41" rx="4" fill="#354653" stroke="#c6d4dc" stroke-width="2"/>
+            <path d="M145 126 V159 M159 128 V159" stroke="#111d28" stroke-width="4"/>
+            <g id="tq-windlass"><rect x="118" y="137" width="67" height="10" rx="4" fill="#aebec9" stroke="#e1e9ea" stroke-width="2"/><path d="M125 139 V145 M178 139 V145" stroke="#526878" stroke-width="2"/></g>
+            <path id="tq-tail" d="M162 159 Q193 185 198 212" fill="none" stroke="#233542" stroke-width="10"/>
+            <path d="M136 171 L160 173 L159 180 L135 178 Z" fill="#e1e5db"/>
+          </g>
+          <g id="tq-grip" fill="#769aaa" stroke="#c0d5df" stroke-width="2">
+            <path d="M174 32 L210 42 L186 101 L172 140 Q166 152 158 149 L146 143 Q140 140 145 133 L154 126 L146 121 Q137 126 133 121 Q130 115 137 109 L157 96 Z"/>
+            <path d="M164 104 L154 126 M169 114 L160 131 M175 122 L166 138" fill="none" stroke="#4c7185"/>
+          </g>
+        </g>
+      </svg>
+      <div id="tourniquet-label"></div>
     </div>
 
     <!-- Scalpel animation overlay — surgical procedures -->
@@ -1620,6 +1691,6 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-    <script src="app.js?v=70"></script>
+    <script src="app.js?v=71"></script>
 </body>
 </html>

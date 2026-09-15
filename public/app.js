@@ -836,6 +836,7 @@ async function sendTurn(msg, opts = {}) {
       if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
       if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
       if (r.procedure_id === 'cpr') await animateCPR(r.outcome);
+      if (r.procedure_id === 'bleeding_control' || r.procedure_id === 'tourniquet') await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
       if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
       if (r.procedure_id === 'cpap') await animateNIV(r);
       if (r.procedure_id === 'lucas') await animateLUCAS(r.outcome);
@@ -1906,6 +1907,8 @@ function animateDrill(outcome) {
 // Presentation clocks only: simulation outcomes and elapsed time stay server-owned.
 // CSS receives these values so sound, result and cleanup have one timing source.
 const PROCEDURE_TIMING = Object.freeze({
+  bleeding_control: Object.freeze({ hold: 4200, start: 0, cycle: 4200, result: 3100, sound: 3100 }),
+  tourniquet: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3100, sound: 3100 }),
   bvm: Object.freeze({ hold: 2500, start: 350, cycle: 1500, result: 1900, sound: 350 }),
   lucas: Object.freeze({ hold: 1900, start: 100, cycle: 600, result: 1450, sound: 100 }),
   laryngoscope: Object.freeze({ hold: 4000, start: 0, cycle: 4000, result: 3000, sound: 3000 }),
@@ -1917,7 +1920,7 @@ const PROCEDURE_TIMING = Object.freeze({
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
+  return id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
 function animateProcedureScene(id, procedureId, outcome) {
   const timing = PROCEDURE_TIMING[id];
@@ -1928,6 +1931,8 @@ function animateProcedureScene(id, procedureId, outcome) {
   if (!overlay || !label) { playSound(sound); return Promise.resolve(); }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const labels = {
+    bleeding_control: { SUCCESS: 'SUCCESS · BLEEDING CONTROLLED', MARGINAL: 'MARGINAL · SLOW SEEPAGE', FAILURE: 'FAILURE · GAUZE SATURATED', COMPLICATION: 'COMPLICATION · HEAVY BLEEDING' },
+    tourniquet: { SUCCESS: 'SUCCESS · FLOW STOPPED', MARGINAL: 'MARGINAL · FLOW REDUCED', FAILURE: 'FAILURE · BLEEDING CONTINUES', COMPLICATION: 'COMPLICATION · CONTROL LOST' },
     ncd: { SUCCESS: 'SUCCESS · AIR RELEASED', MARGINAL: 'MARGINAL · LIMITED AIR RELEASE', FAILURE: 'FAILURE · NO AIR RETURN', COMPLICATION: 'COMPLICATION · BLOOD RETURN' },
     suction: { SUCCESS: 'SUCCESS · AIRWAY CLEARED', MARGINAL: 'MARGINAL · PARTIAL CLEARANCE', FAILURE: 'FAILURE · MINIMAL CLEARANCE', COMPLICATION: 'COMPLICATION · SUCTION JAMMED' },
     sga: { SUCCESS: 'SUCCESS · CUFF SEATED', MARGINAL: 'MARGINAL · SHALLOW SEAT', FAILURE: 'FAILURE · NOT SEATED', COMPLICATION: 'COMPLICATION · CUFF MISALIGNED' },

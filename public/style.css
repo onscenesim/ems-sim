@@ -4329,3 +4329,77 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
   #ncd-overlay .outcome-mark { grid-column: 2; grid-row: 2; justify-self: center; }
   #ncd-label { grid-column: 2; grid-row: 3; align-self: start; }
 }
+
+/* Hemorrhage control: outcome classes change the final amount of visible blood. */
+#bleeding_control-overlay, #tourniquet-overlay {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  z-index: 101; display: flex; flex-direction: column; align-items: center;
+  box-sizing: border-box; width: min(420px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px); padding: 18px 16px; gap: 12px;
+  background: #101923; border: 1px solid #526878; border-radius: 8px;
+  box-shadow: 0 16px 60px #0009; pointer-events: none; opacity: 0;
+  transition: opacity var(--procedure-fade, 220ms) ease;
+  --blood-scale: 1; --ooze: 0.75; --flow: 0.85; --tightness: 0.96;
+  --result-color: #e16c70;
+}
+:is(#bleeding_control-overlay, #tourniquet-overlay).visible { opacity: 1; }
+:is(#bleeding_control-overlay, #tourniquet-overlay).visible.is-fading { opacity: 0; }
+:is(#bleeding_control-overlay, #tourniquet-overlay).outcome-SUCCESS {
+  --blood-scale: 0.23; --ooze: 0; --flow: 0; --tightness: 0.82; --result-color: #69d995;
+}
+:is(#bleeding_control-overlay, #tourniquet-overlay).outcome-MARGINAL {
+  --blood-scale: 0.57; --ooze: 0.28; --flow: 0.23; --tightness: 0.88; --result-color: #e2c66f;
+}
+:is(#bleeding_control-overlay, #tourniquet-overlay).outcome-COMPLICATION {
+  --blood-scale: 1.35; --ooze: 1; --flow: 1.15; --tightness: 1; --result-color: #f38a62;
+}
+#bleeding_control-header, #tourniquet-header {
+  font: 11px var(--font-block, monospace); letter-spacing: 0.18em; color: #b8cbd6;
+}
+#bleeding_control-svg, #tourniquet-svg { width: 100%; min-height: 0; flex-shrink: 1; }
+#bleeding_control-label, #tourniquet-label {
+  font: 10px var(--font-block, monospace); letter-spacing: 0.06em;
+  text-align: center; color: var(--result-color); min-height: 26px;
+}
+:is(#bleeding_control-overlay, #tourniquet-overlay).visible [id$="-label"] {
+  animation: hemorrhageResult 180ms ease var(--procedure-result) both;
+}
+.pressure-stain { transform-origin: 181px 151px; transform: scale(var(--blood-scale)); }
+.pressure-pool { transform-origin: 185px 187px; transform: scale(var(--blood-scale)); opacity: var(--ooze); }
+.pressure-ooze { opacity: var(--ooze); }
+#bleeding_control-overlay.visible #pressure-contact { animation: pressureSeat 450ms ease-out both; }
+#bleeding_control-overlay.visible #pressure-hands { animation: pressureTremor 120ms linear 450ms 25 both; }
+#bleeding_control-overlay.visible .pressure-stain { animation: gauzeSaturate 2700ms ease 450ms both; }
+#bleeding_control-overlay.visible .pressure-ooze { animation: pressureSeep 1700ms ease 1400ms both; }
+#bleeding_control-overlay.visible .pressure-pool { animation: pressureSeep 2000ms ease 1100ms both; }
+@keyframes pressureSeat { from { transform: translateY(-25px); } to { transform: translateY(0); } }
+@keyframes pressureTremor {
+  0%, 100% { transform: translate(0, 1px); }
+  25% { transform: translate(-1.5px, 3px); }
+  50% { transform: translate(1px, 0); }
+  75% { transform: translate(1.5px, 2px); }
+}
+@keyframes gauzeSaturate { from { transform: scale(0.12); } to { transform: scale(var(--blood-scale)); } }
+@keyframes pressureSeep { from { opacity: 0; } to { opacity: var(--ooze); } }
+@keyframes hemorrhageResult { from { opacity: 0; } to { opacity: 1; } }
+#tq-band { transform-origin: 151px 145px; transform: scaleY(var(--tightness)); }
+#tq-windlass { transform-origin: 151px 142px; transform: rotate(540deg); }
+#tq-grip { transform-origin: 151px 142px; opacity: 0; }
+.tq-flow { transform-origin: 240px 146px; transform: scale(var(--flow)); opacity: var(--flow); }
+.tq-pool { transform-origin: 278px 211px; transform: scale(0.6); }
+#tourniquet-overlay.visible #tq-band { animation: tqTighten 2700ms ease both; }
+#tourniquet-overlay.visible #tq-windlass { animation: tqTurn 2600ms ease-in-out both; }
+#tourniquet-overlay.visible #tq-grip { animation: tqGrip 2900ms ease-in-out both; }
+#tourniquet-overlay.visible .tq-flow { animation: tqControl 3100ms ease both; }
+#tourniquet-overlay.visible .tq-pulse { animation: tqSpurt 550ms ease-out 8 both; }
+#tourniquet-overlay.visible .tq-pool { animation: tqPool 4000ms ease both; }
+@keyframes tqTighten { 0%, 25% { transform: scaleY(1.12); } 100% { transform: scaleY(var(--tightness)); } }
+@keyframes tqTurn { 0%, 25% { transform: rotate(0); } 55% { transform: rotate(180deg); } 75% { transform: rotate(360deg); } 100% { transform: rotate(540deg); } }
+@keyframes tqGrip { 0% { transform: translateY(-35px); opacity: 0; } 15%, 30% { transform: rotate(0); opacity: 1; } 50%, 75% { transform: rotate(-18deg); opacity: 1; } 60%, 85% { transform: rotate(12deg); opacity: 1; } 100% { transform: translateY(-45px); opacity: 0; } }
+@keyframes tqControl { 0%, 40% { transform: scale(1); opacity: 1; } 100% { transform: scale(var(--flow)); opacity: var(--flow); } }
+@keyframes tqSpurt { 0%, 100% { opacity: 0.25; } 15%, 30% { opacity: 1; } 75% { opacity: 0.35; } }
+@keyframes tqPool { from { transform: scale(0.2); } to { transform: scale(calc(0.6 + var(--flow) * 0.4)); } }
+@media (prefers-reduced-motion: reduce) {
+  #bleeding_control-overlay, #tourniquet-overlay { transition: none; }
+  :is(#bleeding_control-overlay, #tourniquet-overlay).visible * { animation: none !important; }
+}

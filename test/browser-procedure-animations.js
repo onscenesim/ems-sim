@@ -542,6 +542,55 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       }
     }
     console.log(`${transportLayouts} transport layout/motion checks passed; rotating wheels, parallax, departure lurch, and fade verified.`);
+    // Hemorrhage feedback must preserve distinct severities and stop flow on success.
+    async function hemorrhage(id, outcome, time) {
+      return page.evaluate(({ id, outcome, time }) => {
+        document.querySelectorAll('[id$="-overlay"]').forEach(e => { e.classList.remove('visible'); e.style.display = 'none'; });
+        const overlay = document.getElementById(`${id}-overlay`);
+        overlay.style.display = '';
+        animateProcedureScene(id, id, outcome);
+        overlay.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = time; });
+        const style = selector => getComputedStyle(overlay.querySelector(selector));
+        const rect = overlay.getBoundingClientRect();
+        return {
+          left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+          label: overlay.querySelector('[id$="-label"]').textContent,
+          amount: id === 'bleeding_control' ? new DOMMatrix(style('.pressure-stain').transform).a : Number(style('.tq-flow').opacity),
+          ooze: id === 'bleeding_control' ? Number(style('.pressure-ooze').opacity) : 0,
+          hand: id === 'bleeding_control' ? style('#pressure-hands').transform : style('#tq-grip').opacity,
+          windlass: id === 'tourniquet' ? style('#tq-windlass').transform : '',
+        };
+      }, { id, outcome, time });
+    }
+    for (const reduced of [false, true]) {
+      await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
+      for (const width of [320, 1280]) {
+        await page.setViewportSize({ width, height: width === 320 ? 568 : 800 });
+        for (const id of ['bleeding_control', 'tourniquet']) {
+          const amounts = [];
+          for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
+            const state = await hemorrhage(id, outcome, 4100);
+            assert.ok(state.left >= 0 && state.right <= width && state.top >= 0 && state.bottom <= (width === 320 ? 568 : 800), 'hemorrhage card fits viewport');
+            assert.ok(state.label.startsWith(outcome));
+            amounts.push(state.amount);
+            if (outcome === 'SUCCESS') assert.equal(id === 'tourniquet' ? state.amount : state.ooze, 0, 'successful control has no active bleeding');
+            if (!reduced) await page.screenshot({ path: path.join(output, `${id}-${outcome}-${width}.png`) });
+          }
+          assert.ok(amounts.every((n, i) => i === 0 || n > amounts[i - 1]), 'blood severity increases across all four outcomes');
+        }
+      }
+    }
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const early = await hemorrhage('tourniquet', 'SUCCESS', 700);
+    const late = await hemorrhage('tourniquet', 'SUCCESS', 3200);
+    assert.equal(early.amount, 1, 'arterial bleeding starts before tightening');
+    assert.equal(late.amount, 0, 'successful tightening stops arterial flow');
+    assert.notEqual(early.windlass, late.windlass, 'windlass turns during tightening');
+    const pressureA = await hemorrhage('bleeding_control', 'FAILURE', 500);
+    const pressureB = await hemorrhage('bleeding_control', 'FAILURE', 540);
+    assert.notEqual(pressureA.hand, pressureB.hand, 'hands tremble while maintaining pressure');
+    assert.ok(pressureA.amount < (await hemorrhage('bleeding_control', 'FAILURE', 3200)).amount, 'gauze progressively saturates');
+    console.log('32 hemorrhage outcome/layout/reduced-motion checks passed; pressure tremor, saturation and tourniquet flow verified.');
     assert.deepEqual(errors, []);
     console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes, i-gel seating, OPA turnover/withdrawal, suction clearance/jam, NCD withdrawal/release and shared anatomy verified. Screenshots: ${output}`);
   } finally {
