@@ -215,7 +215,11 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       const hinge = document.getElementById('lx-mac-hinge').getBoundingClientRect();
       return {
         headDepthRatio: profile.width / profile.height,
-        handleForwardAndUp: (handle.left + handle.right) / 2 > hinge.right && (handle.top + handle.bottom) / 2 < hinge.top,
+        handleForward: (handle.left + handle.right) / 2 > hinge.right,
+        handleLevel: Math.abs(new DOMMatrix(getComputedStyle(document.getElementById('lx-mac-handle')).transform).b) < 0.01,
+        flangeWidth: document.getElementById('lx-mac-flange').getBBox().width,
+        cuffX: Number(document.getElementById('lx-tracheal-cuff').getAttribute('cx')),
+        cuffRadius: Number(document.getElementById('lx-tracheal-cuff').getAttribute('rx')),
         routes: ['tracheal', 'esophageal', 'failed'].map(route => {
           const path = document.getElementById(`lx-${route}-route`);
           return Array.from({ length: 51 }, (_, i) => {
@@ -227,7 +231,10 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       };
     });
     assert.ok(geometry.headDepthRatio > 0.7, 'the cranium has human depth rather than a flattened profile');
-    assert.ok(geometry.handleForwardAndUp, 'the side-profile handle points forward/up, perpendicular to the proximal blade');
+    assert.ok(geometry.handleForward && geometry.handleLevel, 'Mac handle extends forward at a right angle to the proximal blade');
+    assert.ok(geometry.flangeWidth > 20, 'raised flange follows the broad curved spatula');
+    assert.ok(ends[0].x >= 235 && ends[0].x <= 250, 'successful tube has a compact visible segment beyond the cords');
+    assert.ok(geometry.cuffX - geometry.cuffRadius > 209 && geometry.cuffX + geometry.cuffRadius < ends[0].x - 4, 'cuff stays beyond the cords and behind the shortened tip');
     assert.equal(geometry.tubeFilter, 'none', 'no animated SVG blur during tube advancement');
     for (const points of geometry.routes) {
       let lastAngle = Infinity;
@@ -398,6 +405,92 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       return Number(getComputedStyle(document.getElementById('defib-label')).opacity);
     });
     assert.equal(defibLabelOpacity, 1);
+    // Transport cards retain their own visual style and caller-owned sound.
+    async function transportSample(id, time) {
+      return page.evaluate(({ id, time }) => {
+        document.querySelectorAll('[id$="-overlay"]').forEach(e => { e.classList.remove('visible'); e.style.display = 'none'; });
+        const overlay = document.getElementById(`${id}-overlay`);
+        overlay.style.display = '';
+        animateTransportScene(id);
+        const animations = overlay.getAnimations({ subtree: true });
+        animations.forEach(a => { a.pause(); a.currentTime = time; });
+        const matrix = selector => new DOMMatrix(getComputedStyle(overlay.querySelector(selector)).transform);
+        const rect = e => { const r = e.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width }; };
+        const wheel = matrix(`.${id === 'loading' ? 'loading' : 'depart'}-wheel`);
+        return {
+          card: rect(overlay), children: [...overlay.children].map(rect),
+          pointer: getComputedStyle(overlay).pointerEvents,
+          animations: animations.length,
+          ground: matrix(id === 'loading' ? '#loading-ground' : '#depart-road').e,
+          background: matrix(`#${id}-background`).e,
+          vehicle: matrix(id === 'loading' ? '#loading-cart' : '#depart-car').e,
+          wheel: { a: wheel.a, b: wheel.b },
+          bodyPitch: id === 'depart' ? matrix('#depart-body').b : 0,
+        };
+      }, { id, time });
+    }
+    let transportLayouts = 0;
+    for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 568, height: 320 }]) {
+      await page.setViewportSize(viewport);
+      for (const reduced of [false, true]) {
+        await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
+        for (const id of ['loading', 'depart']) {
+          const state = await transportSample(id, 1100);
+          assert.equal(state.pointer, 'none');
+          for (const r of [state.card, ...state.children]) {
+            assert.ok(r.left >= 0 && r.right <= viewport.width + 1 && r.top >= 0 && r.bottom <= viewport.height + 1, `${id} card fits ${JSON.stringify(viewport)}`);
+          }
+          assert.ok(state.children[1].width >= 240, 'transport illustration stays legible');
+          if (reduced) {
+            assert.equal(state.animations, 0); assert.equal(state.ground, 0);
+            assert.equal(state.wheel.a, 1); assert.equal(state.bodyPitch, 0);
+          }
+          transportLayouts++;
+        }
+      }
+    }
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const cartStart = await transportSample('loading', 100);
+    const cartMoving = await transportSample('loading', 900);
+    assert.equal(cartStart.ground, 0); assert.equal(cartStart.wheel.a, 1);
+    assert.ok(cartMoving.ground < cartMoving.background && cartMoving.background < 0, 'stretcher background has parallax');
+    assert.ok(cartMoving.vehicle > cartStart.vehicle);
+    const cartAngle = (cartMoving.vehicle + 18 - cartMoving.ground) / 10;
+    assert.ok(Math.abs(cartMoving.wheel.a - Math.cos(cartAngle)) < 0.001);
+    assert.ok(Math.abs(cartMoving.wheel.b - Math.sin(cartAngle)) < 0.001, 'caster rotation matches ground travel');
+    const parked = await transportSample('depart', 699);
+    const lurch = await transportSample('depart', 898);
+    const rolling = await transportSample('depart', 1300);
+    assert.equal(parked.vehicle, 0); assert.equal(parked.ground, 0); assert.equal(parked.wheel.a, 1);
+    assert.ok(lurch.bodyPitch < -0.01, 'brief nose-up lurch at departure');
+    assert.equal(rolling.bodyPitch, 0, 'suspension settles after the initial lurch');
+    assert.ok(rolling.vehicle > lurch.vehicle && rolling.ground < lurch.ground);
+    assert.ok(rolling.ground < rolling.background && rolling.background < 0);
+    const driveAngle = (rolling.vehicle - rolling.ground) / 18;
+    assert.ok(Math.abs(rolling.wheel.a - Math.cos(driveAngle)) < 0.001);
+    assert.ok(Math.abs(rolling.wheel.b - Math.sin(driveAngle)) < 0.001, 'ambulance tires turn with its acceleration');
+    for (const id of ['loading', 'depart']) {
+      const hold = id === 'loading' ? 2600 : 1800;
+      await transportSample(id, hold);
+      const fade = await page.evaluate(({ id, hold }) => {
+        const overlay = document.getElementById(`${id}-overlay`);
+        const vehicle = document.getElementById(id === 'loading' ? 'loading-cart' : 'depart-car');
+        const before = getComputedStyle(vehicle).transform;
+        overlay.classList.add('is-fading');
+        overlay.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = hold + 250; });
+        return { before, after: getComputedStyle(vehicle).transform, opacity: getComputedStyle(overlay).opacity };
+      }, { id, hold });
+      assert.equal(fade.before, fade.after, 'final transport pose remains fixed through fade');
+      assert.equal(fade.opacity, '0');
+    }
+    for (const width of [320, 1280]) {
+      await page.setViewportSize({ width, height: width === 320 ? 568 : 800 });
+      for (const [id, time] of [['loading', 900], ['depart', 898], ['depart', 1300]]) {
+        await transportSample(id, time);
+        await page.screenshot({ path: path.join(output, `${id}-${width}-${time}.png`) });
+      }
+    }
+    console.log(`${transportLayouts} transport layout/motion checks passed; rotating wheels, parallax, departure lurch, and fade verified.`);
     assert.deepEqual(errors, []);
     console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes, i-gel seating, OPA turnover/withdrawal, suction clearance/jam and shared anatomy verified. Screenshots: ${output}`);
   } finally {

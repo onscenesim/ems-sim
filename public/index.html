@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=68">
+  <link rel="stylesheet" href="style.css?v=70">
 </head>
 <body>
 
@@ -332,24 +332,52 @@
     <!-- Patient loading animation overlay -->
     <div id="loading-overlay" aria-hidden="true">
       <div id="loading-header">LOADING PATIENT</div>
-      <svg id="loading-svg" viewBox="0 0 100 88" xmlns="http://www.w3.org/2000/svg">
-        <!-- Wheels -->
-        <circle cx="20" cy="68" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
-        <circle cx="80" cy="68" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
-        <!-- Scissor legs -->
-        <line x1="20" y1="61" x2="37" y2="44" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <line x1="80" y1="61" x2="63" y2="44" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <line x1="20" y1="61" x2="63" y2="44" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="80" y1="61" x2="37" y2="44" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <!-- Mattress platform -->
-        <rect x="8" y="30" width="84" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
-        <!-- Head elevation -->
-        <line x1="8" y1="30" x2="20" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <line x1="20" y1="22" x2="36" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <!-- Loading dots -->
-        <circle class="load-dot load-dot-1" cx="40" cy="82" r="3" fill="currentColor"/>
-        <circle class="load-dot load-dot-2" cx="50" cy="82" r="3" fill="currentColor"/>
-        <circle class="load-dot load-dot-3" cx="60" cy="82" r="3" fill="currentColor"/>
+      <svg id="loading-svg" viewBox="0 0 360 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs><clipPath id="loading-viewport"><rect x="1" y="1" width="358" height="188" rx="5"/></clipPath></defs>
+        <g clip-path="url(#loading-viewport)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="1" width="358" height="188" rx="5" fill="#bcc6c7" stroke="none"/>
+          <g id="loading-background" stroke="#6d8388" stroke-width="1.5" opacity="0.5">
+            <path d="M-140 129 H570 M-140 35 H570 M-70 35 V129 M100 35 V129 M270 35 V129 M440 35 V129"/>
+            <path d="M-40 54 H69 V105 H-40 Z M130 54 H239 V105 H130 Z M300 54 H409 V105 H300 Z M470 54 H579 V105 H470 Z" fill="#a3b7bd"/>
+            <path d="M-25 61 H55 M145 61 H225 M315 61 H395 M485 61 H565" stroke="#e2e9e8"/>
+          </g>
+          <path d="M0 170 H360" stroke="#52636a" stroke-width="2"/>
+          <g id="loading-ground" stroke="#718188" stroke-width="2" opacity="0.65">
+            <path d="M-100 179 H-62 M-10 179 H28 M80 179 H118 M170 179 H208 M260 179 H298 M350 179 H388 M440 179 H478 M530 179 H568"/>
+          </g>
+          <g id="loading-cart">
+            <g id="loading-platform" stroke-width="2.4">
+              <!-- Reuse the same patient contours and head proportions as BVM/LUCAS. -->
+              <g transform="translate(10 -20) scale(0.75)" stroke="#43535b" stroke-width="2.4">
+                <use href="#procedure-patient-body"/><use href="#procedure-patient-head"/>
+              </g>
+              <path d="M42 103 H278 Q286 103 286 109 V115 H35 V109 Q35 103 42 103 Z" fill="#527f91" stroke="#294f61"/>
+              <path d="M41 107 H279" stroke="#a9c7d0" stroke-width="1.5"/>
+              <path d="M119 87 L126 105 H143 L140 82 M202 76 L206 105 H217 L215 81" fill="#394f5b" stroke="#394f5b" stroke-width="1.5"/>
+              <path d="M72 105 V90 Q72 86 77 86 H177 Q182 86 182 90 V105 M78 92 H175" stroke="#486371"/>
+              <path d="M35 110 H24 V102 M286 110 H298 V102" stroke="#4b606c"/>
+              <path d="M80 117 L250 147 M249 117 L79 147" stroke="#a57530" stroke-width="6"/>
+              <path d="M87 119 L243 145 M242 119 L86 145" stroke="#d5b976" stroke-width="1.5"/>
+              <circle cx="165" cy="132" r="4" fill="#607480"/>
+              <path d="M80 147 H250 M80 147 V159 M250 147 V159" stroke="#425968" stroke-width="4"/>
+              <path d="M153 129 L203 120" stroke="#526c79" stroke-width="4"/>
+            </g>
+            <g transform="translate(80 160)">
+              <circle r="10" fill="#334550" stroke="#243943" stroke-width="2"/>
+              <g class="loading-wheel" stroke="#bed0d5" stroke-width="1.8">
+                <circle r="6"/><path d="M0 -6 V6 M-6 0 H6 M-4 -4 L4 4"/>
+                <circle r="1.5" fill="#bed0d5" stroke="none"/>
+              </g>
+            </g>
+            <g transform="translate(250 160)">
+              <circle r="10" fill="#334550" stroke="#243943" stroke-width="2"/>
+              <g class="loading-wheel" stroke="#bed0d5" stroke-width="1.8">
+                <circle r="6"/><path d="M0 -6 V6 M-6 0 H6 M-4 -4 L4 4"/>
+                <circle r="1.5" fill="#bed0d5" stroke="none"/>
+              </g>
+            </g>
+          </g>
+        </g>
       </svg>
       <div id="loading-label">PACKAGING</div>
     </div>
@@ -425,7 +453,8 @@
         <defs>
 
           <!-- One preformed curve; anterior trachea and posterior esophagus remain separate. -->
-          <path id="lx-tracheal-route" pathLength="100" d="M151 58 C151 128 171 170 226 170 L275 170"/>
+          <!-- Keep the visible tracheal segment compact; the cuff and bevel sit just beyond the cords. -->
+          <path id="lx-tracheal-route" pathLength="100" d="M151 58 C151 128 171 170 226 170 L244 170"/>
           <path id="lx-esophageal-route" pathLength="100" d="M151 58 C151 132 176 198 226 198 L280 198"/>
           <path id="lx-failed-route" pathLength="100" d="M151 58 C151 124 169 160 198 167"/>
         </defs>
@@ -440,25 +469,39 @@
           <g id="lx-cords"><use href="#airway-cords"/></g>
           <g id="lx-labels"><use href="#airway-labels"/></g>
           </g>
-          <!-- Actual side-profile relationship: a short handle at right angles
-               to the proximal blade; a slender curved spatula follows the tongue. -->
+          <!-- Macintosh side profile: near-perpendicular cylindrical handle,
+               lock-on heel, broad curved spatula and raised lateral flange.
+               The distal tip retains the established vallecular contact point. -->
           <g id="lx-mac">
-            <g id="lx-mac-handle" transform="translate(163 88) rotate(-35)">
-              <rect x="0" y="-9" width="72" height="18" rx="4" fill="#24323e"/>
-              <path d="M12 -6 L12 6 M20 -6 L20 6 M28 -6 L28 6 M36 -6 L36 6 M44 -6 L44 6 M52 -6 L52 6 M63 -8 L63 8" stroke-width="1.3" opacity="0.5"/>
+            <g id="lx-mac-handle" transform="translate(163 88)">
+              <!-- Metal neck and green identification collar lead into the grip. -->
+              <path d="M3 -7 L19 -7 L26 -10 L29 -10 L29 10 L26 10 L19 7 L3 7 Z" fill="#8ba2af" stroke="#d2dfe8" stroke-width="1.6"/>
+              <rect x="25" y="-10.5" width="61" height="21" rx="6" fill="#263642" stroke="#a5b9c6" stroke-width="1.8"/>
+              <path d="M34 -7 L77 -7" stroke="#8097a6" stroke-width="1.2" opacity="0.6"/>
+              <path d="M37 -5 V6 M43 -5 V6 M49 -5 V6 M55 -5 V6 M61 -5 V6 M67 -5 V6 M73 -5 V6" stroke="#657e8d" stroke-width="1.4"/>
+              <rect x="26" y="-10.5" width="5" height="21" rx="1.5" fill="#328e83" stroke="none"/>
+              <path d="M80 -8 L80 8" stroke="#a0b5c2" stroke-width="1.5"/>
             </g>
-            <rect id="lx-mac-hinge" x="156" y="81" width="14" height="14" rx="2" fill="#34404c"/>
-            <path id="lx-mac-blade" d="M160 92 C160 119 165 145 182 164 Q187 171 191 170
-              L191 174 Q181 176 176 166 C158 146 155 120 155 94 Z" fill="#9eafbb" stroke="#d2dfe8" stroke-width="1.7"/>
-            <path d="M160 101 C160 129 167 153 181 167" stroke="#eff6fa" stroke-width="1.1" opacity="0.65"/>
+            <path id="lx-mac-hinge" d="M154 80 H168 L173 85 V97 L168 101 H153 V87 Z" fill="#78909f" stroke="#d2dfe8" stroke-width="1.7"/>
+            <path d="M154 93 H171 M158 82 V89" stroke="#425b6b" stroke-width="1.5"/>
+            <circle cx="161" cy="87" r="3.2" fill="#3b5262" stroke="#b8cbd6" stroke-width="1.3"/>
+            <path id="lx-mac-blade" d="M154 98 L170 98 C167 124 173 151 185 166
+              Q188 170 191 172 Q181 178 174 168 C158 150 150 123 154 98 Z"
+              fill="#627b8c" stroke="#d2dfe8" stroke-width="1.8"/>
+            <!-- A raised flange and a separate rounded lower edge give the blade
+                 its recognizable curved cross-section without a bulky tube shape. -->
+            <path id="lx-mac-flange" d="M168 100 C165 125 171 152 185 168 L191 172
+              Q184 170 180 165 C166 146 161 123 164 100 Z" fill="#a6bac7" stroke="#e1eaf0" stroke-width="1.1"/>
+            <path d="M155 102 C154 127 161 151 177 168 Q184 175 191 172" stroke="#91a9b9" stroke-width="1.5"/>
+            <path d="M159 101 C158 127 164 148 177 162" stroke="#3e586b" stroke-width="1.5"/>
             <circle id="lx-mac-tip" cx="191" cy="172" r="1.2" fill="#d2dfe8" stroke="none"/>
-            <circle cx="177" cy="164" r="2" fill="#ffe6a1" stroke="none"/>
+            <path d="M174 159 L178 164" stroke="#fff0c4" stroke-width="2.5"/>
           </g>
           <!-- These cues appear only after blade seating and forward/upward lift. -->
           <path id="lx-light" d="M191 155 L216 160 L217 180 Z" fill="#ffe6a1" fill-opacity="0.075" stroke="none"/>
           <g id="lx-lift-cue" stroke="#7fd0ff">
-            <path d="M240 81 L255 61 M244 63 L255 61 L256 72" stroke-width="2"/>
-            <text x="261" y="68" fill="currentColor" stroke="none" font-family="monospace" font-size="12">LIFT</text>
+            <path d="M279 88 L294 68 M283 70 L294 68 L295 79" stroke-width="2"/>
+            <text x="300" y="75" fill="currentColor" stroke="none" font-family="monospace" font-size="12">LIFT</text>
           </g>
           <path id="lx-view" d="M157 105 L208 170" stroke="#7fd0ff" stroke-width="1.2" stroke-dasharray="3 5"/>
           <g id="lx-tube-tracheal" class="lx-tube">
@@ -475,12 +518,12 @@
             <path d="M-9 -8 L-9 8" stroke-width="3"/>
           </g>
           <g id="lx-tracheal-detail" class="lx-tube-detail" stroke="#506473" stroke-width="1.6">
-            <path d="M223 167 L223 173 M232 167 L232 173 M275 167 L271 173"/>
+            <path d="M215 167 L215 173 M244 167 L240 173"/>
           </g>
           <g id="lx-esophageal-detail" class="lx-tube-detail" stroke="#506473" stroke-width="1.6">
             <path d="M223 195 L223 201 M232 195 L232 201 M280 195 L276 201"/>
           </g>
-          <ellipse id="lx-tracheal-cuff" class="lx-cuff" cx="252" cy="170" rx="9" ry="8"/>
+          <ellipse id="lx-tracheal-cuff" class="lx-cuff" cx="228" cy="170" rx="8" ry="8"/>
           <ellipse id="lx-esophageal-cuff" class="lx-cuff" cx="257" cy="198" rx="9" ry="6"/>
           <ellipse id="lx-success-ring" cx="209" cy="170" rx="19" ry="21" stroke="#66e898" stroke-width="2.5"/>
           <path id="lx-success-rays" d="M191 157 L185 150 M224 156 L230 149 M191 184 L185 191 M225 184 L231 191" stroke="#93efb3" stroke-width="2"/>
@@ -1374,48 +1417,60 @@
     <div id="depart-overlay" aria-hidden="true">
       <div id="depart-header">TRANSPORTING</div>
       <div id="depart-svg-wrap">
-        <svg id="depart-svg" viewBox="0 0 150 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
-            <!-- Module box (patient compartment) -->
-            <path d="M6 16 Q6 13 9 13 L84 13 L84 54 L6 54 Z"/>
-            <!-- Cab: roof step-down, sloped windshield, hood, nose -->
-            <path d="M84 22 L97 22 Q100 22 102 25 L112 40 L134 40 Q138 41 139 45 L139 54 L84 54"/>
-            <!-- Rocker / chassis bottom -->
-            <line x1="6" y1="54" x2="139" y2="54" stroke-width="1.6"/>
-            <!-- Rear door seam + handle -->
-            <line x1="15" y1="14" x2="15" y2="54" stroke-width="1.4"/>
-            <line x1="11" y1="36" x2="13" y2="36" stroke-width="2"/>
-            <!-- Belt line -->
-            <line x1="18" y1="33" x2="82" y2="33" stroke-width="1.2" opacity="0.5"/>
-            <!-- Windshield glass -->
-            <path d="M95 25 L103 25 L112 39 L103 39 Z" fill="currentColor" opacity="0.16" stroke-width="1.4"/>
-            <!-- Cab side window -->
-            <rect x="114" y="42" width="14" height="8" rx="1.5" stroke-width="1.4" opacity="0.6"/>
-            <!-- Headlight -->
-            <rect x="135" y="46" width="4" height="5" rx="1.2" stroke-width="1.4"/>
-            <!-- Lightbar -->
-            <rect x="20" y="6" width="40" height="6" rx="2.5" stroke-width="1.8"/>
-            <rect x="24" y="7.5" width="9" height="3" rx="1" fill="currentColor" stroke="none" opacity="0.5"/>
-            <rect x="47" y="7.5" width="9" height="3" rx="1" fill="currentColor" stroke="none" opacity="0.5"/>
-            <!-- Star of Life emblem -->
-            <g transform="translate(45,33)" stroke="currentColor" stroke-width="2.2" opacity="0.7">
-              <line x1="0" y1="-9" x2="0" y2="9"/>
-              <line x1="-7.8" y1="-4.5" x2="7.8" y2="4.5"/>
-              <line x1="-7.8" y1="4.5" x2="7.8" y2="-4.5"/>
+        <svg id="depart-svg" viewBox="0 0 360 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs><clipPath id="depart-viewport"><rect x="1" y="1" width="358" height="188" rx="5"/></clipPath></defs>
+          <g clip-path="url(#depart-viewport)" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">
+            <rect x="1" y="1" width="358" height="188" rx="5" fill="#bac8ce" stroke="none"/>
+            <g id="depart-background" stroke="#718b96" stroke-width="1.5" opacity="0.6">
+              <path d="M-90 132 V67 H-20 V132 M-12 132 V39 H69 V132 M85 132 V57 H150 V132 M169 132 V29 H250 V132 M268 132 V69 H335 V132 M349 132 V45 H428 V132 M446 132 V62 H524 V132" fill="#a9bbc0"/>
+              <path d="M0 57 H55 M0 76 H55 M0 95 H55 M183 49 H235 M183 70 H235 M183 91 H235 M363 65 H414 M363 86 H414" stroke-dasharray="9 9" stroke-width="5" opacity="0.6"/>
             </g>
-            <!-- Wheel arches -->
-            <path d="M27 54 A11 11 0 0 1 49 54"/>
-            <path d="M100 54 A11 11 0 0 1 122 54"/>
-            <!-- Wheels -->
-            <circle cx="38" cy="58" r="11"/>
-            <circle cx="38" cy="58" r="4.5" stroke-width="1.8"/>
-            <circle cx="111" cy="58" r="11"/>
-            <circle cx="111" cy="58" r="4.5" stroke-width="1.8"/>
+            <path d="M0 169 H360 V190 H0 Z" fill="#9daeb5" stroke="none"/>
+            <path d="M0 168 H360" stroke="#526671" stroke-width="2"/>
+            <g id="depart-road" stroke="#e1e7e7" stroke-width="3">
+              <path d="M-80 181 H-41 M10 181 H49 M100 181 H139 M190 181 H229 M280 181 H319 M370 181 H409 M460 181 H499 M550 181 H589"/>
+            </g>
+            <g id="depart-car">
+              <g id="depart-body" stroke="#334f60" stroke-width="2.1">
+                <!-- Suspension moves the body; the tires stay on the road. -->
+                <path d="M62 64 Q62 60 67 60 H195 V140 H62 Z" fill="#dce3df"/>
+                <path d="M195 83 H230 Q237 83 242 91 L258 114 L293 120 Q301 123 301 132 V142 H195 Z" fill="#dce3df"/>
+                <path d="M64 118 H248 L260 123 H298 V131 H64 Z" fill="#416e86" stroke="none"/>
+                <path d="M76 64 V135 M87 66 H181 V109 H87 Z" stroke-width="1.2"/>
+                <path d="M82 87 V99 M90 134 H180 M153 112 V117" stroke-width="2"/>
+                <path d="M202 91 H229 Q232 91 235 96 L246 112 H202 Z" fill="#739cab"/>
+                <path d="M209 94 H226 L236 109" stroke="#b6d0d6" stroke-width="1.5"/>
+                <path d="M199 86 V137 M221 117 H229 M249 105 H256 V115"/>
+                <path d="M70 140 H297" stroke-width="5"/>
+                <path d="M90 142 A22 22 0 0 1 134 142 M242 142 A22 22 0 0 1 286 142" fill="#a6b7bd"/>
+                <rect x="291" y="122" width="10" height="7" rx="2" fill="#efe1ac"/>
+                <path d="M299 136 H307 V143 H293 M58 134 H67" stroke-width="3"/>
+                <rect x="87" y="52" width="53" height="7" rx="2" fill="#546c7a"/>
+                <path d="M91 55 H108" stroke="#aa4f4c" stroke-width="4"/>
+                <path d="M120 55 H136" stroke="#487da0" stroke-width="4"/>
+                <g transform="translate(132 87)" stroke="#416e86" stroke-width="6">
+                  <path d="M0 -13 V13 M-11 -6.5 L11 6.5 M-11 6.5 L11 -6.5"/>
+                  <path d="M0 -7 V7" stroke="#e2eceb" stroke-width="1.4"/>
+                </g>
+                <text x="91" y="128" fill="#e8eeee" stroke="none" font-family="monospace" font-size="8" letter-spacing="1">EMS</text>
+              </g>
+              <g transform="translate(112 150)">
+                <circle r="18" fill="#2b3e49" stroke="#203541" stroke-width="2"/>
+                <g class="depart-wheel" stroke="#becfd5" stroke-width="2">
+                  <circle r="11" fill="#607785"/><path d="M0 -10 V10 M-10 0 H10 M-7 -7 L7 7"/>
+                  <circle r="3" fill="#c8d8db" stroke="none"/>
+                </g>
+              </g>
+              <g transform="translate(264 150)">
+                <circle r="18" fill="#2b3e49" stroke="#203541" stroke-width="2"/>
+                <g class="depart-wheel" stroke="#becfd5" stroke-width="2">
+                  <circle r="11" fill="#607785"/><path d="M0 -10 V10 M-10 0 H10 M-7 -7 L7 7"/>
+                  <circle r="3" fill="#c8d8db" stroke="none"/>
+                </g>
+              </g>
+            </g>
           </g>
         </svg>
-      </div>
-      <div class="loading-dots" id="depart-dots">
-        <span></span><span></span><span></span>
       </div>
       <div id="depart-label">EN ROUTE</div>
     </div>
@@ -1498,6 +1553,6 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-    <script src="app.js?v=67"></script>
+    <script src="app.js?v=69"></script>
 </body>
 </html>

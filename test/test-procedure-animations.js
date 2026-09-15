@@ -166,3 +166,72 @@ test('SGA, OPA and suction wrappers preserve outcomes and use the shared sound/r
   }
   assert.equal(f.played.length, 12);
 });
+
+function transportFixture(options) {
+  const f = fixture(options);
+  for (const id of ['loading', 'depart']) {
+    const classes = new Set(), properties = {};
+    f.elements.set(`${id}-overlay`, {
+      offsetWidth: 100, properties,
+      classList: { add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c) },
+      style: { setProperty: (key, value) => { properties[key] = value; } },
+    });
+  }
+  vm.runInContext(source.slice(source.indexOf('const TRANSPORT_TIMING'), source.indexOf('function animateDrill')) + source.slice(source.indexOf('function animateDepart()'), source.indexOf('/**', source.indexOf('function animateDepart()'))) + '\nthis.transportTiming = TRANSPORT_TIMING;', f.context);
+  return f;
+}
+for (const [id, fn, hold, fade] of [['loading', 'animateLoading', 2600, 220], ['depart', 'animateDepart', 1800, 250]]) {
+  test(`${id}: preserves event lifetime, replay and final pose through fade without duplicating caller-owned sound`, async () => {
+    for (const reduced of [false, true]) {
+      const f = transportFixture({ reduced });
+      const overlay = f.elements.get(`${id}-overlay`);
+      for (let replay = 0; replay < 2; replay++) {
+        let complete = false;
+        const p = f.context[fn]().then(() => { complete = true; });
+        assert.equal(overlay.classList.contains('visible'), true);
+        assert.equal(overlay.classList.contains('is-fading'), false);
+        assert.equal(overlay.properties['--transport-start'], `${f.context.transportTiming[id].start}ms`);
+        assert.equal(overlay.properties['--transport-travel'], `${f.context.transportTiming[id].travel}ms`);
+        f.advance(hold - 1); assert.equal(overlay.classList.contains('is-fading'), false);
+        f.advance(1); assert.equal(overlay.classList.contains('is-fading'), true);
+        assert.equal(overlay.classList.contains('visible'), true);
+        f.advance(fade - 1); await Promise.resolve(); assert.equal(complete, false);
+        f.advance(1); await p;
+        assert.equal(overlay.classList.contains('visible'), false);
+        assert.equal(overlay.classList.contains('is-fading'), false);
+      }
+      assert.equal(f.played.length, 0); assert.equal(f.timers.length, 0);
+    }
+    const absent = transportFixture({ missing: true });
+    await absent.context[fn](); assert.equal(absent.timers.length, 0);
+  });
+}
+
+test('server transport flags still gate one-time loading/departure sounds, destination lock and moving state', async () => {
+  for (const provider of ['ALS', 'BLS']) {
+    const f = fixture(), events = [], releases = [];
+    let enteredDepart;
+    const departStarted = new Promise(r => { enteredDepart = r; });
+    Object.assign(f.context, {
+      hasPlayedLoading: false, hasPlayedDepart: false,
+      localTranscript: { meta: { provider_level: provider } },
+      playSound: sound => events.push(sound),
+      lockDestinationPanel: dest => events.push(`lock:${dest}`),
+      animateLoading: () => { events.push('loading'); return new Promise(r => releases.push(r)); },
+      animateDepart: () => { events.push('depart'); enteredDepart(); return new Promise(r => releases.push(r)); },
+    });
+    const start = source.indexOf('    // Contextual animations');
+    const end = source.indexOf('    // A terminal skip', start);
+    vm.runInContext('async function transportEvents(data) {\n' + source.slice(start, end) + '\n}', f.context);
+    await f.context.transportEvents({}); assert.equal(events.length, 0);
+    let done = false;
+    const p = f.context.transportEvents({ loading: true, departing: true, transport_dest: 'hospital' }).then(() => { done = true; });
+    assert.deepEqual(events, [provider === 'BLS' ? 'sfx_loading_bls' : 'sfx_loading_als', 'loading']);
+    releases.shift()(); await departStarted;
+    assert.equal(f.context.window._isMoving, true);
+    assert.deepEqual(events.slice(2), ['lock:hospital', 'sfx_depart', 'depart']);
+    assert.equal(done, false); releases.shift()(); await p;
+    await f.context.transportEvents({ loading: true, departing: true, transport_dest: 'hospital' });
+    assert.equal(events.length, 5, 'repeated server flags do not replay transport');
+  }
+});

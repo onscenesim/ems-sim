@@ -1851,18 +1851,37 @@ function animateDispatch() {
 }
 
 
-function animateLoading() {
+// Preserve the server-triggered loading/departure lifetimes and caller-owned
+// sounds. CSS uses this clock for scenery, tire rotation and suspension.
+const TRANSPORT_TIMING = Object.freeze({
+  loading: Object.freeze({ hold: 2600, start: 100, travel: 2200, fade: 220 }),
+  depart: Object.freeze({ hold: 1800, start: 700, travel: 1100, fade: 250 }),
+});
+function animateTransportScene(id) {
+  const overlay = document.getElementById(`${id}-overlay`);
+  if (!overlay) return Promise.resolve();
+  const timing = TRANSPORT_TIMING[id];
+  overlay.classList.remove('visible');
+  overlay.classList.remove('is-fading');
+  overlay.style.setProperty('--transport-start', `${timing.start}ms`);
+  overlay.style.setProperty('--transport-travel', `${timing.travel}ms`);
+  overlay.style.setProperty('--transport-fade', `${timing.fade}ms`);
+  void overlay.offsetWidth;
+  overlay.classList.add('visible');
   return new Promise(resolve => {
-    const HOLD_MS = 2600;
-    const FADE_MS = 220;
-    let overlay = document.getElementById('loading-overlay');
-    if (!overlay) { resolve(); return; }
-    overlay.classList.add('visible');
     setTimeout(() => {
-      overlay.classList.remove('visible');
-      setTimeout(resolve, FADE_MS);
-    }, HOLD_MS);
+      // Keep the final pose through the fade instead of snapping back to parked.
+      overlay.classList.add('is-fading');
+      setTimeout(() => {
+        overlay.classList.remove('visible');
+        overlay.classList.remove('is-fading');
+        resolve();
+      }, timing.fade);
+    }, timing.hold);
   });
+}
+function animateLoading() {
+  return animateTransportScene('loading');
 }
 
 function animateDrill(outcome) {
@@ -2140,22 +2159,7 @@ function animateLaryngoscope(procedureId, outcome) {
 }
 
 function animateDepart() {
-  return new Promise(resolve => {
-    const DRIVE_DELAY = 700;
-    const DRIVE_MS    = 1100;
-    const FADE_MS     = 250;
-    let overlay = document.getElementById('depart-overlay');
-    if (!overlay) { resolve(); return; }
-    overlay.classList.add('visible');
-    setTimeout(() => {
-      overlay.classList.add('driving');
-    }, DRIVE_DELAY);
-    const total = DRIVE_DELAY + DRIVE_MS;
-    setTimeout(() => {
-      overlay.classList.remove('visible', 'driving');
-      setTimeout(resolve, FADE_MS);
-    }, total);
-  });
+  return animateTransportScene('depart');
 }
 
 /**

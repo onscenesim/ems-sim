@@ -1112,142 +1112,95 @@ html, body {
 #vitals-bar.multi-patient #multi-patient-notice { display: flex; }
 
 
-/* ── Patient loading overlay ─────────────────────────────────────────────── */
-
-#loading-overlay {
+/* ── Patient loading and ambulance departure ──────────────────────────── */
+/* Retain the chrome transport cards, with larger clipped SVG scenes. */
+#loading-overlay, #depart-overlay {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -60%) scale(0.85);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.96);
   z-index: 103;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px;
+  width: min(520px, calc(100vw - 24px));
   background: var(--chrome-bg);
   background-image: var(--noise);
   background-blend-mode: soft-light;
   border: 2px solid;
   border-color: var(--hi) var(--lo) var(--lo) var(--hi);
-  padding: 1rem 2.2rem 0.9rem;
-  font-family: var(--font-block, monospace);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  min-width: 190px;
-  text-align: center;
-}
-
-#loading-overlay.visible {
-  opacity: 1;
-  transform: translate(-50%, -60%) scale(1);
-}
-
-#loading-header {
-  font-size: 0.5rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #0a3d52;
-  margin-bottom: 0.15rem;
-}
-
-#loading-svg {
-  width: 96px;
-  height: 86px;
-  color: #333;
-}
-
-#loading-label {
-  font-size: 0.95rem;
-  letter-spacing: 0.14em;
-  color: #1a1a1a;
-  margin-top: 0.1rem;
-}
-
-.load-dot {
-  opacity: 0.2;
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-}
-.load-dot-1 { animation: dot-pulse 1.1s ease-in-out infinite 0.0s; }
-.load-dot-2 { animation: dot-pulse 1.1s ease-in-out infinite 0.22s; }
-.load-dot-3 { animation: dot-pulse 1.1s ease-in-out infinite 0.44s; }
-
-@keyframes dot-pulse {
-  0%, 100% { opacity: 0.2; transform: translateY(0); }
-  45%       { opacity: 0.9; transform: translateY(-4px); }
-}
-
-/* ── Ambulance departure overlay ─────────────────────────────────────────── */
-
-#depart-overlay {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -60%) scale(0.85);
-  z-index: 103;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  background: var(--chrome-bg);
-  background-image: var(--noise);
-  background-blend-mode: soft-light;
-  border: 2px solid;
-  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
-  padding: 1rem 2.2rem 0.9rem;
+  padding: 14px;
   font-family: var(--font-block, monospace);
   pointer-events: none;
   opacity: 0;
   overflow: hidden;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  min-width: 220px;
+  transition: opacity var(--transport-fade, 220ms) ease, transform 200ms ease;
   text-align: center;
 }
-
-#depart-overlay.visible {
+#loading-overlay.visible, #depart-overlay.visible {
   opacity: 1;
-  transform: translate(-50%, -60%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
 }
-
-#depart-header {
-  font-size: 0.5rem;
+:is(#loading-overlay, #depart-overlay).visible.is-fading { opacity: 0; }
+#loading-header, #depart-header {
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #0a3d52;
-  margin-bottom: 0.15rem;
 }
-
-#depart-svg {
-  width: 154px;
-  height: auto;
-  color: #333;
-  overflow: visible;
-}
-
-#depart-dots {
-  margin: 2px 0 0;
-}
-
-#depart-label {
-  font-size: 0.95rem;
+#loading-label, #depart-label {
+  font-size: 16px;
+  line-height: 1.5;
   letter-spacing: 0.14em;
   color: #1a1a1a;
-  margin-top: 0.05rem;
 }
-
-/* Drive-off: ambulance slides right and fades */
-#depart-svg-wrap {
-  overflow: visible;
+#loading-svg, #depart-svg {
+  width: min(100%, calc((100vh - 110px) * 1.8947));
+  height: auto;
+  flex-shrink: 0;
+  color: #334f60;
+  overflow: hidden;
 }
-#depart-overlay.driving #depart-svg-wrap {
-  animation: depart-drive 1.15s ease-in forwards;
+#depart-svg-wrap { width: 100%; display: flex; justify-content: center; }
+.loading-wheel, .depart-wheel { transform-box: view-box; transform-origin: 0 0; }
+/* The cart travels 36 units while the ground passes 144: 180 / radius 10
+   radians of wheel rotation. All three use the same linear clock. */
+#loading-overlay.visible #loading-cart { animation: loadingRoll var(--transport-travel) linear var(--transport-start) both; }
+#loading-overlay.visible #loading-ground { animation: loadingGround var(--transport-travel) linear var(--transport-start) both; }
+#loading-overlay.visible #loading-background { animation: loadingBackground var(--transport-travel) linear var(--transport-start) both; }
+#loading-overlay.visible .loading-wheel { animation: loadingWheel var(--transport-travel) linear var(--transport-start) both; }
+#loading-overlay.visible #loading-platform { animation: loadingRide var(--transport-travel) linear var(--transport-start) both; }
+@keyframes loadingRoll { from { transform: translateX(-18px); } to { transform: translateX(18px); } }
+@keyframes loadingGround { to { transform: translateX(-144px); } }
+@keyframes loadingBackground { to { transform: translateX(-72px); } }
+@keyframes loadingWheel { to { transform: rotate(1031.324deg); } }
+@keyframes loadingRide {
+  0%, 24%, 48%, 72%, 100% { transform: translateY(0); }
+  12%, 60% { transform: translateY(-1px); }
+  36%, 84% { transform: translateY(0.7px); }
 }
-
-@keyframes depart-drive {
-  0%   { transform: translateX(0);     opacity: 1; }
-  65%  { transform: translateX(60px);  opacity: 0.75; }
-  100% { transform: translateX(140px); opacity: 0; }
+/* Tires and scenery accelerate together after the original 700ms lead-in.
+   Body pitch is separate from the tires so the suspension lurch stays grounded. */
+#depart-overlay { --departure-ease: cubic-bezier(0.45, 0, 0.7, 0.6); }
+#depart-body { transform-box: view-box; transform-origin: 150px 134px; }
+#depart-overlay.visible #depart-car { animation: departDrive var(--transport-travel) var(--departure-ease) var(--transport-start) both; }
+#depart-overlay.visible #depart-road { animation: departRoad var(--transport-travel) var(--departure-ease) var(--transport-start) both; }
+#depart-overlay.visible #depart-background { animation: departBackground var(--transport-travel) var(--departure-ease) var(--transport-start) both; }
+#depart-overlay.visible .depart-wheel { animation: departWheel var(--transport-travel) var(--departure-ease) var(--transport-start) both; }
+#depart-overlay.visible #depart-body { animation: departLurch var(--transport-travel) linear var(--transport-start) both; }
+@keyframes departDrive { from { transform: translateX(0); opacity: 1; } 70% { opacity: 1; } to { transform: translateX(200px); opacity: 0; } }
+@keyframes departRoad { to { transform: translateX(-180px); } }
+@keyframes departBackground { to { transform: translateX(-65px); } }
+/* 380 units of relative ground travel / radius 18, clockwise toward the right. */
+@keyframes departWheel { to { transform: rotate(1209.5776deg); } }
+@keyframes departLurch {
+  0%, 52%, 100% { transform: translate(0, 0) rotate(0); }
+  8% { transform: translate(-2px, 1px) rotate(-0.8deg); }
+  18% { transform: translate(1px, -1.5px) rotate(-1deg); }
+  28% { transform: translate(0, 1px) rotate(0.5deg); }
+  40% { transform: translate(0, -0.5px) rotate(-0.2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #loading-overlay, #depart-overlay { transition: none; }
+  :is(#loading-overlay, #depart-overlay).visible * { animation: none !important; }
 }
 
 /* ── Dispatch incoming overlay ───────────────────────────────────────────── */
