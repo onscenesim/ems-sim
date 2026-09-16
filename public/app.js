@@ -85,6 +85,7 @@ const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression',
 const SCALPEL_PROCS = new Set(['cricothyrotomy', 'finger_thoracostomy',
   'resuscitative_thoracotomy', 'perimortem_csection']);
 // Triggers the laryngoscope animation with pass/fail outcome
+const OBSTRUCTION_PROCS = new Set(['foreign_body_removal', 'abdominal_thrusts']);
 const LARYNGOSCOPE_PROCS = new Set(['intubation', 'rsi']);
 // Triggers the defib/cardioversion animation
 const DEFIB_PROCS = new Set(['defibrillation', 'cardioversion']);
@@ -832,6 +833,8 @@ async function sendTurn(msg, opts = {}) {
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id, r.outcome);
+      if (r.procedure_id === 'nasopharyngeal_airway') await animateProcedureScene('npa', r.procedure_id, r.outcome);
+      if (OBSTRUCTION_PROCS.has(r.procedure_id)) await animateProcedureScene('obstruction', r.procedure_id, r.outcome);
       if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
       if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
       if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
@@ -1010,7 +1013,7 @@ function showProcConfirm(msg, opts, items) {
     info.className = 'proc-confirm-info';
     const name = document.createElement('div');
     name.className = 'proc-confirm-name';
-    name.textContent = item.procedure_id.replace(/_/g, ' ').toUpperCase()
+    name.textContent = (OBSTRUCTION_PROCS.has(item.procedure_id) ? 'REMOVE OBSTRUCTION' : item.procedure_id.replace(/_/g, ' ').toUpperCase())
       + (item.matched && item.matched !== item.procedure_id ? ` ("${item.matched}")` : '');
     info.appendChild(name);
     // Only ambiguous detections need the "why are we asking" line; confident
@@ -1907,6 +1910,8 @@ function animateDrill(outcome) {
 // Presentation clocks only: simulation outcomes and elapsed time stay server-owned.
 // CSS receives these values so sound, result and cleanup have one timing source.
 const PROCEDURE_TIMING = Object.freeze({
+  npa: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2800, sound: 2800 }),
+  obstruction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2500, sound: 2500 }),
   chest_seal: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3000, sound: 3000 }),
   pacing: Object.freeze({ hold: 5200, start: 0, cycle: 5200, result: 2800, sound: 2800 }),
   defib: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 2600, sound: 1400 }),
@@ -1923,7 +1928,7 @@ const PROCEDURE_TIMING = Object.freeze({
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
+  return OBSTRUCTION_PROCS.has(id) || id === 'nasopharyngeal_airway' || DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
 function animateProcedureScene(id, procedureId, outcome) {
   const timing = PROCEDURE_TIMING[id];
@@ -1934,6 +1939,8 @@ function animateProcedureScene(id, procedureId, outcome) {
   if (!overlay || !label) { playSound(sound); return Promise.resolve(); }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const labels = {
+    npa: { SUCCESS: 'SUCCESS · AIRWAY SEATED', MARGINAL: 'MARGINAL · SHALLOW PLACEMENT', FAILURE: 'FAILURE · UNABLE TO ADVANCE', COMPLICATION: 'COMPLICATION · AIRWAY EXPELLED' },
+    obstruction: { SUCCESS: 'SUCCESS · OBSTRUCTION EXPELLED', MARGINAL: 'MARGINAL · DISLODGED INTO MOUTH', FAILURE: 'FAILURE · OBSTRUCTION REMAINS', COMPLICATION: 'COMPLICATION · OBSTRUCTION DEEPER' },
     chest_seal: { SUCCESS: 'SUCCESS · SEAL SEATED', MARGINAL: 'MARGINAL · PARTIAL ADHESION', FAILURE: 'FAILURE · VENT CLOGGED', COMPLICATION: 'COMPLICATION · WOUND MISSED' },
     pacing: { SUCCESS: 'SUCCESS · CAPTURE', MARGINAL: 'MARGINAL · INTERMITTENT CAPTURE', FAILURE: 'FAILURE · NO CAPTURE', COMPLICATION: 'COMPLICATION · CAPTURE LOST' },
     defib: { SUCCESS: 'SUCCESS · ORGANIZED RHYTHM', MARGINAL: 'MARGINAL · TRANSIENT RESPONSE', FAILURE: 'FAILURE · QUIVERING PERSISTS', COMPLICATION: 'COMPLICATION · RESPONSE LOST' },
@@ -2176,7 +2183,7 @@ function animateDiceRoll(procedureId, roll, dc, outcome) {
     const FADE_MS    = 200;  // CSS transition duration (matches --transition in CSS)
 
     // Populate static labels
-    diceProcEl.textContent    = procedureId.replace(/_/g, ' ').toUpperCase();
+    diceProcEl.textContent    = OBSTRUCTION_PROCS.has(procedureId) ? 'REMOVE OBSTRUCTION' : procedureId.replace(/_/g, ' ').toUpperCase();
     const dcLabel = Array.isArray(dc) ? dc.join(' / ') : dc;
     diceDCEl.textContent      = `DC ${dcLabel}`;
     diceOutcomeEl.textContent = '';

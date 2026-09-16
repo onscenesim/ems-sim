@@ -54,7 +54,7 @@ const PROC_TERMS = {
   cpr: ['cpr', 'compression'],
   bvm: ['bag-valve', 'bag valve', 'bvm', 'bagging', 'ventilat'],
   needle_decompression: ['decompress', 'needle'],
-  foreign_body_removal: ['obstruction', 'mainstem', 'main stem', 'foreign body', 'reposition', 'withdraw', 'tube'],
+  foreign_body_removal: ['back blow', 'back slap', 'thrust', 'heimlich', 'magill', 'macgill', 'choking', 'obstruction', 'mainstem', 'main stem', 'foreign body', 'reposition', 'withdraw', 'tube'],
   tourniquet: ['tourniquet', 'tq', 'cat'],
   bleeding_control: ['bleeding', 'hemorrhage', 'pressure', 'packing', 'gauze', 'dressing'],
   fundal_massage: ['fundal', 'uterine massage'],

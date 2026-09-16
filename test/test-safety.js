@@ -41,6 +41,17 @@ test('natural direct-pressure orders trigger bleeding control', () => {
   }
 });
 
+test('bleeding control and junctional packing variants use one intervention', () => {
+  for (const phrase of [
+    'bleeding control', 'hemorrhage control', 'junctional tourniquet', 'XStat',
+    'wound packing groin', 'pelvic wound packing', 'axillary packing',
+    'neck packing', 'zone one hemorrhage', 'zone three hemorrhage'
+  ]) {
+    assert.deepEqual(detectAllProcedures(phrase).map(e => e.proc.id), ['bleeding_control'], phrase);
+  }
+  assert.equal(INTERVENTIONS.some(p => p.id === 'wound_packing_junctional'), false);
+});
+
 test('common field abbreviations and intervention misspellings still trigger the intended procedure', () => {
   for (const [phrase, id] of [
     ['TQ', 'tourniquet'], ['apply a TQ', 'tourniquet'], ['TQ time', 'tourniquet_time'], ['tourniquet time', 'tourniquet_time'],
@@ -231,4 +242,11 @@ test('debriefs share the session queue and repeated requests reuse the completed
 test('invalid scenario config is rejected before a model call', async () => {
   generate = () => assert.fail('invalid config called the model');
   assert.equal((await route('/new', {difficulty:'INVALID'})).status,400);
+});
+
+
+test('obstruction removal techniques share one roll, including combined attempts', () => {
+  for (const phrase of ['back blows', 'chest thrusts', 'abdominal thrusts', 'Magill forceps', 'Macgill forceps', 'remove obstruction', 'push foreign body down the right mainstem', 'back blows and abdominal thrusts and Magill forceps']) {
+    assert.deepEqual(detectWithConfirmation(phrase).rolls.map(r => r.procedure_id), ['foreign_body_removal'], phrase);
+  }
 });

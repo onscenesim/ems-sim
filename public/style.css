@@ -3926,47 +3926,49 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
 @keyframes lxPhaseSeat { 0%, 24%, 36%, 100% { opacity: 0; } 26%, 32% { opacity: 0.8; } }
 @keyframes lxPhaseLift { 0%, 35%, 72%, 100% { opacity: 0; } 39%, 65% { opacity: 0.8; } }
 
-/* A single fixed curve follows the tongue. Continuous, constant-speed travel
-   avoids the former multi-bend shape and mid-pass pause. Failure never
-   reaches the cords and reverses the same path until completely withdrawn. */
+/* Preserve the preformed tube shape throughout insertion and withdrawal. */
 .lx-tube { display: none; }
 #laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tube-tracheal,
 #laryngoscope-overlay.outcome-COMPLICATION #lx-tube-esophageal,
 #laryngoscope-overlay.outcome-FAILURE #lx-tube-failed { display: block; }
-.lx-tube use { stroke-dasharray: 100; stroke-dashoffset: 100; stroke-linecap: butt; }
+/* The complete tube translates in, carrying its connector, bevel and eye. */
+.lx-tube > use { stroke-linecap: butt; }
 .lx-tube-wall { stroke: #c1d8e5; stroke-width: 5.5; }
 .lx-tube-lumen { stroke: #708a9c; stroke-width: 2; }
-#laryngoscope-overlay.visible .lx-tube use { animation: lxTubePass var(--procedure-duration) linear both; }
-#laryngoscope-overlay.outcome-FAILURE.visible .lx-tube use { animation-name: lxTubeWithdraw; }
+#lx-tube-assembly { opacity: 0; transform-box: view-box; }
+#laryngoscope-overlay.visible #lx-tube-assembly { animation: lxTubePass var(--procedure-duration) linear both; }
+#laryngoscope-overlay.outcome-FAILURE.visible #lx-tube-assembly { animation-name: lxTubeWithdraw; }
 @keyframes lxTubePass {
-  0%, 45% { opacity: 0; }
-  47%, 100% { opacity: 1; }
-  0%, 46% { stroke-dashoffset: 100; }
-  70%, 100% { stroke-dashoffset: 0; }
+  0%, 45% { opacity: 0; transform: translate(-82px, -118px); }
+  47% { opacity: 1; transform: translate(-82px, -118px); }
+  63%, 100% { opacity: 1; transform: translate(0, 0); }
 }
 @keyframes lxTubeWithdraw {
-  0%, 45%, 74%, 100% { opacity: 0; }
-  47%, 73% { opacity: 1; }
-  0%, 46% { stroke-dashoffset: 100; }
-  62%, 65% { stroke-dashoffset: 0; }
-  74%, 100% { stroke-dashoffset: 100; }
+  0%, 45% { opacity: 0; transform: translate(-46px, -112px); }
+  47% { opacity: 1; transform: translate(-46px, -112px); }
+  62%, 65% { opacity: 1; transform: translate(0, 0); }
+  74%, 100% { opacity: 0; transform: translate(-46px, -112px); }
 }
-#lx-tube-connector { opacity: 0; }
-#laryngoscope-overlay.visible #lx-tube-connector { animation: lxConnector var(--procedure-duration) linear both; }
-#laryngoscope-overlay.outcome-FAILURE.visible #lx-tube-connector { animation-name: lxConnectorWithdraw; }
-@keyframes lxConnector { 0%, 45% { opacity: 0; } 47%, 100% { opacity: 1; } }
-@keyframes lxConnectorWithdraw { 0%, 45%, 74%, 100% { opacity: 0; } 47%, 70% { opacity: 1; } }
+.lx-stylet { opacity: 0; }
+#laryngoscope-overlay.visible .lx-stylet { animation: lxStyletWithdraw var(--procedure-duration) linear both; }
+@keyframes lxStyletWithdraw {
+  0%, 63% { opacity: 1; transform: translate(0, 0); }
+  70% { opacity: 1; transform: translate(-72px, -100px); }
+  72%, 100% { opacity: 0; transform: translate(-82px, -118px); }
+}
+#laryngoscope-overlay.outcome-FAILURE.visible .lx-stylet { animation: none; opacity: 1; }
+#lx-tube-connector { opacity: 1; }
 .lx-cuff { display: none; opacity: 0; fill: #b9e6ff; fill-opacity: 0.13; stroke: #b9d8e9; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; }
 #laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tracheal-cuff,
 #laryngoscope-overlay.outcome-COMPLICATION #lx-esophageal-cuff { display: block; }
 #laryngoscope-overlay.visible .lx-cuff { animation: lxCuffSeat var(--procedure-duration) ease-out both; }
-@keyframes lxCuffSeat { 0%, 70% { opacity: 0; transform: scaleY(0.4); } 75%, 100% { opacity: 1; transform: scaleY(1); } }
+@keyframes lxCuffSeat { 0%, 71% { opacity: 1; transform: scaleY(0.3); } 75%, 100% { opacity: 1; transform: scaleY(1); } }
 
-/* Tube depth bands arrive with the final seating phase; never decorate a failed pass. */
+/* Depth bands travel with the complete tube. */
 .lx-tube-detail { display: none; opacity: 0; }
 #laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tracheal-detail,
 #laryngoscope-overlay.outcome-COMPLICATION #lx-esophageal-detail { display: block; }
-#laryngoscope-overlay.visible .lx-tube-detail { animation: accessReveal 120ms ease calc(var(--procedure-duration) * 0.7) both; }
+#laryngoscope-overlay.visible .lx-tube-detail { opacity: 1; }
 
 /* The payoff: a clean green airway accent, one expanding ring and a check
    that lands with the existing success sound. Marginal retains a quiet amber result. */
@@ -4385,4 +4387,81 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
 @media (prefers-reduced-motion: reduce) {
   #chest_seal-overlay, #pacing-overlay, #defib-overlay { transition: none; }
   :is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).visible * { animation: none !important; }
+}
+
+/* Nasal adjunct and mechanism-neutral obstruction outcomes use the same head. */
+:is(#npa-overlay, #obstruction-overlay) {
+  position: fixed; inset: 0; z-index: 9500; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px; padding: 16px;
+  background: rgba(4, 8, 14, 0.82); pointer-events: none; opacity: 0;
+  transition: opacity var(--procedure-fade, 220ms) ease;
+  color: #b9cbd9; --procedure-color: #66e898;
+}
+:is(#npa-overlay, #obstruction-overlay).visible { opacity: 1; }
+:is(#npa-overlay, #obstruction-overlay).is-fading { opacity: 0; }
+:is(#npa-overlay, #obstruction-overlay).outcome-MARGINAL { --procedure-color: #ccaa33; }
+:is(#npa-overlay, #obstruction-overlay).outcome-FAILURE { --procedure-color: #cc4040; }
+:is(#npa-overlay, #obstruction-overlay).outcome-COMPLICATION { --procedure-color: #cc5522; }
+#npa-svg, #obstruction-svg { width: min(510px, 92vw, 100vh); flex-shrink: 0; }
+:is(#npa-overlay, #obstruction-overlay) > div { font-family: var(--font-block, monospace); font-size: 12px; letter-spacing: 0.14em; text-align: center; line-height: 1.6; }
+#npa-label, #obstruction-label { color: var(--procedure-color); opacity: 0; }
+:is(#npa-overlay, #obstruction-overlay).visible > div:last-child { animation: accessReveal 120ms ease var(--procedure-result) both; }
+:is(#npa-overlay, #obstruction-overlay).visible :is(.om-check, .om-x1, .om-x2) { animation-delay: var(--procedure-result); animation-duration: 180ms; }
+#npa-overlay { --npa-x: 0px; --npa-y: 0px; }
+#npa-overlay.outcome-MARGINAL { --npa-x: -18px; --npa-y: -6px; }
+#npa-overlay.outcome-FAILURE { --npa-x: -50px; --npa-y: -16px; }
+#npa-device { transform: translate(var(--npa-x), var(--npa-y)); }
+#npa-overlay.visible #npa-device { animation: npaSlide var(--procedure-duration) ease-in-out both; }
+@keyframes npaSlide {
+  0%, 8% { transform: translate(-96px, -35px); opacity: 0; }
+  15% { opacity: 1; }
+  58%, 100% { transform: translate(var(--npa-x), var(--npa-y)); opacity: 1; }
+}
+#npa-overlay.outcome-COMPLICATION.visible #npa-device { animation-name: npaExpel; }
+@keyframes npaExpel {
+  0%, 8% { transform: translate(-96px, -35px); opacity: 0; }
+  15% { opacity: 1; }
+  52%, 60% { transform: translate(0, 0); opacity: 1; }
+  72%, 100% { transform: translate(-100px, -44px) rotate(-12deg); opacity: 1; }
+}
+#obstruction-overlay { --object-x: 0px; --object-y: 0px; --air-opacity: 0; }
+#obstruction-overlay.outcome-SUCCESS { --object-x: -90px; --object-y: -135px; --air-opacity: 0.85; }
+#obstruction-overlay.outcome-MARGINAL { --object-x: -76px; --object-y: -48px; --air-opacity: 0.45; }
+#obstruction-overlay.outcome-COMPLICATION { --object-x: 55px; --object-y: 0px; }
+#obstruction-object { transform: translate(var(--object-x), var(--object-y)); }
+#obstruction-overlay.visible #obstruction-object { animation: obstructionMove var(--procedure-duration) linear both; }
+@keyframes obstructionMove {
+  0%, 35% { transform: translate(0, 0); }
+  40% { transform: translate(-2px, 1px); }
+  44% { transform: translate(1px, -1px); }
+  58%, 100% { transform: translate(var(--object-x), var(--object-y)); }
+}
+#obstruction-overlay.outcome-MARGINAL.visible #obstruction-object { animation-name: obstructionWeak; }
+@keyframes obstructionWeak {
+  0%, 40% { transform: translate(0, 0); }
+  59% { transform: translate(-52px, -20px); }
+  70%, 100% { transform: translate(var(--object-x), var(--object-y)); }
+}
+#obstruction-flow, #obstruction-burst { opacity: 0; }
+#obstruction-overlay.visible #obstruction-flow { animation: obstructionAir var(--procedure-duration) linear both; }
+@keyframes obstructionAir { 0%, 70% { opacity: 0; stroke-dashoffset: 0; } 75% { opacity: var(--air-opacity); } 100% { opacity: var(--air-opacity); stroke-dashoffset: -70; } }
+#obstruction-overlay.outcome-SUCCESS.visible #obstruction-burst { animation: obstructionBurst var(--procedure-duration) linear both; }
+@keyframes obstructionBurst { 0%, 51%, 67%, 100% { opacity: 0; } 58% { opacity: 0.9; } }
+@media (max-height: 450px) and (min-aspect-ratio: 5/4) {
+  #npa-overlay, #obstruction-overlay { display: grid; grid-template-columns: minmax(0, 320px) minmax(100px, 180px); grid-template-rows: 1fr auto 1fr; gap: 8px 20px; }
+  #npa-svg, #obstruction-svg { grid-column: 1; grid-row: 1 / 4; width: min(100%, calc((100vh - 32px) * 1.32)); }
+  #npa-header, #obstruction-header { grid-column: 2; grid-row: 1; align-self: end; }
+  :is(#npa-overlay, #obstruction-overlay) .outcome-mark { grid-column: 2; grid-row: 2; justify-self: center; }
+  #npa-label, #obstruction-label { grid-column: 2; grid-row: 3; align-self: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #laryngoscope-overlay #lx-tube-assembly { opacity: 1; transform: none; }
+  #laryngoscope-overlay.outcome-FAILURE #lx-tube-assembly { opacity: 0; }
+  #laryngoscope-overlay.visible .lx-stylet { opacity: 0; }
+  #npa-overlay, #obstruction-overlay { transition: none; }
+  :is(#npa-overlay, #obstruction-overlay).visible * { animation: none !important; }
+  #npa-label, #obstruction-label { opacity: 1; }
+  #npa-overlay.outcome-COMPLICATION #npa-device { transform: translate(-100px, -44px) rotate(-12deg); }
+  #obstruction-flow { opacity: var(--air-opacity); }
+  :is(#npa-overlay, #obstruction-overlay).visible :is(.om-check, .om-x1, .om-x2) { stroke-dashoffset: 0; }
 }
