@@ -820,7 +820,7 @@ async function sendTurn(msg, opts = {}) {
       const procSound = getProcedureSound(r.procedure_id, r.outcome);
       console.log('[roll]', r.procedure_id, r.outcome, '→ sound:', procSound);
       if (r.multi_roll) {
-        playSound(procSound);
+        if (!DEFIB_PROCS.has(r.procedure_id)) playSound(procSound);
         if (DEFIB_PROCS.has(r.procedure_id)) await animateDefib(r.procedure_id, r.outcome);
         continue;
       }
@@ -836,7 +836,7 @@ async function sendTurn(msg, opts = {}) {
       if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
       if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
       if (r.procedure_id === 'cpr') await animateCPR(r.outcome);
-      if (r.procedure_id === 'bleeding_control' || r.procedure_id === 'tourniquet') await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
+      if (['bleeding_control', 'tourniquet', 'chest_seal', 'pacing'].includes(r.procedure_id)) await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
       if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
       if (r.procedure_id === 'cpap') await animateNIV(r);
       if (r.procedure_id === 'lucas') await animateLUCAS(r.outcome);
@@ -1907,6 +1907,9 @@ function animateDrill(outcome) {
 // Presentation clocks only: simulation outcomes and elapsed time stay server-owned.
 // CSS receives these values so sound, result and cleanup have one timing source.
 const PROCEDURE_TIMING = Object.freeze({
+  chest_seal: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3000, sound: 3000 }),
+  pacing: Object.freeze({ hold: 5200, start: 0, cycle: 5200, result: 2800, sound: 2800 }),
+  defib: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 2600, sound: 1400 }),
   bleeding_control: Object.freeze({ hold: 4200, start: 0, cycle: 4200, result: 3100, sound: 3100 }),
   tourniquet: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3100, sound: 3100 }),
   bvm: Object.freeze({ hold: 2500, start: 350, cycle: 1500, result: 1900, sound: 350 }),
@@ -1920,7 +1923,7 @@ const PROCEDURE_TIMING = Object.freeze({
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
+  return DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
 function animateProcedureScene(id, procedureId, outcome) {
   const timing = PROCEDURE_TIMING[id];
@@ -1931,6 +1934,9 @@ function animateProcedureScene(id, procedureId, outcome) {
   if (!overlay || !label) { playSound(sound); return Promise.resolve(); }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const labels = {
+    chest_seal: { SUCCESS: 'SUCCESS · SEAL SEATED', MARGINAL: 'MARGINAL · PARTIAL ADHESION', FAILURE: 'FAILURE · VENT CLOGGED', COMPLICATION: 'COMPLICATION · WOUND MISSED' },
+    pacing: { SUCCESS: 'SUCCESS · CAPTURE', MARGINAL: 'MARGINAL · INTERMITTENT CAPTURE', FAILURE: 'FAILURE · NO CAPTURE', COMPLICATION: 'COMPLICATION · CAPTURE LOST' },
+    defib: { SUCCESS: 'SUCCESS · ORGANIZED RHYTHM', MARGINAL: 'MARGINAL · TRANSIENT RESPONSE', FAILURE: 'FAILURE · QUIVERING PERSISTS', COMPLICATION: 'COMPLICATION · RESPONSE LOST' },
     bleeding_control: { SUCCESS: 'SUCCESS · BLEEDING CONTROLLED', MARGINAL: 'MARGINAL · SLOW SEEPAGE', FAILURE: 'FAILURE · GAUZE SATURATED', COMPLICATION: 'COMPLICATION · HEAVY BLEEDING' },
     tourniquet: { SUCCESS: 'SUCCESS · FLOW STOPPED', MARGINAL: 'MARGINAL · FLOW REDUCED', FAILURE: 'FAILURE · BLEEDING CONTINUES', COMPLICATION: 'COMPLICATION · CONTROL LOST' },
     ncd: { SUCCESS: 'SUCCESS · AIR RELEASED', MARGINAL: 'MARGINAL · LIMITED AIR RELEASE', FAILURE: 'FAILURE · NO AIR RETURN', COMPLICATION: 'COMPLICATION · BLOOD RETURN' },
@@ -1942,6 +1948,7 @@ function animateProcedureScene(id, procedureId, outcome) {
   };
   label.textContent = labels[id]?.[outcome] || outcome || '';
   const header = document.getElementById(`${id}-header`);
+  if (id === 'defib' && header) header.textContent = procedureId === 'cardioversion' ? 'SYNCHRONIZED CARDIOVERSION' : 'DEFIBRILLATION';
   if ((id === 'scalpel' || id === 'laryngoscope') && header) header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
   overlay.className = '';
   overlay.style.setProperty('--procedure-start', `${timing.start}ms`);
@@ -1951,6 +1958,7 @@ function animateProcedureScene(id, procedureId, outcome) {
   overlay.style.setProperty('--procedure-fade', `${PROCEDURE_FADE_MS}ms`);
   void overlay.offsetWidth; // Restart every layer, including consecutive identical rolls.
   if (outcome) overlay.classList.add(`outcome-${outcome}`);
+  if (id === 'defib' && procedureId === 'cardioversion') overlay.classList.add('is-cardioversion');
   overlay.classList.add('visible');
   return new Promise(resolve => {
     // Reduced motion shows a still result, keeping the same bounded turn lifecycle.
@@ -1973,24 +1981,7 @@ function animateScalpel(procedureId, outcome) {
 }
 
 function animateDefib(procedureId, outcome) {
-  return new Promise(resolve => {
-    const HOLD_MS = 1550;
-    const FADE_MS = 220;
-    const overlay = document.getElementById('defib-overlay');
-    const header  = document.getElementById('defib-header');
-    const label   = document.getElementById('defib-label');
-    if (!overlay) { resolve(); return; }
-    header.textContent = procedureId === 'cardioversion' ? 'CARDIOVERSION' : 'DEFIBRILLATION';
-    label.textContent  = outcome;
-    overlay.className = '';
-    void overlay.offsetWidth;
-    overlay.classList.add('visible', `outcome-${outcome}`);
-    if (procedureId === 'cardioversion') overlay.classList.add('is-cardioversion');
-    setTimeout(() => {
-      overlay.classList.remove('visible');
-      setTimeout(resolve, FADE_MS);
-    }, HOLD_MS);
-  });
+  return animateProcedureScene('defib', procedureId, outcome);
 }
 
 function animateThorsHammer(outcome) {

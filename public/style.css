@@ -3513,116 +3513,6 @@ html, body {
 #io-overlay.visible #io-label {
   animation: ioReveal 0.25s ease 1.5s forwards;
 }
-/* ── Defibrillation / cardioversion overlay ─────────────────────────── */
-#defib-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9500;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: rgba(6, 2, 8, 0.82);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.18s ease;
-}
-#defib-overlay.visible { opacity: 1; }
-
-#defib-header {
-  font-family: var(--font-block, monospace);
-  font-size: 0.48rem;
-  letter-spacing: 0.24em;
-  color: rgba(220, 200, 230, 0.75);
-  text-transform: uppercase;
-}
-
-#defib-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-#defib-svg {
-  width: 88px;
-  height: 82px;
-  overflow: visible;
-}
-
-/* Heart — line art with a faint crimson wash (matches the house style) */
-#defib-heart {
-  fill: rgba(192, 40, 64, 0.16);
-  stroke: #e04858;
-  stroke-width: 3;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 8px rgba(224, 72, 88, 0.45));
-}
-
-/* Bolt — hidden until animation fires */
-#defib-bolt {
-  fill: #ffe040;
-  stroke: #8a6a10;
-  stroke-width: 1;
-  stroke-linejoin: round;
-  opacity: 0;
-}
-
-/* Jolt: icon wrap squash-and-stretch on shock delivery */
-#defib-overlay.visible #defib-icon-wrap {
-  animation: defibJolt 0.72s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.22s both;
-}
-@keyframes defibJolt {
-  0%   { transform: scale(1,   1);    }
-  12%  { transform: scale(1.14,0.87); }
-  26%  { transform: scale(0.88,1.12); }
-  42%  { transform: scale(1.07,0.95); }
-  58%  { transform: scale(0.97,1.03); }
-  74%  { transform: scale(1.02,0.99); }
-  100% { transform: scale(1,   1);    }
-}
-
-/* Bolt flashes in on shock delivery */
-#defib-overlay.visible #defib-bolt {
-  animation: boltFlash 0.6s ease-out 0.22s forwards;
-}
-@keyframes boltFlash {
-  0%   { opacity: 0; filter: brightness(1);   }
-  18%  { opacity: 1; filter: brightness(3.5); }
-  45%  { opacity: 1; filter: brightness(1);   }
-  100% { opacity: 0.8; }
-}
-
-/* SYNC badge — only visible for cardioversion */
-#defib-sync {
-  font-family: var(--font-block, monospace);
-  font-size: 0.55rem;
-  letter-spacing: 0.22em;
-  color: #55bbff;
-  background: rgba(20, 80, 180, 0.28);
-  border: 1px solid rgba(85, 187, 255, 0.45);
-  padding: 2px 10px 1px;
-  border-radius: 2px;
-  display: none;
-}
-#defib-overlay.is-cardioversion #defib-sync { display: block; }
-
-/* Outcome label */
-#defib-label {
-  font-family: var(--font-block, monospace);
-  font-size: 0.5rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  opacity: 0;
-}
-#defib-overlay.visible #defib-label {
-  animation: lxLabelFade 0.9s ease 0.35s forwards;
-}
-#defib-overlay.outcome-SUCCESS     #defib-label { color: #3dcc66; }
-#defib-overlay.outcome-MARGINAL    #defib-label { color: #ccaa33; }
-#defib-overlay.outcome-FAILURE     #defib-label { color: #cc4040; }
-#defib-overlay.outcome-COMPLICATION #defib-label { color: #cc5522; }
-
-
 /* ── Theme toggle buttons ───────────────────────────────────────────────── */
 #theme-toggle-hdr {
   flex-shrink: 0;
@@ -4402,4 +4292,97 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
 @media (prefers-reduced-motion: reduce) {
   #bleeding_control-overlay, #tourniquet-overlay { transition: none; }
   :is(#bleeding_control-overlay, #tourniquet-overlay).visible * { animation: none !important; }
+}
+
+/* Shared CPR torso scenes: chest seals and electrical therapy. */
+#chest_seal-overlay, #pacing-overlay, #defib-overlay {
+  position: fixed; inset: 0; z-index: 9500; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; gap: 14px; padding: 16px;
+  box-sizing: border-box; background: #060d17e8; pointer-events: none; opacity: 0;
+  transition: opacity var(--procedure-fade, 220ms) ease; --result-color: #e16c70;
+}
+:is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).visible { opacity: 1; }
+:is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).visible.is-fading { opacity: 0; }
+:is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).outcome-SUCCESS { --result-color: #69d995; }
+:is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).outcome-MARGINAL { --result-color: #e2c66f; }
+:is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).outcome-COMPLICATION { --result-color: #f38a62; }
+#chest_seal-svg, #pacing-svg, #defib-svg { width: min(330px, 85vw); height: min(360px, 65dvh); flex-shrink: 1; min-height: 0; }
+#chest_seal-header, #pacing-header, #defib-header { font: 11px var(--font-block, monospace); color: #b8cbd6; letter-spacing: 0.12em; text-align: center; }
+#chest_seal-label, #pacing-label, #defib-label { font: 10px var(--font-block, monospace); color: var(--result-color); letter-spacing: 0.06em; text-align: center; min-height: 24px; }
+:is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).visible [id$="-label"] { animation: hemorrhageResult 180ms ease var(--procedure-result) both; }
+/* Dressing lands at 950ms, compresses, then the glove lifts off. */
+#chest_seal-overlay { --seal-x: 0px; --seal-y: 0px; --seal-clog: 0; --seal-leak: 0; }
+#chest_seal-overlay.outcome-MARGINAL { --seal-leak: 0.35; }
+#chest_seal-overlay.outcome-FAILURE { --seal-clog: 1; --seal-leak: 0.8; }
+#chest_seal-overlay.outcome-COMPLICATION { --seal-x: -62px; --seal-y: 39px; --seal-leak: 1; }
+.seal-placement { transform: translate(var(--seal-x), var(--seal-y)); }
+.seal-dressing { transform-origin: 143px 91px; }
+.seal-clog { opacity: var(--seal-clog); }
+.seal-hand { transform-origin: 143px 91px; opacity: 0; }
+.seal-impact { opacity: 0; }
+.seal-seep { opacity: var(--seal-leak); stroke-dasharray: 50; }
+#chest_seal-overlay.visible .seal-dressing { animation: sealSlap 1300ms cubic-bezier(.2,.8,.3,1) both; }
+#chest_seal-overlay.visible .seal-hand { animation: sealGlove 2100ms ease both; }
+#chest_seal-overlay.visible .seal-impact { animation: sealImpact 400ms ease-out 950ms both; }
+#chest_seal-overlay.visible .seal-clog { animation: sealClog 1800ms ease 1300ms both; }
+#chest_seal-overlay.visible .seal-seep { animation: sealSeep 3100ms ease both; }
+#chest_seal-overlay.outcome-MARGINAL.visible .seal-dressing { animation: sealSlap 1300ms ease both, sealPeel 600ms ease 2200ms forwards; }
+#chest_seal-overlay.outcome-COMPLICATION .seal-hand { opacity: 1; transform: translate(3px, 12px); }
+#chest_seal-overlay.outcome-COMPLICATION.visible .seal-hand { animation: sealMiss 4400ms linear both; }
+#chest_seal-overlay.outcome-COMPLICATION .seal-impact { transform: translate(-62px, 39px); }
+@keyframes sealSlap { 0%, 35% { transform: translate(15px, -65px) scale(1.18); opacity: 0; } 55% { opacity: 1; } 73% { transform: translate(0, 0) scale(1.08, .9); } 87% { transform: scale(.98, 1.02); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes sealGlove { 0%, 20% { transform: translate(15px, -65px); opacity: 0; } 32% { opacity: 1; } 45%, 65% { transform: translate(0, 8px); opacity: 1; } 100% { transform: translate(20px, -70px); opacity: 0; } }
+@keyframes sealImpact { 0%, 100% { opacity: 0; } 20% { opacity: .9; } }
+@keyframes sealClog { from { opacity: 0; } to { opacity: var(--seal-clog); } }
+@keyframes sealSeep { 0% { stroke-dashoffset: 50; opacity: 1; } 35% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: var(--seal-leak); } }
+@keyframes sealPeel { to { transform: skewY(-5deg) scaleX(.96); } }
+@keyframes sealMiss {
+  0%, 10% { transform: translate(-47px, -26px); opacity: 0; }
+  18% { opacity: 1; } 22%, 32% { transform: translate(-62px, 47px); opacity: 1; }
+  40% { transform: translate(14px, 3px) rotate(12deg); }
+  48% { transform: translate(-13px, 21px) rotate(-9deg); }
+  56% { transform: translate(8px, 7px) rotate(7deg); }
+  64% { transform: translate(-8px, 17px) rotate(-6deg); }
+  72% { transform: translate(6px, 8px); } 80% { transform: translate(-5px, 16px); }
+  88% { transform: translate(5px, 9px); } 96%, 100% { transform: translate(3px, 12px); opacity: 1; }
+}
+/* Identical torso, pads and translucent heart for pacing and both shock modes. */
+.heart-motion { transform-origin: 117px 101px; }
+.heart-before, .shock-energy, .sync-cue { opacity: 0; }
+.heart-after { opacity: 1; }
+.heart-after .heart-motion { filter: drop-shadow(0 0 5px #73cde566); }
+#defib-overlay.visible .heart-before { animation: heartBefore 1400ms step-end both; }
+#defib-overlay.visible .heart-before .heart-motion { animation: heartQuiver 100ms linear 14 both; }
+#defib-overlay.visible .heart-after { animation: heartAfter 1400ms step-end both; }
+#defib-overlay.visible .shock-energy { animation: cardiacFlash 400ms ease 1400ms both; }
+#defib-overlay.visible .electrical-patient { transform-origin: 110px 110px; animation: cardiacJolt 400ms ease 1400ms both; }
+#defib-overlay.is-cardioversion .sync-cue { opacity: 1; }
+#defib-overlay.is-cardioversion.visible .sync-cue { animation: syncLock 1400ms steps(1) both; }
+#defib-overlay.outcome-SUCCESS.visible .heart-after .heart-motion { animation: heartBeat 750ms ease 1800ms 3 both; }
+#defib-overlay.outcome-MARGINAL.visible .heart-after .heart-motion { animation: heartTentative 1050ms ease 1800ms 2 both; }
+#defib-overlay.outcome-FAILURE.visible .heart-after .heart-motion { animation: heartQuiver 100ms linear 1800ms 26 both; }
+#defib-overlay.outcome-COMPLICATION.visible .heart-after .heart-motion { animation: heartLost 2600ms linear 1800ms both; }
+#pacing-overlay.visible .heart-before { animation: heartBefore 1800ms step-end both; }
+#pacing-overlay.visible .heart-before .heart-motion { animation: heartBeat 1800ms ease 1 both; }
+#pacing-overlay.visible .heart-after { animation: heartAfter 1800ms step-end both; }
+#pacing-overlay.visible .shock-energy { animation: pacingPulse 600ms ease 600ms 7 both; }
+#pacing-overlay.outcome-SUCCESS.visible .heart-after .heart-motion { animation: heartBeat 600ms ease 1800ms 5 both; }
+#pacing-overlay.outcome-MARGINAL.visible .heart-after .heart-motion { animation: heartTentative 1200ms ease 1800ms 2 both; }
+#pacing-overlay.outcome-FAILURE.visible .heart-after .heart-motion { animation: heartBeat 1800ms ease 1800ms 1 both; }
+#pacing-overlay.outcome-COMPLICATION.visible .heart-after .heart-motion { animation: pacingLost 3000ms ease 1800ms both; }
+:is(#pacing-overlay, #defib-overlay).outcome-COMPLICATION .heart-after { opacity: .45; }
+@keyframes heartBefore { 0% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes heartAfter { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes heartBeat { 0%, 45%, 100% { transform: scale(1); } 12% { transform: scale(1.15, 1.08); } 25% { transform: scale(.94, .97); } }
+@keyframes heartTentative { 0%, 28%, 70%, 100% { transform: scale(1); } 8% { transform: scale(1.12, 1.07); } 18% { transform: scale(.96); } 55% { transform: scale(1.06, 1.03); } }
+@keyframes heartQuiver { 0%, 100% { transform: translate(0, 0) skewX(0); } 25% { transform: translate(-1px, 1px) skewX(4deg) scale(1.02, .98); } 75% { transform: translate(1px, -1px) skewX(-4deg) scale(.98, 1.02); } }
+@keyframes heartLost { 0%, 12% { transform: scale(1.1); } 22%, 37%, 51% { transform: translate(-2px, 1px) skewX(5deg); } 29%, 44%, 60% { transform: translate(2px, -1px) skewX(-5deg); } 75%, 100% { transform: scale(.95); opacity: .45; } }
+@keyframes pacingLost { 0%, 20%, 40%, 100% { transform: scale(1); } 3%, 23% { transform: scale(1.15, 1.08); } 7%, 27% { transform: scale(.94); } 60%, 100% { opacity: .45; } }
+@keyframes cardiacFlash { 0%, 100% { opacity: 0; } 12%, 40% { opacity: 1; } }
+@keyframes pacingPulse { 0%, 20%, 100% { opacity: 0; } 4%, 10% { opacity: .85; } }
+@keyframes cardiacJolt { 0%, 100% { transform: translateY(0); } 20% { transform: translateY(-4px) scale(1.02); } 55% { transform: translateY(2px); } }
+@keyframes syncLock { 0%, 35%, 70% { opacity: 0; } 15%, 50%, 85%, 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  #chest_seal-overlay, #pacing-overlay, #defib-overlay { transition: none; }
+  :is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).visible * { animation: none !important; }
 }

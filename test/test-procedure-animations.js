@@ -9,7 +9,7 @@ const scenes = source.slice(source.indexOf('const PROCEDURE_TIMING'), source.ind
 function fixture({ reduced = false, missing = false } = {}) {
   let now = 0;
   const timers = [], played = [], elements = new Map();
-  for (const scene of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet']) {
+  for (const scene of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
     for (const suffix of ['overlay', 'label', 'header']) {
       const classes = new Set(), properties = {};
       elements.set(`${scene}-${suffix}`, {
@@ -39,7 +39,7 @@ function fixture({ reduced = false, missing = false } = {}) {
   return { context, elements, played, timers, advance };
 }
 
-for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet']) {
+for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
   test(`${id}: action sound fires once, result timing is shared with CSS, and cleanup resolves after fade`, async () => {
     const f = fixture();
     const procedure = id === 'scalpel' ? 'cricothyrotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id;
@@ -53,7 +53,7 @@ for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suct
     assert.equal(overlay.properties['--procedure-result'], `${t.result}ms`);
     assert.ok(t.result + 180 <= t.hold, 'result is readable before fade');
     f.advance(t.sound - 1); assert.equal(f.played.length, 0);
-    f.advance(1); assert.deepEqual(f.played, [{ sound: id === 'bvm' ? 'bvm_success' : id === 'lucas' ? 'lucas' : id === 'ncd' ? 'hiss' : ['laryngoscope', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet'].includes(id) ? 'success' : 'sword', time: t.sound }]);
+    f.advance(1); assert.deepEqual(f.played, [{ sound: id === 'bvm' ? 'bvm_success' : id === 'lucas' ? 'lucas' : id === 'ncd' ? 'hiss' : ['laryngoscope', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib'].includes(id) ? 'success' : 'sword', time: t.sound }]);
     f.advance(t.hold - t.sound);
     assert.equal(overlay.classList.contains('visible'), true, 'keep final CSS pose throughout the fade');
     assert.equal(overlay.classList.contains('is-fading'), true);
@@ -66,7 +66,7 @@ for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suct
 }
 
 test('replaying scenes clears previous outcomes and preserves all sound mappings', async () => {
-  for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet']) {
+  for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
     const f = fixture();
     const proc = id === 'scalpel' ? 'finger_thoracostomy' : id === 'laryngoscope' ? 'rsi' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id;
     for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION', 'SUCCESS']) {
@@ -77,14 +77,14 @@ test('replaying scenes clears previous outcomes and preserves all sound mappings
       }
       f.advance(f.context.timing[id].hold + 220); await p;
       const good = outcome === 'SUCCESS' || outcome === 'MARGINAL';
-      assert.equal(f.played.at(-1).sound, id === 'scalpel' ? 'sword' : id === 'ncd' ? good ? 'hiss' : 'fail' : ['laryngoscope', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet'].includes(id) ? good ? 'success' : 'fail' : id === 'bvm' ? good ? 'bvm_success' : 'bvm_fail' : good ? 'lucas' : 'fail');
+      assert.equal(f.played.at(-1).sound, id === 'scalpel' ? 'sword' : id === 'ncd' ? good ? 'hiss' : 'fail' : ['laryngoscope', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib'].includes(id) ? good ? 'success' : 'fail' : id === 'bvm' ? good ? 'bvm_success' : 'bvm_fail' : good ? 'lucas' : 'fail');
     }
     assert.equal(f.played.length, 5);
   }
 });
 
 test('reduced motion and missing scenes retain sounds and always release the turn', async () => {
-  for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet']) {
+  for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
     const procedure = id === 'scalpel' ? 'resuscitative_thoracotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id;
     for (const options of [{ reduced: true }, { missing: true }]) {
       const f = fixture(options);
@@ -120,11 +120,11 @@ test('the real roll loop defers only scene-owned sounds and waits for animations
   const a = source.indexOf('    for (const r of (data.rolls || [])) {');
   const b = source.indexOf('    for (const r of (data.rolls || [])) printRoll', a);
   vm.runInContext('async function rolls(data) {\n' + source.slice(a, b) + '\n}', c);
-  const p = c.rolls({ rolls: ['bvm', 'lucas', 'cricothyrotomy', 'resuscitative_thoracotomy', 'intubation', 'rsi', 'supraglottic_airway', 'oropharyngeal_airway', 'suction', 'needle_decompression', 'needle_cricothyrotomy', 'bleeding_control', 'tourniquet', 'cpr', 'defibrillation'].map(procedure_id => ({ procedure_id, outcome: 'SUCCESS', roll: 18, dc: 12 })) });
+  const p = c.rolls({ rolls: ['bvm', 'lucas', 'cricothyrotomy', 'resuscitative_thoracotomy', 'intubation', 'rsi', 'supraglottic_airway', 'oropharyngeal_airway', 'suction', 'needle_decompression', 'needle_cricothyrotomy', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'cpr', 'defibrillation'].map(procedure_id => ({ procedure_id, outcome: 'SUCCESS', roll: 18, dc: 12 })) });
   await started;
   assert.deepEqual(events, ['dice:bvm', 'bvm']);
   release(); await p;
-  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'hiss', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'cpr_outside', 'dice:cpr', 'cpr', 'defib_outside', 'defib']);
+  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'hiss', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'cpr_outside', 'dice:cpr', 'cpr', 'defib']);
   events.length = 0;
   await c.rolls({ rolls: [{ procedure_id: 'lucas', outcome: 'FAILURE', multi_roll: true }, { procedure_id: 'bvm', no_roll: true }] });
   assert.deepEqual(events, ['fail'], 'legacy multi/no-roll routing remains unchanged');
@@ -253,4 +253,23 @@ test('NCD routes to the chest scene while needle cric retains its existing scene
   assert.equal(f.context.hasProcedureAnimationSound('needle_cricothyrotomy'), false);
   f.advance(2820); await legacy;
   assert.equal(f.played.length, 1, 'needle cric sound is still owned by the roll loop');
+});
+
+// Shock modes share the lifecycle and own their sound at the shock, including legacy multi-rolls.
+test('electrical shock modes preserve headers, sync state, and one timed sound', async () => {
+  const f = fixture();
+  vm.runInContext(source.slice(source.indexOf('function animateDefib('), source.indexOf('function animateThorsHammer(')), f.context);
+  for (const procedure of ['cardioversion', 'defibrillation']) {
+    for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
+      const before = f.played.length;
+      const p = f.context.animateDefib(procedure, outcome);
+      const overlay = f.elements.get('defib-overlay');
+      assert.equal(overlay.classList.contains('is-cardioversion'), procedure === 'cardioversion');
+      assert.equal(f.elements.get('defib-header').textContent, procedure === 'cardioversion' ? 'SYNCHRONIZED CARDIOVERSION' : 'DEFIBRILLATION');
+      f.advance(1399); assert.equal(f.played.length, before);
+      f.advance(1); assert.equal(f.played.at(-1).sound, 'defib_outside');
+      f.advance(3220); await p;
+      assert.equal(f.played.length, before + 1);
+    }
+  }
 });

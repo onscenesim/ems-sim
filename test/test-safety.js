@@ -29,6 +29,18 @@ test('known dangerous misroutes and rhythm analysis are corrected', () => {
   assert.equal(detectWithConfirmation('AED analyze').rolls[0].no_roll, true);
 });
 
+test('natural direct-pressure orders trigger bleeding control', () => {
+  for (const phrase of [
+    'put pressure on the wound',
+    'apply pressure to the wound',
+    'hold direct pressure',
+    'maintain pressure on the wound',
+    'compress the wound',
+  ]) {
+    assert.deepEqual(detectAllProcedures(phrase).map(e => e.proc.id), ['bleeding_control'], phrase);
+  }
+});
+
 test('common field abbreviations and intervention misspellings still trigger the intended procedure', () => {
   for (const [phrase, id] of [
     ['TQ', 'tourniquet'], ['apply a TQ', 'tourniquet'], ['TQ time', 'tourniquet_time'], ['tourniquet time', 'tourniquet_time'],

@@ -425,16 +425,6 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       return document.querySelector(`#${id}-overlay use[href="#patient-face-profile"]`).getBBox().width;
     }));
     anatomy.forEach(width => assert.ok(width > 50));
-    // Defibrillation still uses the legacy label fade formerly housed in the
-    // laryngoscope styles; replacing that scene must not remove the shared keyframe.
-    const defibLabelOpacity = await page.evaluate(() => {
-      const overlay = document.getElementById('defib-overlay');
-      overlay.style.display = '';
-      overlay.classList.add('visible', 'outcome-SUCCESS');
-      overlay.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = 850; });
-      return Number(getComputedStyle(document.getElementById('defib-label')).opacity);
-    });
-    assert.equal(defibLabelOpacity, 1);
     // Shared IV geometry must still render in both procedures after extraction.
     await page.setViewportSize({ width: 390, height: 844 });
     const ivShared = await page.evaluate(() => {
@@ -591,6 +581,75 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.notEqual(pressureA.hand, pressureB.hand, 'hands tremble while maintaining pressure');
     assert.ok(pressureA.amount < (await hemorrhage('bleeding_control', 'FAILURE', 3200)).amount, 'gauze progressively saturates');
     console.log('32 hemorrhage outcome/layout/reduced-motion checks passed; pressure tremor, saturation and tourniquet flow verified.');
+    async function chestScene(id, outcome, time, procedure = id) {
+      return page.evaluate(({ id, outcome, time, procedure }) => {
+        document.querySelectorAll('[id$="-overlay"]').forEach(e => { e.classList.remove('visible'); e.style.display = 'none'; });
+        const overlay = document.getElementById(`${id}-overlay`);
+        overlay.style.display = '';
+        animateProcedureScene(id, procedure, outcome);
+        overlay.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = time; });
+        const css = selector => getComputedStyle(overlay.querySelector(selector));
+        const rect = overlay.querySelector('svg').getBoundingClientRect();
+        const labelRect = overlay.querySelector('[id$="-label"]').getBoundingClientRect();
+        return {
+          left: rect.left, right: rect.right, top: rect.top, bottom: labelRect.bottom,
+          label: overlay.querySelector('[id$="-label"]').textContent,
+          labelOpacity: Number(css('[id$="-label"]').opacity),
+          ...(id === 'chest_seal' ? {
+            clog: Number(css('.seal-clog').opacity), seep: Number(css('.seal-seep').opacity),
+            placement: new DOMMatrix(css('.seal-placement').transform).e,
+            hand: css('.seal-hand').transform, handOpacity: Number(css('.seal-hand').opacity),
+          } : {
+            heart: css('.heart-after .heart-motion').transform,
+            beat: css('.heart-after .heart-motion').animationName,
+            rate: css('.heart-after .heart-motion').animationDuration,
+            before: Number(css('.heart-before').opacity), after: Number(css('.heart-after').opacity),
+            energy: Number(css('.shock-energy').opacity), sync: Number(css('.sync-cue').opacity),
+            base: overlay.querySelector('.electrical-patient > use').getAttribute('href'),
+          }),
+        };
+      }, { id, outcome, time, procedure });
+    }
+    for (const reduced of [false, true]) {
+      await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
+      for (const width of [320, 1280]) {
+        const height = width === 320 ? 568 : 800;
+        await page.setViewportSize({ width, height });
+        for (const procedure of ['chest_seal', 'pacing', 'defibrillation', 'cardioversion']) {
+          const id = ['defibrillation', 'cardioversion'].includes(procedure) ? 'defib' : procedure;
+          for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
+            const state = await chestScene(id, outcome, id === 'pacing' ? 5100 : 4300, procedure);
+            assert.ok(state.left >= 0 && state.right <= width && state.top >= 0 && state.bottom <= height);
+            assert.ok(state.label.startsWith(outcome)); assert.equal(state.labelOpacity, 1);
+            if (id === 'chest_seal') {
+              assert.equal(state.clog, outcome === 'FAILURE' ? 1 : 0);
+              assert.equal(state.placement, outcome === 'COMPLICATION' ? -62 : 0);
+              assert.equal(state.handOpacity, outcome === 'COMPLICATION' ? 1 : 0);
+            } else {
+              assert.equal(state.base, '#electrical-torso');
+              assert.equal(state.before, 0);
+              assert.equal(state.sync, procedure === 'cardioversion' ? 1 : 0);
+            }
+            if (!reduced) await page.screenshot({ path: path.join(output, `${procedure}-${outcome}-${width}.png`) });
+          }
+        }
+      }
+    }
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const initialShock = await chestScene('defib', 'SUCCESS', 800, 'defibrillation');
+    const shock = await chestScene('defib', 'SUCCESS', 1500, 'defibrillation');
+    assert.equal(initialShock.before, 1); assert.equal(initialShock.after, 0);
+    assert.ok(shock.energy > .8); assert.equal(shock.before, 0);
+    for (const [outcome, expected] of [['SUCCESS', 'heartBeat'], ['MARGINAL', 'heartTentative'], ['FAILURE', 'heartQuiver'], ['COMPLICATION', 'heartLost']]) {
+      assert.equal((await chestScene('defib', outcome, 3000, 'defibrillation')).beat, expected);
+    }
+    assert.equal((await chestScene('pacing', 'SUCCESS', 2200)).rate, '0.6s');
+    assert.equal((await chestScene('pacing', 'MARGINAL', 2200)).rate, '1.2s');
+    assert.equal((await chestScene('pacing', 'FAILURE', 2200)).rate, '1.8s');
+    for (const time of [650, 1250, 1850, 2450]) assert.ok((await chestScene('pacing', 'SUCCESS', time)).energy > .5, 'repeated pacing pulses');
+    assert.notEqual((await chestScene('chest_seal', 'COMPLICATION', 1800)).hand, (await chestScene('chest_seal', 'COMPLICATION', 2400)).hand);
+    assert.ok((await chestScene('chest_seal', 'FAILURE', 1700)).clog < (await chestScene('chest_seal', 'FAILURE', 3200)).clog);
+    console.log('64 chest/electrical outcome, layout and reduced-motion checks passed; seal clogging, missed placement, repeated pacing and shock responses verified.');
     assert.deepEqual(errors, []);
     console.log(`${layouts} layout/outcome/motion checks passed; ventilation, all three compression cycles, surgical phases, anatomical intubation routes, i-gel seating, OPA turnover/withdrawal, suction clearance/jam, NCD withdrawal/release and shared anatomy verified. Screenshots: ${output}`);
   } finally {
