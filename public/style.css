@@ -3904,18 +3904,18 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
   8% { opacity: 1; }
   14% { transform: translate(-37px, -24px) rotate(-10deg); }
   25%, 32% { transform: translate(0, 0) rotate(0); }
-  44%, 78% { transform: translate(14px, -15px) rotate(0); opacity: 1; }
+  44%, 86% { transform: translate(14px, -15px) rotate(0); opacity: 1; }
   92%, 100% { transform: translate(-52px, -50px) rotate(-18deg); opacity: 0; }
 }
 @keyframes lxTongueLift {
   0%, 32%, 94%, 100% { transform: rotate(0); }
-  44%, 78% { transform: rotate(-23deg); }
+  44%, 86% { transform: rotate(-23deg); }
 }
 @keyframes lxEpiglottisLift {
   0%, 32%, 94%, 100% { transform: rotate(0); }
-  44%, 78% { transform: rotate(54deg); }
+  44%, 86% { transform: rotate(54deg); }
 }
-@keyframes lxLight { 0%, 32%, 90%, 100% { opacity: 0; } 44%, 78% { opacity: 1; } }
+@keyframes lxLight { 0%, 32%, 90%, 100% { opacity: 0; } 44%, 86% { opacity: 1; } }
 @keyframes lxLiftCue { 0%, 32%, 49%, 100% { opacity: 0; } 36%, 44% { opacity: 0.85; } }
 @keyframes lxView { 0%, 39%, 58%, 100% { opacity: 0; } 44%, 48% { opacity: 0.7; } }
 @keyframes lxExposeCords { 0%, 32% { opacity: 0.22; } 44%, 100% { opacity: 1; } }
@@ -3931,38 +3931,112 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
 #laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tube-tracheal,
 #laryngoscope-overlay.outcome-COMPLICATION #lx-tube-esophageal,
 #laryngoscope-overlay.outcome-FAILURE #lx-tube-failed { display: block; }
-/* The complete tube translates in, carrying its connector, bevel and eye. */
+/* Rotate the unchanged preformed tube about its advancing tip. The sampled
+   tip positions track the oral corridor, rather than a diagonal across the face. */
 .lx-tube > use { stroke-linecap: butt; }
 .lx-tube-wall { stroke: #c1d8e5; stroke-width: 5.5; }
 .lx-tube-lumen { stroke: #708a9c; stroke-width: 2; }
-#lx-tube-assembly { opacity: 0; transform-box: view-box; }
+#lx-tube-assembly { opacity: 0; transform-box: view-box; transform-origin: 244px 170px; }
+#laryngoscope-overlay.outcome-COMPLICATION #lx-tube-assembly { transform-origin: 280px 198px; }
+#laryngoscope-overlay.outcome-FAILURE #lx-tube-assembly { transform-origin: 198px 167px; }
 #laryngoscope-overlay.visible #lx-tube-assembly { animation: lxTubePass var(--procedure-duration) linear both; }
+#laryngoscope-overlay.outcome-COMPLICATION.visible #lx-tube-assembly { animation-name: lxTubeEsophageal; }
 #laryngoscope-overlay.outcome-FAILURE.visible #lx-tube-assembly { animation-name: lxTubeWithdraw; }
 @keyframes lxTubePass {
-  0%, 45% { opacity: 0; transform: translate(-82px, -118px); }
-  47% { opacity: 1; transform: translate(-82px, -118px); }
-  63%, 100% { opacity: 1; transform: translate(0, 0); }
+  0%, 45% { opacity: 0; transform: translate(-86.000px, -82.000px) rotate(90.000deg); }
+  47.000% { opacity: 1; transform: translate(-86.000px, -82.000px) rotate(90.000deg); }
+  50.000% { opacity: 1; transform: translate(-86.000px, -52.000px) rotate(90.000deg); }
+  51.083% { opacity: 1; transform: translate(-85.358px, -43.414px) rotate(85.724deg); }
+  52.167% { opacity: 1; transform: translate(-83.450px, -35.648px) rotate(81.136deg); }
+  53.250% { opacity: 1; transform: translate(-80.297px, -28.688px) rotate(75.843deg); }
+  54.333% { opacity: 1; transform: translate(-75.926px, -22.519px) rotate(69.513deg); }
+  55.417% { opacity: 1; transform: translate(-70.360px, -17.127px) rotate(62.548deg); }
+  56.500% { opacity: 1; transform: translate(-63.625px, -12.500px) rotate(55.069deg); }
+  57.583% { opacity: 1; transform: translate(-55.744px, -8.623px) rotate(47.103deg); }
+  58.667% { opacity: 1; transform: translate(-46.741px, -5.481px) rotate(38.623deg); }
+  59.750% { opacity: 1; transform: translate(-36.640px, -3.062px) rotate(29.615deg); }
+  60.833% { opacity: 1; transform: translate(-25.467px, -1.352px) rotate(20.052deg); }
+  61.917% { opacity: 1; transform: translate(-13.246px, -0.336px) rotate(10.027deg); }
+  63.000% { opacity: 1; transform: translate(0.000px, 0.000px) rotate(0deg); }
+  64%, 100% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+}
+@keyframes lxTubeEsophageal {
+  0%, 45% { opacity: 0; transform: translate(-122.000px, -110.000px) rotate(90.000deg); }
+  47.000% { opacity: 1; transform: translate(-122.000px, -110.000px) rotate(90.000deg); }
+  50.000% { opacity: 1; transform: translate(-122.000px, -80.000px) rotate(90.000deg); }
+  51.083% { opacity: 1; transform: translate(-120.898px, -67.082px) rotate(85.124deg); }
+  52.167% { opacity: 1; transform: translate(-117.686px, -55.324px) rotate(80.083deg); }
+  53.250% { opacity: 1; transform: translate(-112.500px, -44.719px) rotate(74.930deg); }
+  54.333% { opacity: 1; transform: translate(-105.482px, -35.259px) rotate(69.736deg); }
+  55.417% { opacity: 1; transform: translate(-96.768px, -26.939px) rotate(64.372deg); }
+  56.500% { opacity: 1; transform: translate(-86.500px, -19.750px) rotate(57.523deg); }
+  57.583% { opacity: 1; transform: translate(-74.815px, -13.686px) rotate(49.307deg); }
+  58.667% { opacity: 1; transform: translate(-61.852px, -8.741px) rotate(39.993deg); }
+  59.750% { opacity: 1; transform: translate(-47.750px, -4.906px) rotate(30.046deg); }
+  60.833% { opacity: 1; transform: translate(-32.648px, -2.176px) rotate(19.916deg); }
+  61.917% { opacity: 1; transform: translate(-16.685px, -0.543px) rotate(9.917deg); }
+  63.000% { opacity: 1; transform: translate(0.000px, 0.000px) rotate(0deg); }
+  64%, 100% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
 }
 @keyframes lxTubeWithdraw {
-  0%, 45% { opacity: 0; transform: translate(-46px, -112px); }
-  47% { opacity: 1; transform: translate(-46px, -112px); }
-  62%, 65% { opacity: 1; transform: translate(0, 0); }
-  74%, 100% { opacity: 0; transform: translate(-46px, -112px); }
+  0%, 45% { opacity: 0; transform: translate(-40.000px, -79.000px) rotate(90.000deg); }
+  47.000% { opacity: 1; transform: translate(-40.000px, -79.000px) rotate(90.000deg); }
+  50.000% { opacity: 1; transform: translate(-40.000px, -49.000px) rotate(90.000deg); }
+  51.083% { opacity: 1; transform: translate(-39.633px, -42.574px) rotate(68.863deg); }
+  52.167% { opacity: 1; transform: translate(-38.565px, -36.343px) rotate(61.306deg); }
+  53.250% { opacity: 1; transform: translate(-36.844px, -30.375px) rotate(54.023deg); }
+  54.333% { opacity: 1; transform: translate(-34.519px, -24.741px) rotate(46.912deg); }
+  55.417% { opacity: 1; transform: translate(-31.638px, -19.509px) rotate(40.162deg); }
+  56.500% { opacity: 1; transform: translate(-28.250px, -14.750px) rotate(33.761deg); }
+  57.583% { opacity: 1; transform: translate(-24.404px, -10.532px) rotate(27.629deg); }
+  58.667% { opacity: 1; transform: translate(-20.148px, -6.926px) rotate(21.790deg); }
+  59.750% { opacity: 1; transform: translate(-15.531px, -4.000px) rotate(16.203deg); }
+  60.833% { opacity: 1; transform: translate(-10.601px, -1.824px) rotate(10.818deg); }
+  61.917% { opacity: 1; transform: translate(-5.408px, -0.468px) rotate(5.480deg); }
+  63.000% { opacity: 1; transform: translate(0.000px, 0.000px) rotate(0deg); }
+  64%, 65% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  65.866% { opacity: 1; transform: translate(-5.408px, -0.468px) rotate(5.480deg); }
+  66.734% { opacity: 1; transform: translate(-10.601px, -1.824px) rotate(10.818deg); }
+  67.600% { opacity: 1; transform: translate(-15.531px, -4.000px) rotate(16.203deg); }
+  68.466% { opacity: 1; transform: translate(-20.148px, -6.926px) rotate(21.790deg); }
+  69.334% { opacity: 1; transform: translate(-24.404px, -10.532px) rotate(27.629deg); }
+  70.200% { opacity: 1; transform: translate(-28.250px, -14.750px) rotate(33.761deg); }
+  71.066% { opacity: 1; transform: translate(-31.638px, -19.509px) rotate(40.162deg); }
+  71.934% { opacity: 1; transform: translate(-34.519px, -24.741px) rotate(46.912deg); }
+  72.800% { opacity: 1; transform: translate(-36.844px, -30.375px) rotate(54.023deg); }
+  73.666% { opacity: 1; transform: translate(-38.565px, -36.343px) rotate(61.306deg); }
+  74.534% { opacity: 1; transform: translate(-39.633px, -42.574px) rotate(68.863deg); }
+  75.400% { opacity: 1; transform: translate(-40.000px, -49.000px) rotate(90.000deg); }
+  77.800% { opacity: 1; transform: translate(-40.000px, -79.000px) rotate(90.000deg); }
+  79%, 100% { opacity: 0; transform: translate(-40px, -79px) rotate(90deg); }
 }
+
+/* Feed wire out through the proximal connector. The internal segment retreats
+   tip-first while the exposed shaft and hooked handle extend by the same amount.
+   Only after the distal end clears the connector does the whole wire lift away. */
 .lx-stylet { opacity: 0; }
-#laryngoscope-overlay.visible .lx-stylet { animation: lxStyletWithdraw var(--procedure-duration) linear both; }
-@keyframes lxStyletWithdraw {
-  0%, 63% { opacity: 1; transform: translate(0, 0); }
-  70% { opacity: 1; transform: translate(-72px, -100px); }
-  72%, 100% { opacity: 0; transform: translate(-82px, -118px); }
+#laryngoscope-overlay.visible .lx-stylet { animation: lxStyletRemove var(--procedure-duration) linear both; }
+#laryngoscope-overlay.visible .lx-stylet > use { stroke-dasharray: 100; animation: lxStyletFeed var(--procedure-duration) linear both; }
+#laryngoscope-overlay.visible .lx-stylet > path { animation: lxStyletHandle var(--procedure-duration) linear both; }
+@keyframes lxStyletFeed { 0%, 64% { stroke-dashoffset: 0; } 79%, 100% { stroke-dashoffset: 100; } }
+@keyframes lxStyletHandle {
+  0%, 64% { d: path("M151 58 L151 43 Q151 36 144 38"); }
+  79%, 100% { d: path("M151 58 L151 -145 Q151 -152 144 -150"); }
 }
-#laryngoscope-overlay.outcome-FAILURE.visible .lx-stylet { animation: none; opacity: 1; }
+@keyframes lxStyletRemove {
+  0%, 79% { opacity: 1; transform: translateY(0); }
+  84% { opacity: 1; transform: translateY(-105px); }
+  85%, 100% { opacity: 0; transform: translateY(-150px); }
+}
+#laryngoscope-overlay.outcome-FAILURE.visible .lx-stylet,
+#laryngoscope-overlay.outcome-FAILURE.visible .lx-stylet > use,
+#laryngoscope-overlay.outcome-FAILURE.visible .lx-stylet > path { animation: none; opacity: 1; }
 #lx-tube-connector { opacity: 1; }
 .lx-cuff { display: none; opacity: 0; fill: #b9e6ff; fill-opacity: 0.13; stroke: #b9d8e9; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; }
 #laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tracheal-cuff,
 #laryngoscope-overlay.outcome-COMPLICATION #lx-esophageal-cuff { display: block; }
 #laryngoscope-overlay.visible .lx-cuff { animation: lxCuffSeat var(--procedure-duration) ease-out both; }
-@keyframes lxCuffSeat { 0%, 71% { opacity: 1; transform: scaleY(0.3); } 75%, 100% { opacity: 1; transform: scaleY(1); } }
+@keyframes lxCuffSeat { 0%, 85% { opacity: 1; transform: scaleY(0.3); } 90%, 100% { opacity: 1; transform: scaleY(1); } }
 
 /* Depth bands travel with the complete tube. */
 .lx-tube-detail { display: none; opacity: 0; }
@@ -4407,22 +4481,40 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
 #npa-label, #obstruction-label { color: var(--procedure-color); opacity: 0; }
 :is(#npa-overlay, #obstruction-overlay).visible > div:last-child { animation: accessReveal 120ms ease var(--procedure-result) both; }
 :is(#npa-overlay, #obstruction-overlay).visible :is(.om-check, .om-x1, .om-x2) { animation-delay: var(--procedure-result); animation-duration: 180ms; }
-#npa-overlay { --npa-x: 0px; --npa-y: 0px; }
-#npa-overlay.outcome-MARGINAL { --npa-x: -18px; --npa-y: -6px; }
-#npa-overlay.outcome-FAILURE { --npa-x: -50px; --npa-y: -16px; }
-#npa-device { transform: translate(var(--npa-x), var(--npa-y)); }
-#npa-overlay.visible #npa-device { animation: npaSlide var(--procedure-duration) ease-in-out both; }
+#npa-overlay { --npa-x: 0px; --npa-y: 0px; --npa-angle: 0deg; }
+#npa-overlay.outcome-MARGINAL { --npa-x: -17px; --npa-y: 0px; --npa-angle: 20.280deg; }
+#npa-overlay.outcome-FAILURE { --npa-x: -60px; --npa-y: -30px; --npa-angle: 85.569deg; }
+#npa-device { transform-box: view-box; transform-origin: 200px 184px; transform: translate(var(--npa-x), var(--npa-y)) rotate(var(--npa-angle)); }
+#npa-overlay.visible #npa-device { animation: npaSlide var(--procedure-duration) linear both; }
 @keyframes npaSlide {
-  0%, 8% { transform: translate(-96px, -35px); opacity: 0; }
-  15% { opacity: 1; }
-  58%, 100% { transform: translate(var(--npa-x), var(--npa-y)); opacity: 1; }
+  0%, 8% { transform: translate(-63px, -104px) rotate(90deg); opacity: 0; }
+  14% { transform: translate(-63px, -84px) rotate(90deg); opacity: 1; }
+  24% { transform: translate(-63px, -63px) rotate(90deg); opacity: 1; }
+  34% { transform: translate(-65px, -43px) rotate(99.933deg); }
+  44% { transform: translate(-60px, -22px) rotate(83.999deg); }
+  54% { transform: translate(-42px, -5px) rotate(54.794deg); }
+  66%, 100% { transform: translate(var(--npa-x), var(--npa-y)) rotate(var(--npa-angle)); opacity: 1; }
+}
+#npa-overlay.outcome-FAILURE.visible #npa-device { animation-name: npaBlocked; }
+@keyframes npaBlocked {
+  0%, 8% { transform: translate(-63px, -104px) rotate(90deg); opacity: 0; }
+  14% { transform: translate(-63px, -84px) rotate(90deg); opacity: 1; }
+  24% { transform: translate(-63px, -63px) rotate(90deg); }
+  42%, 100% { transform: translate(var(--npa-x), var(--npa-y)) rotate(var(--npa-angle)); opacity: 1; }
 }
 #npa-overlay.outcome-COMPLICATION.visible #npa-device { animation-name: npaExpel; }
 @keyframes npaExpel {
-  0%, 8% { transform: translate(-96px, -35px); opacity: 0; }
-  15% { opacity: 1; }
-  52%, 60% { transform: translate(0, 0); opacity: 1; }
-  72%, 100% { transform: translate(-100px, -44px) rotate(-12deg); opacity: 1; }
+  0%, 8% { transform: translate(-63px, -104px) rotate(90deg); opacity: 0; }
+  14% { transform: translate(-63px, -84px) rotate(90deg); opacity: 1; }
+  24% { transform: translate(-63px, -63px) rotate(90deg); }
+  34% { transform: translate(-65px, -43px) rotate(99.933deg); }
+  44% { transform: translate(-60px, -22px) rotate(83.999deg); }
+  54% { transform: translate(-42px, -5px) rotate(54.794deg); }
+  64%, 67% { transform: translate(0, 0) rotate(0deg); }
+  72% { transform: translate(-42px, -5px) rotate(54.794deg); }
+  77% { transform: translate(-60px, -22px) rotate(83.999deg); }
+  82% { transform: translate(-63px, -63px) rotate(90deg); }
+  90%, 100% { transform: translate(-63px, -115px) rotate(90deg); opacity: 1; }
 }
 #obstruction-overlay { --object-x: 0px; --object-y: 0px; --air-opacity: 0; }
 #obstruction-overlay.outcome-SUCCESS { --object-x: -90px; --object-y: -135px; --air-opacity: 0.85; }
@@ -4461,7 +4553,7 @@ body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666;
   #npa-overlay, #obstruction-overlay { transition: none; }
   :is(#npa-overlay, #obstruction-overlay).visible * { animation: none !important; }
   #npa-label, #obstruction-label { opacity: 1; }
-  #npa-overlay.outcome-COMPLICATION #npa-device { transform: translate(-100px, -44px) rotate(-12deg); }
+  #npa-overlay.outcome-COMPLICATION #npa-device { transform: translate(-63px, -115px) rotate(90deg); }
   #obstruction-flow { opacity: var(--air-opacity); }
   :is(#npa-overlay, #obstruction-overlay).visible :is(.om-check, .om-x1, .om-x2) { stroke-dashoffset: 0; }
 }

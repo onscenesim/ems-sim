@@ -41,6 +41,12 @@ test('natural direct-pressure orders trigger bleeding control', () => {
   }
 });
 
+test('retry is treated as a procedure action verb', () => {
+  for (const phrase of ['retry intubation', 'retry tourniquet', 'retry bleeding control']) {
+    assert.ok(detectAllProcedures(phrase).some(e => e.proc.id === phrase.replace('retry ', '').replace(' ', '_')), phrase);
+  }
+});
+
 test('bleeding control and junctional packing variants use one intervention', () => {
   for (const phrase of [
     'bleeding control', 'hemorrhage control', 'junctional tourniquet', 'XStat',

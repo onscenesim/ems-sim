@@ -1910,7 +1910,7 @@ function animateDrill(outcome) {
 // Presentation clocks only: simulation outcomes and elapsed time stay server-owned.
 // CSS receives these values so sound, result and cleanup have one timing source.
 const PROCEDURE_TIMING = Object.freeze({
-  npa: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2800, sound: 2800 }),
+  npa: Object.freeze({ hold: 4000, start: 0, cycle: 4000, result: 3600, sound: 3600 }),
   obstruction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2500, sound: 2500 }),
   chest_seal: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3000, sound: 3000 }),
   pacing: Object.freeze({ hold: 5200, start: 0, cycle: 5200, result: 2800, sound: 2800 }),
@@ -1919,7 +1919,7 @@ const PROCEDURE_TIMING = Object.freeze({
   tourniquet: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3100, sound: 3100 }),
   bvm: Object.freeze({ hold: 2500, start: 350, cycle: 1500, result: 1900, sound: 350 }),
   lucas: Object.freeze({ hold: 1900, start: 100, cycle: 600, result: 1450, sound: 100 }),
-  laryngoscope: Object.freeze({ hold: 4000, start: 0, cycle: 4000, result: 3000, sound: 3000 }),
+  laryngoscope: Object.freeze({ hold: 5600, start: 0, cycle: 5600, result: 5040, sound: 5040 }),
   sga: Object.freeze({ hold: 3400, start: 0, cycle: 3400, result: 2652, sound: 2652 }),
   ncd: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2280, sound: 2160 }),
   suction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2880, sound: 2880 }),

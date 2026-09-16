@@ -53,14 +53,14 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
           animationCount: animations.length,
           labelOpacity: Number(css(`${id}-label`).opacity),
           strokeOffset: getComputedStyle(overlay.querySelector(outcome === 'SUCCESS' || outcome === 'MARGINAL' ? '.om-check' : '.om-x1')).strokeDashoffset,
-          ...(id === 'npa' ? { deviceX: matrix('npa-device').e, deviceY: matrix('npa-device').f } : {}),
+          ...(id === 'npa' ? { deviceX: matrix('npa-device').e, deviceY: matrix('npa-device').f, tip: point('npa-device', 200, 184) } : {}),
           ...(id === 'obstruction' ? { objectX: matrix('obstruction-object').e, objectY: matrix('obstruction-object').f, flow: Number(css('obstruction-flow').opacity), flowOffset: Number.parseFloat(css('obstruction-flow').strokeDashoffset) } : {}),
           ...(id === 'bvm' ? { chest: matrix('bvm-chest').d, bag: matrix('bvm-bag').d, leak: Number(css('bvm-leak').opacity), air: Number(css('bvm-air').opacity) } : {}),
           ...(id === 'lucas' ? { chest: matrix('lucas-chest').d, piston: matrix('lucas-piston').f, frame: css('lucas-frame').transform } : {}),
           ...(id === 'laryngoscope' ? {
             tubes: ['tracheal', 'esophageal', 'failed'].map(route => ({ route, display: css(`lx-tube-${route}`).display, opacity: css(`lx-tube-${route}`).opacity, pathOpacity: Number(css('lx-tube-assembly').opacity), offset: Math.abs(matrix('lx-tube-assembly').f) })),
             cuffs: ['tracheal', 'esophageal'].map(route => ({ route, display: css(`lx-${route}-cuff`).display, opacity: Number(css(`lx-${route}-cuff`).opacity) })),
-            ring: Number(css('lx-success-ring').opacity),
+            ring: Number(css('lx-success-ring').opacity), tubeTip: point('lx-tube-assembly', outcome === 'COMPLICATION' ? 280 : outcome === 'FAILURE' ? 198 : 244, outcome === 'COMPLICATION' ? 198 : outcome === 'FAILURE' ? 167 : 170), tubeRotation: matrix('lx-tube-assembly').b, wireOffset: Number.parseFloat(getComputedStyle(document.querySelector('#lx-tube-tracheal .lx-stylet > use')).strokeDashoffset), wireShaft: getComputedStyle(document.querySelector('#lx-tube-tracheal .lx-stylet > path')).d,
             macOpacity: Number(css('lx-mac').opacity),
             connector: Number(css('lx-tube-assembly').opacity), stylet: Number(getComputedStyle(document.querySelector('#lx-tube-tracheal .lx-stylet')).opacity), cuffScale: matrix('lx-tracheal-cuff').d,
             bladeTip: point('lx-mac', 191, 172),
@@ -117,7 +117,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
         await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
         for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd']) {
           for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
-            const state = await sample(id, outcome, id === 'laryngoscope' || id === 'suction' ? 3300 : 3000);
+            const state = await sample(id, outcome, id === 'laryngoscope' ? 5400 : id === 'npa' ? 3900 : id === 'suction' ? 3300 : 3000);
             assert.equal(state.pointerEvents, 'none');
             assert.ok(state.width >= 240, `${id} remains legible`);
             for (const box of state.children) {
@@ -159,10 +159,10 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.equal(recovery.trail, 0); assert.notEqual(anticipation.blade, recovery.blade);
     // Check the mechanism, not just the result: insertion reaches the vallecula,
     // pauses without moving tissue, then lifts tongue/epiglottis before the ETT enters.
-    const entering = await sample('laryngoscope', 'SUCCESS', 600);
-    const seated = await sample('laryngoscope', 'SUCCESS', 1120);
-    const seatHold = await sample('laryngoscope', 'SUCCESS', 1240);
-    const lifted = await sample('laryngoscope', 'SUCCESS', 1760);
+    const entering = await sample('laryngoscope', 'SUCCESS', 840);
+    const seated = await sample('laryngoscope', 'SUCCESS', 1568);
+    const seatHold = await sample('laryngoscope', 'SUCCESS', 1736);
+    const lifted = await sample('laryngoscope', 'SUCCESS', 2464);
     const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     assert.ok(entering.bladeTip.x < seated.bladeTip.x && entering.bladeTip.y < seated.bladeTip.y, 'blade advances down the tongue');
     assert.ok(distance(seated.bladeTip, seatHold.bladeTip) < 0.01, 'seat the tip before applying lift');
@@ -175,53 +175,61 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.ok(lifted.tongueTip.x > seated.tongueTip.x + 10 && lifted.tongueTip.y < seated.tongueTip.y - 10);
     assert.ok(lifted.epiglottisTip.x > seated.epiglottisTip.x + 15);
     assert.ok(seated.cordsOpacity < 0.3 && lifted.cordsOpacity === 1, 'cords become visible only after lift');
-    const airwayView = await sample('laryngoscope', 'SUCCESS', 1760);
+    const airwayView = await sample('laryngoscope', 'SUCCESS', 2464);
     assert.equal(airwayView.macOpacity, 1);
-    assert.equal(airwayView.tubes[0].offset, 118, 'blade lift precedes tube pass');
+    assert.equal(airwayView.tubes[0].offset, 82, 'blade lift precedes tube pass');
     assert.equal(airwayView.tubes[0].pathOpacity, 0, 'no floating tube endcaps before entry');
-    const airwayPass = await sample('laryngoscope', 'SUCCESS', 2300);
+    const airwayPass = await sample('laryngoscope', 'SUCCESS', 3220);
     assert.ok(airwayPass.tubes[0].offset > 0 && airwayPass.tubes[0].offset < 100);
-    const styletIn = await sample('laryngoscope', 'SUCCESS', 2520);
-    const styletOut = await sample('laryngoscope', 'SUCCESS', 2880);
+    const styletIn = await sample('laryngoscope', 'SUCCESS', 3528);
+    const styletOut = await sample('laryngoscope', 'SUCCESS', 4816);
+    const styletPull = await sample('laryngoscope', 'SUCCESS', 4032);
+    assert.ok(styletPull.wireOffset > 0 && styletPull.wireOffset < 100);
+    assert.notEqual(styletPull.wireShaft, styletIn.wireShaft, 'exposed wire extends out of the connector');
+    assert.equal(styletPull.stylet, 1, 'wire remains opaque while physically withdrawing');
     assert.equal(styletIn.stylet, 1); assert.equal(styletOut.stylet, 0);
     assert.ok(styletIn.cuffScale < 0.4 && styletOut.cuffScale < 1, 'stylet withdraws before cuff finishes inflating');
-    const airwaySuccess = await sample('laryngoscope', 'SUCCESS', 3150);
+    const airwaySuccess = await sample('laryngoscope', 'SUCCESS', 5300);
     assert.equal(airwaySuccess.tubes[0].display, 'block');
     assert.equal(airwaySuccess.tubes[0].offset, 0);
     assert.equal(airwaySuccess.tubes[1].display, 'none');
     assert.equal(airwaySuccess.cuffs[0].opacity, 1);
     assert.ok(airwaySuccess.ring > 0);
-    const airwayMarginal = await sample('laryngoscope', 'MARGINAL', 3150);
+    const airwayMarginal = await sample('laryngoscope', 'MARGINAL', 5300);
     assert.equal(airwayMarginal.tubes[0].offset, 0);
     assert.equal(airwayMarginal.ring, 0, 'marginal does not get the success celebration');
-    const failedAttempt = await sample('laryngoscope', 'FAILURE', 2520);
-    const withdrawing = await sample('laryngoscope', 'FAILURE', 2760);
-    const withdrawn = await sample('laryngoscope', 'FAILURE', 3000);
+    const failedAttempt = await sample('laryngoscope', 'FAILURE', 3528);
+    const withdrawing = await sample('laryngoscope', 'FAILURE', 3864);
+    const withdrawn = await sample('laryngoscope', 'FAILURE', 4480);
     assert.equal(failedAttempt.tubes[2].offset, 0);
     assert.ok(withdrawing.tubes[2].offset > 0 && withdrawing.tubes[2].offset < 100);
-    assert.equal(withdrawn.tubes[2].offset, 112);
+    assert.equal(withdrawn.tubes[2].offset, 79);
     assert.equal(withdrawn.tubes[2].pathOpacity, 0, 'withdrawal leaves no tube tip or endcaps behind');
     assert.equal(withdrawn.connector, 0);
     assert.equal(withdrawn.cuffs[0].display, 'none');
-    const misplaced = await sample('laryngoscope', 'COMPLICATION', 3600);
+    const misplaced = await sample('laryngoscope', 'COMPLICATION', 5040);
     assert.equal(misplaced.tubes[0].display, 'none');
     assert.equal(misplaced.tubes[1].offset, 0);
     assert.equal(misplaced.cuffs[1].opacity, 1);
     assert.equal(misplaced.ring, 0);
     const npaEarly = await sample('npa', 'SUCCESS', 600);
     const npaLate = await sample('npa', 'SUCCESS', 3000);
-    assert.ok(npaEarly.deviceX < npaLate.deviceX);
+    assert.ok(npaEarly.tip.y < npaLate.tip.y);
+    const nostril = await sample('npa', 'SUCCESS', 960);
+    assert.ok(distance(nostril.tip, { x: 137, y: 121 }) < 0.01, 'tip enters the nostril before turning down');
+    const nasalDescent = await sample('npa', 'SUCCESS', 1360);
+    assert.ok(nasalDescent.tip.x < 145 && nasalDescent.tip.y > 135, 'NPA descends behind the palate');
     for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
-      const nasal = await sample('npa', outcome, 3300);
+      const nasal = await sample('npa', outcome, 3900);
       const obstruct = await sample('obstruction', outcome, 3300);
       if (outcome === 'SUCCESS') { assert.equal(nasal.deviceX, 0); assert.ok(obstruct.objectY < -100); }
-      if (outcome === 'MARGINAL') { assert.equal(nasal.deviceX, -18); assert.equal(obstruct.objectY, -48); }
-      if (outcome === 'FAILURE') { assert.equal(nasal.deviceX, -50); assert.equal(obstruct.objectX, 0); }
-      if (outcome === 'COMPLICATION') { assert.equal(nasal.deviceX, -100); assert.equal(obstruct.objectX, 55); }
+      if (outcome === 'MARGINAL') { assert.equal(nasal.deviceX, -17); assert.equal(obstruct.objectY, -48); }
+      if (outcome === 'FAILURE') { assert.equal(nasal.deviceX, -60); assert.equal(obstruct.objectX, 0); }
+      if (outcome === 'COMPLICATION') { assert.equal(nasal.deviceX, -63); assert.equal(obstruct.objectX, 55); }
       assert.equal(obstruct.flow > 0, ['SUCCESS', 'MARGINAL'].includes(outcome));
       if (obstruct.flow > 0) assert.ok(obstruct.flowOffset < 0);
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      const stillNasal = await sample('npa', outcome, 3300);
+      const stillNasal = await sample('npa', outcome, 3900);
       const stillObject = await sample('obstruction', outcome, 3300);
       assert.equal(stillNasal.deviceX, nasal.deviceX); assert.equal(stillObject.objectX, obstruct.objectX);
       await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -235,15 +243,16 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.ok(ends[0].x > 210 && ends[0].y > 160 && ends[0].y < 181);
     assert.ok(ends[1].x > 210 && ends[1].y > 191 && ends[1].y < 205);
     assert.ok(ends[2].x < 201);
-    // Continuous travel through the old mid-pass pause: fixed geometry and no
-    // speed changes masquerading as dropped frames.
-    const advances = [];
-    for (const time of [2200, 2240, 2280, 2320, 2360]) {
-      advances.push((await sample('laryngoscope', 'SUCCESS', time)).tubes[0].offset);
-    }
-    for (let i = 1; i < advances.length; i++) {
-      assert.ok(advances[i] < advances[i - 1], 'the pass never stalls midway');
-      assert.ok(Math.abs((advances[i - 1] - advances[i]) - (advances[0] - advances[1])) < 0.01, 'constant advancement speed');
+    // Tip enters through the mouth, then turns along the tongue. No base-path morphing.
+    const oralEntry = await sample('laryngoscope', 'SUCCESS', 2800);
+    assert.ok(distance(oralEntry.tubeTip, { x: 158, y: 118 }) < 0.01);
+    let previous = oralEntry;
+    for (const time of [2912, 3024, 3136, 3248, 3360, 3472, 3584]) {
+      const current = await sample('laryngoscope', 'SUCCESS', time);
+      assert.ok(current.tubeTip.x > previous.tubeTip.x && current.tubeTip.y >= previous.tubeTip.y - 0.01);
+      assert.ok(current.tubeRotation <= previous.tubeRotation, 'tube turns as the tip follows the tongue');
+      assert.ok(current.tubeTip.y <= 171 && current.tubeTip.y >= 118);
+      previous = current;
     }
     const geometry = await page.evaluate(() => {
       const profile = document.querySelector('#procedure-patient-head > g').getBBox();
@@ -399,7 +408,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.equal(earlyOoze.air, 0); assert.equal(earlyOoze.blood, 0); assert.equal(earlyOoze.ooze, 1);
     assert.ok(earlyOoze.oozeOffset > lateOoze.oozeOffset && lateOoze.oozeOffset === 0, 'ooze continues after a few isolated drops would stop');
     // Starting the fade must not restart the tube or blade animation.
-    await sample('laryngoscope', 'SUCCESS', 4000);
+    await sample('laryngoscope', 'SUCCESS', 5600);
     const fade = await page.evaluate(() => {
       const overlay = document.getElementById('laryngoscope-overlay');
       const tube = document.querySelector('#lx-tube-tracheal use');
@@ -414,25 +423,25 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     // Save reviewable fixed frames. Screenshots don't require a live scenario.
     for (const width of [320, 1280]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 800 });
-      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 3150], ['sga', 3000], ['opa', 3200], ['suction', 3300], ['ncd', 2400]]) {
+      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 5300], ['sga', 3000], ['opa', 3200], ['suction', 3300], ['ncd', 2400]]) {
         await sample(id, 'SUCCESS', time);
         await page.screenshot({ path: path.join(output, `${id}-${width}.png`) });
       }
     }
     for (const [outcome, time] of [['SUCCESS', 600], ['SUCCESS', 1120], ['SUCCESS', 1760], ['SUCCESS', 2300], ['FAILURE', 2520], ['FAILURE', 2760], ['FAILURE', 3600], ['COMPLICATION', 3600]]) {
       await page.setViewportSize({ width: 390, height: 844 });
-      await sample('laryngoscope', outcome, time);
+      await sample('laryngoscope', outcome, time * 1.4);
       await page.screenshot({ path: path.join(output, `intubation-${outcome.toLowerCase()}-${time}.png`) });
     }
     for (const id of ['sga', 'opa', 'suction', 'ncd', 'npa', 'obstruction']) {
       for (const [outcome, fraction] of [['SUCCESS', 0.24], ['SUCCESS', 0.28], ['SUCCESS', 0.38], ['SUCCESS', 0.5], ['SUCCESS', 0.9], ['MARGINAL', 0.9], ['FAILURE', 0.9], ['COMPLICATION', 0.9]]) {
         await page.setViewportSize({ width: 390, height: 844 });
-        await sample(id, outcome, (id === 'sga' ? 3400 : 3600) * fraction);
+        await sample(id, outcome, (id === 'sga' ? 3400 : id === 'npa' ? 4000 : 3600) * fraction);
         await page.screenshot({ path: path.join(output, `${id}-${outcome.toLowerCase()}-${fraction}.png`) });
       }
     }
     await page.setViewportSize({ width: 568, height: 320 });
-    await sample('laryngoscope', 'SUCCESS', 3600);
+    await sample('laryngoscope', 'SUCCESS', 5040);
     await page.screenshot({ path: path.join(output, 'intubation-landscape.png') });
     // All three airway scenes must resolve the shared supine head, including its
     // full cranium. A missing definition can silently render an empty <use>.
