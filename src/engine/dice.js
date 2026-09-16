@@ -35,7 +35,7 @@ const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exem
   // Hemorrhage-control equipment and the common spellings users type for it.
   'tourniquet', 'tourniqet', 'tournquet', 'torniket', 'tourniquite',
   'tourniket', 'torniquet', 'turniquet',
-  'pacing', 'pacer',
+  'pace', 'pacing', 'pacer',
   // Drug abbreviations — specific enough to fire without an admin verb
   'io',       // bare IO order — firefighter shorthand
   'epi',      // bare epi order — firefighter shorthand

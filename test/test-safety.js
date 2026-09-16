@@ -47,6 +47,11 @@ test('retry is treated as a procedure action verb', () => {
   }
 });
 
+test('pace and rate-qualified pacing orders are detected', () => {
+  assert.deepEqual(detectAllProcedures('Pace at 80').map(e => e.proc.id), ['pacing']);
+  assert.deepEqual(detectAllProcedures('pace').map(e => e.proc.id), ['pacing']);
+});
+
 test('bleeding control and junctional packing variants use one intervention', () => {
   for (const phrase of [
     'bleeding control', 'hemorrhage control', 'junctional tourniquet', 'XStat',

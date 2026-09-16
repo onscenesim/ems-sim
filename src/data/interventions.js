@@ -29,7 +29,7 @@ const INTERVENTIONS = [
   { id: "defibrillation", synonyms: ["defibrillate", "unsynchronized shock", "shock", "deliver shock", "AED shock", "defib", "defibrillation", "shock the patient", "CPR shock", "VF shock", "clear and shock", "charge the defib", "deliver the charge", "200 joules", "360 joules", "biphasic shock", "monophasic",   "shock advised"], dc: [7], no_roll: false, dc_notes: "DC 7 — one roll covers the whole shock, delivery through rhythm response. Failure: the shock delivers cleanly but the rhythm does not convert — continue CPR and retry; not a technique error and not a device problem. Complication: pad contact arcing with skin burns, or a crew member contacting the patient because clear was not called.", scope: "ALS", notes: null },
   { id: "pacing", synonyms: [
     // Device + procedure names
-    "pacer", "pacing", "TCP", "transcutaneous pacing", "transcutaneous cardiac pacing",
+    "pace", "pacer", "pacing", "TCP", "transcutaneous pacing", "transcutaneous cardiac pacing",
     "external pacing", "electrical pacing", "external pacer",
     // Start / activate
     "pace the patient", "initiate pacing", "start pacing", "begin pacing",
