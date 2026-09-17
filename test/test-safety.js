@@ -29,6 +29,20 @@ test('known dangerous misroutes and rhythm analysis are corrected', () => {
   assert.equal(detectWithConfirmation('AED analyze').rolls[0].no_roll, true);
 });
 
+test('defibrillation complications worsen physiology without fabricating a safety lapse', () => {
+  const originalRandom = Math.random;
+  Math.random = () => 0; // natural 1
+  try {
+    for (const difficulty of ['EASY', 'NORMAL', 'HARD', 'BLACK_CLOUD']) {
+      const shock = rollProcedure('defibrillation', {}, difficulty);
+      assert.equal(shock.roll, 1, difficulty);
+      assert.equal(shock.outcome, 'COMPLICATION', difficulty);
+    }
+  } finally {
+    Math.random = originalRandom;
+  }
+});
+
 test('natural direct-pressure orders trigger bleeding control', () => {
   for (const phrase of [
     'put pressure on the wound',
