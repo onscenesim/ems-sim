@@ -269,6 +269,29 @@ test('invalid scenario config is rejected before a model call', async () => {
   assert.equal((await route('/new', {difficulty:'INVALID'})).status,400);
 });
 
+test('standalone arrest checks advance to the scheduled CPR checkpoint', async () => {
+  const seed = rollScenario({category:'arrest'});
+  assert.match(new Session(seed).systemPrompt,
+    /standalone request for a pulse check, rhythm check, or combined pulse\/rhythm check[\s\S]+fast-forward the scene clock/);
+
+  let modelMessage = '';
+  generate = async messages => {
+    modelMessage = messages.at(-1).content;
+    return {text:'The scheduled check is performed. [TIME: 2:00]'};
+  };
+
+  const checkOnly = new Session(seed);
+  await checkOnly.send('Pulse check and rhythm check');
+  assert.match(modelMessage, /SCHEDULED ARREST CHECK/);
+  assert.match(modelMessage, /perform NO additional intervention/);
+  assert.equal(checkOnly.sceneMinute, 2);
+
+  const checkAndTreat = new Session(seed);
+  await checkAndTreat.send('Check the rhythm and give epinephrine');
+  assert.doesNotMatch(modelMessage, /SCHEDULED ARREST CHECK/,
+    'multi-intervention orders must retain the normal one-action-window flow');
+});
+
 
 test('obstruction removal techniques share one roll, including combined attempts', () => {
   for (const phrase of ['back blows', 'chest thrusts', 'abdominal thrusts', 'Magill forceps', 'Macgill forceps', 'remove obstruction', 'push foreign body down the right mainstem', 'back blows and abdominal thrusts and Magill forceps']) {

@@ -556,6 +556,20 @@ class Session {
     // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
     let messageText = userText;
 
+    // During an active arrest cycle, a standalone request to check the pulse or
+    // rhythm is intent to check at the next scheduled two-minute pause — not an
+    // attempt to interrupt compressions early. Reinforce the arrest prompt on the
+    // exact turn where it matters. Keeping this scoped to check-only turns means a
+    // chained order cannot smuggle epi, a shock, or another intervention into the
+    // fast-forwarded interval.
+    const arrestCheckIds = new Set(['pulse_check', 'rhythm_check']);
+    const standaloneArrestCheck = this.seed.category === 'arrest'
+      && rolls.length > 0
+      && rolls.every(r => arrestCheckIds.has(r.procedure_id));
+    if (standaloneArrestCheck) {
+      messageText += '\n\n[SYSTEM NOTE: SCHEDULED ARREST CHECK — This turn contains only a pulse and/or rhythm check request. If a CPR cycle is currently active and its next 2-minute checkpoint has not arrived, keep the existing compressions uninterrupted, perform NO additional intervention, and advance the scene clock through the remaining interval to that checkpoint; then pause briefly and perform the requested check. Do not object that the request was early. If this is the initial pulse assessment before CPR, or the checkpoint is already due, perform the check now without adding time.]';
+    }
+
     // Deterministic LOAD: the provider clearly ordered the patient into the rig and
     // the unit isn't already loaded or moving. The model sometimes defers this or
     // forgets [LOADING], which suppressed the destination panel — force it below.
