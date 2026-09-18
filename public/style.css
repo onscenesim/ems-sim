@@ -19,9 +19,9 @@
   --chrome-bg:  #d0cdc8;
   --chrome-mid: #c0bdb8;
   --font-block: 'BlockBlueprint', 'Arial Black', sans-serif;
-  /* Tahoma was the default Windows XP UI face. Keep fallbacks for platforms
-     that do not ship it rather than bundling a proprietary system font. */
-  --font-xp:    Tahoma, Verdana, 'MS Sans Serif', Arial, sans-serif;
+  /* Microsoft Sans Serif has the lightly pixel-stepped raster look of late
+     1990s/XP-era web UI. It stays a local system face; do not redistribute it. */
+  --font-xp:    'Microsoft Sans Serif', 'MS Sans Serif', Geneva, Tahoma, Arial, sans-serif;
   --font-ui:    var(--font-xp);
   --font-mono:  'Courier New', Courier, monospace;
   --font-brand: Georgia, 'Times New Roman', serif;
