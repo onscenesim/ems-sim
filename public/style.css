@@ -11,6 +11,16 @@
   font-style: normal;
 }
 
+/* A real, proportional bitmap face — deliberately softer than the display
+   font above, but visibly rasterized like late-1990s desktop/web UI. */
+@font-face {
+  font-family: 'PixelOperator';
+  src: url('fonts/PixelOperator.ttf') format('truetype');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --body-bg:    #b8b8b8;
   --panel-bg:   #1a1a1a;
@@ -19,9 +29,7 @@
   --chrome-bg:  #d0cdc8;
   --chrome-mid: #c0bdb8;
   --font-block: 'BlockBlueprint', 'Arial Black', sans-serif;
-  /* Microsoft Sans Serif has the lightly pixel-stepped raster look of late
-     1990s/XP-era web UI. It stays a local system face; do not redistribute it. */
-  --font-xp:    'Microsoft Sans Serif', 'MS Sans Serif', Geneva, Tahoma, Arial, sans-serif;
+  --font-xp:    'PixelOperator', 'Microsoft Sans Serif', 'MS Sans Serif', Geneva, Tahoma, Arial, sans-serif;
   --font-ui:    var(--font-xp);
   --font-mono:  'Courier New', Courier, monospace;
   --font-brand: Georgia, 'Times New Roman', serif;
@@ -572,8 +580,8 @@ html, body {
   font-family: var(--font-xp);
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.6;
-  font-size: 14px;
+  line-height: 1.5;
+  font-size: 16px;
 }
 
 .line.narrative { color: var(--text-term); }
@@ -652,8 +660,8 @@ html, body {
 .brief-text {
   font-family: var(--font-xp);
   color: var(--text-term);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.5;
 }
 .brief-label {
   color: var(--k);
