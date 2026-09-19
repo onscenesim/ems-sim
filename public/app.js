@@ -516,10 +516,10 @@ captainSelect.addEventListener('change', () => {
 // -- Tile descriptions -------------------------------------------------------
 const TILE_DESCS = {
   difficulty: {
-    'NORMAL':      "Realistic acuity. Mistakes have consequences.",
-    'EASY':        "Stable patients. Forgiving margins. Good for learning.",
-    'HARD':        "Complex presentations. Tight windows. No slack.",
-    'BLACK_CLOUD': "Every call is your worst. Full crew. No breaks.",
+    'EASY':        "Procedures succeed automatically. No equipment failure.",
+    'NORMAL':      "Challenging but realistic. Optimized experience.",
+    'HARD':        "Very challenging but still realistic.",
+    'BLACK_CLOUD': "Every call is your worst. Experimental, not to be taken seriously.",
   },
   provider: {
     'ALS': "Full paramedic scope — IVs, drips, advanced airway.",
