@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync(require.resolve('../public/app.js'), 'utf8');
+const html = fs.readFileSync(require.resolve('../public/index.html'), 'utf8');
 const sounds = source.slice(source.indexOf('const SURGICAL_PROCS'), source.indexOf('// ── Mobile audio unlock'));
 const scenes = source.slice(source.indexOf('const PROCEDURE_TIMING'), source.indexOf('function animateDefib'));
 function fixture({ reduced = false, missing = false } = {}) {
@@ -38,6 +39,13 @@ function fixture({ reduced = false, missing = false } = {}) {
   }
   return { context, elements, played, timers, advance };
 }
+
+test('12-lead EKG reuses the CPR torso model with all six precordial leads', () => {
+  const ekg = html.slice(html.indexOf('<div id="ekg-overlay"'), html.indexOf('<!-- OPA', html.indexOf('<div id="ekg-overlay"')));
+  assert.match(ekg, /<use href="#procedure-torso"\/>/);
+  assert.equal((ekg.match(/class="ekg-lead"/g) || []).length, 6);
+  assert.doesNotMatch(ekg, /Bare torso|trapezius|costal margin hint/);
+});
 
 for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
   test(`${id}: action sound fires once, result timing is shared with CSS, and cleanup resolves after fade`, async () => {

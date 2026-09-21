@@ -39,7 +39,46 @@ const SOUNDS = {
   sfx_loading_bls:  new Audio('/sounds/BLSStretcher.m4a'),
   sfx_depart:       new Audio('/sounds/AmbulanceDeparting.m4a'),
 };
-Object.values(SOUNDS).forEach(a => { if (a) a.preload = 'auto'; });
+// A single HTMLAudioElement cannot play over itself: calling play() again
+// rewinds the effect already in progress. Keep a small, warmed voice pool per
+// sound so two animation/action cues can overlap without cancelling either.
+const SOUND_VOICES_PER_EFFECT = 2;
+const SOUND_VOICE_POOLS = new Map();
+Object.entries(SOUNDS).forEach(([name, sound]) => {
+  if (!sound) return;
+  sound.preload = 'auto';
+  const voices = [sound];
+  for (let i = 1; i < SOUND_VOICES_PER_EFFECT; i++) {
+    const voice = sound.cloneNode(true);
+    voice.preload = 'auto';
+    voices.push(voice);
+  }
+  SOUND_VOICE_POOLS.set(name, voices);
+});
+
+function soundVoice(name, sound) {
+  const voices = SOUND_VOICE_POOLS.get(name) || [sound];
+  const idle = voices.find(voice => voice.paused || voice.ended);
+  if (idle) return idle;
+  // Do not steal an in-progress cue. The browser cache has already been warmed
+  // by the pool above, so this only costs an extra decoder while cues overlap.
+  const voice = sound.cloneNode(true);
+  voice.preload = 'auto';
+  voices.push(voice);
+  SOUND_VOICE_POOLS.set(name, voices);
+  return voice;
+}
+
+function stopSound(name) {
+  for (const voice of SOUND_VOICE_POOLS.get(name) || []) {
+    voice.pause();
+    voice.currentTime = 0;
+  }
+}
+
+function stopAllSounds() {
+  for (const name of SOUND_VOICE_POOLS.keys()) stopSound(name);
+}
 
 // Nearest-hospital transit time by region (minutes, midpoint of documented range)
 const REGION_TRANSPORT_MIN = {
@@ -74,10 +113,11 @@ function playSound(name) {
   const s = SOUNDS[name];
   if (s === undefined) { console.warn('[sound] unknown:', name); return; }
   if (s === null) return;  // known slot — file not yet assigned
+  const voice = soundVoice(name, s);
   console.log('[sound] playing:', name);
-  s.muted = false;  // ensure not silenced from unlock phase
-  s.currentTime = 0;
-  s.play().catch(err => console.warn('[sound] play error:', name, err.message));
+  voice.muted = false;  // ensure not silenced from unlock phase
+  voice.currentTime = 0;
+  voice.play().catch(err => console.warn('[sound] play error:', name, err.message));
 }
 const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression',
   'finger_thoracostomy', 'resuscitative_thoracotomy', 'perimortem_csection']);
@@ -153,9 +193,7 @@ document.addEventListener('touchend', unlockAudio);
 // play() calls and flush them all when the user tabs back in.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    Object.values(SOUNDS).forEach(s => {
-      if (s && !s.paused) { s.pause(); s.currentTime = 0; }
-    });
+    stopAllSounds();
   }
 });
 
@@ -885,7 +923,7 @@ async function sendTurn(msg, opts = {}) {
       const _bc = SOUNDS.base_contact;
       if (_bc && _bc.paused) {
         playSound('base_contact');
-        setTimeout(() => { if (_bc) { _bc.pause(); _bc.currentTime = 0; } }, 7000);
+        setTimeout(() => stopSound('base_contact'), 7000);
       }
     }
 
@@ -919,7 +957,7 @@ async function sendTurn(msg, opts = {}) {
         firstVitalsPlayed = true;
         const monitorSound = localTranscript?.meta?.provider_level === 'BLS' ? 'kitopen' : 'lifepak';
         playSound(monitorSound);
-        setTimeout(() => { const s = SOUNDS[monitorSound]; if (s) { s.pause(); s.currentTime = 0; } }, 4000);
+        setTimeout(() => stopSound(monitorSound), 4000);
       }
     }
     if (data.backup) applyBackupStatus(data.backup);

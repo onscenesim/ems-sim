@@ -1490,34 +1490,19 @@
     <!-- 12-lead EKG animation overlay -->
     <div id="ekg-overlay" aria-hidden="true">
       <div id="ekg-header">12-LEAD EKG</div>
-      <svg id="ekg-svg" viewBox="0 0 240 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <!-- Bare torso, front view (black-and-white line art) -->
+      <!-- Match the overhead chest model used for the CPR animation so lead
+           landmarks stay consistent across resuscitation procedures. -->
+      <svg id="ekg-svg" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <!-- neck -->
-          <path d="M103 12 Q104 30 95 37"/>
-          <path d="M137 12 Q136 30 145 37"/>
-          <!-- trapezius → shoulder → hanging upper arm (cropped at bottom) -->
-          <path d="M95 37 Q72 44 55 54 Q39 63 35 84 Q32 100 37 120 L43 212"/>
-          <path d="M145 37 Q168 44 185 54 Q201 63 205 84 Q208 100 203 120 L197 212"/>
-          <!-- inner arm / chest-wall separation -->
-          <path d="M63 212 L65 132 Q66 106 58 88" stroke-width="1.6" opacity="0.7"/>
-          <path d="M177 212 L175 132 Q174 106 182 88" stroke-width="1.6" opacity="0.7"/>
-          <!-- clavicles -->
-          <path d="M99 50 Q110 56 118 56" stroke-width="1.4" opacity="0.5"/>
-          <path d="M141 50 Q130 56 122 56" stroke-width="1.4" opacity="0.5"/>
-          <!-- sternum -->
-          <line x1="120" y1="58" x2="120" y2="120" stroke-width="1.4" opacity="0.45"/>
-          <!-- costal margin hint -->
-          <path d="M120 120 Q100 148 78 150" stroke-width="1.3" opacity="0.4"/>
-          <path d="M120 120 Q140 148 162 150" stroke-width="1.3" opacity="0.4"/>
+          <use href="#procedure-torso"/>
         </g>
         <!-- Precordial leads pop on in order V1→V6 -->
-        <g class="ekg-lead" style="--i:0"><circle cx="104" cy="96"  r="10" fill="#d63a3a"/><text x="104" y="99.5">V1</text></g>
-        <g class="ekg-lead" style="--i:1"><circle cx="132" cy="96"  r="10" fill="#e6c12e"/><text x="132" y="99.5">V2</text></g>
-        <g class="ekg-lead" style="--i:2"><circle cx="141" cy="121" r="10" fill="#2fa14e"/><text x="141" y="124.5">V3</text></g>
-        <g class="ekg-lead" style="--i:3"><circle cx="149" cy="146" r="10" fill="#2f6dd0"/><text x="149" y="149.5">V4</text></g>
-        <g class="ekg-lead" style="--i:4"><circle cx="171" cy="139" r="10" fill="#8b5a2b"/><text x="171" y="142.5">V5</text></g>
-        <g class="ekg-lead" style="--i:5"><circle cx="189" cy="126" r="10" fill="#9333a8"/><text x="189" y="129.5">V6</text></g>
+        <g class="ekg-lead" style="--i:0"><circle cx="101" cy="96"  r="10" fill="#d63a3a"/><text x="101" y="99.5">V1</text></g>
+        <g class="ekg-lead" style="--i:1"><circle cx="119" cy="96"  r="10" fill="#e6c12e"/><text x="119" y="99.5">V2</text></g>
+        <g class="ekg-lead" style="--i:2"><circle cx="127" cy="109" r="10" fill="#2fa14e"/><text x="127" y="112.5">V3</text></g>
+        <g class="ekg-lead" style="--i:3"><circle cx="136" cy="123" r="10" fill="#2f6dd0"/><text x="136" y="126.5">V4</text></g>
+        <g class="ekg-lead" style="--i:4"><circle cx="157" cy="121" r="10" fill="#8b5a2b"/><text x="157" y="124.5">V5</text></g>
+        <g class="ekg-lead" style="--i:5"><circle cx="174" cy="111" r="10" fill="#9333a8"/><text x="174" y="114.5">V6</text></g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
         <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
