@@ -1,18 +1,43 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+const { DATA_DIR } = require('./storagePath');
+
 // ---------------------------------------------------------------------------
-// In-memory run log.
+// Durable run log backed by the configured data directory.
 //
 // Every scenario that reaches a natural close (transfer of care, end scenario,
 // or force-close) gets appended here. The debrief text is patched in when the
 // user requests it.
 //
-// MAX_RUNS entries are kept (oldest evicted first). On server restart the
-// store is empty — migrate to Supabase in Session 4 for persistence.
+// MAX_RUNS entries are kept (oldest evicted first). Writes are atomic so a
+// process interruption cannot leave a partially-written run log.
 // ---------------------------------------------------------------------------
 
 const MAX_RUNS = 500;
-const runs = [];   // { session_id, ..., conversation, events, debrief? }
+const RUNS_PATH = path.join(DATA_DIR, 'completed_runs.json');
+
+function loadRuns() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(RUNS_PATH, 'utf8'));
+    return Array.isArray(parsed) ? parsed.slice(-MAX_RUNS) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRuns() {
+  try {
+    const tmp = `${RUNS_PATH}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(runs), 'utf8');
+    fs.renameSync(tmp, RUNS_PATH);
+  } catch (err) {
+    console.error('[adminLogger] save failed:', err.message);
+  }
+}
+
+const runs = loadRuns();   // { session_id, ..., conversation, events, debrief? }
 
 /**
  * Record a completed scenario.
@@ -71,6 +96,7 @@ function logRun(sessionId, seed, messages) {
   };
 
   runs.push(run);
+  saveRuns();
 
   // Write a one-line summary to stdout (captured by Render / Railway logs)
   const procEvents = (seed.events || []).filter(e => e.event_type === 'procedure' && e.outcome !== 'NO_ROLL');
@@ -97,6 +123,7 @@ function updateRunDebrief(sessionId, debriefText) {
   const run = runs.find(r => r.session_id === sessionId);
   if (run) {
     run.debrief = debriefText;
+    saveRuns();
     console.log(JSON.stringify({
       event:      'DEBRIEF_COMPLETE',
       session_id: sessionId,

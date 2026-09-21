@@ -81,7 +81,7 @@ router.get('/summary', adminAuth, (req, res) => {
     avg_scene_mins:  runs.length ? Math.round(totalMins / runs.length) : null,
     avg_rolls:       runs.length ? Math.round(totalRolls / runs.length) : null,
     by_category:     byCategory,
-    note:            'In-memory only — resets on server restart.',
+    note:            'Stored in the configured persistent data directory.',
   });
 });
 

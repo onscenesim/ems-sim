@@ -27,8 +27,14 @@ app.use('/api/scenario', scenarioRouter);
 // Admin — no rate limit (internal use only, guarded by ADMIN_TOKEN)
 app.use('/admin', adminRouter);
 
-// Health check (used by ALB target group)
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+// Readiness check (used by the hosting target group). Do not advertise a green
+// deployment that can serve the shell but cannot start a simulation.
+app.get('/health', (_req, res) => {
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(503).json({ status: 'not_ready', missing: ['GEMINI_API_KEY'] });
+  }
+  return res.json({ status: 'ok' });
+});
 
 // SPA fallback — always serve index.html for non-API routes
 // Express 5 requires a named wildcard or regex — bare '*' is a syntax error

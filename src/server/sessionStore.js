@@ -3,6 +3,7 @@
 const fs             = require('fs');
 const path           = require('path');
 const { randomUUID: uuidv4 } = require('node:crypto');
+const { DATA_DIR }    = require('./storagePath');
 const { Session }     = require('../engine/session');
 const { rollScenario } = require('../engine/roller');
 const { HISTORY_WINDOWS } = require('../data/config');
@@ -17,7 +18,7 @@ const store = new Map();
 // Keyed by client IP.
 //
 // Persisted to disk so history survives server restarts.
-const HISTORY_PATH = path.join(__dirname, '../../sessions/user_history.json');
+const HISTORY_PATH = path.join(DATA_DIR, 'user_history.json');
 
 function loadHistoryFromDisk() {
   try {
@@ -160,6 +161,7 @@ function deleteSession(id) {
 function restoreSession(snapshot) {
   const session = new Session(snapshot.seed, snapshot.id);
   session.operationResults = snapshot.operationResults || [];
+  session.ownerId = snapshot.ownerId || null;
   session.debriefText = snapshot.debriefText || null;
   session.lastReplyHadTime = snapshot.lastReplyHadTime ?? true;
   session.messages    = snapshot.messages    || [];
@@ -177,6 +179,7 @@ function restoreSession(snapshot) {
   session.transportDest       = snapshot.transportDest       ?? null;
   session.departSceneMinute   = snapshot.departSceneMinute   ?? null;
   session.access              = snapshot.access              || [];
+  session.contextFlags        = snapshot.contextFlags        || session.contextFlags;
   session.demoSource          = snapshot.demo_source         || null;
   session.secondPatientFound  = snapshot.second_patient      || false;
   store.set(snapshot.id, {

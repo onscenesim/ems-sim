@@ -2,13 +2,20 @@ services:
   - type: web
     name: ems-sim
     runtime: node
+    plan: starter
     buildCommand: npm install --include=dev
     startCommand: node bin/server.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: ANTHROPIC_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
-      - key: BETA_TOKENS
+      - key: ADMIN_TOKEN
         sync: false
+      - key: EMS_DATA_DIR
+        value: /var/data
+    disk:
+      name: ems-sim-data
+      mountPath: /var/data
+      sizeGB: 1

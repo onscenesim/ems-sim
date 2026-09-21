@@ -398,20 +398,70 @@ function parseCrewStatusTag(reply) {
 
 /**
  * Build context flags from the current seed for context-aware DC selection.
- * Flags are static for the scenario — a future version could update these
- * dynamically as findings are revealed.
+ * Seed the persistent parts of procedure context. Turn-specific state such as
+ * blood pressure and order wording is layered on by buildTurnContextFlags.
  */
+const DIFFICULT_AIRWAY_RE = /\b(?:airway (?:edema|swelling)|angioedema|stridor|soot|singed (?:nasal )?hair|facial burns?|neck burns?|facial trauma|midface trauma|blood (?:in|pooling in) the airway|vomit(?:us)? (?:in|pooling in) the airway|trismus|limited mouth opening|small mouth|short neck|distorted airway|chemical airway burn)\b/i;
+const JUNCTIONAL_BLEEDING_RE = /\b(?:junctional|inguinal|groin|axill\w*|armpit|base of (?:the )?(?:arm|leg)|neck (?:wound|bleed|hemorrhage)|pelvic wound|zone (?:one|1|three|3) hemorrhage)\b/i;
+const COMPLICATED_DELIVERY_RE = /\b(?:breech|shoulder dystocia|cord prolapse|prolapsed cord|nuchal cord|transverse lie|limb presentation)\b/i;
+const NEWBORN_RESUSCITATIVE_RE = /\b(?:positive[ -]?pressure ventilation|ppv|bag(?:ging)?|bvm|ventilat\w*|chest compressions?|cpr|epinephrine|adrenaline|intubat\w*)\b/i;
+const PRETERM_RE = /\b(?:preterm|premature|preemie|less than 37 weeks?|\d{2}\s*-?week(?: gestation)?)\b/i;
+
+function seedText(seed) {
+  return [seed.presentation, seed.hint, seed.special_flags, seed.comorbidity_bundle]
+    .filter(Boolean).join(' ');
+}
+
+function hasDifficultAirwayEvidence(text) {
+  return String(text || '').split(/[.!?\n]+/).some(clause =>
+    DIFFICULT_AIRWAY_RE.test(clause)
+    && !/\b(?:no|without|absent|denies?|negative for|free of)\b/i.test(clause)
+  );
+}
+
+function systolicPressure(vitals) {
+  let bp = vitals && vitals.BP;
+  if (bp && typeof bp === 'object') bp = bp.value;
+  const match = String(bp || '').match(/^(\d{2,3})(?:\/|$)/);
+  return match ? Number(match[1]) : null;
+}
+
+function hypotensionThreshold(age) {
+  const years = Number(age);
+  if (!Number.isFinite(years) || years > 10) return 90;
+  if (years < 1) return 70;
+  return 70 + (2 * Math.floor(years));
+}
+
 function buildContextFlags(seed) {
   const comorbidity = seed.comorbidity_bundle || '';
+  const source = seedText(seed);
+  const obese = /metabolic|obes|bariatric/i.test(comorbidity);
   return {
-    obese: comorbidity.includes('metabolic') || comorbidity.includes('obese'),
+    obese,
     // age_group is the override string (e.g. "pediatric — infant predominantly"),
     // so match the base band, not an exact 'pediatric' — otherwise the pediatric
     // airway DC bump never fired for any qualified pediatric scenario.
     pediatric: String(seed.age_group || '').toLowerCase().startsWith('pediatric'),
-    hypotensive: false,      // updated dynamically if needed
-    difficult_airway: false, // updated dynamically if needed
-    junctional: false,
+    difficult_airway: obese || hasDifficultAirwayEvidence(source),
+    complicated_delivery: COMPLICATED_DELIVERY_RE.test(source),
+    preterm_newborn: PRETERM_RE.test(source),
+  };
+}
+
+/** Build the procedure context for this exact order from current patient state. */
+function buildTurnContextFlags(seed, baseFlags, lastVitals, userText, moving = false) {
+  const systolic = systolicPressure(lastVitals);
+  const text = String(userText || '');
+  return {
+    ...baseFlags,
+    hypotensive: systolic !== null && systolic < hypotensionThreshold(seed.patient_age),
+    junctional: JUNCTIONAL_BLEEDING_RE.test(text),
+    complicated_delivery: baseFlags.complicated_delivery || COMPLICATED_DELIVERY_RE.test(text),
+    resuscitative_steps: NEWBORN_RESUSCITATIVE_RE.test(text),
+    two_hand_bvm: /\b(?:two[ -]?hand(?:ed)?|two person|two-person)\b/i.test(text),
+    cold_water_immersion: /\b(?:cold water immersion|immerse\w* (?:him|her|them|the patient) in (?:cold|ice) water|ice water immersion)\b/i.test(text),
+    moving,
   };
 }
 
@@ -541,7 +591,9 @@ class Session {
 
     // Detect and roll ALL procedures mentioned in the user's message.
     // Skip entirely when the player is giving a radio report, handoff, or a time-skip.
-    const rollContext = { ...this.contextFlags, moving: this.moving };
+    const rollContext = buildTurnContextFlags(
+      this.seed, this.contextFlags, this.lastVitals, userText, this.moving
+    );
     const detection = (reportMode || skipMode)
       ? { rolls: [], suppressed: [] }
       : detectWithConfirmation(userText, rollContext, this.seed.difficulty, procOverrides);
@@ -786,6 +838,11 @@ class Session {
       .replace(/[^\S\n]+\n/g, '\n')
       .trim();
 
+    // Once an observable difficult-airway feature appears, keep that mechanical
+    // context for later airway attempts. The flag only affects dice; it is never
+    // exposed as diagnostic guidance to the player.
+    if (hasDifficultAirwayEvidence(reply)) this.contextFlags.difficult_airway = true;
+
     // Reconcile dice against the narration: drop any roll the model declined or
     // showed didn't happen, so the debrief/log and client only see real events.
     const reconciledRolls = reconcileRolls(rolls, reply);
@@ -1004,4 +1061,11 @@ class Session {
   }
 }
 
-module.exports = { Session, reconcileRolls, LOAD_REQUEST_RE, LOAD_QUESTION_RE };
+module.exports = {
+  Session,
+  reconcileRolls,
+  buildContextFlags,
+  buildTurnContextFlags,
+  LOAD_REQUEST_RE,
+  LOAD_QUESTION_RE,
+};

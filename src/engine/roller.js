@@ -33,6 +33,10 @@ const PLAYER_SELECTABLE_CATEGORIES = new Set([
   'neuro', 'toxicology', 'arrest', 'pediatric', 'ob',
 ]);
 
+function isMultiPatientSeed(seed) {
+  return /\b(?:two|multiple)_patients\b|\bmci\b/i.test(String(seed?.special_flags || ''));
+}
+
 function pickCategory(difficulty, history, curveBallWeight) {
   const weights = { ...CATEGORY_WEIGHTS };
   if (curveBallWeight !== undefined) weights.curveballs = curveBallWeight;
@@ -424,7 +428,7 @@ function rollScenario(opts = {}) {
     crew_in_back: [],
     backup_present_on_arrival:
       category === 'arrest' ? Math.random() < 0.40 :
-      (presentation.special_flags && /two_patients|mci/i.test(presentation.special_flags)) ? true :
+      isMultiPatientSeed(presentation) ? true :
       Math.random() < 0.08,
     region: region_id,
     // The two transport destinations for this region: `nearest` (closer, lower
@@ -445,4 +449,9 @@ function generateId() {
   });
 }
 
-module.exports = { rollScenario, PLAYER_SELECTABLE_CATEGORIES, specialCircumstanceEligible };
+module.exports = {
+  rollScenario,
+  PLAYER_SELECTABLE_CATEGORIES,
+  isMultiPatientSeed,
+  specialCircumstanceEligible,
+};

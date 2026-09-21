@@ -411,7 +411,10 @@ function detectProcedure(userText) {
 function selectDC(proc, contextFlags = {}) {
   if (!proc.dc || proc.no_roll) return null;
 
-  const { difficult_airway, hypotensive, obese, pediatric, junctional, moving, suction_assisted } = contextFlags;
+  const {
+    difficult_airway, hypotensive, obese, pediatric, junctional, moving,
+    suction_assisted, two_hand_bvm, cold_water_immersion,
+  } = contextFlags;
   const dcs = proc.dc;
   let selectedDC;
 
@@ -424,6 +427,12 @@ function selectDC(proc, contextFlags = {}) {
       // SALAD: active suction in the same turn improves the intubation view,
       // regardless of whether the suction roll itself succeeds.
       if (suction_assisted) selectedDC -= 2;
+      break;
+    case 'supraglottic_airway':
+      selectedDC = difficult_airway ? dcs[dcs.length - 1] : dcs[0];
+      break;
+    case 'bvm':
+      selectedDC = dcs[0] - (two_hand_bvm ? 2 : 0);
       break;
     case 'needle_decompression':
       selectedDC = obese ? 13 : dcs[0];
@@ -439,6 +448,10 @@ function selectDC(proc, contextFlags = {}) {
       break;
     case 'newborn_resuscitation':
       selectedDC = contextFlags.resuscitative_steps ? dcs[1] : dcs[0];
+      if (contextFlags.preterm_newborn) selectedDC += 3;
+      break;
+    case 'active_cooling':
+      selectedDC = cold_water_immersion ? 4 : dcs[0];
       break;
     case 'cpr':
       // DC 17 in a moving ambulance — provider can't brace, compressions suffer.

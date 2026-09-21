@@ -181,14 +181,20 @@ require.cache[require.resolve('../src/engine/api')] = { exports: {
   sendDebrief: async (_context,_level,options) => (await requestModel(params=>generate([],params.config.abortSignal),{}, {...options,timeoutMs:40})).text,
 } };
 require.cache[require.resolve('../src/server/adminLogger')] = { exports: { logRun(){}, updateRunDebrief(){} } };
-const { Session } = require('../src/engine/session');
-const { rollScenario } = require('../src/engine/roller');
+const { Session, buildContextFlags, buildTurnContextFlags } = require('../src/engine/session');
+const { rollScenario, isMultiPatientSeed } = require('../src/engine/roller');
 const sessions = new Map(), snapshots = new Map();
 let seq=0;
 require.cache[require.resolve('../src/server/sessionStore')] = { exports: {
   getSession:id=>sessions.get(id),
   createSession:opts=>{const seed=rollScenario(opts),id=`session-${++seq}`;sessions.set(id,new Session(seed,id));return {id,seed};},
-  restoreSession:snapshot=>sessions.get(snapshot.id),
+  restoreSession:snapshot=>{
+    const session=new Session(snapshot.seed,snapshot.id);
+    Object.assign(session,snapshot);
+    session.sessionId=snapshot.id;
+    sessions.set(snapshot.id,session);
+    return session;
+  },
   deleteSession:id=>sessions.delete(id),
 } };
 require.cache[require.resolve('../src/server/persistence')] = { exports: {
@@ -202,10 +208,50 @@ async function route(path,body={},params={},headers={}) {
   const layer=router.stack.find(l=>l.route?.path===path);
   let status=200,payload;
   const res={status(n){status=n;return this;},json(data){payload=data;return this;},setHeader(){}};
-  await layer.route.stack[0].handle({body,params,headers,ip:'127.0.0.1',socket:{}},res);
+  const requestHeaders = { ...headers };
+  if (params.id && requestHeaders.cookie === undefined) {
+    const ownerId = sessions.get(params.id)?.ownerId || 'test-browser-owner';
+    requestHeaders.cookie = `ems_sid=${params.id}; ems_owner=${ownerId}`;
+  }
+  await layer.route.stack[0].handle({body,params,headers:requestHeaders,ip:'127.0.0.1',socket:{}},res);
   return {status,body:payload};
 }
-function sessionFixture() { const id=`fixture-${++seq}`, s=new Session(rollScenario(),id);sessions.set(id,s); snapshots.set(id,{id,seed:s.seed});return s; }
+function sessionFixture() {
+  const id=`fixture-${++seq}`, s=new Session(rollScenario(),id);
+  s.ownerId='test-browser-owner';
+  sessions.set(id,s); snapshots.set(id,{id,seed:s.seed,ownerId:s.ownerId});return s;
+}
+
+test('clinical state and order wording activate context-sensitive procedure DCs', () => {
+  const seed={
+    patient_age:45, age_group:'middle_aged', presentation:'Breech preterm delivery with airway angioedema',
+    hint:null, special_flags:null, comorbidity_bundle:'metabolic obesity',
+  };
+  const base=buildContextFlags(seed);
+  assert.equal(base.difficult_airway,true);
+  assert.equal(base.complicated_delivery,true);
+  assert.equal(base.preterm_newborn,true);
+  const turn=buildTurnContextFlags(seed,base,{BP:{value:'78/44'}},
+    'Use two-hand BVM, pack the groin wound, then PPV for the newborn with cold water immersion',true);
+  assert.equal(turn.hypotensive,true);
+  assert.equal(turn.junctional,true);
+  assert.equal(turn.resuscitative_steps,true);
+  assert.equal(turn.two_hand_bvm,true);
+  assert.equal(turn.cold_water_immersion,true);
+  assert.equal(turn.moving,true);
+
+  assert.equal(rollProcedure('peripheral_iv',turn).dc,16,'hard IV plus moving penalty');
+  assert.equal(rollProcedure('intubation',{...turn,moving:false}).dc,14);
+  assert.equal(rollProcedure('supraglottic_airway',{...turn,moving:false}).dc,8);
+  assert.equal(rollProcedure('bvm',{...turn,moving:false}).dc,5);
+  assert.equal(rollProcedure('bleeding_control',{...turn,moving:false}).dc,14);
+  assert.equal(rollProcedure('emergency_delivery',{...turn,moving:false}).dc,14);
+  assert.equal(rollProcedure('newborn_resuscitation',{...turn,moving:false}).dc,15);
+  assert.equal(rollProcedure('active_cooling',{...turn,moving:false}).dc,4);
+
+  const recovered=buildTurnContextFlags(seed,base,{BP:{value:'118/72'}},'Start an IV',false);
+  assert.equal(recovered.hypotensive,false);
+});
 
 test('failed/timeout turns preserve messages, seed events, access, arrival, and backup state', async () => {
   const session=sessionFixture(), before=structuredClone(session);
@@ -267,6 +313,60 @@ test('debriefs share the session queue and repeated requests reuse the completed
 test('invalid scenario config is rejected before a model call', async () => {
   generate = () => assert.fail('invalid config called the model');
   assert.equal((await route('/new', {difficulty:'INVALID'})).status,400);
+  assert.equal((await route('/new', {category:'doa'})).status,400);
+  assert.equal((await route('/new', {category:'curveballs'})).status,400);
+  assert.equal((await route('/new', {partner_name:'Captain Dennis Holt'})).status,400);
+  assert.equal((await route('/new', {captain_name:'Marcus Webb'})).status,400);
+  assert.equal((await route('/new', {provider_level:'BLS',partner_name:'Marcus Webb'})).status,400);
+});
+
+test('session mutation and transcript routes require the matching browser cookie', async () => {
+  const session=sessionFixture();
+  const denied=await route('/:id/turn',{
+    message:'check vitals',operation_id:'forbidden-operation-001',procs_resolved:true,
+  },{id:session.sessionId},{cookie:`ems_sid=${session.sessionId}; ems_owner=someone-else-000`});
+  assert.equal(denied.status,403);assert.equal(denied.body.error,'session_forbidden');
+  const transcript=await route('/:id/transcript',{}, {id:session.sessionId},{cookie:`ems_sid=${session.sessionId}; ems_owner=someone-else-000`});
+  assert.equal(transcript.status,403);
+  assert.equal(session.turns.length,0);
+});
+
+test('one browser owner can keep multiple scenario tabs active', async () => {
+  const first=sessionFixture();
+  const second=sessionFixture();
+  const response=await route('/:id/transcript',{}, {id:first.sessionId},{
+    cookie:`ems_sid=${second.sessionId}; ems_owner=${first.ownerId}`,
+  });
+  assert.equal(response.status,200);
+  assert.equal(response.body.seed.scenario_id,first.seed.scenario_id);
+});
+
+test('owned sessions restore on demand after an in-memory restart', async () => {
+  const session=sessionFixture();
+  sessions.delete(session.sessionId);
+  const response=await route('/:id/transcript',{}, {id:session.sessionId},{
+    cookie:`ems_sid=${session.sessionId}; ems_owner=${session.ownerId}`,
+  });
+  assert.equal(response.status,200);
+  assert.equal(response.body.seed.scenario_id,session.seed.scenario_id);
+  assert.ok(sessions.has(session.sessionId));
+});
+
+test('new scenario returns and persists initial demographic machine state', async () => {
+  generate=async()=>({text:'Crew has the patient. [DEMO: on-scene crew] [SECOND_PATIENT] [TIME: 0:00]'});
+  const response=await route('/new');
+  assert.equal(response.status,200);
+  assert.equal(response.body.demo_source,'on-scene crew');
+  assert.equal(response.body.second_patient,true);
+  const saved=snapshots.get(response.body.session_id);
+  assert.equal(saved.demo_source,'on-scene crew');
+  assert.equal(saved.second_patient,true);
+});
+
+test('multi-patient detection covers ordinary two-patient and MCI seeds', () => {
+  assert.equal(isMultiPatientSeed({special_flags:'two_patients — mother and newborn'}),true);
+  assert.equal(isMultiPatientSeed({special_flags:'mci. multiple_patients. incident_command'}),true);
+  assert.equal(isMultiPatientSeed({special_flags:'two_large_bore_IVs'}),false);
 });
 
 test('standalone arrest checks advance to the scheduled CPR checkpoint', async () => {

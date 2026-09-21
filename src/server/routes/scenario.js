@@ -2,19 +2,21 @@
 
 const express = require('express');
 const router  = express.Router();
+const { randomUUID } = require('node:crypto');
 
 const { createSession, getSession, restoreSession, deleteSession } = require('../sessionStore');
 const persistence = require('../persistence');
 const { CREW } = require('../../data/crew');
 const { REGIONS } = require('../../data/regions');
 const { DIFFICULTY_POOL } = require('../../data/config');
-const { SCENARIO_POOLS } = require('../../data/scenarios');
+const { PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed } = require('../../engine/roller');
 const { detectAllProcedures } = require('../../engine/dice');
 const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
 
 const { operationsFor } = require('../../engine/operations');
 
 const COOKIE_NAME = 'ems_sid';
+const OWNER_COOKIE_NAME = 'ems_owner';
 const COOKIE_MAX_AGE = 30 * 24 * 3600; // 30 days in seconds
 
 function getCookie(req, name) {
@@ -29,14 +31,23 @@ function getCookie(req, name) {
   return null;
 }
 
-function setSessionCookie(res, id) {
-  res.setHeader('Set-Cookie', `${COOKIE_NAME}=${id}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${COOKIE_MAX_AGE}`);
+function cookieValue(name, value) {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  return `${name}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${COOKIE_MAX_AGE}${secure}`;
+}
+
+function setSessionCookies(res, id, ownerId) {
+  res.setHeader('Set-Cookie', [
+    cookieValue(COOKIE_NAME, id),
+    cookieValue(OWNER_COOKIE_NAME, ownerId),
+  ]);
 }
 
 function buildSnapshot(id, session, { userId, tier, meta, crew }) {
   return {
     id,
     debriefed: false,
+    ownerId: session.ownerId,
     userId,
     tier,
     seed:        session.seed,
@@ -47,11 +58,20 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     turns:       session.turns,
     hasLoaded:   session.hasLoaded,
     moving:      session.moving,
+    arrivedAtHospital: session.arrivedAtHospital,
     backupStatus:        session.backupStatus,
     backupArrivalMinute: session.backupArrivalMinute,
     crewStatus:          session.crewStatus,
     transportEtaMin:     session.transportEtaMin,
+    transportDest:       session.transportDest,
     departSceneMinute:   session.departSceneMinute,
+    access:               session.access,
+    contextFlags:         session.contextFlags,
+    lastReplyHadTime:     session.lastReplyHadTime,
+    demo_source:          session.demoSource,
+    second_patient:       session.secondPatientFound,
+    debriefText:          session.debriefText || null,
+    operationResults:     operationsFor(session).snapshot(),
     meta,
     crew,
   };
@@ -60,6 +80,30 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
 function crewRecord(name) {
   if (!name) return null;
   return CREW.find(c => c.name === name) || null;
+}
+
+function validCrewSelection(name, role, providerLevel) {
+  if (name === null) return true;
+  const record = crewRecord(name);
+  if (!record || !record.role.startsWith(role)) return false;
+  return providerLevel !== 'BLS' || record.role === `${role}_BLS`;
+}
+
+function ownedSession(req, res) {
+  let session = getSession(req.params.id);
+  if (!session) {
+    const snapshot = persistence.load(req.params.id);
+    if (snapshot) session = restoreSession(snapshot);
+  }
+  if (!session) {
+    res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
+    return null;
+  }
+  if (!session.ownerId || getCookie(req, OWNER_COOKIE_NAME) !== session.ownerId) {
+    res.status(403).json({ error: 'session_forbidden', message: 'This session belongs to a different browser.' });
+    return null;
+  }
+  return session;
 }
 const { getClientIP } = require('../middleware/authStub');
 
@@ -74,6 +118,7 @@ function validOperationId(id) {
 function persistSession(id, session) {
   persistence.update(id, {
     seed: session.seed,
+    ownerId: session.ownerId,
     messages: session.messages, lastVitals: session.lastVitals,
     sceneMinute: session.sceneMinute, closed: session.closed, turns: session.turns,
     hasLoaded: session.hasLoaded, moving: session.moving,
@@ -82,7 +127,8 @@ function persistSession(id, session) {
     backupStatus: session.backupStatus, backupArrivalMinute: session.backupArrivalMinute,
     crewStatus: session.crewStatus, transportEtaMin: session.transportEtaMin,
     transportDest: session.transportDest, departSceneMinute: session.departSceneMinute,
-    access: session.access, lastReplyHadTime: session.lastReplyHadTime,
+    access: session.access, contextFlags: session.contextFlags,
+    lastReplyHadTime: session.lastReplyHadTime,
     debriefText: session.debriefText || null,
     operationResults: operationsFor(session).snapshot(),
   });
@@ -96,8 +142,8 @@ function sendOperationError(res, err) {
 // the operation committed first. It deliberately does not abort the browser's
 // original fetch, so the UI can reconcile a completion racing with STOP.
 router.post('/:id/operations/:operationId/cancel', async (req, res) => {
-  const session = getSession(req.params.id);
-  if (!session) return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
+  const session = ownedSession(req, res);
+  if (!session) return;
   if (!validOperationId(req.params.operationId)) return res.status(400).json({ error: 'invalid_operation_id' });
   const result = await operationsFor(session).cancel(req.params.operationId);
   persistSession(req.params.id, session);
@@ -114,6 +160,19 @@ router.get('/resume', (req, res) => {
 
   const snapshot = persistence.load(sid);
   if (!snapshot || snapshot.debriefed) return res.json({ session: null });
+
+  // Migrate pre-owner snapshots on first resume. New snapshots require the
+  // stable browser-owner cookie, which supports multiple active tabs without
+  // turning the session ID itself into an authorization token.
+  let ownerId = getCookie(req, OWNER_COOKIE_NAME);
+  if (snapshot.ownerId) {
+    if (ownerId !== snapshot.ownerId) return res.json({ session: null });
+  } else {
+    ownerId = ownerId && /^[a-zA-Z0-9_-]{16,80}$/.test(ownerId) ? ownerId : randomUUID();
+    snapshot.ownerId = ownerId;
+    persistence.update(sid, { ownerId });
+  }
+  setSessionCookies(res, sid, ownerId);
 
   // Restore in-memory session if server was restarted
   if (!getSession(sid)) restoreSession(snapshot);
@@ -155,7 +214,9 @@ router.post('/new', async (req, res) => {
 
   if (!Object.hasOwn(DIFFICULTY_POOL, difficulty) || !['BLS', 'ALS'].includes(provider_level)
       || !REGIONS.some(r => r.id === region_id)
-      || (category !== null && !Object.hasOwn(SCENARIO_POOLS, category))) {
+      || (category !== null && !PLAYER_SELECTABLE_CATEGORIES.has(category))
+      || !validCrewSelection(partner_name, 'partner', provider_level)
+      || !validCrewSelection(captain_name, 'captain', provider_level)) {
     return res.status(400).json({ error: 'invalid_config', message: 'Choose a valid difficulty, provider level, region, and category.' });
   }
 
@@ -166,19 +227,23 @@ router.post('/new', async (req, res) => {
 
   let createdId = null;
   try {
+    const existingOwner = getCookie(req, OWNER_COOKIE_NAME);
+    const ownerId = existingOwner && /^[a-zA-Z0-9_-]{16,80}$/.test(existingOwner)
+      ? existingOwner : randomUUID();
     const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null }, ip, tier);
     createdId = id;
     const session = getSession(id);
+    session.ownerId = ownerId;
 
     // Fire the dispatch turn
     const result = await session.send('begin');
 
     const partnerRec = crewRecord(seed.crew_partner);
     const captainRec = crewRecord(seed.crew_captain);
-    const multiPatient = seed.special_flags ? /two_patients/i.test(seed.special_flags) : false;
+    const multiPatient = isMultiPatientSeed(seed);
 
     // Persist session so it survives server restarts and tab closures
-    setSessionCookie(res, id);
+    setSessionCookies(res, id, ownerId);
     persistence.save(buildSnapshot(id, session, {
       userId: ip,
       tier,
@@ -230,6 +295,8 @@ router.post('/new', async (req, res) => {
       vitals:              result.vitals || null,
       backup:              result.backup     || null,
       crewStatus:          result.crewStatus || null,
+      demo_source:         result.demoSource || null,
+      second_patient:      result.secondPatient || false,
       scene_minute:        session.sceneMinute,
       closed:              result.closed,
       multi_patient:       multiPatient,
@@ -245,10 +312,8 @@ router.post('/new', async (req, res) => {
 // POST /api/scenario/:id/turn
 // ---------------------------------------------------------------------------
 router.post('/:id/turn', async (req, res) => {
-  const session = getSession(req.params.id);
-  if (!session) {
-    return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
-  }
+  const session = ownedSession(req, res);
+  if (!session) return;
 
   const { message, report_mode, skip_mode, proc_allow, proc_deny, procs_resolved, operation_id } = req.body;
   if (!validOperationId(operation_id)) return res.status(400).json({ error: 'invalid_operation_id', message: 'A unique operation_id is required.' });
@@ -335,10 +400,8 @@ router.post('/:id/turn', async (req, res) => {
 // POST /api/scenario/:id/debrief
 // ---------------------------------------------------------------------------
 router.post('/:id/debrief', async (req, res) => {
-  const session = getSession(req.params.id);
-  if (!session) {
-    return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
-  }
+  const session = ownedSession(req, res);
+  if (!session) return;
 
   const { operation_id } = req.body;
   if (!validOperationId(operation_id)) return res.status(400).json({ error: 'invalid_operation_id', message: 'A unique operation_id is required.' });
@@ -369,10 +432,8 @@ router.post('/:id/debrief', async (req, res) => {
 // Returns the full session data (seed, messages, debrief) for export.
 // ---------------------------------------------------------------------------
 router.get('/:id/transcript', (req, res) => {
-  const session = getSession(req.params.id);
-  if (!session) {
-    return res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
-  }
+  const session = ownedSession(req, res);
+  if (!session) return;
   return res.json(session.getTranscriptData());
 });
 

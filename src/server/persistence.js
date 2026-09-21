@@ -2,11 +2,9 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { DATA_DIR: SESSIONS_DIR } = require('./storagePath');
 
-const SESSIONS_DIR = path.join(__dirname, '../../sessions');
 const MAX_AGE_MS   = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
 
 function sessionPath(id) {
   const safe = id.replace(/[^a-zA-Z0-9-]/g, '');
@@ -50,11 +48,12 @@ function markDebriefed(id) {
 }
 
 // Prune files older than MAX_AGE_MS on startup
-// Excludes user_history.json — that's a permanent accumulation file, not a session.
+// Excludes durable aggregate files — they are not individual session snapshots.
 function pruneOld() {
   try {
     for (const f of fs.readdirSync(SESSIONS_DIR)) {
-      if (f === 'user_history.json' || f === 'user_history.json.tmp') continue;
+      if (['user_history.json', 'user_history.json.tmp',
+           'completed_runs.json', 'completed_runs.json.tmp'].includes(f)) continue;
       const fp = path.join(SESSIONS_DIR, f);
       try {
         const stat = fs.statSync(fp);
