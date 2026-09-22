@@ -10,6 +10,10 @@ const scrypt = promisify(crypto.scrypt);
 const STORE_PATH = path.join(DATA_DIR, 'players.json');
 const SESSION_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 const COOKIE_NAME = 'ems_player';
+const TRACKED_CATEGORIES = [
+  'medical', 'trauma', 'cardiac', 'respiratory', 'behavioral', 'neuro',
+  'toxicology', 'arrest', 'curveballs', 'pediatric', 'doa', 'ob',
+];
 
 function emptyStore() {
   return { version: 1, players: [], sessions: [] };
@@ -74,14 +78,39 @@ function safeEqual(a, b) {
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
+function ensureStats(player) {
+  const existing = player.stats && typeof player.stats === 'object' ? player.stats : {};
+  const categoryCompletions = {};
+  for (const category of TRACKED_CATEGORIES) {
+    const count = Number(existing.categoryCompletions?.[category]);
+    categoryCompletions[category] = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  }
+  player.stats = {
+    scenariosStarted: Number(existing.scenariosStarted) || 0,
+    scenariosCompleted: Number(existing.scenariosCompleted) || 0,
+    debriefsGenerated: Number(existing.debriefsGenerated) || 0,
+    categoryCompletions,
+    recentCategories: Array.isArray(existing.recentCategories)
+      ? existing.recentCategories.filter(category => TRACKED_CATEGORIES.includes(category)).slice(-5)
+      : [],
+    lastCompletedAt: Number(existing.lastCompletedAt) || null,
+  };
+  return player.stats;
+}
+
 function publicPlayer(player) {
+  const stats = ensureStats(player);
   return {
     id: player.id,
     displayName: player.displayName,
     createdAt: player.createdAt,
     stats: {
-      scenariosStarted: player.stats?.scenariosStarted || 0,
-      scenariosCompleted: player.stats?.scenariosCompleted || 0,
+      scenariosStarted: stats.scenariosStarted,
+      scenariosCompleted: stats.scenariosCompleted,
+      debriefsGenerated: stats.debriefsGenerated,
+      categoryCompletions: { ...stats.categoryCompletions },
+      recentCategories: [...stats.recentCategories],
+      lastCompletedAt: stats.lastCompletedAt,
     },
   };
 }
@@ -137,7 +166,14 @@ async function signup(displayName, pin) {
     pinHash,
     createdAt: now,
     lastSeenAt: now,
-    stats: { scenariosStarted: 0, scenariosCompleted: 0 },
+    stats: {
+      scenariosStarted: 0,
+      scenariosCompleted: 0,
+      debriefsGenerated: 0,
+      categoryCompletions: Object.fromEntries(TRACKED_CATEGORIES.map(category => [category, 0])),
+      recentCategories: [],
+      lastCompletedAt: null,
+    },
   };
   store.players.push(player);
   const token = createLoginSession(player.id);
@@ -183,19 +219,34 @@ function logout(token) {
 function recordScenarioStarted(playerId) {
   const player = store.players.find(candidate => candidate.id === playerId);
   if (!player) return;
-  player.stats ||= { scenariosStarted: 0, scenariosCompleted: 0 };
-  player.stats.scenariosStarted += 1;
+  const stats = ensureStats(player);
+  stats.scenariosStarted += 1;
   player.lastSeenAt = Date.now();
   try { saveStore(); } catch (err) { console.error('[playerStore] start tracking failed:', err.message); }
 }
 
-function recordScenarioCompleted(playerId) {
+function recordScenarioCompleted(playerId, seed = {}) {
   const player = store.players.find(candidate => candidate.id === playerId);
   if (!player) return;
-  player.stats ||= { scenariosStarted: 0, scenariosCompleted: 0 };
-  player.stats.scenariosCompleted += 1;
-  player.lastSeenAt = Date.now();
+  const stats = ensureStats(player);
+  stats.scenariosCompleted += 1;
+  if (TRACKED_CATEGORIES.includes(seed.category)) {
+    stats.categoryCompletions[seed.category] += 1;
+    stats.recentCategories.push(seed.category);
+    stats.recentCategories = stats.recentCategories.slice(-5);
+  }
+  stats.lastCompletedAt = Date.now();
+  player.lastSeenAt = stats.lastCompletedAt;
   try { saveStore(); } catch (err) { console.error('[playerStore] completion tracking failed:', err.message); }
+}
+
+function recordDebriefGenerated(playerId) {
+  const player = store.players.find(candidate => candidate.id === playerId);
+  if (!player) return;
+  const stats = ensureStats(player);
+  stats.debriefsGenerated += 1;
+  player.lastSeenAt = Date.now();
+  try { saveStore(); } catch (err) { console.error('[playerStore] debrief tracking failed:', err.message); }
 }
 
 module.exports = {
@@ -208,4 +259,5 @@ module.exports = {
   publicPlayer,
   recordScenarioStarted,
   recordScenarioCompleted,
+  recordDebriefGenerated,
 };

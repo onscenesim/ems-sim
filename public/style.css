@@ -125,7 +125,8 @@ html, body {
 #player-actions button:active,
 .auth-actions button:active { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 
-#auth-overlay {
+#auth-overlay,
+#progress-overlay {
   position: fixed;
   inset: 0;
   z-index: 10000;
@@ -135,7 +136,8 @@ html, body {
   padding: 18px;
   background: rgba(0, 0, 0, 0.68);
 }
-#auth-overlay[hidden] { display: none; }
+#auth-overlay[hidden],
+#progress-overlay[hidden] { display: none; }
 
 .auth-dialog {
   width: 100%;
@@ -192,6 +194,61 @@ html, body {
 .auth-actions { display: flex; justify-content: flex-end; gap: 7px; }
 .auth-actions #auth-submit { background: #164724; color: #8cf0a8; }
 .auth-actions button:disabled { opacity: 0.45; cursor: default; }
+
+.progress-dialog { max-width: 440px; }
+.progress-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin: 6px 0 9px;
+}
+.progress-summary > div {
+  padding: 9px 5px;
+  text-align: center;
+  background: #0a1117;
+  border: 1px solid #344755;
+}
+.progress-summary strong {
+  display: block;
+  color: #69df8a;
+  font-family: var(--font-block);
+  font-size: 17px;
+}
+.progress-summary span,
+.progress-heading {
+  color: #8ea4b3;
+  font-family: var(--font-block);
+  font-size: 7px;
+  letter-spacing: 0.06em;
+}
+.progress-heading { margin-top: 2px; font-size: 9px; }
+#progress-categories {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+.progress-category {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 5px 6px;
+  color: #6f8797;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid #283a47;
+  font-family: var(--font-xp);
+  font-size: 10px;
+}
+.progress-category.seen { color: #d5e8f4; border-color: #3d6a52; }
+.progress-category b { color: #69df8a; }
+#progress-recent,
+.progress-note {
+  color: #90a5b4;
+  font-family: var(--font-xp);
+  font-size: 10px;
+  line-height: 1.4;
+}
+#progress-recent { min-height: 14px; margin-top: 4px; }
+.progress-note { color: #637988; margin: 3px 0 5px; }
 
 .tile-grid {
   display: grid;
@@ -1020,6 +1077,7 @@ html, body {
   #player-bar { margin: 0 3px 4px; }
   #player-label { font-size: 8px; }
   #player-actions button { padding: 5px 7px; }
+  #progress-categories { grid-template-columns: repeat(2, 1fr); }
 
   /* Fix scrollability: center+overflow makes top/bottom unreachable */
   #start-screen { justify-content: flex-start; gap: 8px; padding: 8px 0 16px; }

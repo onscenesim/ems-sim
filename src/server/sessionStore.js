@@ -184,6 +184,7 @@ function restoreSession(snapshot) {
   session.secondPatientFound  = snapshot.second_patient      || false;
   session.playerId            = snapshot.playerId            || null;
   session.completionCredited  = snapshot.completionCredited  || false;
+  session.debriefCredited     = snapshot.debriefCredited     || false;
   store.set(snapshot.id, {
     session,
     lastActive: Date.now(),

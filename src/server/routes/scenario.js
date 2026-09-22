@@ -15,7 +15,7 @@ const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
 
 const { operationsFor } = require('../../engine/operations');
 const { currentPlayer } = require('./auth');
-const { recordScenarioStarted, recordScenarioCompleted } = require('../playerStore');
+const { recordScenarioStarted, recordScenarioCompleted, recordDebriefGenerated } = require('../playerStore');
 
 const COOKIE_NAME = 'ems_sid';
 const OWNER_COOKIE_NAME = 'ems_owner';
@@ -53,6 +53,7 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     userId,
     playerId: session.playerId || null,
     completionCredited: session.completionCredited || false,
+    debriefCredited: session.debriefCredited || false,
     tier,
     seed:        session.seed,
     messages:    session.messages,
@@ -136,6 +137,7 @@ function persistSession(id, session) {
     debriefText: session.debriefText || null,
     playerId: session.playerId || null,
     completionCredited: session.completionCredited || false,
+    debriefCredited: session.debriefCredited || false,
     operationResults: operationsFor(session).snapshot(),
   });
 }
@@ -244,6 +246,7 @@ router.post('/new', async (req, res) => {
     session.ownerId = ownerId;
     session.playerId = player?.id || null;
     session.completionCredited = false;
+    session.debriefCredited = false;
 
     // Fire the dispatch turn
     const result = await session.send('begin');
@@ -401,7 +404,7 @@ router.post('/:id/turn', async (req, res) => {
       };
     });
     if (!wasClosed && session.closed && session.playerId && !session.completionCredited) {
-      recordScenarioCompleted(session.playerId);
+      recordScenarioCompleted(session.playerId, session.seed);
       session.completionCredited = true;
     }
     persistSession(req.params.id, session);
@@ -433,6 +436,10 @@ router.post('/:id/debrief', async (req, res) => {
     const payload = await operationsFor(session).run(operation_id, 'debrief', async signal => ({
       operation_id, debrief: await session.debrief({ signal }),
     }));
+    if (session.playerId && !session.debriefCredited) {
+      recordDebriefGenerated(session.playerId);
+      session.debriefCredited = true;
+    }
     persistSession(req.params.id, session);
     persistence.markDebriefed(req.params.id);
     return res.json(payload);

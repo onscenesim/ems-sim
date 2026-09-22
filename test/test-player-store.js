@@ -23,9 +23,14 @@ test('player signup, login, tracking, logout, and reload use durable storage', a
   await assert.rejects(players.login('Station 12', '9999'), { code: 'invalid_login' });
 
   players.recordScenarioStarted(created.player.id);
-  players.recordScenarioCompleted(created.player.id);
+  players.recordScenarioCompleted(created.player.id, { category: 'medical' });
+  players.recordDebriefGenerated(created.player.id);
   const loggedIn = await players.login('STATION 12', '2468');
-  assert.deepEqual(loggedIn.player.stats, { scenariosStarted: 1, scenariosCompleted: 1 });
+  assert.equal(loggedIn.player.stats.scenariosStarted, 1);
+  assert.equal(loggedIn.player.stats.scenariosCompleted, 1);
+  assert.equal(loggedIn.player.stats.debriefsGenerated, 1);
+  assert.equal(loggedIn.player.stats.categoryCompletions.medical, 1);
+  assert.deepEqual(loggedIn.player.stats.recentCategories, ['medical']);
 
   assert.equal(fs.existsSync(path.join(dataDir, 'players.json')), true);
   delete require.cache[modulePath];

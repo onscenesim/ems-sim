@@ -219,6 +219,7 @@ const splashEl     = document.getElementById('splash');
 const playerLabel  = document.getElementById('player-label');
 const playerSignup = document.getElementById('player-signup');
 const playerLogin  = document.getElementById('player-login');
+const playerProgress = document.getElementById('player-progress');
 const playerLogout = document.getElementById('player-logout');
 
 // ── State ────────────────────────────────────────────────────────────────
@@ -467,7 +468,15 @@ const authPin     = document.getElementById('auth-pin');
 const authError   = document.getElementById('auth-error');
 const authCancel  = document.getElementById('auth-cancel');
 const authSubmit  = document.getElementById('auth-submit');
+const progressOverlay = document.getElementById('progress-overlay');
+const progressClose = document.getElementById('progress-close');
 let authMode = 'signup';
+
+const PLAYER_CATEGORY_LABELS = {
+  medical: 'Medical', trauma: 'Trauma', cardiac: 'Cardiac', respiratory: 'Respiratory',
+  behavioral: 'Behavioral', neuro: 'Neuro', toxicology: 'Toxicology', arrest: 'Arrest',
+  curveballs: 'Curveballs', pediatric: 'Pediatric', doa: 'DOA', ob: 'OB',
+};
 
 function renderPlayer() {
   if (!playerLabel) return;
@@ -478,12 +487,14 @@ function renderPlayer() {
     playerLabel.classList.add('signed-in');
     playerSignup.hidden = true;
     playerLogin.hidden = true;
+    playerProgress.hidden = false;
     playerLogout.hidden = false;
   } else {
     playerLabel.textContent = 'PLAYING AS GUEST · CREATE A PLAYER TO TRACK PROGRESS';
     playerLabel.classList.remove('signed-in');
     playerSignup.hidden = false;
     playerLogin.hidden = false;
+    playerProgress.hidden = true;
     playerLogout.hidden = true;
   }
 }
@@ -518,14 +529,49 @@ function hideAuth() {
   authError.textContent = '';
 }
 
+function renderProgress() {
+  if (!currentPlayer) return;
+  const stats = currentPlayer.stats || {};
+  const counts = stats.categoryCompletions || {};
+  const coverage = Object.keys(PLAYER_CATEGORY_LABELS).filter(category => (counts[category] || 0) > 0).length;
+  document.getElementById('progress-completed').textContent = stats.scenariosCompleted || 0;
+  document.getElementById('progress-coverage').textContent = `${coverage}/${Object.keys(PLAYER_CATEGORY_LABELS).length}`;
+  document.getElementById('progress-debriefs').textContent = stats.debriefsGenerated || 0;
+  document.getElementById('progress-categories').innerHTML = Object.entries(PLAYER_CATEGORY_LABELS)
+    .map(([category, label]) => {
+      const count = counts[category] || 0;
+      return `<div class="progress-category${count ? ' seen' : ''}"><span>${label}</span><b>${count}</b></div>`;
+    }).join('');
+  const recent = (stats.recentCategories || []).slice().reverse().map(category => PLAYER_CATEGORY_LABELS[category] || category);
+  document.getElementById('progress-recent').textContent = recent.length
+    ? `RECENT: ${recent.join(' · ')}`
+    : 'RECENT: Complete a call to begin your history.';
+}
+
+function showProgress() {
+  renderProgress();
+  progressOverlay.hidden = false;
+  progressClose.focus();
+}
+
+function hideProgress() {
+  progressOverlay.hidden = true;
+}
+
 if (playerSignup) playerSignup.addEventListener('click', () => showAuth('signup'));
 if (playerLogin) playerLogin.addEventListener('click', () => showAuth('login'));
+if (playerProgress) playerProgress.addEventListener('click', showProgress);
 if (authCancel) authCancel.addEventListener('click', hideAuth);
+if (progressClose) progressClose.addEventListener('click', hideProgress);
 if (authOverlay) authOverlay.addEventListener('click', event => {
   if (event.target === authOverlay) hideAuth();
 });
+if (progressOverlay) progressOverlay.addEventListener('click', event => {
+  if (event.target === progressOverlay) hideProgress();
+});
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && authOverlay && !authOverlay.hidden) hideAuth();
+  if (event.key === 'Escape' && progressOverlay && !progressOverlay.hidden) hideProgress();
 });
 
 if (authForm) authForm.addEventListener('submit', async event => {

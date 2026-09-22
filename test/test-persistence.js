@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-sim-storage-'));
 process.env.EMS_DATA_DIR = dataDir;
@@ -58,4 +59,24 @@ test('health check fails closed when Gemini is not configured', () => {
   assert.deepEqual(payload, { status: 'ok' });
   if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
   else process.env.GEMINI_API_KEY = originalKey;
+});
+
+test('production refuses to use an unconfigured or missing persistent data directory', () => {
+  const cwd = path.join(__dirname, '..');
+  const withoutConfig = spawnSync(process.execPath, ['-e', "require('./src/server/storagePath')"], {
+    cwd,
+    encoding: 'utf8',
+    env: { ...process.env, NODE_ENV: 'production', EMS_DATA_DIR: '' },
+  });
+  assert.notEqual(withoutConfig.status, 0);
+  assert.match(withoutConfig.stderr, /EMS_DATA_DIR is required/);
+
+  const missingPath = path.join(dataDir, 'not-mounted');
+  const withoutMount = spawnSync(process.execPath, ['-e', "require('./src/server/storagePath')"], {
+    cwd,
+    encoding: 'utf8',
+    env: { ...process.env, NODE_ENV: 'production', EMS_DATA_DIR: missingPath },
+  });
+  assert.notEqual(withoutMount.status, 0);
+  assert.match(withoutMount.stderr, /Attach the Render disk/);
 });
