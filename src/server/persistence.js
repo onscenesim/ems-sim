@@ -53,7 +53,8 @@ function pruneOld() {
   try {
     for (const f of fs.readdirSync(SESSIONS_DIR)) {
       if (['user_history.json', 'user_history.json.tmp',
-           'completed_runs.json', 'completed_runs.json.tmp'].includes(f)) continue;
+           'completed_runs.json', 'completed_runs.json.tmp',
+           'players.json', 'players.json.tmp'].includes(f)) continue;
       const fp = path.join(SESSIONS_DIR, f);
       try {
         const stat = fs.statSync(fp);

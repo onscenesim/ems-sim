@@ -182,6 +182,8 @@ function restoreSession(snapshot) {
   session.contextFlags        = snapshot.contextFlags        || session.contextFlags;
   session.demoSource          = snapshot.demo_source         || null;
   session.secondPatientFound  = snapshot.second_patient      || false;
+  session.playerId            = snapshot.playerId            || null;
+  session.completionCredited  = snapshot.completionCredited  || false;
   store.set(snapshot.id, {
     session,
     lastActive: Date.now(),

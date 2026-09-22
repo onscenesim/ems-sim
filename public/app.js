@@ -216,6 +216,10 @@ const tierMsg      = document.getElementById('tier-msg');
 const badgeUnit    = document.getElementById('badge-unit');
 const unitNameInput = document.getElementById('cfg-unit-name');
 const splashEl     = document.getElementById('splash');
+const playerLabel  = document.getElementById('player-label');
+const playerSignup = document.getElementById('player-signup');
+const playerLogin  = document.getElementById('player-login');
+const playerLogout = document.getElementById('player-logout');
 
 // ── State ────────────────────────────────────────────────────────────────
 
@@ -234,6 +238,7 @@ let lightMode         = localStorage.getItem('ems_theme') === 'light';
 let reportMode        = false;  // true = next send is a report, skips dice
 let localTranscript = null;   // built client-side so export never hits the server
 let scenarioStartTime = null; // Date.now() when the current scenario started
+let currentPlayer = null;
 
 // ── Input history (↑ / ↓ arrow keys) ───────────────────────────────────
 
@@ -451,7 +456,108 @@ async function apiGet(path) {
   return data;
 }
 
-// ── Access code UI ───────────────────────────────────────────────────────
+// ── Lightweight player profiles ─────────────────────────────────────────
+
+const authOverlay = document.getElementById('auth-overlay');
+const authForm    = document.getElementById('auth-form');
+const authTitle   = document.getElementById('auth-title');
+const authCopy    = document.getElementById('auth-copy');
+const authName    = document.getElementById('auth-name');
+const authPin     = document.getElementById('auth-pin');
+const authError   = document.getElementById('auth-error');
+const authCancel  = document.getElementById('auth-cancel');
+const authSubmit  = document.getElementById('auth-submit');
+let authMode = 'signup';
+
+function renderPlayer() {
+  if (!playerLabel) return;
+  if (currentPlayer) {
+    const started = currentPlayer.stats?.scenariosStarted || 0;
+    const completed = currentPlayer.stats?.scenariosCompleted || 0;
+    playerLabel.textContent = `PLAYER: ${currentPlayer.displayName} · ${started} STARTED · ${completed} COMPLETED`;
+    playerLabel.classList.add('signed-in');
+    playerSignup.hidden = true;
+    playerLogin.hidden = true;
+    playerLogout.hidden = false;
+  } else {
+    playerLabel.textContent = 'PLAYING AS GUEST · CREATE A PLAYER TO TRACK PROGRESS';
+    playerLabel.classList.remove('signed-in');
+    playerSignup.hidden = false;
+    playerLogin.hidden = false;
+    playerLogout.hidden = true;
+  }
+}
+
+async function refreshPlayer() {
+  try {
+    const data = await apiGet('/api/auth/me');
+    currentPlayer = data.player || null;
+  } catch {
+    currentPlayer = null;
+  }
+  renderPlayer();
+}
+
+function showAuth(mode) {
+  authMode = mode;
+  authTitle.textContent = mode === 'signup' ? 'CREATE PLAYER' : 'PLAYER LOG IN';
+  authCopy.textContent = mode === 'signup'
+    ? 'Choose a name and a 4–8 digit PIN. No email or personal information needed.'
+    : 'Enter the player name and PIN you used before.';
+  authSubmit.textContent = mode === 'signup' ? 'CREATE' : 'LOG IN';
+  authPin.autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+  authName.value = '';
+  authPin.value = '';
+  authError.textContent = '';
+  authOverlay.hidden = false;
+  authName.focus();
+}
+
+function hideAuth() {
+  authOverlay.hidden = true;
+  authError.textContent = '';
+}
+
+if (playerSignup) playerSignup.addEventListener('click', () => showAuth('signup'));
+if (playerLogin) playerLogin.addEventListener('click', () => showAuth('login'));
+if (authCancel) authCancel.addEventListener('click', hideAuth);
+if (authOverlay) authOverlay.addEventListener('click', event => {
+  if (event.target === authOverlay) hideAuth();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && authOverlay && !authOverlay.hidden) hideAuth();
+});
+
+if (authForm) authForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  authError.textContent = '';
+  authSubmit.disabled = true;
+  authSubmit.textContent = authMode === 'signup' ? 'CREATING…' : 'LOGGING IN…';
+  try {
+    const data = await apiPost(`/api/auth/${authMode}`, {
+      displayName: authName.value,
+      pin: authPin.value,
+    });
+    currentPlayer = data.player;
+    renderPlayer();
+    hideAuth();
+  } catch (err) {
+    authError.textContent = err.message;
+    authPin.value = '';
+    authPin.focus();
+  } finally {
+    authSubmit.disabled = false;
+    authSubmit.textContent = authMode === 'signup' ? 'CREATE' : 'LOG IN';
+  }
+});
+
+if (playerLogout) playerLogout.addEventListener('click', async () => {
+  playerLogout.disabled = true;
+  try { await apiPost('/api/auth/logout', {}); } catch (_) {}
+  currentPlayer = null;
+  renderPlayer();
+  playerLogout.disabled = false;
+});
 
 
 // ── Unit name (custom medic identifier) ──────────────────────────────────────
@@ -692,6 +798,7 @@ if (themeToggleHdr)   themeToggleHdr.addEventListener('click',   toggleTheme);
 if (themeToggleStart) themeToggleStart.addEventListener('click', toggleTheme);
 applyTheme();
 
+refreshPlayer();
 checkResume();
 
 // ── Start scenario ────────────────────────────────────────────────────────
@@ -713,6 +820,8 @@ async function startScenario() {
     const partner_name = partnerSelect ? (partnerSelect.value || null) : null;
     const captain_name = captainSelect ? (captainSelect.value || null) : null;
     const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name, partner_name, captain_name, category });
+
+    if (currentPlayer?.stats) currentPlayer.stats.scenariosStarted += 1;
 
     sessionId      = data.session_id;
     isClosed       = false;
@@ -1451,6 +1560,7 @@ function resetToStart() {
   setLoading(false);
 
   checkResume();
+  refreshPlayer();
 }
 
 // ── Input controls ────────────────────────────────────────────────────────

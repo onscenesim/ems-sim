@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMS TERMINAL</title>
-  <link rel="stylesheet" href="style.css?v=78">
+  <link rel="stylesheet" href="style.css?v=79">
 </head>
 <body>
 
@@ -151,6 +151,14 @@
   <!-- ── Start screen ──────────────────────────────────────────────────── -->
   <div id="start-screen">
     <div id="start-card">
+      <div id="player-bar" aria-live="polite">
+        <span id="player-label">PLAYING AS GUEST</span>
+        <span id="player-actions">
+          <button id="player-signup" type="button">CREATE PLAYER</button>
+          <button id="player-login" type="button">LOG IN</button>
+          <button id="player-logout" type="button" hidden>LOG OUT</button>
+        </span>
+      </div>
       <div class="tile-grid">
 
         <div class="cfg-tile tile-difficulty">
@@ -254,6 +262,22 @@
         <span class="resume-tile-arrow">&#x203A;</span>
       </div>
 
+    </div>
+
+    <div id="auth-overlay" hidden>
+      <form id="auth-form" class="auth-dialog">
+        <div class="auth-title" id="auth-title">CREATE PLAYER</div>
+        <p class="auth-copy" id="auth-copy">Choose a name and a 4–8 digit PIN. No email or personal information needed.</p>
+        <label for="auth-name">PLAYER NAME</label>
+        <input id="auth-name" name="username" type="text" minlength="2" maxlength="24" autocomplete="username" required>
+        <label for="auth-pin">PIN</label>
+        <input id="auth-pin" name="password" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="new-password" required>
+        <div id="auth-error" role="alert"></div>
+        <div class="auth-actions">
+          <button id="auth-cancel" type="button">CANCEL</button>
+          <button id="auth-submit" type="submit">CREATE</button>
+        </div>
+      </form>
     </div>
 
     <!-- Company logo — like the NASA meatball below the image map -->
@@ -1794,6 +1818,6 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-    <script src="app.js?v=75"></script>
+    <script src="app.js?v=76"></script>
 </body>
 </html>

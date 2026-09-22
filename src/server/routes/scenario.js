@@ -14,6 +14,8 @@ const { detectAllProcedures } = require('../../engine/dice');
 const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
 
 const { operationsFor } = require('../../engine/operations');
+const { currentPlayer } = require('./auth');
+const { recordScenarioStarted, recordScenarioCompleted } = require('../playerStore');
 
 const COOKIE_NAME = 'ems_sid';
 const OWNER_COOKIE_NAME = 'ems_owner';
@@ -49,6 +51,8 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     debriefed: false,
     ownerId: session.ownerId,
     userId,
+    playerId: session.playerId || null,
+    completionCredited: session.completionCredited || false,
     tier,
     seed:        session.seed,
     messages:    session.messages,
@@ -130,6 +134,8 @@ function persistSession(id, session) {
     access: session.access, contextFlags: session.contextFlags,
     lastReplyHadTime: session.lastReplyHadTime,
     debriefText: session.debriefText || null,
+    playerId: session.playerId || null,
+    completionCredited: session.completionCredited || false,
     operationResults: operationsFor(session).snapshot(),
   });
 }
@@ -209,6 +215,8 @@ router.get('/resume', (req, res) => {
 router.post('/new', async (req, res) => {
   const tier = 'free';
   const ip   = getClientIP(req);
+  const player = currentPlayer(req);
+  const userId = player ? `player:${player.id}` : ip;
 
   const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name, partner_name = null, captain_name = null, category = null } = req.body;
 
@@ -230,10 +238,12 @@ router.post('/new', async (req, res) => {
     const existingOwner = getCookie(req, OWNER_COOKIE_NAME);
     const ownerId = existingOwner && /^[a-zA-Z0-9_-]{16,80}$/.test(existingOwner)
       ? existingOwner : randomUUID();
-    const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null }, ip, tier);
+    const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null }, userId, tier);
     createdId = id;
     const session = getSession(id);
     session.ownerId = ownerId;
+    session.playerId = player?.id || null;
+    session.completionCredited = false;
 
     // Fire the dispatch turn
     const result = await session.send('begin');
@@ -245,7 +255,7 @@ router.post('/new', async (req, res) => {
     // Persist session so it survives server restarts and tab closures
     setSessionCookies(res, id, ownerId);
     persistence.save(buildSnapshot(id, session, {
-      userId: ip,
+      userId,
       tier,
       meta: {
         scenario_id:    seed.scenario_id,
@@ -267,6 +277,7 @@ router.post('/new', async (req, res) => {
       },
       crew: { partner: partnerRec, captain: captainRec },
     }));
+    if (player) recordScenarioStarted(player.id);
 
     return res.json({
       session_id:          id,
@@ -357,6 +368,7 @@ router.post('/:id/turn', async (req, res) => {
   }
 
   try {
+    const wasClosed = session.closed;
     const payload = await operationsFor(session).run(operation_id, JSON.stringify({
       message: message.trim(), report_mode: report_mode === true, skipMode,
       proc_allow: proc_allow || [], proc_deny: proc_deny || [],
@@ -388,6 +400,10 @@ router.post('/:id/turn', async (req, res) => {
                         session.sceneMinute >= session.seed.decompensation_clock,
       };
     });
+    if (!wasClosed && session.closed && session.playerId && !session.completionCredited) {
+      recordScenarioCompleted(session.playerId);
+      session.completionCredited = true;
+    }
     persistSession(req.params.id, session);
     return res.json(payload);
   } catch (err) {

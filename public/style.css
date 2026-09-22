@@ -79,6 +79,120 @@ html, body {
   max-width: 96vw;
 }
 
+/* Lightweight player identity. This stays visually subordinate to the
+   scenario controls so guest play still feels like the default flow. */
+#player-bar {
+  min-height: 38px;
+  margin-bottom: 4px;
+  padding: 6px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #101820;
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+}
+
+#player-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #9db7c9;
+  font-family: var(--font-block);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+#player-label.signed-in { color: #69df8a; }
+
+#player-actions { display: flex; flex-shrink: 0; gap: 5px; }
+#player-actions button,
+.auth-actions button {
+  padding: 5px 9px;
+  background: #263746;
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  color: #d4e8f7;
+  font-family: var(--font-block);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+#player-actions button:hover,
+.auth-actions button:hover { background: #344b5e; color: #fff; }
+#player-actions button:active,
+.auth-actions button:active { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
+
+#auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.68);
+}
+#auth-overlay[hidden] { display: none; }
+
+.auth-dialog {
+  width: 100%;
+  max-width: 360px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  background-color: #151f28;
+  background-image: var(--noise);
+  background-blend-mode: soft-light;
+  border: 3px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.55);
+}
+.auth-title {
+  color: #fff;
+  font-family: var(--font-block);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+.auth-copy {
+  margin-bottom: 5px;
+  color: #90a5b4;
+  font-family: var(--font-xp);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.auth-dialog label {
+  color: #a9becd;
+  font-family: var(--font-block);
+  font-size: 9px;
+  letter-spacing: 0.07em;
+}
+.auth-dialog input {
+  width: 100%;
+  padding: 8px 9px;
+  border: 2px solid;
+  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
+  outline: none;
+  background: #080c10;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+.auth-dialog input:focus { border-color: #547c98 #9bb8cc #9bb8cc #547c98; }
+#auth-error {
+  min-height: 16px;
+  color: #ff8585;
+  font-family: var(--font-xp);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.auth-actions { display: flex; justify-content: flex-end; gap: 7px; }
+.auth-actions #auth-submit { background: #164724; color: #8cf0a8; }
+.auth-actions button:disabled { opacity: 0.45; cursor: default; }
+
 .tile-grid {
   display: grid;
   grid-template-columns: 1fr 1.5fr 1fr;
@@ -902,6 +1016,10 @@ html, body {
 @media (max-width: 600px) {
 
   #start-card { width: 100%; max-width: 100vw; }
+
+  #player-bar { margin: 0 3px 4px; }
+  #player-label { font-size: 8px; }
+  #player-actions button { padding: 5px 7px; }
 
   /* Fix scrollability: center+overflow makes top/bottom unreachable */
   #start-screen { justify-content: flex-start; gap: 8px; padding: 8px 0 16px; }
