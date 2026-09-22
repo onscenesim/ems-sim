@@ -2370,7 +2370,7 @@ body.light-mode .brief-options-note { color: #536159; }
 
 .notepad-body {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(240px, 1fr);
+  grid-template-columns: minmax(250px, 1.15fr) minmax(220px, 0.9fr) minmax(240px, 1fr);
   gap: 22px;
   padding: 10px 16px 12px 24px;
   background: linear-gradient(90deg, transparent 14px, #a878704d 14px, #a878704d 15px, transparent 15px),
@@ -2383,6 +2383,19 @@ body.light-mode .brief-options-note { color: #536159; }
 #vitals-panel .vital-stale-warn { color: #795300 !important; }
 #vitals-panel .vital-stale-bad { color: #922e26 !important; }
 .notepad-scratch { min-width: 0; }
+.notepad-patient { min-width: 0; border-right: 1px dotted #7a8077; padding-right: 12px; }
+.notepad-patient .pcr-card { background: transparent; }
+.notepad-patient .pcr-hdr { padding: 0 0 6px; border-color: #52646a; }
+.notepad-patient .pcr-agency { display: none; }
+.notepad-patient .pcr-title { color: #263543; font-size: 14px; }
+.notepad-patient .pcr-incident-row,
+.notepad-patient .pcr-label,
+.notepad-patient .pcr-source,
+.notepad-patient .pcr-pending { color: #48555a; }
+.notepad-patient .pcr-field { padding: 5px 0; border-color: #7a80774a; }
+.notepad-patient .pcr-value,
+.notepad-patient .pcr-field-top .pcr-value { color: #202f3e; font-size: 16px; }
+.notepad-patient .pcr-section-rule { height: 1px; background: #7a80774a; border: 0; }
 .scratch-toolbar { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
 #vitals-scratch { display: block; width: 100%; height: 126px; margin: 4px 0; touch-action: none; cursor: crosshair; border: 1px dotted #7a8077; }
 
@@ -2562,6 +2575,7 @@ body.light-mode .brief-options-note { color: #536159; }
   white-space: nowrap;
   transition: background 0.08s, color 0.1s, border-color 0.1s;
 }
+#report-btn svg { display: none; }
 #report-btn:hover { background: #dedad4; }
 #report-btn:active { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 
@@ -3604,6 +3618,10 @@ body.light-mode .brief-options-note { color: #536159; }
 #sound-toggle-hdr .speaker-muted { display: none; }
 #sound-toggle-hdr.sound-off .speaker-muted { display: block; }
 #sound-toggle-hdr.sound-off .speaker-waves { display: none; }
+.theme-icon { display: block; width: 18px; height: 18px; image-rendering: pixelated; }
+.theme-icon-sun { display: none; }
+body.light-mode .theme-icon-moon { display: none; }
+body.light-mode .theme-icon-sun { display: block; }
 @media (max-width: 600px) {
   #sound-toggle-hdr, #theme-toggle-hdr { min-width: 44px; min-height: 44px; }
   .start-toolbar { gap: 16px; }
@@ -4682,32 +4700,104 @@ body.light-mode {
 .dialog-titlebar :is(.auth-title, .confirm-title) { margin: 0; }
 
 #hdr-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
-#hdr-controls #crew-btn { margin: 0; min-height: 44px; }
+#hdr-controls #crew-btn { margin: 0; min-height: 36px; display: flex; align-items: center; gap: 6px; }
+#crew-btn svg { width: 16px; height: 16px; }
 #hdr-badges { min-width: 0; align-items: center; }
 #hdr-badges .badge { max-width: 100%; overflow-wrap: anywhere; }
-#patient-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 44px;
-  padding: 4px 9px;
-  background: #31555c;
-  color: #f1ead0;
-  border: 2px solid;
-  border-color: #98bab2 #182e33 #182e33 #98bab2;
-  font: 16px var(--font-xp);
-  cursor: pointer;
-}
-#patient-btn svg { width: 28px; height: 28px; flex-shrink: 0; }
-#patient-btn:hover { background: #3c6870; }
-#patient-btn:active { border-color: #182e33 #98bab2 #98bab2 #182e33; }
-#patient-btn:focus-visible { outline: 2px solid #315b81; outline-offset: 2px; }
 #output { min-height: 0; overflow-anchor: none; overscroll-behavior: contain; }
 #input-row { flex-shrink: 0; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
 #vitals-panel { flex-shrink: 1; min-height: 0; max-height: min(340px, calc(var(--terminal-height, 100dvh) * 0.38)); }
 @media (max-width: 600px) {
-  #hdr-controls { width: 100%; margin: 0; justify-content: flex-end; }
-  #hdr-badges .badge { font: 14px var(--font-xp); letter-spacing: 0; padding: 3px 5px; }
+  /* One low-profile scene strip: statuses scroll instead of growing vertically. */
+  #header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px;
+  }
+  #hdr-badges {
+    order: initial;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    min-height: 24px;
+  }
+  #hdr-badges::-webkit-scrollbar { display: none; }
+  #hdr-badges .badge {
+    flex: 0 0 auto;
+    max-width: none;
+    white-space: nowrap;
+    font: 12px var(--font-xp);
+    letter-spacing: 0;
+    padding: 2px 4px;
+  }
+  #hdr-controls { width: auto; margin: 0; flex-wrap: nowrap; gap: 0; }
+  #hdr-controls #crew-btn {
+    width: 32px;
+    height: 30px;
+    min-height: 30px;
+    padding: 4px;
+    justify-content: center;
+    margin: 0;
+  }
+  #crew-btn span { display: none; }
+  #crew-btn svg { width: 18px; height: 18px; }
+  #sound-toggle-hdr, #theme-toggle-hdr { display: none; }
+
+  /* Closed reference panels are absent from layout and paint. This prevents
+     iOS viewport changes from flashing their translated surfaces. */
+  #crew-panel, #drug-panel { display: none; transition: none; transform: none; }
+  #crew-panel.open, #drug-panel.open { display: flex; transform: none; }
+
+  #vitals-bar { flex-wrap: nowrap; padding: 2px 3px; align-items: stretch; }
+  #waveform-toggle {
+    min-width: 30px;
+    min-height: 24px;
+    height: 24px;
+    padding: 2px;
+    font-size: 8px;
+    border-radius: 0;
+  }
+  #rhythm-strip, #pleth-strip { height: 18px; }
+  #rhythm-cell { padding: 2px 3px; }
+  #vitals-expand {
+    flex: 0 0 38px;
+    width: 38px;
+    min-height: 38px;
+    height: 38px;
+    align-self: center;
+    margin: 1px 0 1px 3px;
+    padding: 3px;
+    gap: 0;
+  }
+  #vitals-expand > span,
+  #vitals-expand > span:nth-child(2) { display: none; }
+  #vitals-expand .notepad-icon { width: 28px; height: 28px; }
+
+  /* The hub overlays the play area only while deliberately open. */
+  #vitals-panel {
+    position: absolute;
+    z-index: 46;
+    inset: 4px 4px 58px;
+    max-height: none;
+    overflow-y: auto;
+  }
+  .notepad-body { grid-template-columns: 1fr; gap: 14px; padding: 8px 12px 18px 22px; }
+  .notepad-patient { border-right: 0; border-bottom: 1px dotted #7a8077; padding: 0 0 10px; }
+  .notepad-titlebar { position: sticky; top: 0; z-index: 1; }
+  #vitals-scratch { height: 180px; }
   #user-input, #send-btn, #skip-btn { min-height: 44px; }
+  #input-row { flex-wrap: nowrap; padding: 4px; gap: 4px; }
+  #report-btn {
+    order: initial;
+    flex: 0 0 40px;
+    width: 40px;
+    min-height: 44px;
+    padding: 5px;
+  }
+  #report-btn span { display: none; }
+  #report-btn svg { display: block; width: 20px; height: 20px; margin: auto; }
 }

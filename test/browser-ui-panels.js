@@ -106,6 +106,12 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
     await page.locator('#sound-toggle-hdr').click();
     assert.equal(await page.locator('#sound-toggle-hdr').getAttribute('aria-pressed'), 'true');
     assert.deepEqual(await page.evaluate(() => window.soundCalls), [{ name: 'radio', enabled: true }, { name: 'radio', enabled: true }]);
+    assert.equal(await page.locator('.theme-icon-moon').isVisible(), true, 'dark mode shows its pixel moon');
+    assert.equal(await page.locator('.theme-icon-sun').isVisible(), false);
+    await page.locator('#theme-toggle-hdr').click();
+    assert.equal(await page.locator('.theme-icon-sun').isVisible(), true, 'light mode shows its pixel sun');
+    assert.equal(await page.locator('.theme-icon-moon').isVisible(), false);
+    await page.locator('#theme-toggle-hdr').click();
     assert.equal(await page.locator('#hdr-collapse, #header-reveal, #badge-unit').count(), 0);
     await page.locator('#vitals-expand').click();
     assert.equal(await page.locator('#vitals-expand').getAttribute('aria-expanded'), 'true');
@@ -131,37 +137,48 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
     await page.evaluate(() => {
       hideDrugPanel();
       patientDemoSource = 'Crew';
-      populatePatientPanel({ name: 'Test Patient', age: 65, sex: 'Male' }, 'TEST');
-      document.getElementById('patient-panel').classList.add('open');
+      populateNotepadPatient({ name: 'Test Patient', age: 65, sex: 'male' }, 'TEST');
+      setVitalsPanelOpen(true);
     });
-    await page.screenshot({ animations: 'disabled', path: path.join(output, 'desktop-patient.png') });
-    await page.evaluate(() => document.getElementById('patient-panel').classList.remove('open'));
+    assert.match(await page.locator('#notepad-patient').textContent(), /PATIENT, Test/);
+    assert.match(await page.locator('#notepad-patient').textContent(), /65 years/);
+    await page.screenshot({ animations: 'disabled', path: path.join(output, 'desktop-patient-notepad.png') });
+    await page.evaluate(() => setVitalsPanelOpen(false));
     for (const width of [320, 390, 600]) {
       await page.setViewportSize({ width, height: 844 });
       await page.evaluate(() => {
-        patientBtn.style.display = '';
         applyBackupStatus({ status: 'on_scene' });
         applyCrewStatus({ partner: 'in_back', captain: 'in_back', driver: 'anonymous' });
       });
-      const headerRects = await page.evaluate(() => [...document.querySelectorAll('#hdr-controls > button, #hdr-badges > .badge')].filter(e => getComputedStyle(e).display !== 'none').map(e => {
+      const headerRects = await page.evaluate(() => [...document.querySelectorAll('#hdr-controls > button')].filter(e => getComputedStyle(e).display !== 'none').map(e => {
         const r = e.getBoundingClientRect();
-        return { id: e.id || e.dataset.crewRole, x: r.x, y: r.y, right: r.right, bottom: r.bottom };
+        return { id: e.id, x: r.x, y: r.y, right: r.right, bottom: r.bottom };
       }));
       for (let i = 0; i < headerRects.length; i++) {
         const a = headerRects[i];
         assert.ok(a.x >= 0 && a.right <= width, 'header item fits: ' + a.id);
         for (const b of headerRects.slice(i + 1)) assert.ok(a.right <= b.x || b.right <= a.x || a.bottom <= b.y || b.bottom <= a.y, 'header items do not overlap: ' + a.id + '/' + b.id);
       }
+      const statusStrip = await page.locator('#hdr-badges').boundingBox();
+      assert.ok(statusStrip.x >= 0 && statusStrip.x + statusStrip.width <= width, 'status strip fits viewport');
+      assert.ok(statusStrip.x + statusStrip.width <= headerRects[0].x, 'status strip does not overlap controls');
       const sizes = await page.evaluate(() => {
         const r = document.getElementById('vitals-expand').getBoundingClientRect();
         return { width: innerWidth, scroll: document.documentElement.scrollWidth, button: r.height, right: r.right, monitor: document.getElementById('vitals-bar').getBoundingClientRect().height };
       });
       assert.ok(sizes.scroll <= sizes.width, 'no page overflow at ' + width);
-      assert.ok(sizes.button >= 44 && sizes.right <= width, 'visible touch target at ' + width);
-      assert.ok(sizes.monitor > sizes.button, 'monitor remains visible');
+      assert.ok(sizes.button >= 36 && sizes.button <= 40 && sizes.right <= width, 'compact notepad target at ' + width);
+      assert.ok(sizes.monitor <= 60, 'monitor remains compact at ' + width + ': ' + sizes.monitor);
+      assert.equal(await page.locator('#vitals-expand b').isVisible(), false);
+      assert.equal(await page.locator('#sound-toggle-hdr').isVisible(), false);
+      assert.equal(await page.locator('#theme-toggle-hdr').isVisible(), false);
+      const headerHeight = await page.locator('#header').evaluate(e => e.getBoundingClientRect().height);
+      assert.ok(headerHeight <= 40, 'header stays compact: ' + headerHeight);
       await page.screenshot({ animations: 'disabled', path: path.join(output, `mobile-${width}.png`) });
     }
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('#vitals-expand').click();
+    await page.screenshot({ animations: 'disabled', path: path.join(output, 'mobile-notepad-hub.png') });
     await page.locator('#vitals-scratch').scrollIntoViewIfNeeded();
     await page.locator('#scratch-clear').click();
     assert.equal(await inkCount(), 0);
@@ -178,43 +195,32 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
     await page.locator('#vitals-close').focus();
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#vitals-panel').isVisible(), false);
-    // Model the distinct iOS visual viewport through keyboard open, pan, and close.
+    // Text entry closes auxiliary surfaces and never rewrites terminal geometry.
     await page.evaluate(async () => {
-      const originalViewport = window.visualViewport;
-      const viewport = new EventTarget();
-      Object.assign(viewport, { height: 420, offsetTop: 28, scale: 1 });
-      Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
       const originalScrollTo = window.scrollTo;
       let forcedScrolls = 0;
       window.scrollTo = () => forcedScrolls++;
-      const frame = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      userInput.focus({ preventScroll: true });
+      showCrewPanel();
+      showDrugPanel('epinephrine');
+      setVitalsPanelOpen(true);
+      userInput.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, isPrimary: true }));
       adjustForViewport();
-      await frame();
-      let r = document.getElementById('input-row').getBoundingClientRect();
-      if (r.bottom > 449 || r.top < 28) throw Error('Composer outside keyboard viewport');
-      userInput.blur();
+      if (crewPanel.classList.contains('open') || drugPanel.classList.contains('open') || !vitalsPanel.hidden) throw Error('Text entry left an auxiliary surface open');
+      if (getComputedStyle(crewPanel).display !== 'none' || getComputedStyle(drugPanel).display !== 'none') throw Error('Closed mobile panel remained paintable');
+      if (terminal.style.height || terminal.style.top) throw Error('Text entry rewrote terminal geometry');
       setLoading(true);
       setLoading(false);
       if (document.activeElement === userInput) throw Error('Reply reopened the mobile keyboard');
       for (let i = 0; i < 80; i++) print('History line ' + i);
       output.scrollTop = 100;
-      Object.assign(viewport, { height: 500, offsetTop: 0 });
       adjustForViewport();
-      await frame();
       if (Math.abs(output.scrollTop - 100) > 1) throw Error('Viewport update jumped away from reading position');
-      Object.assign(viewport, { height: 844, offsetTop: 0 });
-      adjustForViewport();
-      await frame();
-      if (Math.abs(terminal.getBoundingClientRect().height - 844) > 1) throw Error('Keyboard dismissal did not restore height');
       if (forcedScrolls) throw Error('Viewport changes forced page scrolls');
       window.scrollTo = originalScrollTo;
-      Object.defineProperty(window, 'visualViewport', { configurable: true, value: originalViewport });
       output.innerHTML = '';
       printBriefing();
-      adjustForViewport();
     });
-    for (const id of ['options-close', 'vitals-close', 'drug-panel-close', 'crew-panel-close', 'patient-panel-close', 'progress-close', 'auth-close']) {
+    for (const id of ['options-close', 'vitals-close', 'drug-panel-close', 'crew-panel-close', 'progress-close', 'auth-close']) {
       assert.equal(await page.locator('#' + id).evaluate(e => e.classList.contains('xp-close') && !!e.getAttribute('aria-label')), true);
     }
     await page.evaluate(() => {

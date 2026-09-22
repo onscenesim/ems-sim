@@ -836,14 +836,17 @@ if (splashEl && typeof getRandomSplash === 'function') {
 // ── Sound toggle ─────────────────────────────────────��────────────────────
 // ── Report mode toggle ──────────────────────────────────────────────────────
 function updateReportBtn() {
+  const label = reportBtn.querySelector('span');
   if (reportMode) {
-    reportBtn.textContent = '\u25cf  REPORTING';
+    label.textContent = '● REPORTING';
     reportBtn.classList.add('report-active');
+    reportBtn.setAttribute('aria-pressed', 'true');
     document.getElementById('input-row').classList.add('report-mode');
     userInput.placeholder = 'Give your radio report or handoff...';
   } else {
-    reportBtn.textContent = 'REPORT';
+    label.textContent = 'REPORT';
     reportBtn.classList.remove('report-active');
+    reportBtn.setAttribute('aria-pressed', 'false');
     document.getElementById('input-row').classList.remove('report-mode');
     userInput.placeholder = 'Type your action or order...';
   }
@@ -883,10 +886,9 @@ const themeToggleStart = document.getElementById('theme-toggle-start');
 
 function applyTheme() {
   const isLight = document.body.classList.contains('light-mode');
-  const hdrLabel = isLight ? '☽' : '☀';
-  if (themeToggleHdr)   themeToggleHdr.textContent   = hdrLabel;
   if (themeToggleStart) themeToggleStart.checked = isLight;
   if (themeToggleHdr) themeToggleHdr.setAttribute('aria-label', isLight ? 'Switch to dark mode' : 'Switch to light mode');
+  if (themeToggleHdr) themeToggleHdr.title = isLight ? 'Switch to dark mode' : 'Switch to light mode';
 }
 
 function toggleTheme() {
@@ -969,8 +971,7 @@ async function startScenario() {
     patientDemoSource      = null;
     secondPatientConfirmed = false;
     if (data.patient) {
-      populatePatientPanel(data.patient, data.scenario_id);
-      patientBtn.style.display = '';
+      populateNotepadPatient(data.patient, data.scenario_id);
     }
 
     // Crew card pops at scenario start. The captain is an off-scene supervisor
@@ -978,7 +979,6 @@ async function startScenario() {
     // default when backup is already on scene.
     if (data.crew) {
       populateCrewPanel(data.crew);
-      showCrewPanel();
       applyCrewStatus({
         partner: 'on_scene',
         captain: 'not_on_scene',
@@ -1197,7 +1197,6 @@ async function sendTurn(msg, opts = {}) {
       isClosed = true;
       skipBtn.disabled = true;
       updateSkipBtn();          // hide the END CALL button once the call is closed
-      showCrewPanel();
       showDebriefCTA();
       setLoading(false);
       setInputEnabled(false);
@@ -1645,11 +1644,9 @@ function resetToStart() {
   prevBackupStatus  = null;
   firstVitalsPlayed = false;
   localTranscript   = null;
-  patientBtn.style.display  = 'none';
   patientDemoSource         = null;
   secondPatientConfirmed    = false;
-  hidePatientPanel();
-  patientPanelBody.innerHTML = '';
+  notepadPatientBody.innerHTML = '';
   output.innerHTML = '';
 
   scenarioStartTime = null;
@@ -1736,6 +1733,14 @@ sendBtn.addEventListener('click', () => {
   if (!msg) return;
   userInput.value = '';
   sendTurn(msg);
+});
+
+userInput.addEventListener('pointerdown', () => {
+  // A text entry gesture should have one result: the keyboard and composer.
+  // Remove auxiliary surfaces before the browser starts changing viewports.
+  hideCrewPanel();
+  hideDrugPanel();
+  setVitalsPanelOpen(false);
 });
 
 userInput.addEventListener('keydown', e => {
@@ -1991,17 +1996,13 @@ crewBtn.addEventListener('click', () => {
   if (crewPanel.classList.contains('open')) {
     hideCrewPanel();
   } else {
-    hidePatientPanel();
     showCrewPanel();
   }
 });
 
-// ── Patient card panel ──────────────────────────────────────────────────────
+// ── Patient section in the field notepad ───────────────────────────────────
 
-const patientPanel      = document.getElementById('patient-panel');
-const patientPanelBody  = document.getElementById('patient-panel-body');
-const patientPanelClose = document.getElementById('patient-panel-close');
-const patientBtn        = document.getElementById('patient-btn');
+const notepadPatientBody = document.getElementById('notepad-patient');
 
 const COMORBIDITY_LABELS = {
   compensated_cardiac_history: 'Cardiac Hx — HTN, hyperlipidemia, prior MI',
@@ -2096,35 +2097,17 @@ function buildPatientCard(patient, scenarioId) {
   return wrap;
 }
 
-function populatePatientPanel(patient, scenarioId) {
-  patientPanelBody.innerHTML = '';
+function populateNotepadPatient(patient, scenarioId) {
+  notepadPatientBody.innerHTML = '';
   if (!patient) return;
-  patientPanelBody.appendChild(buildPatientCard(patient, scenarioId));
+  notepadPatientBody.appendChild(buildPatientCard(patient, scenarioId));
 }
 
 function refreshPatientCard() {
   const patient    = localTranscript && localTranscript.meta && localTranscript.meta.patient;
   const scenarioId = localTranscript && localTranscript.meta && localTranscript.meta.scenario_id;
-  if (patient) populatePatientPanel(patient, scenarioId);
+  if (patient) populateNotepadPatient(patient, scenarioId);
 }
-function showPatientPanel() {
-  patientPanel.classList.add('open');
-}
-
-function hidePatientPanel() {
-  patientPanel.classList.remove('open');
-}
-
-patientPanelClose.addEventListener('click', hidePatientPanel);
-
-patientBtn.addEventListener('click', () => {
-  if (patientPanel.classList.contains('open')) {
-    hidePatientPanel();
-  } else {
-    hideCrewPanel();
-    showPatientPanel();
-  }
-});
 
 /**
  * Show the incoming-dispatch overlay before the first reply prints.
@@ -2825,8 +2808,7 @@ async function resumeFromSnapshot(snap) {
   if (snap.meta && snap.meta.patient) {
     patientDemoSource      = snap.demo_source   || null;
     secondPatientConfirmed = snap.second_patient || false;
-    populatePatientPanel(snap.meta.patient, snap.meta.scenario_id);
-    patientBtn.style.display = '';
+    populateNotepadPatient(snap.meta.patient, snap.meta.scenario_id);
   }
 
   if (isClosed) {
@@ -3424,6 +3406,10 @@ function resetVitals() {
 }
 
 function setVitalsPanelOpen(open) {
+  if (open) {
+    hideCrewPanel();
+    hideDrugPanel();
+  }
   vitalsPanel.hidden = !open;
   vitalsPanel.classList.toggle('open', open);
   vitalsExpand.classList.toggle('open', open);
@@ -3485,39 +3471,17 @@ for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 }
 document.getElementById('scratch-clear').addEventListener('click', clearVitalsScratch);
 
-// Follow the visible viewport without fighting the browser's keyboard panning.
-// Batch resize/scroll events into one layout update per animation frame.
-let viewportFrame = null;
+// The terminal uses 100dvh and interactive-widget=resizes-content. Avoid
+// rewriting its position during keyboard animation: that made iOS pan the page
+// while the app simultaneously moved itself, producing the visible jump.
 function adjustForViewport() {
-  if (viewportFrame !== null) return;
-  viewportFrame = requestAnimationFrame(() => {
-    viewportFrame = null;
-    if (terminal.style.display !== 'flex') return;
-    const viewport = window.visualViewport;
-    if (viewport && Math.abs(viewport.scale - 1) > 0.01) return; // Preserve pinch zoom.
-    const height = viewport ? viewport.height : window.innerHeight;
-    const top = viewport ? viewport.offsetTop : 0;
-    const atBottom = output.scrollHeight - output.scrollTop - output.clientHeight < 24;
-    terminal.style.height = `${height}px`;
-    terminal.style.top = `${top}px`;
-    terminal.style.setProperty('--terminal-height', `${height}px`);
-    if (atBottom) output.scrollTop = output.scrollHeight;
-  });
-}
-function resetTerminalHeight() {
-  if (viewportFrame !== null) cancelAnimationFrame(viewportFrame);
-  viewportFrame = null;
   terminal.style.height = '';
   terminal.style.top = '';
-  terminal.style.removeProperty('--terminal-height');
 }
-window.addEventListener('resize', adjustForViewport);
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', adjustForViewport);
-  window.visualViewport.addEventListener('scroll', adjustForViewport);
+function resetTerminalHeight() {
+  terminal.style.height = '';
+  terminal.style.top = '';
 }
-userInput.addEventListener('focus', adjustForViewport);
-userInput.addEventListener('blur', adjustForViewport);
 
 document.addEventListener('click', e => {
   const cell = e.target && e.target.closest('#nibp-cell');
