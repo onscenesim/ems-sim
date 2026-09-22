@@ -238,12 +238,14 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
     const newbornVitals = { HR: 140, RR: 40, GCS: 15 };
     const motherFocus = { id: 'patient_1', label: 'Mother' };
     const newbornFocus = { id: 'patient_2', label: 'Newborn' };
+    const motherRecord = { ...motherFocus, name: 'Jane Smith', age: 30, sex: 'female', comorbidity: 'Asthma', source: 'patient stated' };
+    const newbornRecord = { ...newbornFocus, age: 0, age_display: '10 minutes old', sex: 'female', source: 'crew' };
     let newCall = { session_id: 'multi-test', scenario_id: 'MULTI', reply: 'Two patients on scene.', multi_patient: true,
-      patient_focus: motherFocus, vitals: motherVitals, scene_minute: 1, patient: { name: 'Test Patient', age: 30, sex: 'female' } };
+      patients: [motherRecord], patient_focus: motherFocus, vitals: motherVitals, scene_minute: 1, patient: { name: 'Test Patient', age: 30, sex: 'female' } };
     await page.route('**/api/scenario/new', route => route.fulfill({ json: newCall }));
     await page.route('**/api/scenario/multi-test/turn', route => route.fulfill({ json: {
       reply: 'You are assessing the newborn.', vitals: newbornVitals, patient_focus: newbornFocus,
-      second_patient: true, scene_minute: 2, rolls: [],
+      patients: [motherRecord, newbornRecord], second_patient: true, scene_minute: 2, rolls: [],
     } }));
     await page.evaluate(() => { hideCrewPanel(); hideDrugPanel(); return startScenario(); });
     assert.match(await page.locator('#patient-focus').textContent(), /Mother/);
@@ -266,13 +268,21 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
       await page.locator('#vitals-expand').click();
       assert.equal(await page.locator('#vitals-panel').isVisible(), true);
       assert.match(await page.locator('#notepad-focus').textContent(), /Newborn/);
+      assert.equal(await page.locator('#notepad-patient-select').inputValue(), 'patient_2');
+      assert.match(await page.locator('#notepad-patient').textContent(), /10 minutes old/);
+      assert.ok(!(await page.locator('#notepad-patient').textContent()).includes('Asthma'));
+      await page.locator('#notepad-patient-select').selectOption('patient_1');
+      assert.match(await page.locator('#notepad-patient').textContent(), /SMITH, Jane/);
+      assert.match(await page.locator('#notepad-patient').textContent(), /Asthma/);
+      assert.match(await page.locator('#notepad-focus').textContent(), /Newborn/, 'browsing records leaves monitor focus unchanged');
+      await page.locator('#notepad-patient-select').selectOption('patient_2');
       assert.equal(await inkCount(), savedInk, 'turns and focus switches preserve notes');
       await page.screenshot({ animations: 'disabled', path: path.join(output, `multi-patient-${width}.png`) });
       await page.locator('#vitals-close').click();
     }
     await page.evaluate(snap => resumeFromSnapshot(snap), {
       session_id: 'multi-test', multi_patient: true, second_patient: true, patient_focus: newbornFocus,
-      lastVitals: newbornVitals, sceneMinute: 2, meta: {}, turns: [],
+      patients: [motherRecord, newbornRecord], lastVitals: newbornVitals, sceneMinute: 2, meta: {}, turns: [],
     });
     assert.match(await page.locator('#patient-focus').textContent(), /Newborn/);
     assert.equal(await page.locator('[data-vital="HR"]').first().textContent(), '140');
@@ -283,6 +293,20 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
     assert.equal(await page.locator('#patient-focus').isVisible(), false, 'new single-patient call clears multi-patient status');
     assert.equal(await page.locator('#vitals-expand').isVisible(), true);
     assert.equal(await inkCount(), 0, 'new call clears notes');
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.locator('#vitals-expand').click();
+    assert.equal(await page.locator('#notepad-patient-picker').isVisible(), false, 'single patient needs no record selector');
+    const columns = await page.locator('.notepad-body').evaluate(body => [...body.children].map(child => {
+      const bounds = child.getBoundingClientRect();
+      return { x: bounds.x, y: bounds.y, width: bounds.width };
+    }));
+    assert.equal(columns.length, 3, 'only demographics, readings and scratch pad occupy grid columns');
+    assert.equal(columns[0].y, columns[1].y, 'readings align with demographics');
+    assert.equal(columns[1].y, columns[2].y, 'scratch pad stays in the same row');
+    assert.ok(columns[1].x - columns[0].x - columns[0].width < 30, 'no empty column between demographics and readings');
+    assert.equal(await page.locator('.notepad-readings #notepad-focus').count(), 1, 'reading label is inside its section');
+    await page.screenshot({ animations: 'disabled', path: path.join(output, 'single-patient-layout.png') });
+
     assert.deepEqual(errors, []);
     console.log('UI checks passed. Screenshots: ' + output);
   } finally { await browser.close(); }

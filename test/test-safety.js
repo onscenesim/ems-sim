@@ -364,12 +364,12 @@ test('new scenario returns and persists initial demographic machine state', asyn
 });
 
 test('patient focus and separate vital snapshots flow through new, turn, persistence and resume', async () => {
-  generate = async () => ({ text: 'Mother assessed. [PATIENT_FOCUS: patient_1 | Mother] [VITALS: HR=84 GCS=15] [TIME: 1:00]' });
+  generate = async () => ({ text: 'Mother assessed. [PATIENT_DEMO: {"id":"patient_1","label":"Mother","name":"Jane Smith","age":30,"source":"patient stated"}] [PATIENT_FOCUS: patient_1 | Mother] [VITALS: HR=84 GCS=15] [TIME: 1:00]' });
   const created = await route('/new');
   const id = created.body.session_id;
   assert.deepEqual(created.body.patient_focus, { id: 'patient_1', label: 'Mother' });
   assert.equal(snapshots.get(id).patientVitals.patient_1.HR, 84);
-  generate = async () => ({ text: 'Newborn assessed. [PATIENT_FOCUS: patient_2 | Newborn] [VITALS: HR=140 RR=40] [TIME: 2:00]' });
+  generate = async () => ({ text: 'Newborn assessed. [PATIENT_DEMO: {"id":"patient_2","label":"Newborn","age":0,"age_display":"10 minutes old","source":"crew"}] [PATIENT_FOCUS: patient_2 | Newborn] [VITALS: HR=140 RR=40] [TIME: 2:00]' });
   const changed = await route('/:id/turn', {
     message: 'Focus on the newborn', operation_id: 'multi-focus-operation-001', procs_resolved: true,
   }, { id });
@@ -379,9 +379,13 @@ test('patient focus and separate vital snapshots flow through new, turn, persist
   const saved = snapshots.get(id);
   assert.equal(saved.patientVitals.patient_1.HR, 84);
   assert.equal(saved.patientVitals.patient_2.HR, 140);
+  assert.equal(created.body.patients[0].name, 'Jane Smith');
+  assert.deepEqual(saved.patientRecords, changed.body.patients);
+  assert.equal(saved.patientRecords[1].age, 0);
   const resumed = await route('/resume', {}, {}, { cookie: `ems_sid=${id}; ems_owner=${saved.ownerId}` });
   assert.deepEqual(resumed.body.session.patient_focus, changed.body.patient_focus);
   assert.equal(resumed.body.session.lastVitals.HR, 140);
+  assert.deepEqual(resumed.body.session.patients, saved.patientRecords);
 });
 
 test('multi-patient detection covers ordinary two-patient and MCI seeds', () => {

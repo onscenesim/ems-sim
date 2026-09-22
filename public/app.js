@@ -968,12 +968,10 @@ async function startScenario() {
     printHr();
     for (const r of (data.rolls || [])) printRoll(r);
 
-    // Patient card — starts in pending state
-    patientDemoSource      = null;
-    secondPatientConfirmed = false;
-    if (data.patient) {
-      populateNotepadPatient(data.patient, data.scenario_id);
-    }
+    notebookPatients = [];
+    notebookPatientId = null;
+    patientDemoSource = data.demo_source || null;
+    secondPatientConfirmed = !!data.second_patient;
 
     // Crew card pops at scenario start. The captain is an off-scene supervisor
     // at T+0 (Rule 18) — the model's [CREW_STATUS:] tag below overrides this
@@ -994,14 +992,9 @@ async function startScenario() {
     applyVitals(data.vitals || null);
     applyBackupStatus(data.backup || { status: 'not_called', eta: null });
     if (data.crewStatus) applyCrewStatus(data.crewStatus);
-    if (data.demo_source && !patientDemoSource) {
-      patientDemoSource = data.demo_source;
-      refreshPatientCard();
-    }
-    if (data.second_patient && !secondPatientConfirmed) {
-      secondPatientConfirmed = true;
-      refreshPatientCard();
-    }
+    patientDemoSource = data.demo_source || patientDemoSource;
+    secondPatientConfirmed = secondPatientConfirmed || !!data.second_patient;
+    applyPatientRecords(data.patients, localTranscript?.meta?.patient, patientDemoSource);
 
     setLoading(false);
     focusActionInput();
@@ -1170,14 +1163,9 @@ async function sendTurn(msg, opts = {}) {
     }
     if (data.backup) applyBackupStatus(data.backup);
     if (data.crewStatus) applyCrewStatus(data.crewStatus);
-    if (data.demo_source && !patientDemoSource) {
-      patientDemoSource = data.demo_source;
-      refreshPatientCard();
-    }
-    if (data.second_patient && !secondPatientConfirmed) {
-      secondPatientConfirmed = true;
-      refreshPatientCard();
-    }
+    patientDemoSource = data.demo_source || patientDemoSource;
+    secondPatientConfirmed = secondPatientConfirmed || !!data.second_patient;
+    applyPatientRecords(data.patients, localTranscript?.meta?.patient, patientDemoSource);
 
     // Save turn client-side for transcript export (incl. backend data)
     if (localTranscript) {
@@ -1644,7 +1632,9 @@ function resetToStart() {
   localTranscript   = null;
   patientDemoSource         = null;
   secondPatientConfirmed    = false;
-  notepadPatientBody.innerHTML = '';
+  notebookPatients = [];
+  notebookPatientId = null;
+  renderPatientRecords();
   output.innerHTML = '';
 
   scenarioStartTime = null;
@@ -2018,8 +2008,10 @@ const COMORBIDITY_LABELS = {
 // demoSource = null means pending; string = who obtained demographics
 let patientDemoSource      = null;
 let secondPatientConfirmed = false;
+let notebookPatients = [];
+let notebookPatientId = null;
 
-function buildPatientCard(patient, scenarioId) {
+function buildPatientCard(patient, scenarioId, source = patientDemoSource) {
   const wrap = document.createElement('div');
   wrap.className = 'pcr-card';
 
@@ -2056,7 +2048,7 @@ function buildPatientCard(patient, scenarioId) {
     wrap.appendChild(row);
   }
 
-  if (!patientDemoSource) {
+  if (!source) {
     rule();
     const pending = document.createElement('div');
     pending.className = 'pcr-pending';
@@ -2067,45 +2059,80 @@ function buildPatientCard(patient, scenarioId) {
     const nameParts = (patient.name || '').split(' ');
     const nameFormatted = nameParts.length >= 2
       ? nameParts.slice(1).join(' ').toUpperCase() + ', ' + nameParts[0]
-      : (patient.name || '—');
+      : (patient.name || 'Not obtained');
     field('NAME', nameFormatted);
     // Infants/neonates have patient.age === 0; show the months/days display instead.
-    field('AGE', patient.age ? patient.age + ' years' : (patient.age_display || '—'));
-    field('SEX', patient.sex === 'male' ? 'Male' : patient.sex === 'female' ? 'Female' : '—');
+    field('AGE', patient.age_display || (typeof patient.age === 'number' ? patient.age + ' years' : 'Not obtained'));
+    field('SEX', patient.sex === 'male' ? 'Male' : patient.sex === 'female' ? 'Female' : (patient.sex || 'Not obtained'));
 
     rule();
-    const pmh = COMORBIDITY_LABELS[patient.comorbidity] || patient.comorbidity || 'None documented';
+    const pmh = COMORBIDITY_LABELS[patient.comorbidity] || patient.comorbidity || 'Not obtained';
     field('PMH', pmh, true);
 
     rule();
     const src = document.createElement('div');
     src.className = 'pcr-source';
-    src.textContent = 'Courtesy of ' + patientDemoSource + '.';
+    src.textContent = 'Courtesy of ' + source + '.';
     wrap.appendChild(src);
   }
 
-  if (secondPatientConfirmed) {
-    rule();
-    const notice = document.createElement('div');
-    notice.className = 'pcr-multi-notice';
-    notice.textContent = '⚠️  MULTI-PATIENT INCIDENT — Monitor and readings follow your focused patient. This record belongs to the original patient.';
-    wrap.appendChild(notice);
-  }
 
   return wrap;
 }
 
+// Legacy single-patient snapshots remain readable while newer responses carry a roster.
 function populateNotepadPatient(patient, scenarioId) {
-  notepadPatientBody.innerHTML = '';
-  if (!patient) return;
-  notepadPatientBody.appendChild(buildPatientCard(patient, scenarioId));
+  notebookPatients = patient ? [{ ...patient, id: 'patient_1', label: 'Primary patient', source: patientDemoSource }] : [];
+  notebookPatientId = 'patient_1';
+  renderPatientRecords(scenarioId);
+}
+
+function applyPatientRecords(patients, legacyPatient = null, source = null) {
+  if (Array.isArray(patients)) {
+    notebookPatients = patients;
+  } else if (legacyPatient && !notebookPatients.length) {
+    notebookPatients = [{ ...legacyPatient, id: 'patient_1', label: 'Primary patient', source }];
+  } else if (source && notebookPatients.length) {
+    const primary = notebookPatients.find(patient => patient.id === 'patient_1');
+    if (primary) primary.source = source;
+  }
+  // Legacy multi-patient saves may know the focus without having a demographics record yet.
+  if (focusedPatientId && !notebookPatients.some(patient => patient.id === focusedPatientId)) {
+    notebookPatients = [...notebookPatients, { id: focusedPatientId, label: focusedPatientLabel }];
+  }
+  renderPatientRecords();
+}
+
+function renderPatientRecords(scenarioId = localTranscript?.meta?.scenario_id) {
+  const selector = document.getElementById('notepad-patient-select');
+  selector.replaceChildren();
+  for (const patient of notebookPatients) {
+    const option = document.createElement('option');
+    option.value = patient.id;
+    const label = patient.label || patient.id.replace('patient_', 'Patient ');
+    option.textContent = label + (patient.source && patient.name ? ` — ${patient.name}` : '')
+      + (patient.id === focusedPatientId ? ' (focused)' : '');
+    selector.appendChild(option);
+  }
+  if (!notebookPatients.some(patient => patient.id === notebookPatientId)) {
+    notebookPatientId = notebookPatients.find(patient => patient.id === focusedPatientId)?.id || notebookPatients[0]?.id || null;
+  }
+  selector.value = notebookPatientId || '';
+  selector.disabled = notebookPatients.length < 2;
+  document.getElementById('notepad-patient-picker').hidden = notebookPatients.length < 2;
+  const patient = notebookPatients.find(patient => patient.id === notebookPatientId);
+  notepadPatientBody.replaceChildren();
+  if (patient) notepadPatientBody.appendChild(buildPatientCard(patient, scenarioId, patient.source || null));
 }
 
 function refreshPatientCard() {
-  const patient    = localTranscript && localTranscript.meta && localTranscript.meta.patient;
-  const scenarioId = localTranscript && localTranscript.meta && localTranscript.meta.scenario_id;
-  if (patient) populateNotepadPatient(patient, scenarioId);
+  renderPatientRecords();
 }
+
+document.getElementById('notepad-patient-select').addEventListener('change', event => {
+  notebookPatientId = event.target.value;
+  renderPatientRecords();
+});
 
 /**
  * Show the incoming-dispatch overlay before the first reply prints.
@@ -2745,6 +2772,8 @@ function updateResumeTile(snap) {
 
 async function resumeFromSnapshot(snap) {
   resetVitals();
+  notebookPatients = [];
+  notebookPatientId = null;
   sessionId       = snap.session_id;
   isClosed        = snap.closed || false;
   waitingDebrief  = false;
@@ -2801,11 +2830,9 @@ async function resumeFromSnapshot(snap) {
   applyBackupStatus(snap.backup || { status: 'not_called', eta: null });
   if (snap.crewStatus) applyCrewStatus(snap.crewStatus);
 
-  if (snap.meta && snap.meta.patient) {
-    patientDemoSource      = snap.demo_source   || null;
-    secondPatientConfirmed = snap.second_patient || false;
-    populateNotepadPatient(snap.meta.patient, snap.meta.scenario_id);
-  }
+  patientDemoSource = snap.demo_source || null;
+  secondPatientConfirmed = snap.second_patient || false;
+  applyPatientRecords(snap.patients, snap.meta?.patient, patientDemoSource);
 
   if (isClosed) {
     setInputEnabled(false);
@@ -3489,6 +3516,7 @@ document.addEventListener('click', e => {
 });
 
 let focusedPatientId = null;
+let focusedPatientLabel = 'Current patient';
 let multiPatientIncident = false;
 function applyPatientFocus(focus, multiPatient = false) {
   multiPatientIncident = multiPatientIncident || !!multiPatient || (!!focus?.id && focus.id !== 'patient_1');
@@ -3498,13 +3526,14 @@ function applyPatientFocus(focus, multiPatient = false) {
     stopRhythmStrip();
     updatePlethStrip(null);
     focusedPatientId = nextPatientId;
+    notebookPatientId = nextPatientId;
   }
   const label = focus?.label || 'Current patient';
+  focusedPatientLabel = label;
   const notice = document.getElementById('patient-focus');
   notice.hidden = !multiPatientIncident;
   notice.textContent = `Focused on: ${label} · To switch, type “focus on” and the patient.`;
   document.getElementById('notepad-focus').textContent = `Readings for: ${label}`;
-  document.getElementById('notepad-record-label').hidden = !multiPatientIncident;
 }
 
 // Tick staleness every 5s while the page is alive

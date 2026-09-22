@@ -5,6 +5,7 @@ const path           = require('path');
 const { randomUUID: uuidv4 } = require('node:crypto');
 const { DATA_DIR }    = require('./storagePath');
 const { Session }     = require('../engine/session');
+const { initialPatientRecords, ensurePatientRecord } = require('../engine/patient-records');
 const { rollScenario } = require('../engine/roller');
 const { HISTORY_WINDOWS } = require('../data/config');
 
@@ -168,6 +169,9 @@ function restoreSession(snapshot) {
   session.lastVitals  = snapshot.lastVitals  || null;
   session.patientFocus = snapshot.patientFocus || null;
   session.patientVitals = snapshot.patientVitals || {};
+  session.patientRecords = snapshot.patientRecords || initialPatientRecords(snapshot.seed, snapshot.demo_source);
+  if (session.patientFocus) ensurePatientRecord(session.patientRecords, session.patientFocus.id, session.patientFocus.label);
+  if (snapshot.second_patient && session.patientRecords.length === 1) ensurePatientRecord(session.patientRecords, 'patient_2');
   session.sceneMinute = snapshot.sceneMinute || 0;
   session.closed      = snapshot.closed      || false;
   session.turns       = snapshot.turns       || [];

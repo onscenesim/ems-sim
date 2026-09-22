@@ -6,6 +6,7 @@ const { randomUUID } = require('node:crypto');
 
 const { createSession, getSession, restoreSession, deleteSession } = require('../sessionStore');
 const persistence = require('../persistence');
+const { initialPatientRecords } = require('../../engine/patient-records');
 const { CREW } = require('../../data/crew');
 const { REGIONS } = require('../../data/regions');
 const { DIFFICULTY_POOL } = require('../../data/config');
@@ -60,6 +61,7 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     lastVitals:  session.lastVitals,
     patientFocus: session.patientFocus,
     patientVitals: session.patientVitals,
+    patientRecords: session.patientRecords,
     sceneMinute: session.sceneMinute,
     closed:      session.closed,
     turns:       session.turns,
@@ -128,6 +130,7 @@ function persistSession(id, session) {
     ownerId: session.ownerId,
     messages: session.messages, lastVitals: session.lastVitals,
     patientFocus: session.patientFocus, patientVitals: session.patientVitals,
+    patientRecords: session.patientRecords,
     sceneMinute: session.sceneMinute, closed: session.closed, turns: session.turns,
     hasLoaded: session.hasLoaded, moving: session.moving,
     arrivedAtHospital: session.arrivedAtHospital,
@@ -198,6 +201,7 @@ router.get('/resume', (req, res) => {
       turns:        snapshot.turns       || [],
       lastVitals:   snapshot.lastVitals  || null,
       patient_focus: snapshot.patientFocus || null,
+      patients: snapshot.patientRecords || initialPatientRecords(snapshot.seed, snapshot.demo_source),
       sceneMinute:  snapshot.sceneMinute || 0,
       closed:       snapshot.closed      || false,
       debriefed:    snapshot.debriefed   || false,
@@ -312,6 +316,7 @@ router.post('/new', async (req, res) => {
       rolls:               result.rolls || [],
       vitals:              result.vitals || null,
       patient_focus:       session.patientFocus,
+      patients:            session.patientRecords,
       backup:              result.backup     || null,
       crewStatus:          result.crewStatus || null,
       demo_source:         result.demoSource || null,
@@ -397,6 +402,7 @@ router.post('/:id/turn', async (req, res) => {
         suppressed:     result.suppressed || [],
         vitals:         result.vitals || null,
         patient_focus:  session.patientFocus,
+        patients:       session.patientRecords,
         baseContact:    result.baseContact || false,
         backup:         result.backup     || null,
         crewStatus:     result.crewStatus || null,

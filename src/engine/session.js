@@ -7,6 +7,7 @@ const { detectWithConfirmation, getProcedure, PRECHARGE_RE } = require('./dice')
 const { sendTurn, sendDebrief } = require('./api');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 const { applyPulseOx } = require('./pulse-ox');
+const { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords } = require('./patient-records');
 
 // Phrases that close the scenario and trigger debrief offer
 const DEBRIEF_TRIGGERS = [
@@ -487,6 +488,7 @@ class Session {
     this.contextFlags = buildContextFlags(seed);
     this.lastVitals = null;       // most-recent parsed [VITALS:] tag, or null if none yet
     this.patientFocus = null;
+    this.patientRecords = initialPatientRecords(seed);
     this.patientVitals = {};      // per-patient snapshots, including persistent probe state
     this.turns = [];
     this.backupStatus = null;        // { status, eta } from [BACKUP:] tag
@@ -827,7 +829,10 @@ class Session {
     // remembers what it last reported. Strip the tag from the user-facing copy.
     this.messages.push({ role: 'assistant', content: rawReply });
 
-    const { cleanedReply: focusClean, focus } = parsePatientFocusTag(rawReply);
+    const { cleanedReply: demographicsClean, patches: demographics } = parsePatientRecords(rawReply);
+    updatePatientRecords(this.patientRecords, demographics);
+    const { cleanedReply: focusClean, focus } = parsePatientFocusTag(demographicsClean);
+    if (focus) ensurePatientRecord(this.patientRecords, focus.id, focus.label);
     const previousId = this.patientFocus?.id || 'patient_1';
     if (this.lastVitals) this.patientVitals[previousId] = this.lastVitals;
     if (focus) this.patientFocus = focus;
@@ -886,8 +891,15 @@ class Session {
       this.backupStatus = backup;
     }
     if (crewStatus) this.crewStatus = crewStatus;
-    if (demoSource && !this.demoSource) this.demoSource = demoSource;
-    if (secondPatient) this.secondPatientFound = true;
+    // Older replies used a source-only tag for the seeded patient. Never apply it
+    // to a secondary patient or overwrite a newer, partially discovered record.
+    const primaryRecord = this.patientRecords.find(patient => patient.id === 'patient_1');
+    if (demoSource && patientId === 'patient_1' && !primaryRecord.source) {
+      Object.assign(primaryRecord, initialPatientRecords(this.seed, demoSource)[0], { label: primaryRecord.label });
+    }
+    this.demoSource = primaryRecord.source || null;
+    if (secondPatient && this.patientRecords.length === 1) ensurePatientRecord(this.patientRecords, 'patient_2');
+    if (secondPatient || this.patientRecords.length > 1) this.secondPatientFound = true;
     // Skip turns drive the transport phase DETERMINISTICALLY from the skip target.
     // The model often omits [LOADING]/[EN_ROUTE] during a time-skip, which left the
     // load/depart animations un-fired and the arrival inconsistent (arrived=true but
