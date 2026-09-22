@@ -46,3 +46,25 @@ test('auth routes create, restore, reject duplicates, and clear a player session
   const signedOut = await route('/me', 'get', {}, { cookie });
   assert.deepEqual(signedOut.body, { player: null });
 });
+
+test('briefing preferences require a player, validate booleans, and stay with that account', async () => {
+  const guest = await route('/preferences', 'post', { showFieldBriefing: false });
+  assert.equal(guest.status, 401);
+  const signup = await route('/signup', 'post', { displayName: 'Quiet Briefing', pin: '2468' });
+  const cookie = signup.headers['set-cookie'].split(';')[0];
+  assert.equal(signup.body.player.preferences.showFieldBriefing, true);
+  for (const value of ['false', null, 0]) {
+    const invalid = await route('/preferences', 'post', { showFieldBriefing: value }, { cookie });
+    assert.equal(invalid.status, 400);
+  }
+  const saved = await route('/preferences', 'post', { showFieldBriefing: false }, { cookie });
+  assert.equal(saved.body.player.preferences.showFieldBriefing, false);
+  await route('/logout', 'post', {}, { cookie });
+  const login = await route('/login', 'post', { displayName: 'Quiet Briefing', pin: '2468' });
+  assert.equal(login.body.player.preferences.showFieldBriefing, false);
+  const other = await route('/signup', 'post', { displayName: 'New Briefing', pin: '1357' });
+  assert.equal(other.body.player.preferences.showFieldBriefing, true);
+  const restoredCookie = login.headers['set-cookie'].split(';')[0];
+  const enabled = await route('/preferences', 'post', { showFieldBriefing: true }, { cookie: restoredCookie });
+  assert.equal(enabled.body.player.preferences.showFieldBriefing, true);
+});

@@ -18,6 +18,7 @@ test('player signup, login, tracking, logout, and reload use durable storage', a
   assert.equal(created.player.displayName, 'Station 12');
   assert.equal(created.player.stats.scenariosStarted, 0);
   assert.equal(players.getPlayerByToken(created.token).id, created.player.id);
+  players.updatePreferences(players.getPlayerByToken(created.token), { showFieldBriefing: false });
 
   await assert.rejects(players.signup('station 12', '1111'), { code: 'player_exists' });
   await assert.rejects(players.login('Station 12', '9999'), { code: 'invalid_login' });
@@ -36,6 +37,7 @@ test('player signup, login, tracking, logout, and reload use durable storage', a
   delete require.cache[modulePath];
   players = require(modulePath);
   assert.equal(players.getPlayerByToken(loggedIn.token).displayName, 'Station 12');
+  assert.equal(players.publicPlayer(players.getPlayerByToken(loggedIn.token)).preferences.showFieldBriefing, false);
 
   players.logout(loggedIn.token);
   assert.equal(players.getPlayerByToken(loggedIn.token), null);

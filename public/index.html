@@ -254,6 +254,11 @@
 
       </div>
 
+      <div class="briefing-preference">
+        <label><input id="briefing-toggle" type="checkbox" checked> Show field briefing before each call</label>
+        <span id="briefing-save-status" role="status">Saved on this device for guests.</span>
+      </div>
+
       <div id="sound-row">
         <button id="sound-toggle" title="Toggle sound effects"></button>
       </div>
@@ -323,7 +328,6 @@
     <div id="header">
       <span id="hdr-title">EMS TERMINAL</span>
       <span id="hdr-badges">
-        <span class="badge badge-unit" id="badge-unit">MEDIC 1</span>
         <span class="badge badge-backup" id="badge-backup" style="display:none"></span>
       </span>
       <button id="patient-btn" title="View patient card" style="display:none">PT</button>
@@ -332,10 +336,7 @@
       <span class="badge badge-crew" data-crew-role="captain" style="display:none" aria-label="Captain status"></span>
   <span class="badge badge-crew" data-crew-role="driver" style="display:none" aria-label="Driver status"></span>
       <button id="theme-toggle-hdr" title="Toggle light/dark mode" aria-label="Toggle light mode">&#x2600;</button>
-      <button id="hdr-collapse" title="Hide header" aria-label="Hide header">&#x25B2;</button>
     </div>
-    <!-- Mobile-only reveal strip — shown when header is collapsed -->
-    <div id="header-reveal" aria-label="Tap to show header" role="button" tabindex="0"></div>
 
     <!-- Vitals monitor strip — LIFEPAK-style. Sits below header on all viewports. -->
     <div id="vitals-bar" aria-label="Patient vitals monitor">
@@ -369,12 +370,19 @@
         <div class="vital-label">EtCO<sub>2</sub></div>
         <div class="vital-value" data-vital="ETCO2">&mdash;&mdash;</div>
       </div>
-      <button id="vitals-expand" title="Show all vitals" aria-label="Expand vitals">&#x25BC;</button>
+      <button id="vitals-expand" type="button" aria-expanded="false" aria-controls="vitals-panel">
+        <svg class="notepad-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 3h20v26H4z" fill="#d8d4b7" stroke="#293746" stroke-width="2"/><path d="M8 1v5m5-5v5m5-5v5M8 11h12M8 16h10M8 21h8" fill="none" stroke="#637887" stroke-width="2"/><path d="m17 23 3-7L28 5l3 3-8 11z" fill="#b59b52" stroke="#293746" stroke-width="1.5"/></svg>
+        <span><b>MORE VITALS</b><small>RR · TEMP · GLUCOSE · GCS</small></span>
+        <span class="notepad-chevron" aria-hidden="true">▼</span>
+      </button>
       <span id="multi-patient-notice">Multiple patients on scene &mdash; vitals unavailable</span>
     </div>
 
-    <!-- Expanded vitals panel — toggled by the chevron in #vitals-bar -->
-    <div id="vitals-panel" aria-hidden="true">
+    <!-- Field notepad keeps additional observations beside a scratch area. -->
+    <div id="vitals-panel" aria-hidden="true" hidden>
+      <div class="notepad-titlebar"><span>FIELD NOTES — VITALS &amp; OBSERVATIONS</span><button id="vitals-close" type="button" aria-label="Close field notes">×</button></div>
+      <div class="notepad-body">
+      <div class="notepad-readings">
       <div class="vital-row"><span class="vital-row-label">Pulse ox</span><span class="vital-row-value" id="pulse-ox-status">Probe not placed</span></div>
       <div class="vital-row"><span class="vital-row-label">RR</span><span class="vital-row-value" data-vital="RR">&mdash;</span></div>
       <!-- No Rhythm row: the rhythm is deliberately never named in the UI — the
@@ -383,6 +391,13 @@
       <div class="vital-row"><span class="vital-row-label">Glucose</span><span class="vital-row-value" data-vital="Glucose">&mdash;</span><span class="vital-row-stamp" data-vital-stamp="Glucose"></span></div>
       <div class="vital-row"><span class="vital-row-label">GCS</span><span class="vital-row-value" data-vital="GCS">&mdash;</span></div>
       <div class="vital-row"><span class="vital-row-label">Pain</span><span class="vital-row-value" data-vital="Pain">&mdash;</span></div>
+      </div>
+      <div class="notepad-scratch">
+        <div class="scratch-toolbar"><span id="scratch-label">SCRATCH PAD</span><button id="scratch-clear" type="button">CLEAR</button></div>
+        <canvas id="vitals-scratch" width="800" height="300" aria-labelledby="scratch-label" aria-describedby="scratch-hint">Draw with your mouse or finger. These doodles are just for this call.</canvas>
+        <small id="scratch-hint">A little room to doodle. Mouse or finger · just for this call.</small>
+      </div>
+      </div>
     </div>
 
     <!-- Dispatch incoming animation overlay -->

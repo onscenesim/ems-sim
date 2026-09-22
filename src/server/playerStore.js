@@ -104,6 +104,7 @@ function publicPlayer(player) {
     id: player.id,
     displayName: player.displayName,
     createdAt: player.createdAt,
+    preferences: { showFieldBriefing: player.preferences?.showFieldBriefing !== false },
     stats: {
       scenariosStarted: stats.scenariosStarted,
       scenariosCompleted: stats.scenariosCompleted,
@@ -216,6 +217,21 @@ function logout(token) {
   if (store.sessions.length !== before) saveStore();
 }
 
+function updatePreferences(player, preferences) {
+  if (typeof preferences?.showFieldBriefing !== 'boolean') {
+    const err = new Error('Field briefing preference must be true or false.');
+    err.code = 'invalid_preferences';
+    throw err;
+  }
+  const previous = player.preferences;
+  player.preferences = { showFieldBriefing: preferences.showFieldBriefing };
+  try { saveStore(); } catch (err) {
+    player.preferences = previous;
+    throw err;
+  }
+  return publicPlayer(player);
+}
+
 function recordScenarioStarted(playerId) {
   const player = store.players.find(candidate => candidate.id === playerId);
   if (!player) return;
@@ -257,6 +273,7 @@ module.exports = {
   logout,
   getPlayerByToken,
   publicPlayer,
+  updatePreferences,
   recordScenarioStarted,
   recordScenarioCompleted,
   recordDebriefGenerated,

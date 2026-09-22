@@ -61,4 +61,18 @@ router.post('/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/preferences', (req, res) => {
+  const player = currentPlayer(req);
+  if (!player) return res.status(401).json({ error: 'login_required', message: 'Log in to save account preferences.' });
+  try {
+    return res.json({ player: playerStore.updatePreferences(player, req.body) });
+  } catch (err) {
+    const status = err.code === 'invalid_preferences' ? 400 : 500;
+    return res.status(status).json({
+      error: err.code || 'preferences_failed',
+      message: status === 400 ? err.message : 'Could not save preferences. Please try again.',
+    });
+  }
+});
+
 module.exports = { router, currentPlayer };

@@ -213,7 +213,6 @@ const skipBtn      = document.getElementById('skip-btn');
 const crewBtn      = document.getElementById('crew-btn');
 const tierMsg      = document.getElementById('tier-msg');
 
-const badgeUnit    = document.getElementById('badge-unit');
 const unitNameInput = document.getElementById('cfg-unit-name');
 const splashEl     = document.getElementById('splash');
 const playerLabel  = document.getElementById('player-label');
@@ -304,6 +303,7 @@ function printHr() {
 // Start-of-run "field briefing" — a styled card in place of the old wall of
 // dim system tips, so players actually read how to drive the sim.
 function printBriefing() {
+  if (!showFieldBriefing()) return;
   const tips = [
     { icon: 'Rx', key: 'rx', label: 'Order care',
       text: 'Use direct actions: <i>“check vitals,” “place an IV,” “give [drug, dose, route].”</i> Put separate actions in separate sentences. Ask for findings you need.' },
@@ -478,7 +478,45 @@ const PLAYER_CATEGORY_LABELS = {
   curveballs: 'Curveballs', pediatric: 'Pediatric', doa: 'DOA', ob: 'OB',
 };
 
+const briefingToggle = document.getElementById('briefing-toggle');
+const briefingSaveStatus = document.getElementById('briefing-save-status');
+
+function showFieldBriefing() {
+  return currentPlayer
+    ? currentPlayer.preferences?.showFieldBriefing !== false
+    : localStorage.getItem('ems_guest_briefing') !== 'off';
+}
+
+function renderBriefingPreference() {
+  briefingToggle.checked = showFieldBriefing();
+  briefingSaveStatus.textContent = currentPlayer ? 'Saved to your player account.' : 'Saved on this device for guests.';
+}
+
+briefingToggle.addEventListener('change', async () => {
+  const enabled = briefingToggle.checked;
+  if (!currentPlayer) {
+    localStorage.setItem('ems_guest_briefing', enabled ? 'on' : 'off');
+    renderBriefingPreference();
+    return;
+  }
+  const playerId = currentPlayer.id;
+  briefingToggle.disabled = true;
+  briefingSaveStatus.textContent = 'Saving…';
+  try {
+    const data = await apiPost('/api/auth/preferences', { showFieldBriefing: enabled });
+    if (currentPlayer?.id === playerId) currentPlayer.preferences = data.player.preferences;
+    renderBriefingPreference();
+  } catch (err) {
+    briefingToggle.checked = showFieldBriefing();
+    briefingSaveStatus.textContent = err.message;
+  } finally {
+    briefingToggle.disabled = false;
+  }
+});
+renderBriefingPreference();
+
 function renderPlayer() {
+  renderBriefingPreference();
   if (!playerLabel) return;
   if (currentPlayer) {
     const started = currentPlayer.stats?.scenariosStarted || 0;
@@ -844,7 +882,7 @@ if (themeToggleHdr)   themeToggleHdr.addEventListener('click',   toggleTheme);
 if (themeToggleStart) themeToggleStart.addEventListener('click', toggleTheme);
 applyTheme();
 
-refreshPlayer();
+const initialPlayerReady = refreshPlayer();
 checkResume();
 
 // ── Start scenario ────────────────────────────────────────────────────────
@@ -888,9 +926,6 @@ async function startScenario() {
     };
     output.innerHTML = '';
 
-    // Update header badges
-    badgeUnit.textContent = (data.unit_name || unit_name).toUpperCase();
-
     skipBtn.disabled = false;
     updateSkipBtn();
 
@@ -902,6 +937,7 @@ async function startScenario() {
 
     playSound(getDispatchSound(data.region));
     print(`Scenario ID: ${data.scenario_id}`, 'system');
+    await initialPlayerReady;
     printBriefing();
     printHr();
     // Show dispatch flash before the text appears
@@ -1596,7 +1632,6 @@ function resetToStart() {
   applyBackupStatus({ status: 'not_called', eta: null });
   resetCrewStatus();
 
-  setHeaderCollapsed(false);
   terminal.style.display    = 'none';
   startScreen.style.display = 'flex';
 
@@ -1799,6 +1834,31 @@ const ROLE_LABEL = {
   captain_BLS:  'Captain — EMT-B',
 };
 
+// Player-facing copy is separate from the crew's model instructions.
+const CREW_TENDENCIES = {
+  'Marcus Webb': 'Give him a clear job and he’ll do it well. Don’t expect him to volunteer or fill the silence. If something looks dangerous, you’ll get one blunt heads-up — listen the first time.',
+  'Destiny Okafor': 'She’ll have the basics going before you finish asking. Expect enthusiastic read-backs and a quick question if your plan is unusual. She likes knowing what you’re thinking.',
+  'Ray Kowalski': 'Ray usually has a second opinion, especially on cardiac calls. Talk him through your reasoning and he’ll ease up. Skip the explanation and you’ll still get the work done, with commentary.',
+  'Priya Nair': 'She’s keen to jump in, sometimes before she’s ready. Double-check her findings and watch her technique; confidence doesn’t always mean accuracy. She takes coaching well but needs close guidance.',
+  'Darnell Hughes': 'He keeps an eye on scene safety and the clock. On trauma calls, the next piece of kit is often already in his hand. If you’re lingering, he’ll let you know.',
+  'Brianna Solis': 'She knows the protocols, but you may need to keep things moving. Extra paperwork earns a sigh, heavy lifting gets a grumble, and she’s unlikely to offer for either.',
+  'Tyler Beaumont': 'Expect complaints early and pushback when you give him a job. Keep a close eye on his work. If something goes wrong, he’ll probably blame the gear before looking at his own technique.',
+  'Amara Diallo': 'She brings plenty of skill — and plenty of opinions. Expect advanced suggestions and a quick takeover if she spots a mistake. Show her you have a solid plan and she’s a strong teammate.',
+  'Jorge Medina': 'He’ll gravitate toward the family and help settle a tense scene. For unfamiliar care, give him a quick explanation and he’ll get on with it. People are his strong suit.',
+  'Quinn Abernathy': 'Steady, quiet, and waiting for direction. Tell him what you need and he’ll handle it. His answers are brief and useful, but he won’t usually offer the next step.',
+  'Captain Sandra Okonkwo': 'She gives you room to run your call and focuses on getting you the resources you need. Feedback usually comes in a quiet conversation after the handoff.',
+  'Captain Frank Delucci': 'Newer approaches tend to get a raised eyebrow and a question about liability. Be ready to explain your plan, even when it’s sound. Paperwork is never far from his mind.',
+  'Captain Yolanda Ferris': 'She’ll pitch in when things get complicated, flag mistakes without making a scene, and give credit when you get it right. A reassuring extra pair of hands.',
+  'Captain Dennis Holt': 'He arrives eager to help and full of suggestions. Check those suggestions carefully — his confidence runs ahead of his clinical skills. He’s cheerful about being steered back on track.',
+  'Danny Kowalczyk': 'He gets the BLS basics moving without much direction and knows exactly where his scope ends. When ALS arrives, he’s comfortable handing over the lead.',
+  'Keisha Tremblay': 'She’s excited to use what she’s learning, sometimes a little ahead of her scope. Expect questions and the occasional reminder to stick to BLS. She’s quick to take a correction on board.',
+  'Walt Garside': 'Clear, firm assignments help keep him moving. Otherwise, jobs tend to take a while, and carrying gear may come with a complaint. Expect to do some follow-up.',
+  'Fatima Al-Rashid': 'She’s good at making older patients and people facing a language barrier feel heard. Give her a BLS task and she’ll quietly get it done. She’s straightforward about what’s outside her scope.',
+  'Bo Hendricks': 'He’s quick to jump in and slow to admit a mistake. Watch his technique and be ready for an argument when you correct it. Calling for ALS may earn some pushback too.',
+  'Captain Ruth Callahan': 'She takes care of the scene, the resources, and getting more help on the way. On a tough call, she may already be arranging ALS or a helicopter. Scope concerns get a quiet word aside.',
+  'Captain Gord Beaulieu': 'Have your reasoning ready when you ask for ALS or air medical. He’s skeptical of newer gear and protocols, and may think you’re being overly cautious. Getting support can take some persistence.',
+};
+
 function buildCrewMemberCard(member) {
   const wrap = document.createElement('div');
   wrap.className = 'crew-member';
@@ -1853,14 +1913,14 @@ function buildCrewMemberCard(member) {
     wrap.appendChild(txt);
   }
 
-  if (member.trigger_behaviors) {
+  if (CREW_TENDENCIES[member.name]) {
     const lbl = document.createElement('div');
     lbl.className = 'crew-section-label';
     lbl.textContent = 'On-scene tendencies';
     wrap.appendChild(lbl);
     const txt = document.createElement('div');
     txt.className = 'crew-triggers';
-    txt.textContent = member.trigger_behaviors;
+    txt.textContent = CREW_TENDENCIES[member.name];
     wrap.appendChild(txt);
   }
 
@@ -2687,7 +2747,6 @@ async function resumeFromSnapshot(snap) {
   output.innerHTML = '';
 
   const m = snap.meta || {};
-  badgeUnit.textContent = (m.unit_name || 'Medic 1').toUpperCase();
 
   skipBtn.disabled = isClosed;
   updateSkipBtn();
@@ -2747,9 +2806,6 @@ async function resumeFromSnapshot(snap) {
 const vitalsBar       = document.getElementById('vitals-bar');
 const vitalsPanel     = document.getElementById('vitals-panel');
 const vitalsExpand    = document.getElementById('vitals-expand');
-const hdrCollapse     = document.getElementById('hdr-collapse');
-const headerReveal    = document.getElementById('header-reveal');
-const headerEl        = document.getElementById('header');
 
 // All possible field names we render from the [VITALS:] tag
 const VITAL_FIELDS = ['HR', 'BP', 'SpO2', 'ETCO2', 'RR', 'Rhythm', 'Temp', 'Glucose', 'GCS', 'Pain'];
@@ -3324,19 +3380,73 @@ function resetVitals() {
       sEl.textContent = '';
     }
   }
-  vitalsPanel.classList.remove('open');
-  vitalsExpand.classList.remove('open');
-  vitalsPanel.setAttribute('aria-hidden', 'true');
+  setVitalsPanelOpen(false);
+  clearVitalsScratch();
   const nibpCell = document.getElementById('nibp-cell');
   if (nibpCell) nibpCell.classList.remove('nibp-active', 'nibp-loading');
 }
 
-vitalsExpand.addEventListener('click', () => {
-  const willOpen = !vitalsPanel.classList.contains('open');
-  vitalsPanel.classList.toggle('open', willOpen);
-  vitalsExpand.classList.toggle('open', willOpen);
-  vitalsPanel.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+function setVitalsPanelOpen(open) {
+  vitalsPanel.hidden = !open;
+  vitalsPanel.classList.toggle('open', open);
+  vitalsExpand.classList.toggle('open', open);
+  vitalsPanel.setAttribute('aria-hidden', String(!open));
+  vitalsExpand.setAttribute('aria-expanded', String(open));
+}
+
+vitalsExpand.addEventListener('click', () => setVitalsPanelOpen(vitalsPanel.hidden));
+document.getElementById('vitals-close').addEventListener('click', () => {
+  setVitalsPanelOpen(false);
+  vitalsExpand.focus();
 });
+vitalsPanel.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    setVitalsPanelOpen(false);
+    vitalsExpand.focus();
+  }
+});
+
+// A fixed logical page retains doodles when the panel closes or the screen rotates.
+const vitalsScratch = document.getElementById('vitals-scratch');
+const scratchContext = vitalsScratch.getContext('2d');
+let scratchPointer = null;
+function clearVitalsScratch() {
+  scratchPointer = null;
+  scratchContext.clearRect(0, 0, vitalsScratch.width, vitalsScratch.height);
+}
+function scratchPoint(event) {
+  const rect = vitalsScratch.getBoundingClientRect();
+  return [(event.clientX - rect.left) * vitalsScratch.width / rect.width,
+    (event.clientY - rect.top) * vitalsScratch.height / rect.height];
+}
+vitalsScratch.addEventListener('pointerdown', event => {
+  if (!event.isPrimary || event.button !== 0 || scratchPointer !== null) return;
+  event.preventDefault();
+  scratchPointer = event.pointerId;
+  vitalsScratch.setPointerCapture(event.pointerId);
+  scratchContext.strokeStyle = '#283a57';
+  scratchContext.fillStyle = '#283a57';
+  scratchContext.lineWidth = 3;
+  scratchContext.lineCap = 'round';
+  scratchContext.lineJoin = 'round';
+  const [x, y] = scratchPoint(event);
+  scratchContext.beginPath();
+  scratchContext.arc(x, y, 1.5, 0, Math.PI * 2);
+  scratchContext.fill();
+  scratchContext.beginPath();
+  scratchContext.moveTo(x, y);
+});
+vitalsScratch.addEventListener('pointermove', event => {
+  if (scratchPointer !== event.pointerId) return;
+  scratchContext.lineTo(...scratchPoint(event));
+  scratchContext.stroke();
+});
+for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  vitalsScratch.addEventListener(name, event => {
+    if (scratchPointer === event.pointerId) scratchPointer = null;
+  });
+}
+document.getElementById('scratch-clear').addEventListener('click', clearVitalsScratch);
 
 // ── Mobile: fix iOS keyboard covering the input field ─────────────────────
 // On iOS, opening the virtual keyboard shrinks the visual viewport but NOT
@@ -3363,28 +3473,6 @@ window.addEventListener('scroll', () => {
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', adjustForViewport);
   window.visualViewport.addEventListener('scroll', adjustForViewport);
-}
-
-// ── Mobile: collapsible header ──────────────────────────────────────────
-function setHeaderCollapsed(collapse) {
-  if (!headerEl) return;
-  headerEl.classList.toggle('hdr-collapsed', collapse);
-  vitalsBar.classList.toggle('hdr-collapsed', collapse);
-  if (headerReveal) headerReveal.classList.toggle('visible', collapse);
-  if (hdrCollapse) {
-    hdrCollapse.textContent = collapse ? '▼' : '▲';
-    hdrCollapse.setAttribute('aria-label', collapse ? 'Show header' : 'Hide header');
-    hdrCollapse.title = collapse ? 'Show header' : 'Hide header';
-  }
-}
-
-if (hdrCollapse) {
-  hdrCollapse.addEventListener('click', () => {
-    setHeaderCollapsed(!headerEl.classList.contains('hdr-collapsed'));
-  });
-}
-if (headerReveal) {
-  headerReveal.addEventListener('click', () => setHeaderCollapsed(false));
 }
 
 document.addEventListener('click', e => {
