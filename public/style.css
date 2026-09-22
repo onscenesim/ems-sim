@@ -58,16 +58,25 @@ html, body {
 #start-screen {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  overflow-y: auto;
-  gap: 14px;
-  padding: 10px 0;
-  box-sizing: border-box;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
+/* Only this region scrolls. New menu sections cannot displace the toolbar. */
+.start-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0;
+}
+
+
 #start-card {
+  flex-shrink: 0;
+  margin: auto;
   background-color: var(--panel-bg);
   background-image: var(--noise);
   background-size: 160px 160px;
@@ -495,26 +504,65 @@ html, body {
 
 /* ── Company logo ──────────────────────────────────────────────────────── */
 
-.company-logo {
+.start-toolbar {
+  flex-shrink: 0;
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
+  gap: 28px;
+  padding: 6px 12px max(6px, env(safe-area-inset-bottom));
+  border-top: 2px solid var(--hi);
+  background: var(--chrome-bg);
 }
-
+.company-logo { display: flex; align-items: center; gap: 10px; }
 .magic-8-ball {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  width: 60px;
-  height: 60px;
 }
+.magic-8-ball svg { display: block; width: 100%; height: 100%; }
+.company-name { font-family: var(--font-block); font-size: 10px; color: #444; letter-spacing: 0.08em; }
+#options-open {
+  min-height: 44px;
+  padding: 6px 14px;
+  font: 16px var(--font-xp);
+  color: #263543;
+  background: var(--chrome-bg);
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  cursor: pointer;
+}
+#options-open:active { border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
+#eightball:focus-visible, #options-open:focus-visible { outline: 2px solid #315b81; outline-offset: 2px; }
 
-.company-name {
-  font-family: var(--font-block);
-  font-size: 11px;
-  color: #444;
-  letter-spacing: 0.08em;
+/* ── Options dialog ───────────────────────────────────────────────────── */
+#options-dialog {
+  margin: auto;
+  padding: 0;
+  width: min(420px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  background: var(--reference-bg);
+  color: var(--reference-text);
+  border: 3px solid;
+  border-color: #8e999b #303b40 #303b40 #8e999b;
+  font: 18px var(--font-xp);
 }
+#options-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+.options-titlebar { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 4px 14px; background: #25323b; color: #c8d0cf; }
+#options-title { font: 16px var(--font-xp); letter-spacing: 0.08em; }
+#options-close { width: 44px; height: 44px; background: transparent; border: none; color: inherit; font: 26px var(--font-xp); cursor: pointer; }
+.options-body { padding: 8px 16px 16px; }
+.option-row { display: flex; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; }
+.option-row input { width: 18px; height: 18px; flex-shrink: 0; accent-color: #738b87; }
+#briefing-save-status { display: block; margin: 0 0 10px 28px; font-size: 14px; color: var(--reference-dim); }
+.brief-options-note { margin: 12px 0 0; font: 14px var(--font-xp); color: #a2aba5; }
+body.light-mode .brief-options-note { color: #536159; }
 
 /* ── Terminal ─────────────────────────────────────────────────────────── */
 
@@ -1010,8 +1058,8 @@ html, body {
 }
 
 #eightball-response {
-  position: fixed;
-  bottom: 100px;
+  position: absolute;
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%) translateY(10px);
   font-family: var(--font-block);
@@ -1026,7 +1074,9 @@ html, body {
   border-color: var(--lo) var(--hi) var(--hi) var(--lo);
   padding: 9px 18px;
   text-align: center;
-  white-space: nowrap;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  white-space: normal;
   opacity: 0;
   transition: opacity 0.3s, transform 0.3s;
   pointer-events: none;
@@ -1049,8 +1099,8 @@ html, body {
   #player-actions button { padding: 5px 7px; }
   #progress-categories { grid-template-columns: repeat(2, 1fr); }
 
-  /* Fix scrollability: center+overflow makes top/bottom unreachable */
-  #start-screen { justify-content: flex-start; gap: 8px; padding: 8px 0 16px; }
+  /* Keep the scroll area separate from the always-visible toolbar. */
+  .start-content { padding: 8px 0; }
 
   .tile-grid {
     grid-template-columns: 1fr;
@@ -2355,7 +2405,6 @@ html, body {
 .notepad-scratch { min-width: 0; }
 .scratch-toolbar { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
 #vitals-scratch { display: block; width: 100%; height: 126px; margin: 4px 0; touch-action: none; cursor: crosshair; border: 1px dotted #7a8077; }
-#scratch-hint { display: block; font-size: 13px; color: #48555a; }
 
 @media (max-width: 600px) {
   #vitals-bar { padding: 3px 4px; gap: 0; flex-wrap: wrap; }
@@ -2516,39 +2565,6 @@ html, body {
 .crew-status-driving      { background: #2a2000; color: #ffd700; }
 .crew-status-en-route     { background: #2a1500; color: #ff8c00; }
 .crew-status-not-on-scene { background: #1a1a1a; color: #555;    }
-
-/* ── Sound toggle row + button ──────────────────────────────────────────── */
-#sound-row {
-  padding: 4px 4px 0;
-}
-#sound-toggle {
-  display: block;
-  width: 100%;
-  padding: 8px 14px;
-  font-family: inherit;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  font-weight: 600;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.18);
-  color: rgba(255,255,255,0.55);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-  box-sizing: border-box;
-}
-#sound-toggle:hover {
-  border-color: rgba(255,255,255,0.35);
-  color: rgba(255,255,255,0.85);
-}
-#sound-toggle.sound-off {
-  color: rgba(255,255,255,0.3);
-  border-color: rgba(255,255,255,0.1);
-}
-#sound-toggle.sound-off:hover {
-  color: rgba(255,255,255,0.5);
-  border-color: rgba(255,255,255,0.25);
-}
 
 /* ── Report button ──────────────────────────────────────────────────── */
 #report-btn {
@@ -3590,7 +3606,7 @@ html, body {
   animation: ioReveal 0.25s ease 1.5s forwards;
 }
 /* ── Theme toggle buttons ───────────────────────────────────────────────── */
-#theme-toggle-hdr {
+#theme-toggle-hdr, #sound-toggle-hdr {
   flex-shrink: 0;
   background: var(--chrome-bg);
   border: 2px solid;
@@ -3602,25 +3618,16 @@ html, body {
   line-height: 1;
   transition: background 0.1s;
 }
-#theme-toggle-hdr:hover { background: #dedad4; }
-
-.theme-row {
-  display: flex;
-  justify-content: center;
-  padding: 6px 0 2px;
+#theme-toggle-hdr:hover, #sound-toggle-hdr:hover { background: #dedad4; }
+#sound-toggle-hdr { min-width: 32px; display: flex; align-items: center; justify-content: center; }
+#sound-toggle-hdr svg { width: 18px; height: 18px; }
+#sound-toggle-hdr .speaker-muted { display: none; }
+#sound-toggle-hdr.sound-off .speaker-muted { display: block; }
+#sound-toggle-hdr.sound-off .speaker-waves { display: none; }
+@media (max-width: 600px) {
+  #sound-toggle-hdr, #theme-toggle-hdr { min-width: 44px; min-height: 44px; }
+  .start-toolbar { gap: 16px; }
 }
-#theme-toggle-start {
-  background: transparent;
-  border: none;
-  color: rgba(255,255,255,0.35);
-  font-family: var(--font-block);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  cursor: pointer;
-  padding: 4px 10px;
-  transition: color 0.15s;
-}
-#theme-toggle-start:hover { color: rgba(255,255,255,0.7); }
 
 /* ── Light mode overrides ───────────────────────────────────────────────── */
 /* Applied via body.light-mode class; toggled by JS and persisted in localStorage */
@@ -3643,8 +3650,6 @@ body.light-mode .tile-captain    { background-color: #1a3a3a; }
 body.light-mode .tile-desc        { color: rgba(0,0,0,0.45); }
 body.light-mode .start-tile      { background-color: #6a1010; }
 
-body.light-mode #theme-toggle-start { color: rgba(255,255,255,0.55); }
-body.light-mode #theme-toggle-start:hover { color: #fff; }
 
 /* Terminal output — the most important surface */
 body.light-mode #output {
@@ -4660,10 +4665,6 @@ body.light-mode {
 .crew-stats, .drug-route { font-size: 16px; }
 .pcr-value, .pcr-field-top .pcr-value { font-size: 18px; }
 .crew-member { border-left-color: #607680; }
-.briefing-preference { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 12px; color: #c8d0cf; font: 16px var(--font-xp); }
-.briefing-preference label { cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 8px; }
-.briefing-preference input { width: 18px; height: 18px; accent-color: #738b87; }
-#briefing-save-status { font-size: 14px; color: #a5b2b4; }
 @media (max-width: 600px) {
   :is(#crew-panel, #drug-panel, #patient-panel) { width: 100%; }
   :is(#crew-panel-close, #drug-panel-close, #patient-panel-close) { min-width: 44px; min-height: 44px; }

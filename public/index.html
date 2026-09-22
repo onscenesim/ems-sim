@@ -151,6 +151,7 @@
 
   <!-- ── Start screen ──────────────────────────────────────────────────── -->
   <div id="start-screen">
+    <div class="start-content">
     <div id="start-card">
       <div id="player-bar" aria-live="polite">
         <span id="player-label">PLAYING AS GUEST</span>
@@ -230,9 +231,6 @@
           </select>
           <div class="tile-desc" id="desc-category"></div>
         </div>
-        <div class="theme-row">
-          <button id="theme-toggle-start" aria-label="Toggle light mode">&#x2600; LIGHT MODE</button>
-        </div>
 
         <div class="cfg-tile tile-partner">
           <div class="tile-label">PARTNER</div>
@@ -254,15 +252,6 @@
 
       </div>
 
-      <div class="briefing-preference">
-        <label><input id="briefing-toggle" type="checkbox" checked> Show field briefing before each call</label>
-        <span id="briefing-save-status" role="status">Saved on this device for guests.</span>
-      </div>
-
-      <div id="sound-row">
-        <button id="sound-toggle" title="Toggle sound effects"></button>
-      </div>
-
       <div id="resume-tile">
         <span class="resume-tile-label">LAST RUN</span>
         <span id="resume-tile-body">— NO RECENT RUN —</span>
@@ -270,6 +259,18 @@
       </div>
 
     </div>
+
+    </div><!-- Only the menu content scrolls; the toolbar stays in view. -->
+
+    <dialog id="options-dialog" aria-labelledby="options-title">
+      <div class="options-titlebar"><h2 id="options-title">OPTIONS</h2><button id="options-close" type="button" aria-label="Close options">×</button></div>
+      <div class="options-body">
+        <label class="option-row"><input id="briefing-toggle" type="checkbox" checked> Show field briefing before each call</label>
+        <span id="briefing-save-status" role="status">Saved on this device for guests.</span>
+        <label class="option-row"><input id="sound-toggle" type="checkbox" checked> Sound effects</label>
+        <label class="option-row"><input id="theme-toggle-start" type="checkbox"> Light mode</label>
+      </div>
+    </dialog>
 
     <div id="auth-overlay" hidden>
       <form id="auth-form" class="auth-dialog">
@@ -305,9 +306,11 @@
       </section>
     </div>
 
-    <!-- Company logo — like the NASA meatball below the image map -->
+    <!-- Reserved toolbar space keeps the 8-ball reachable as the menu grows. -->
+    <div class="start-toolbar">
     <div class="company-logo">
-      <svg class="magic-8-ball" id="eightball" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+      <button class="magic-8-ball" id="eightball" type="button" aria-label="Ask the magic 8 ball">
+      <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <!-- Ball -->
         <circle cx="10" cy="10" r="9" fill="#0a0a0a"/>
         <!-- Shine -->
@@ -318,8 +321,11 @@
         <text x="10" y="14" text-anchor="middle" font-size="5" font-weight="bold"
               font-family="Arial" fill="#111">8</text>
       </svg>
+      </button>
       <div class="company-name">On Scene Sim</div>
-      <div id="eightball-response"></div>
+      <div id="eightball-response" role="status"></div>
+    </div>
+    <button id="options-open" type="button" aria-haspopup="dialog" aria-controls="options-dialog">OPTIONS</button>
     </div>
   </div>
 
@@ -335,6 +341,9 @@
       <span class="badge badge-crew" data-crew-role="partner" style="display:none" aria-label="Partner status"></span>
       <span class="badge badge-crew" data-crew-role="captain" style="display:none" aria-label="Captain status"></span>
   <span class="badge badge-crew" data-crew-role="driver" style="display:none" aria-label="Driver status"></span>
+      <button id="sound-toggle-hdr" type="button" title="Mute sound" aria-label="Sound effects" aria-pressed="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path class="speaker-waves" d="M16 8q4 4 0 8m3-11q7 7 0 14"/><path class="speaker-muted" d="m16 9 6 6m0-6-6 6"/></g></svg>
+      </button>
       <button id="theme-toggle-hdr" title="Toggle light/dark mode" aria-label="Toggle light mode">&#x2600;</button>
     </div>
 
@@ -394,8 +403,7 @@
       </div>
       <div class="notepad-scratch">
         <div class="scratch-toolbar"><span id="scratch-label">SCRATCH PAD</span><button id="scratch-clear" type="button">CLEAR</button></div>
-        <canvas id="vitals-scratch" width="800" height="300" aria-labelledby="scratch-label" aria-describedby="scratch-hint">Draw with your mouse or finger. These doodles are just for this call.</canvas>
-        <small id="scratch-hint">A little room to doodle. Mouse or finger · just for this call.</small>
+        <canvas id="vitals-scratch" width="800" height="300" aria-labelledby="scratch-label">Draw with your mouse or finger. These doodles are just for this call.</canvas>
       </div>
       </div>
     </div>

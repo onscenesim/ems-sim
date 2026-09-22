@@ -207,6 +207,7 @@ const startBtn      = document.getElementById('start-btn');
 // Apply saved theme immediately — before any rendering
 if (localStorage.getItem('ems_theme') === 'light') document.body.classList.add('light-mode');
 
+const soundToggleHdr = document.getElementById('sound-toggle-hdr');
 const soundToggleBtn = document.getElementById('sound-toggle');
 const reportBtn    = document.getElementById('report-btn');
 const skipBtn      = document.getElementById('skip-btn');
@@ -331,6 +332,7 @@ function printBriefing() {
         `<span class="brief-sub">You run the call — talk to your crew and patient in plain English.</span>` +
       `</div>` +
       `<div class="brief-rows">${rows}</div>` +
+      `<p class="brief-options-note">In the future, you can hide this briefing in the options menu.</p>` +
     `</div>`;
   output.appendChild(el);
   scrollBottom();
@@ -477,6 +479,10 @@ const PLAYER_CATEGORY_LABELS = {
   behavioral: 'Behavioral', neuro: 'Neuro', toxicology: 'Toxicology', arrest: 'Arrest',
   curveballs: 'Curveballs', pediatric: 'Pediatric', doa: 'DOA', ob: 'OB',
 };
+
+const optionsDialog = document.getElementById('options-dialog');
+document.getElementById('options-open').addEventListener('click', () => optionsDialog.showModal());
+document.getElementById('options-close').addEventListener('click', () => optionsDialog.close());
 
 const briefingToggle = document.getElementById('briefing-toggle');
 const briefingSaveStatus = document.getElementById('briefing-save-status');
@@ -848,15 +854,26 @@ reportBtn.addEventListener('click', () => {
 updateReportBtn();
 
 function updateSoundToggle() {
-  soundToggleBtn.textContent = soundEnabled ? '\u25cf  SOUND: ON' : '\u25cb  SOUND: OFF';
-  soundToggleBtn.classList.toggle('sound-off', !soundEnabled);
+  soundToggleBtn.checked = soundEnabled;
+  soundToggleHdr.classList.toggle('sound-off', !soundEnabled);
+  soundToggleHdr.setAttribute('aria-pressed', String(soundEnabled));
+  soundToggleHdr.title = soundEnabled ? 'Mute sound' : 'Enable sound';
 }
-soundToggleBtn.addEventListener('click', () => {
-  soundEnabled = !soundEnabled;
+function toggleSound(fromHeader = false) {
+  unlockAudio();
+  const next = !soundEnabled;
+  if (!next) {
+    stopAllSounds();
+    // The header gives one final radio click as confirmation before muting.
+    if (fromHeader) playSound('radio');
+  }
+  soundEnabled = next;
   localStorage.setItem('ems_sound', soundEnabled ? 'on' : 'off');
   updateSoundToggle();
-  if (soundEnabled) playSound('radio'); // confirmation crackle on enable
-});
+  if (soundEnabled) playSound('radio');
+}
+soundToggleBtn.addEventListener('change', () => toggleSound());
+soundToggleHdr.addEventListener('click', () => toggleSound(true));
 updateSoundToggle();
 
 // ── Theme (light / dark) toggle ──────────────────────────────────────────
@@ -865,10 +882,10 @@ const themeToggleStart = document.getElementById('theme-toggle-start');
 
 function applyTheme() {
   const isLight = document.body.classList.contains('light-mode');
-  const label = isLight ? '☽ DARK MODE' : '☀ LIGHT MODE';
   const hdrLabel = isLight ? '☽' : '☀';
   if (themeToggleHdr)   themeToggleHdr.textContent   = hdrLabel;
-  if (themeToggleStart) themeToggleStart.textContent  = label;
+  if (themeToggleStart) themeToggleStart.checked = isLight;
+  if (themeToggleHdr) themeToggleHdr.setAttribute('aria-label', isLight ? 'Switch to dark mode' : 'Switch to light mode');
 }
 
 function toggleTheme() {
@@ -879,7 +896,7 @@ function toggleTheme() {
 }
 
 if (themeToggleHdr)   themeToggleHdr.addEventListener('click',   toggleTheme);
-if (themeToggleStart) themeToggleStart.addEventListener('click', toggleTheme);
+if (themeToggleStart) themeToggleStart.addEventListener('change', toggleTheme);
 applyTheme();
 
 const initialPlayerReady = refreshPlayer();
