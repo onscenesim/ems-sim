@@ -2373,7 +2373,7 @@ body.light-mode .brief-options-note { color: #536159; }
   background: linear-gradient(90deg, transparent 14px, #a878704d 14px, #a878704d 15px, transparent 15px),
     repeating-linear-gradient(transparent 0 27px, #69849b30 27px 28px);
 }
-.vital-row { display: flex; align-items: baseline; gap: 10px; min-height: 28px; padding: 4px 0; border-bottom: 1px dotted #7a80774a; }
+.vital-row { display: flex; align-items: baseline; gap: 10px; min-height: 28px; padding: 4px 0; }
 .vital-row-label { flex: 0 0 72px; color: #48555a; font: 14px var(--font-xp); text-transform: uppercase; }
 .vital-row-value { flex: 1 1 auto; color: #202f3e; font-size: 18px; }
 .vital-row-stamp { font-size: 13px; color: #46525c; font-family: var(--font-xp); }
