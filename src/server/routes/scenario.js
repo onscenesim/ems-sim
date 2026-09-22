@@ -16,7 +16,8 @@ const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
 
 const { operationsFor } = require('../../engine/operations');
 const { currentPlayer } = require('./auth');
-const { recordScenarioStarted, recordScenarioCompleted, recordDebriefGenerated } = require('../playerStore');
+const { recordScenarioStarted, recordScenarioCompleted, recordDebriefGenerated, recordGloveboxSorted, publicPlayer } = require('../playerStore');
+const { createGlovebox, gloveboxView, sortItem, CALL_XP } = require('../../engine/glovebox');
 
 const COOKIE_NAME = 'ems_sid';
 const OWNER_COOKIE_NAME = 'ems_owner';
@@ -55,6 +56,7 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     playerId: session.playerId || null,
     completionCredited: session.completionCredited || false,
     debriefCredited: session.debriefCredited || false,
+    glovebox: session.glovebox || null,
     tier,
     seed:        session.seed,
     messages:    session.messages,
@@ -144,6 +146,7 @@ function persistSession(id, session) {
     playerId: session.playerId || null,
     completionCredited: session.completionCredited || false,
     debriefCredited: session.debriefCredited || false,
+    glovebox: session.glovebox || null,
     operationResults: operationsFor(session).snapshot(),
   });
 }
@@ -151,6 +154,42 @@ function persistSession(id, session) {
 function sendOperationError(res, err) {
   return res.status(err.status || 500).json({ error: err.code || 'api_error', message: err.message });
 }
+
+function gloveboxPayload(req, session) {
+  const player = currentPlayer(req);
+  const ownsProgress = player && player.id === session.playerId;
+  return {
+    glovebox: gloveboxView(session.glovebox),
+    player: ownsProgress ? publicPlayer(player) : null,
+    progressScope: session.playerId ? (ownsProgress ? 'player' : 'other-player') : 'guest',
+  };
+}
+
+router.get('/:id/glovebox', (req, res) => {
+  const session = ownedSession(req, res);
+  if (!session) return;
+  session.glovebox ||= createGlovebox(req.params.id);
+  persistSession(req.params.id, session);
+  return res.json(gloveboxPayload(req, session));
+});
+
+router.post('/:id/glovebox', (req, res) => {
+  const session = ownedSession(req, res);
+  if (!session) return;
+  session.glovebox ||= createGlovebox(req.params.id);
+  // This synchronous transaction never rewrites clinical session state or waits
+  // for a model turn. Player rewards have their own durable idempotency ledger.
+  const next = structuredClone(session.glovebox);
+  try {
+    const result = sortItem(next, req.body?.item, req.body?.destination);
+    if (!result.duplicate && session.playerId) recordGloveboxSorted(session.playerId, req.params.id, req.body.item, req.body.destination);
+    session.glovebox = next;
+    persistSession(req.params.id, session);
+    return res.json({ ...gloveboxPayload(req, session), ...result });
+  } catch (err) {
+    return sendOperationError(res, err);
+  }
+});
 
 // STOP is acknowledged only after cancellation/rollback, or with the result if
 // the operation committed first. It deliberately does not abort the browser's
@@ -204,6 +243,8 @@ router.get('/resume', (req, res) => {
       patients: snapshot.patientRecords || initialPatientRecords(snapshot.seed, snapshot.demo_source),
       sceneMinute:  snapshot.sceneMinute || 0,
       closed:       snapshot.closed      || false,
+      completionXP: snapshot.closed ? (CALL_XP[snapshot.seed?.difficulty] || CALL_XP.NORMAL) : 0,
+      progressScope: snapshot.playerId ? 'player' : 'guest',
       debriefed:    snapshot.debriefed   || false,
       hasLoaded:    snapshot.hasLoaded   || false,
       moving:       snapshot.moving      || false,
@@ -381,7 +422,6 @@ router.post('/:id/turn', async (req, res) => {
   }
 
   try {
-    const wasClosed = session.closed;
     const payload = await operationsFor(session).run(operation_id, JSON.stringify({
       message: message.trim(), report_mode: report_mode === true, skipMode,
       proc_allow: proc_allow || [], proc_deny: proc_deny || [],
@@ -415,12 +455,12 @@ router.post('/:id/turn', async (req, res) => {
                         session.sceneMinute >= session.seed.decompensation_clock,
       };
     });
-    if (!wasClosed && session.closed && session.playerId && !session.completionCredited) {
-      recordScenarioCompleted(session.playerId, session.seed);
+    if (session.closed && session.playerId && !session.completionCredited) {
+      recordScenarioCompleted(session.playerId, session.seed, req.params.id);
       session.completionCredited = true;
     }
     persistSession(req.params.id, session);
-    return res.json(payload);
+    return res.json({ ...payload, ...(session.closed ? { completionXP: CALL_XP[session.seed.difficulty] || CALL_XP.NORMAL, progressScope: session.playerId ? 'player' : 'guest' } : {}) });
   } catch (err) {
     console.error('[scenario/turn]', err.message);
     return sendOperationError(res, err);

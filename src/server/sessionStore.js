@@ -191,6 +191,7 @@ function restoreSession(snapshot) {
   session.playerId            = snapshot.playerId            || null;
   session.completionCredited  = snapshot.completionCredited  || false;
   session.debriefCredited     = snapshot.debriefCredited     || false;
+  session.glovebox            = snapshot.glovebox || null;
   store.set(snapshot.id, {
     session,
     lastActive: Date.now(),

@@ -6,7 +6,7 @@
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css?v=83">
-  <link rel="stylesheet" href="glovebox.css?v=1">
+  <link rel="stylesheet" href="glovebox.css?v=2">
 </head>
 <body>
 
@@ -297,6 +297,11 @@
           <div><strong id="progress-coverage">0/12</strong><span>CATEGORIES SEEN</span></div>
           <div><strong id="progress-debriefs">0</strong><span>DEBRIEFS RUN</span></div>
         </div>
+        <div class="progress-xp-card"><strong><span id="progress-xp">0</span> XP</strong><span>A gloriously useless metric.</span></div>
+        <p id="progress-sorted" class="progress-note"></p>
+        <p class="progress-note">Completed calls: Easy +50 · Normal +100 · Hard +150 · Black Cloud +200. Sorting glovebox finds: +5 each.</p>
+        <p class="progress-note">Coming later: notebook stickers, stains, and different paper. For now, just for funnies.</p>
+        <p id="progress-storage" class="progress-note"></p>
         <div class="progress-heading">CATEGORY COVERAGE</div>
         <div id="progress-categories"></div>
         <div id="progress-recent"></div>
@@ -1894,6 +1899,7 @@
       <h2 id="glovebox-title">The Glovebox</h2>
       <button id="glovebox-close" class="xp-close" type="button" aria-label="Close the glovebox" autofocus></button>
     </header>
+    <div class="glovebox-body">
     <div class="glovebox-liner">
       <div class="glovebox-stamp" aria-hidden="true">PERSONAL EFFECTS / MISC.</div>
       <div id="glovebox-tray" role="group" aria-label="Glovebox items"></div>
@@ -1906,14 +1912,29 @@
         <p id="glovebox-item-lore"></p>
       </div>
     </div>
-    <p id="glovebox-hint">Tap to inspect · Hold and drag to rummage</p>
+    </div>
+    <div class="glovebox-sorting" role="group" aria-label="Sort the selected item">
+      <button type="button" id="glovebox-pocket" class="glovebox-drop" data-destination="pocket" aria-label="Put selected item in your pocket">
+        <svg viewBox="0 0 48 44" aria-hidden="true"><path d="M7 5h34v24L24 40 7 29z" fill="#647e89" stroke="#a0adb1" stroke-width="2"/><path d="M12 10h24v16L24 34 12 26z" fill="none" stroke="#a9b7b2" stroke-dasharray="3 3"/><path d="M8 12h32" stroke="#243b46" stroke-width="3"/></svg>
+        <span>POCKET <small id="glovebox-pocket-count">0 kept</small></span>
+      </button>
+      <div class="glovebox-xp"><strong id="glovebox-xp">0 XP</strong><small>THIS CALL</small></div>
+      <button type="button" id="glovebox-trash" class="glovebox-drop" data-destination="trash" aria-label="Throw selected item in the trash">
+        <svg viewBox="0 0 48 44" aria-hidden="true"><path d="m10 12 3 27h22l3-27z" fill="#7d8a83" stroke="#b0b8a7" stroke-width="2"/><path d="M7 9h34M18 8V4h12v4M19 17v16M29 17v16" fill="none" stroke="#aab5a6" stroke-width="3"/></svg>
+        <span>TRASH <small id="glovebox-trash-count">0 tossed</small></span>
+      </button>
+    </div>
+    <p id="glovebox-feedback" role="status">Keep what someone might want back. Bin the obvious garbage.</p>
+    <details id="glovebox-inventory"><summary>Pocket inventory · this call</summary><ul id="glovebox-inventory-list"></ul></details>
+    <p id="glovebox-hint">Tap to inspect · Drag to pocket or trash · Clear two, uncover one</p>
   </dialog>
 
   <script src="medication-aliases.js"></script>
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-  <script src="app.js?v=79"></script>
-  <script src="glovebox.js?v=1"></script>
+  <script src="app.js?v=80"></script>
+  <script src="glovebox-catalog.js?v=1"></script>
+  <script src="glovebox.js?v=2"></script>
 </body>
 </html>

@@ -5,6 +5,10 @@
 // ── Sound effects ─────────────────────────────────────────────────────────────────────────
 const SOUNDS = {
   glovebox: new Audio('/sounds/GloveboxClick.wav'),
+  rummage: new Audio('/sounds/GloveboxRummage.wav'),
+  pocket: new Audio('/sounds/PocketRustle.wav'),
+  trash: new Audio('/sounds/TrashCrinkle.wav'),
+  paper: new Audio('/sounds/NotebookFlip.wav'),
   defib_outside: new Audio('/sounds/Defiboutsideambulance.m4a'),
   defib_amb:     new Audio('/sounds/Defibinambulance.m4a'),
   fail:     new Audio('/sounds/Diceroll_fail.m4a'),
@@ -528,18 +532,18 @@ function renderPlayer() {
   if (currentPlayer) {
     const started = currentPlayer.stats?.scenariosStarted || 0;
     const completed = currentPlayer.stats?.scenariosCompleted || 0;
-    playerLabel.textContent = `PLAYER: ${currentPlayer.displayName} · ${started} STARTED · ${completed} COMPLETED`;
+    playerLabel.textContent = `PLAYER: ${currentPlayer.displayName} · ${started} STARTED · ${completed} COMPLETED · ${currentPlayer.stats?.xp || 0} XP`;
     playerLabel.classList.add('signed-in');
     playerSignup.hidden = true;
     playerLogin.hidden = true;
     playerProgress.hidden = false;
     playerLogout.hidden = false;
   } else {
-    playerLabel.textContent = 'PLAYING AS GUEST · CREATE A PLAYER TO TRACK PROGRESS';
+    playerLabel.textContent = `PLAYING AS GUEST · ${guestProgressStats().xp} XP · PROGRESS SAVED ON THIS DEVICE`;
     playerLabel.classList.remove('signed-in');
     playerSignup.hidden = false;
     playerLogin.hidden = false;
-    playerProgress.hidden = true;
+    playerProgress.hidden = false;
     playerLogout.hidden = true;
   }
 }
@@ -574,9 +578,43 @@ function hideAuth() {
   authError.textContent = '';
 }
 
+function guestProgressLedger() {
+  try {
+    const data = JSON.parse(localStorage.getItem('ems_guest_progress') || '{}');
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  } catch { return {}; }
+}
+
+function recordGuestProgress(callId, patch) {
+  if (!callId) return;
+  const ledger = guestProgressLedger();
+  const previous = ledger[callId] || {};
+  ledger[callId] = { ...previous, ...patch, gloveboxXP: Math.max(previous.gloveboxXP || 0, patch.gloveboxXP || 0) };
+  try { localStorage.setItem('ems_guest_progress', JSON.stringify(ledger)); } catch { /* private browsing can disable storage */ }
+  renderPlayer();
+}
+
+function guestProgressStats() {
+  const calls = Object.values(guestProgressLedger()).filter(call => call && typeof call === 'object');
+  const completed = calls.filter(call => call.completed);
+  const counts = {};
+  completed.forEach(call => { if (call.category) counts[call.category] = (counts[call.category] || 0) + 1; });
+  return {
+    xp: calls.reduce((sum, call) => sum + (Number(call.gloveboxXP) || 0) + (call.completed ? Number(call.completionXP) || 0 : 0), 0),
+    scenariosCompleted: completed.length,
+    debriefsGenerated: calls.filter(call => call.debrief).length,
+    categoryCompletions: counts,
+    recentCategories: completed.map(call => call.category).filter(Boolean).slice(-5),
+    itemsRecovered: calls.reduce((sum, call) => sum + (call.pocket || 0), 0),
+    itemsDiscarded: calls.reduce((sum, call) => sum + (call.trash || 0), 0),
+  };
+}
+
 function renderProgress() {
-  if (!currentPlayer) return;
-  const stats = currentPlayer.stats || {};
+  const stats = currentPlayer?.stats || guestProgressStats();
+  document.getElementById('progress-xp').textContent = stats.xp || 0;
+  document.getElementById('progress-sorted').textContent = `${stats.itemsRecovered || 0} items recovered · ${stats.itemsDiscarded || 0} pieces of trash removed`;
+  document.getElementById('progress-storage').textContent = currentPlayer ? 'Saved to your player account.' : 'Guest progress is saved on this device.';
   const counts = stats.categoryCompletions || {};
   const coverage = Object.keys(PLAYER_CATEGORY_LABELS).filter(category => (counts[category] || 0) > 0).length;
   document.getElementById('progress-completed').textContent = stats.scenariosCompleted || 0;
@@ -1181,6 +1219,9 @@ async function sendTurn(msg, opts = {}) {
     }
 
     if (data.closed) {
+      if (data.progressScope === 'guest') recordGuestProgress(sessionId, { completed: true, completionXP: data.completionXP || 0, category: localTranscript?.meta?.category });
+      else refreshPlayer();
+      if (data.completionXP) print(`+${data.completionXP} XP · Call complete. A gloriously useless metric.`, 'system');
       isClosed = true;
       skipBtn.disabled = true;
       updateSkipBtn();          // hide the END CALL button once the call is closed
@@ -1484,6 +1525,7 @@ function showDebriefCTA() {
     try {
       debriefOperationId ||= newOperationId();
       const data = await apiOperation(`/api/scenario/${sessionId}/debrief`, {}, debriefOperationId);
+      if (!currentPlayer) recordGuestProgress(sessionId, { debrief: true });
       if (localTranscript) localTranscript.debriefText = data.debrief;
       cta.remove();
       printHr();
@@ -2776,6 +2818,7 @@ async function resumeFromSnapshot(snap) {
   notebookPatients = [];
   notebookPatientId = null;
   sessionId       = snap.session_id;
+  if (snap.closed && snap.progressScope === 'guest') recordGuestProgress(sessionId, { completed: true, completionXP: snap.completionXP || 0, category: snap.meta?.category });
   isClosed        = snap.closed || false;
   waitingDebrief  = false;
   // Restore transport phase so the skip button reflects where the call left off.
@@ -3442,7 +3485,10 @@ function setVitalsPanelOpen(open) {
   vitalsExpand.setAttribute('aria-expanded', String(open));
 }
 
-vitalsExpand.addEventListener('click', () => setVitalsPanelOpen(vitalsPanel.hidden));
+vitalsExpand.addEventListener('click', () => {
+  if (vitalsPanel.hidden) playSound('paper');
+  setVitalsPanelOpen(vitalsPanel.hidden);
+});
 document.getElementById('vitals-close').addEventListener('click', () => {
   setVitalsPanelOpen(false);
   vitalsExpand.focus();

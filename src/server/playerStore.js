@@ -5,6 +5,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const { DATA_DIR } = require('./storagePath');
+const { SORT_XP, CALL_XP } = require('../engine/glovebox');
 
 const scrypt = promisify(crypto.scrypt);
 const STORE_PATH = path.join(DATA_DIR, 'players.json');
@@ -86,6 +87,9 @@ function ensureStats(player) {
     categoryCompletions[category] = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
   }
   player.stats = {
+    xp: Math.max(0, Math.floor(Number(existing.xp) || 0)),
+    itemsRecovered: Math.max(0, Math.floor(Number(existing.itemsRecovered) || 0)),
+    itemsDiscarded: Math.max(0, Math.floor(Number(existing.itemsDiscarded) || 0)),
     scenariosStarted: Number(existing.scenariosStarted) || 0,
     scenariosCompleted: Number(existing.scenariosCompleted) || 0,
     debriefsGenerated: Number(existing.debriefsGenerated) || 0,
@@ -106,6 +110,9 @@ function publicPlayer(player) {
     createdAt: player.createdAt,
     preferences: { showFieldBriefing: player.preferences?.showFieldBriefing !== false },
     stats: {
+      xp: stats.xp,
+      itemsRecovered: stats.itemsRecovered,
+      itemsDiscarded: stats.itemsDiscarded,
       scenariosStarted: stats.scenariosStarted,
       scenariosCompleted: stats.scenariosCompleted,
       debriefsGenerated: stats.debriefsGenerated,
@@ -241,11 +248,16 @@ function recordScenarioStarted(playerId) {
   try { saveStore(); } catch (err) { console.error('[playerStore] start tracking failed:', err.message); }
 }
 
-function recordScenarioCompleted(playerId, seed = {}) {
+function recordScenarioCompleted(playerId, seed = {}, callId = null) {
   const player = store.players.find(candidate => candidate.id === playerId);
   if (!player) return;
+  const key = callId && `${callId}:complete`;
+  if (key && player.xpEvents?.[key]) return;
+  const previous = structuredClone(player);
   const stats = ensureStats(player);
   stats.scenariosCompleted += 1;
+  stats.xp += CALL_XP[seed.difficulty] || CALL_XP.NORMAL;
+  if (key) { player.xpEvents ||= {}; player.xpEvents[key] = true; }
   if (TRACKED_CATEGORIES.includes(seed.category)) {
     stats.categoryCompletions[seed.category] += 1;
     stats.recentCategories.push(seed.category);
@@ -253,7 +265,25 @@ function recordScenarioCompleted(playerId, seed = {}) {
   }
   stats.lastCompletedAt = Date.now();
   player.lastSeenAt = stats.lastCompletedAt;
-  try { saveStore(); } catch (err) { console.error('[playerStore] completion tracking failed:', err.message); }
+  try { saveStore(); } catch (err) { Object.assign(player, previous); player.xpEvents = previous.xpEvents; throw err; }
+}
+
+function recordGloveboxSorted(playerId, callId, itemId, destination) {
+  const player = store.players.find(candidate => candidate.id === playerId);
+  if (!player) return;
+  const key = `${callId}:glovebox:${itemId}`;
+  if (player.xpEvents?.[key]) return;
+  const previous = structuredClone(player);
+  const stats = ensureStats(player);
+  stats.xp += SORT_XP;
+  stats[destination === 'pocket' ? 'itemsRecovered' : 'itemsDiscarded'] += 1;
+  player.xpEvents ||= {};
+  player.xpEvents[key] = true;
+  try { saveStore(); } catch (err) {
+    player.stats = previous.stats;
+    player.xpEvents = previous.xpEvents;
+    throw err;
+  }
 }
 
 function recordDebriefGenerated(playerId) {
@@ -276,5 +306,6 @@ module.exports = {
   updatePreferences,
   recordScenarioStarted,
   recordScenarioCompleted,
+  recordGloveboxSorted,
   recordDebriefGenerated,
 };

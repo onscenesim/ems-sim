@@ -574,6 +574,9 @@ class Session {
     const draft = Object.assign(Object.create(Object.getPrototypeOf(this)), structuredClone(this));
     const result = await draft._send(userText, reportMode, skipMode, procOverrides, options);
     options.signal?.throwIfAborted();
+    // Rummaging can finish while a clinical draft awaits the model. It has
+    // independent state and rewards, so never replace it with an older draft.
+    delete draft.glovebox;
     Object.assign(this, draft);
     return result;
   }
