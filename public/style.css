@@ -556,7 +556,7 @@ html, body {
 #options-dialog::backdrop { background: rgb(0 0 0 / 65%); }
 .options-titlebar { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 4px 14px; background: #25323b; color: #c8d0cf; }
 #options-title { font: 16px var(--font-xp); letter-spacing: 0.08em; }
-#options-close { width: 44px; height: 44px; background: transparent; border: none; color: inherit; font: 26px var(--font-xp); cursor: pointer; }
+
 .options-body { padding: 8px 16px 16px; }
 .option-row { display: flex; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; }
 .option-row input { width: 18px; height: 18px; flex-shrink: 0; accent-color: #738b87; }
@@ -570,7 +570,11 @@ body.light-mode .brief-options-note { color: #536159; }
   display: none;
   flex-direction: column;
   height: 100vh;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: 0;
   overflow: hidden;   /* clips translated-offscreen side panels (drug / crew) */
 }
 
@@ -583,6 +587,7 @@ body.light-mode .brief-options-note { color: #536159; }
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 #hdr-title {
@@ -984,6 +989,7 @@ body.light-mode .brief-options-note { color: #536159; }
 
 #user-input {
   flex: 1;
+  min-width: 0;
   background: #fff;
   border: 2px solid;
   border-color: var(--lo) var(--hi) var(--hi) var(--lo);
@@ -1144,12 +1150,12 @@ body.light-mode .brief-options-note { color: #536159; }
   .magic-8-ball { width: 50px; height: 50px; }
   .company-logo  { gap: 6px; }
 
-  /* Terminal header: single row, no wrap.
-     [PAID] [NORMAL] [ALS] [SUBURBAN ─────────] [END SCENARIO] */
+  /* Controls and scene status have separate rows on narrow screens. */
   #header {
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: stretch;
     gap: 6px;
-    padding: 5px 10px;
+    padding: 5px 8px;
   }
 
   #hdr-title {
@@ -1157,7 +1163,8 @@ body.light-mode .brief-options-note { color: #536159; }
   }
 
   #hdr-badges {
-    flex: 1;
+    order: 2;
+    flex: none;
     min-width: 0;
     gap: 3px;
   }
@@ -1674,18 +1681,9 @@ body.light-mode .brief-options-note { color: #536159; }
   text-transform: uppercase;
 }
 
-#drug-panel-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: rgba(255,255,255,0.75);
-  cursor: pointer;
-  padding: 0 2px;
-  line-height: 1;
-  flex-shrink: 0;
-}
 
-#drug-panel-close:hover { color: var(--reference-text); }
+
+
 
 /* ── Body ─────────────────────────────────────────────────────── */
 
@@ -1843,17 +1841,8 @@ body.light-mode .brief-options-note { color: #536159; }
   text-transform: uppercase;
 }
 
-#crew-panel-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: rgba(255,255,255,0.75);
-  cursor: pointer;
-  padding: 0 2px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-#crew-panel-close:hover { color: var(--reference-text); }
+
+
 
 #crew-panel-body {
   flex: 1;
@@ -2013,17 +2002,8 @@ body.light-mode .brief-options-note { color: #536159; }
   text-transform: uppercase;
 }
 
-#patient-panel-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: rgba(255,255,255,0.75);
-  cursor: pointer;
-  padding: 0 2px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-#patient-panel-close:hover { color: var(--reference-text); }
+
+
 
 #patient-panel-body {
   flex: 1;
@@ -2387,7 +2367,7 @@ body.light-mode .brief-options-note { color: #536159; }
   cursor: pointer;
 }
 #vitals-panel button:active { border-color: #535b5d #edede0 #edede0 #535b5d; }
-#vitals-panel #vitals-close { min-width: 32px; min-height: 32px; font-size: 22px; padding: 0; }
+
 .notepad-body {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(240px, 1fr);
@@ -2422,7 +2402,7 @@ body.light-mode .brief-options-note { color: #536159; }
   .notepad-body { grid-template-columns: 1fr; gap: 8px; padding: 8px 12px 10px 22px; }
   #vitals-panel { max-height: 38dvh; }
   .notepad-titlebar { font-size: 12px; }
-  #vitals-panel #vitals-close { min-width: 44px; min-height: 44px; }
+
   #scratch-clear { min-height: 44px; }
 }
 
@@ -4668,4 +4648,66 @@ body.light-mode {
 @media (max-width: 600px) {
   :is(#crew-panel, #drug-panel, #patient-panel) { width: 100%; }
   :is(#crew-panel-close, #drug-panel-close, #patient-panel-close) { min-width: 44px; min-height: 44px; }
+}
+
+/* Reusable pixel close button: the same target on every dismissible window. */
+.xp-close, #vitals-panel .xp-close {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  padding: 0;
+  color: white;
+  background: linear-gradient(135deg, #ef8e75 0%, #d44830 35%, #bd291d 80%);
+  border: 2px solid;
+  border-color: #ffd1b7 #742018 #742018 #ffd1b7;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px #e76a51;
+  cursor: pointer;
+}
+.xp-close::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='white' d='M1 1h2v1h1v1h1v1h2V3h1V2h1V1h2v2h-1v1H9v1H8v2h1v1h1v1h1v2H9v-1H8V9H7V8H5v1H4v1H3v1H1V9h1V8h1V7h1V5H3V4H2V3H1z'/%3E%3C/svg%3E") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+.xp-close:hover, #vitals-panel .xp-close:hover { background: #e45236; }
+.xp-close:active, #vitals-panel .xp-close:active { border-color: #742018 #ffd1b7 #ffd1b7 #742018; background: #a82d21; }
+.xp-close:focus-visible { outline: 2px solid #f7e59d; outline-offset: 2px; }
+.dialog-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.dialog-titlebar :is(.auth-title, .confirm-title) { margin: 0; }
+
+#hdr-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
+#hdr-controls #crew-btn { margin: 0; min-height: 44px; }
+#hdr-badges { min-width: 0; align-items: center; }
+#hdr-badges .badge { max-width: 100%; overflow-wrap: anywhere; }
+#patient-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 4px 9px;
+  background: #31555c;
+  color: #f1ead0;
+  border: 2px solid;
+  border-color: #98bab2 #182e33 #182e33 #98bab2;
+  font: 16px var(--font-xp);
+  cursor: pointer;
+}
+#patient-btn svg { width: 28px; height: 28px; flex-shrink: 0; }
+#patient-btn:hover { background: #3c6870; }
+#patient-btn:active { border-color: #182e33 #98bab2 #98bab2 #182e33; }
+#patient-btn:focus-visible { outline: 2px solid #315b81; outline-offset: 2px; }
+#output { min-height: 0; overflow-anchor: none; overscroll-behavior: contain; }
+#input-row { flex-shrink: 0; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+#vitals-panel { flex-shrink: 1; min-height: 0; max-height: min(340px, calc(var(--terminal-height, 100dvh) * 0.38)); }
+@media (max-width: 600px) {
+  #hdr-controls { width: 100%; margin: 0; justify-content: flex-end; }
+  #hdr-badges .badge { font: 14px var(--font-xp); letter-spacing: 0; padding: 3px 5px; }
+  #user-input, #send-btn, #skip-btn { min-height: 44px; }
 }

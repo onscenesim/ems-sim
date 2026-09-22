@@ -606,6 +606,7 @@ if (playerSignup) playerSignup.addEventListener('click', () => showAuth('signup'
 if (playerLogin) playerLogin.addEventListener('click', () => showAuth('login'));
 if (playerProgress) playerProgress.addEventListener('click', showProgress);
 if (authCancel) authCancel.addEventListener('click', hideAuth);
+document.getElementById('auth-close').addEventListener('click', hideAuth);
 if (progressClose) progressClose.addEventListener('click', hideProgress);
 if (authOverlay) authOverlay.addEventListener('click', event => {
   if (event.target === authOverlay) hideAuth();
@@ -951,6 +952,7 @@ async function startScenario() {
     // Switch to terminal
     startScreen.style.display = 'none';
     terminal.style.display    = 'flex';
+    adjustForViewport();
 
     playSound(getDispatchSound(data.region));
     print(`Scenario ID: ${data.scenario_id}`, 'system');
@@ -1005,7 +1007,7 @@ async function startScenario() {
     }
 
     setLoading(false);
-    userInput.focus();
+    focusActionInput();
 
 
   } catch (err) {
@@ -1315,7 +1317,7 @@ function showProcConfirm(msg, opts, items) {
     wrap.remove();
     userInput.value = msg;
     setLoading(false);
-    userInput.focus();
+    focusActionInput(true);
   });
 
   continueBtn.addEventListener('click', () => {
@@ -1582,7 +1584,7 @@ function showConfirm({ title, body, confirmLabel, onConfirm }) {
   const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
   const onKey = (e) => {
     if (e.key === 'Escape') { close(); }
-    else if (e.key === 'Enter') { close(); onConfirm(); }
+    else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { close(); onConfirm(); }
   };
 
   cancel.addEventListener('click', close);
@@ -1592,7 +1594,15 @@ function showConfirm({ title, body, confirmLabel, onConfirm }) {
 
   row.appendChild(cancel);
   row.appendChild(ok);
-  box.appendChild(h);
+  const titlebar = document.createElement('div');
+  titlebar.className = 'dialog-titlebar';
+  const dismiss = document.createElement('button');
+  dismiss.className = 'xp-close confirm-close';
+  dismiss.type = 'button';
+  dismiss.setAttribute('aria-label', 'Close confirmation');
+  dismiss.addEventListener('click', close);
+  titlebar.append(h, dismiss);
+  box.appendChild(titlebar);
   box.appendChild(p);
   box.appendChild(row);
   overlay.appendChild(box);
@@ -1650,6 +1660,7 @@ function resetToStart() {
   resetCrewStatus();
 
   terminal.style.display    = 'none';
+  resetTerminalHeight();
   startScreen.style.display = 'flex';
 
   startBtn.disabled    = false;
@@ -1662,6 +1673,13 @@ function resetToStart() {
 }
 
 // ── Input controls ────────────────────────────────────────────────────────
+
+// Let touch users decide when to open the keyboard. Desktop focus must not scroll.
+function focusActionInput(explicit = false) {
+  if (terminal.style.display !== 'flex' || userInput.disabled) return;
+  if (!explicit && window.matchMedia('(any-pointer: coarse)').matches) return;
+  userInput.focus({ preventScroll: true });
+}
 
 // ── Typing indicator (shows while waiting for AI response) ─────────────────
 let loadingDotsEl = null;
@@ -1694,7 +1712,7 @@ function setLoading(loading) {
     if (retryTurn) { userInput.disabled = true; skipBtn.disabled = true; }
     sendBtn.classList.remove('stop-mode');
   }
-  if (!loading) userInput.focus();
+  if (!loading) focusActionInput();
 }
 
 function setInputEnabled(enabled) {
@@ -1721,7 +1739,8 @@ sendBtn.addEventListener('click', () => {
 });
 
 userInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
+  if (e.key === 'Enter' && !e.isComposing) {
+    e.preventDefault();
     const msg = userInput.value.trim();
     if (!msg) return;
     userInput.value = '';
@@ -2772,6 +2791,7 @@ async function resumeFromSnapshot(snap) {
 
   startScreen.style.display = 'none';
   terminal.style.display    = 'flex';
+  adjustForViewport();
 
   print('[Session restored]', 'system');
   if (m.scenario_id) print(`Scenario ID: ${m.scenario_id}`, 'system');
@@ -2814,7 +2834,7 @@ async function resumeFromSnapshot(snap) {
     showDebriefCTA();
   } else {
     setLoading(false);
-    userInput.focus();
+    focusActionInput();
   }
 }
 
@@ -3465,32 +3485,39 @@ for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 }
 document.getElementById('scratch-clear').addEventListener('click', clearVitalsScratch);
 
-// ── Mobile: fix iOS keyboard covering the input field ─────────────────────
-// On iOS, opening the virtual keyboard shrinks the visual viewport but NOT
-// the CSS viewport (100vh/dvh can lag or be unsupported). We use the
-// visualViewport API to explicitly set the terminal height to the visible
-// area, keeping the input row above the keyboard at all times.
-// We also scroll the window back to 0,0 to prevent the header from being
-// pushed off screen.
+// Follow the visible viewport without fighting the browser's keyboard panning.
+// Batch resize/scroll events into one layout update per animation frame.
+let viewportFrame = null;
 function adjustForViewport() {
-  if (!terminal || terminal.style.display === 'none') return;
-  const vvh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  terminal.style.height = vvh + 'px';
-  window.scrollTo(0, 0);
+  if (viewportFrame !== null) return;
+  viewportFrame = requestAnimationFrame(() => {
+    viewportFrame = null;
+    if (terminal.style.display !== 'flex') return;
+    const viewport = window.visualViewport;
+    if (viewport && Math.abs(viewport.scale - 1) > 0.01) return; // Preserve pinch zoom.
+    const height = viewport ? viewport.height : window.innerHeight;
+    const top = viewport ? viewport.offsetTop : 0;
+    const atBottom = output.scrollHeight - output.scrollTop - output.clientHeight < 24;
+    terminal.style.height = `${height}px`;
+    terminal.style.top = `${top}px`;
+    terminal.style.setProperty('--terminal-height', `${height}px`);
+    if (atBottom) output.scrollTop = output.scrollHeight;
+  });
 }
-
 function resetTerminalHeight() {
-  if (terminal) terminal.style.height = '';
+  if (viewportFrame !== null) cancelAnimationFrame(viewportFrame);
+  viewportFrame = null;
+  terminal.style.height = '';
+  terminal.style.top = '';
+  terminal.style.removeProperty('--terminal-height');
 }
-
-window.addEventListener('scroll', () => {
-  if (terminal && terminal.style.display !== 'none') window.scrollTo(0, 0);
-}, { passive: true });
-
+window.addEventListener('resize', adjustForViewport);
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', adjustForViewport);
   window.visualViewport.addEventListener('scroll', adjustForViewport);
 }
+userInput.addEventListener('focus', adjustForViewport);
+userInput.addEventListener('blur', adjustForViewport);
 
 document.addEventListener('click', e => {
   const cell = e.target && e.target.closest('#nibp-cell');

@@ -138,6 +138,20 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
     await page.evaluate(() => document.getElementById('patient-panel').classList.remove('open'));
     for (const width of [320, 390, 600]) {
       await page.setViewportSize({ width, height: 844 });
+      await page.evaluate(() => {
+        patientBtn.style.display = '';
+        applyBackupStatus({ status: 'on_scene' });
+        applyCrewStatus({ partner: 'in_back', captain: 'in_back', driver: 'anonymous' });
+      });
+      const headerRects = await page.evaluate(() => [...document.querySelectorAll('#hdr-controls > button, #hdr-badges > .badge')].filter(e => getComputedStyle(e).display !== 'none').map(e => {
+        const r = e.getBoundingClientRect();
+        return { id: e.id || e.dataset.crewRole, x: r.x, y: r.y, right: r.right, bottom: r.bottom };
+      }));
+      for (let i = 0; i < headerRects.length; i++) {
+        const a = headerRects[i];
+        assert.ok(a.x >= 0 && a.right <= width, 'header item fits: ' + a.id);
+        for (const b of headerRects.slice(i + 1)) assert.ok(a.right <= b.x || b.right <= a.x || a.bottom <= b.y || b.bottom <= a.y, 'header items do not overlap: ' + a.id + '/' + b.id);
+      }
       const sizes = await page.evaluate(() => {
         const r = document.getElementById('vitals-expand').getBoundingClientRect();
         return { width: innerWidth, scroll: document.documentElement.scrollWidth, button: r.height, right: r.right, monitor: document.getElementById('vitals-bar').getBoundingClientRect().height };
@@ -164,6 +178,53 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
     await page.locator('#vitals-close').focus();
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#vitals-panel').isVisible(), false);
+    // Model the distinct iOS visual viewport through keyboard open, pan, and close.
+    await page.evaluate(async () => {
+      const originalViewport = window.visualViewport;
+      const viewport = new EventTarget();
+      Object.assign(viewport, { height: 420, offsetTop: 28, scale: 1 });
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+      const originalScrollTo = window.scrollTo;
+      let forcedScrolls = 0;
+      window.scrollTo = () => forcedScrolls++;
+      const frame = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      userInput.focus({ preventScroll: true });
+      adjustForViewport();
+      await frame();
+      let r = document.getElementById('input-row').getBoundingClientRect();
+      if (r.bottom > 449 || r.top < 28) throw Error('Composer outside keyboard viewport');
+      userInput.blur();
+      setLoading(true);
+      setLoading(false);
+      if (document.activeElement === userInput) throw Error('Reply reopened the mobile keyboard');
+      for (let i = 0; i < 80; i++) print('History line ' + i);
+      output.scrollTop = 100;
+      Object.assign(viewport, { height: 500, offsetTop: 0 });
+      adjustForViewport();
+      await frame();
+      if (Math.abs(output.scrollTop - 100) > 1) throw Error('Viewport update jumped away from reading position');
+      Object.assign(viewport, { height: 844, offsetTop: 0 });
+      adjustForViewport();
+      await frame();
+      if (Math.abs(terminal.getBoundingClientRect().height - 844) > 1) throw Error('Keyboard dismissal did not restore height');
+      if (forcedScrolls) throw Error('Viewport changes forced page scrolls');
+      window.scrollTo = originalScrollTo;
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: originalViewport });
+      output.innerHTML = '';
+      printBriefing();
+      adjustForViewport();
+    });
+    for (const id of ['options-close', 'vitals-close', 'drug-panel-close', 'crew-panel-close', 'patient-panel-close', 'progress-close', 'auth-close']) {
+      assert.equal(await page.locator('#' + id).evaluate(e => e.classList.contains('xp-close') && !!e.getAttribute('aria-label')), true);
+    }
+    await page.evaluate(() => {
+      window.confirmed = false;
+      showConfirm({ title: 'Test close', body: 'Cancel safely', onConfirm: () => { window.confirmed = true; } });
+    });
+    await page.locator('.confirm-close').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#confirm-overlay').count(), 0);
+    assert.equal(await page.evaluate(() => window.confirmed), false);
     await page.evaluate(() => { toggleTheme(); showCrewPanel(); });
     await page.screenshot({ animations: 'disabled', path: path.join(output, 'mobile-light-crew.png') });
     assert.deepEqual(errors, []);

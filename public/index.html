@@ -263,7 +263,7 @@
     </div><!-- Only the menu content scrolls; the toolbar stays in view. -->
 
     <dialog id="options-dialog" aria-labelledby="options-title">
-      <div class="options-titlebar"><h2 id="options-title">OPTIONS</h2><button id="options-close" type="button" aria-label="Close options">×</button></div>
+      <div class="options-titlebar"><h2 id="options-title">OPTIONS</h2><button id="options-close" class="xp-close" type="button" aria-label="Close options"></button></div>
       <div class="options-body">
         <label class="option-row"><input id="briefing-toggle" type="checkbox" checked> Show field briefing before each call</label>
         <span id="briefing-save-status" role="status">Saved on this device for guests.</span>
@@ -274,7 +274,7 @@
 
     <div id="auth-overlay" hidden>
       <form id="auth-form" class="auth-dialog">
-        <div class="auth-title" id="auth-title">CREATE PLAYER</div>
+        <div class="dialog-titlebar"><div class="auth-title" id="auth-title">CREATE PLAYER</div><button id="auth-close" class="xp-close" type="button" aria-label="Close player login"></button></div>
         <p class="auth-copy" id="auth-copy">Choose a name and a 4–8 digit PIN. No email or personal information needed.</p>
         <label for="auth-name">PLAYER NAME</label>
         <input id="auth-name" name="username" type="text" minlength="2" maxlength="24" autocomplete="username" required>
@@ -290,7 +290,7 @@
 
     <div id="progress-overlay" hidden>
       <section class="auth-dialog progress-dialog" role="dialog" aria-modal="true" aria-labelledby="progress-title">
-        <div class="auth-title" id="progress-title">PLAYER PROGRESS</div>
+        <div class="dialog-titlebar"><div class="auth-title" id="progress-title">PLAYER PROGRESS</div><button id="progress-close" class="xp-close" type="button" aria-label="Close player progress"></button></div>
         <div class="progress-summary">
           <div><strong id="progress-completed">0</strong><span>CALLS COMPLETED</span></div>
           <div><strong id="progress-coverage">0/12</strong><span>CATEGORIES SEEN</span></div>
@@ -300,9 +300,7 @@
         <div id="progress-categories"></div>
         <div id="progress-recent"></div>
         <p class="progress-note">Random calls use your profile to avoid the last 10 categories and last 30 exact scenarios. Choosing a category manually overrides category avoidance.</p>
-        <div class="auth-actions">
-          <button id="progress-close" type="button">CLOSE</button>
-        </div>
+
       </section>
     </div>
 
@@ -335,16 +333,21 @@
       <span id="hdr-title">EMS TERMINAL</span>
       <span id="hdr-badges">
         <span class="badge badge-backup" id="badge-backup" style="display:none"></span>
+        <span class="badge badge-crew" data-crew-role="partner" style="display:none" aria-label="Partner status"></span>
+        <span class="badge badge-crew" data-crew-role="captain" style="display:none" aria-label="Captain status"></span>
+        <span class="badge badge-crew" data-crew-role="driver" style="display:none" aria-label="Driver status"></span>
       </span>
-      <button id="patient-btn" title="View patient card" style="display:none">PT</button>
+      <div id="hdr-controls">
+      <button id="patient-btn" type="button" title="View patient card" aria-label="View patient card" style="display:none">
+        <svg viewBox="0 0 24 24" aria-hidden="true" shape-rendering="crispEdges"><path d="M3 3h18v19H3z" fill="#d9ddca" stroke="#223d43" stroke-width="2"/><path d="M8 1h8v5H8z" fill="#839b91"/><path d="M7 8h5v5H7zM5 15h9v4H5z" fill="#365d68"/><path d="M17 9v8m-4-4h8" stroke="#a3322c" stroke-width="2"/></svg>
+        <span>PATIENT</span>
+      </button>
       <button id="crew-btn" title="View crew">CREW</button>
-      <span class="badge badge-crew" data-crew-role="partner" style="display:none" aria-label="Partner status"></span>
-      <span class="badge badge-crew" data-crew-role="captain" style="display:none" aria-label="Captain status"></span>
-  <span class="badge badge-crew" data-crew-role="driver" style="display:none" aria-label="Driver status"></span>
       <button id="sound-toggle-hdr" type="button" title="Mute sound" aria-label="Sound effects" aria-pressed="true">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path class="speaker-waves" d="M16 8q4 4 0 8m3-11q7 7 0 14"/><path class="speaker-muted" d="m16 9 6 6m0-6-6 6"/></g></svg>
       </button>
       <button id="theme-toggle-hdr" title="Toggle light/dark mode" aria-label="Toggle light mode">&#x2600;</button>
+      </div>
     </div>
 
     <!-- Vitals monitor strip — LIFEPAK-style. Sits below header on all viewports. -->
@@ -389,7 +392,7 @@
 
     <!-- Field notepad keeps additional observations beside a scratch area. -->
     <div id="vitals-panel" aria-hidden="true" hidden>
-      <div class="notepad-titlebar"><span>FIELD NOTES — VITALS &amp; OBSERVATIONS</span><button id="vitals-close" type="button" aria-label="Close field notes">×</button></div>
+      <div class="notepad-titlebar"><span>FIELD NOTES — VITALS &amp; OBSERVATIONS</span><button id="vitals-close" class="xp-close" type="button" aria-label="Close field notes"></button></div>
       <div class="notepad-body">
       <div class="notepad-readings">
       <div class="vital-row"><span class="vital-row-label">Pulse ox</span><span class="vital-row-value" id="pulse-ox-status">Probe not placed</span></div>
@@ -1815,7 +1818,7 @@
     <div id="drug-panel" aria-label="Medication reference" role="complementary">
       <div id="drug-panel-header">
         <span id="drug-panel-name"></span>
-        <button id="drug-panel-close" title="Close">✕</button>
+        <button id="drug-panel-close" class="xp-close" type="button" aria-label="Close medication card"></button>
       </div>
       <div id="drug-panel-body"></div>
       <div id="drug-panel-footer">Follow local protocol</div>
@@ -1825,7 +1828,7 @@
     <div id="crew-panel" aria-label="Crew reference" role="complementary">
       <div id="crew-panel-header">
         <span id="crew-panel-title">CREW</span>
-        <button id="crew-panel-close" title="Close">✕</button>
+        <button id="crew-panel-close" class="xp-close" type="button" aria-label="Close crew cards"></button>
       </div>
       <div id="crew-panel-body"></div>
       <div id="crew-panel-footer">Today&#x2019;s shift</div>
@@ -1835,7 +1838,7 @@
     <div id="patient-panel" aria-label="Patient card" role="complementary">
       <div id="patient-panel-header">
         <span id="patient-panel-title">PATIENT</span>
-        <button id="patient-panel-close" title="Close">&#x2715;</button>
+        <button id="patient-panel-close" class="xp-close" type="button" aria-label="Close patient card"></button>
       </div>
       <div id="patient-panel-body"></div>
       <div id="patient-panel-footer">Pre-Hospital Patient Record</div>
@@ -1846,6 +1849,7 @@
       <input
         id="user-input"
         type="text"
+        enterkeyhint="send"
         autocomplete="off"
         spellcheck="false"
         placeholder="Type your action or order..."
