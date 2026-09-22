@@ -19,7 +19,7 @@ test('each call retains unique finds and its Post-it variant across serializatio
     assert.deepEqual(state, createGlovebox(`call-${i}`));
     const view = gloveboxView(state);
     assert.ok([2, 3].includes(view.active.length));
-    assert.equal(new Set(state.order).size, 40);
+    assert.equal(new Set(state.order).size, items.length);
     assert.deepEqual(view, gloveboxView(JSON.parse(JSON.stringify(state))));
     signatures.add(view.active.join(','));
     seenNotes.add(state.note.message);
@@ -31,26 +31,37 @@ test('each call retains unique finds and its Post-it variant across serializatio
   assert.equal(items.filter(item => item.id === 'callahan-note').length, 1);
   for (const item of items) {
     const resolved = resolve(item.id, { message: 2, color: 1 });
-    assert.ok(resolved.art.length > 100 && resolved.lore.length > 20);
+    assert.ok(resolved.art.length > 100 && resolved.lore.length > 0);
   }
+  for (const id of ['fatima-passport', 'covid-mask', 'old-newspaper', 'zynn-container', 'french-fry', 'parking-receipt', 'googly-eye', 'dead-marker']) {
+    assert.ok(resolve(id), `${id} is in the catalog`);
+  }
+  assert.equal(resolve('napkins').destination, 'trash');
+  assert.equal(resolve('hot-sauce').destination, 'trash');
+  assert.equal(resolve('straw').destination, 'trash');
 });
 
-test('sorting validates destinations, only reveals after two removals, and cannot farm XP', () => {
+test('sorting accepts mistakes without XP, reveals after two removals, and cannot farm XP', () => {
   const state = createGlovebox('sorting');
   state.order = ['shears', 'aux', 'callahan-note', ...state.order.filter(id => !['shears', 'aux', 'callahan-note'].includes(id))];
   state.initialCount = 2;
-  assert.throws(() => sortItem(state, 'shears', 'trash'), { code: 'wrong_destination' });
   assert.throws(() => sortItem(state, 'callahan-note', 'pocket'), { code: 'item_unavailable' });
   assert.throws(() => sortItem(state, '__proto__', 'pocket'), { code: 'invalid_sort' });
-  assert.equal(sortItem(state, 'shears', 'pocket').awarded, 5);
+  assert.equal(sortItem(state, 'shears', 'trash').awarded, 0);
   assert.deepEqual(gloveboxView(state).active, ['aux']);
   assert.equal(sortItem(state, 'shears', 'pocket').awarded, 0);
   assert.equal(gloveboxView(state).removed, 1);
-  sortItem(state, 'aux', 'trash');
+  assert.equal(sortItem(state, 'aux', 'trash').awarded, 5);
   assert.deepEqual(gloveboxView(state).active, ['callahan-note']);
   sortItem(state, 'callahan-note', 'pocket');
   assert.deepEqual(gloveboxView(state).active, []);
-  assert.equal(gloveboxView(state).xp, 15);
+  assert.equal(gloveboxView(state).xp, 10);
+  assert.equal(sortItem(state, 'callahan-note', 'trash').awarded, 0);
+  for (const destination of ['pocket', 'trash']) {
+    const coins = { order: ['coins'], initialCount: 1, sorted: {}, note: state.note };
+    assert.equal(sortItem(coins, 'coins', destination).awarded, 5);
+    assert.equal(gloveboxView(coins).xp, 5);
+  }
 });
 
 test('player XP survives reload and duplicate call/item rewards are ignored', async () => {
@@ -65,6 +76,7 @@ test('player XP survives reload and duplicate call/item rewards are ignored', as
   players.recordGloveboxSorted(player.id, 'call-EASY', 'shears', 'pocket');
   players.recordGloveboxSorted(player.id, 'call-EASY', 'shears', 'pocket');
   players.recordGloveboxSorted(player.id, 'call-EASY', 'aux', 'trash');
+  players.recordGloveboxSorted(player.id, 'call-NORMAL', 'shears', 'trash');
   delete require.cache[require.resolve('../src/server/playerStore')];
   players = require('../src/server/playerStore');
   players.recordGloveboxSorted(player.id, 'call-EASY', 'aux', 'trash');
@@ -72,7 +84,7 @@ test('player XP survives reload and duplicate call/item rewards are ignored', as
   assert.equal(saved.stats.xp, 510);
   assert.equal(saved.stats.scenariosCompleted, 4);
   assert.equal(saved.stats.itemsRecovered, 1);
-  assert.equal(saved.stats.itemsDiscarded, 1);
+  assert.equal(saved.stats.itemsDiscarded, 2);
   assert.equal(saved.xpEvents, undefined, 'internal award ledger is not exposed');
 });
 
@@ -120,6 +132,14 @@ test('real glovebox routes check browser ownership, persist sorting, and recover
   assert.equal(result.body.awarded, 5);
   assert.equal(result.body.player.stats.xp, 5);
   assert.equal((await route('post', { item: id, destination })).body.awarded, 0);
+  const wrongId = result.body.glovebox.active[0];
+  const wrongDestination = resolve(wrongId).destination === 'pocket' ? 'trash' : 'pocket';
+  if (wrongId !== 'coins') {
+    const wrong = await route('post', { item: wrongId, destination: wrongDestination });
+    assert.equal(wrong.body.awarded, 0);
+    assert.equal(wrong.body.player.stats.xp, 5);
+    assert.equal((await route('post', { item: wrongId, destination: resolve(wrongId).destination })).body.awarded, 0);
+  }
   sessions.deleteSession(created.id);
   const restored = await route('get');
   assert.equal(restored.body.glovebox.xp, 5);

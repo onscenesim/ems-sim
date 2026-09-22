@@ -77,13 +77,13 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-glovebox-'));
       assert.deepEqual(await activeIds(), ids, 'closing and reopening cannot reroll finds');
       await close();
     }
-    assert.equal(await page.evaluate(() => effectPlays.glovebox), 80);
-    assert.equal(await page.evaluate(() => effectPlays.rummage), 40);
+    assert.equal(await page.evaluate(() => effectPlays.glovebox), items.length * 2);
+    assert.equal(await page.evaluate(() => effectPlays.rummage), items.length);
     await page.evaluate(() => { soundEnabled = false; });
     await open('muted');
     await page.locator('.glovebox-item').first().click();
-    assert.equal(await page.evaluate(() => effectPlays.glovebox), 80);
-    assert.equal(await page.evaluate(() => effectPlays.rummage), 40);
+    assert.equal(await page.evaluate(() => effectPlays.glovebox), items.length * 2);
+    assert.equal(await page.evaluate(() => effectPlays.rummage), items.length);
     await close();
     await page.evaluate(() => { soundEnabled = true; document.getElementById('vitals-expand').click(); });
     assert.equal(await page.evaluate(() => effectPlays.paper), 1, 'notepad opens with paper flip');
@@ -122,11 +122,6 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-glovebox-'));
       await page.keyboard.press('Enter');
       assert.equal(await page.locator('#glovebox-tooltip').isVisible(), true);
       await page.screenshot({ animations: 'disabled', path: path.join(output, `glovebox-${viewport.width}.png`) });
-      // Wrong destination retains the item and earns nothing.
-      await page.locator('#glovebox-trash').click();
-      await page.waitForFunction(() => document.getElementById('glovebox-feedback').textContent.includes('might want'));
-      assert.equal((await activeIds()).length, 3);
-      assert.equal(await page.locator('#glovebox-xp').textContent(), '0 XP');
       // Click/keyboard alternatives support players who cannot drag.
       await page.locator('#glovebox-pocket').click();
       await page.waitForFunction(() => document.getElementById('glovebox-xp').textContent === '5 XP');
@@ -150,6 +145,16 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-glovebox-'));
       assert.equal(await page.locator('#glovebox-xp').textContent(), '10 XP');
       await close();
     }
+
+    await open('wrong-sort');
+    const wrongId = (await activeIds()).find(id => id !== 'coins');
+    const wrongTarget = resolve(wrongId).destination === 'pocket' ? 'trash' : 'pocket';
+    const beforeWrong = (await activeIds()).length;
+    await page.locator(`[data-item="${wrongId}"]`).click();
+    await page.locator(`#glovebox-${wrongTarget}`).click();
+    await page.waitForFunction(expected => document.querySelectorAll('#glovebox-tray .glovebox-item').length === expected, beforeWrong - 1);
+    assert.equal(await page.locator('#glovebox-xp').textContent(), '0 XP');
+    await close();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await open('touch');

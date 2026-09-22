@@ -299,7 +299,7 @@
         </div>
         <div class="progress-xp-card"><strong><span id="progress-xp">0</span> XP</strong><span>A gloriously useless metric.</span></div>
         <p id="progress-sorted" class="progress-note"></p>
-        <p class="progress-note">Completed calls: Easy +50 · Normal +100 · Hard +150 · Black Cloud +200. Sorting glovebox finds: +5 each.</p>
+        <p class="progress-note">Completed calls: Easy +50 · Normal +100 · Hard +150 · Black Cloud +200. Correct glovebox sorts: +5 each.</p>
         <p class="progress-note">Coming later: notebook stickers, stains, and different paper. For now, just for funnies.</p>
         <p id="progress-storage" class="progress-note"></p>
         <div class="progress-heading">CATEGORY COVERAGE</div>
@@ -1894,7 +1894,7 @@
     </div>
   </div>
 
-  <dialog id="glovebox-dialog" aria-labelledby="glovebox-title" aria-describedby="glovebox-hint">
+  <dialog id="glovebox-dialog" aria-labelledby="glovebox-title">
     <header class="glovebox-titlebar">
       <h2 id="glovebox-title">The Glovebox</h2>
       <button id="glovebox-close" class="xp-close" type="button" aria-label="Close the glovebox" autofocus></button>
@@ -1906,7 +1906,7 @@
       <div class="glovebox-latch" aria-hidden="true"></div>
     </div>
     <div class="glovebox-caption" aria-live="polite" aria-atomic="true">
-      <p id="glovebox-empty">Someone left their whole shift in here.</p>
+      <p id="glovebox-empty"></p>
       <div id="glovebox-tooltip" role="tooltip" hidden>
         <strong id="glovebox-item-name"></strong>
         <p id="glovebox-item-lore"></p>
@@ -1924,9 +1924,8 @@
         <span>TRASH <small id="glovebox-trash-count">0 tossed</small></span>
       </button>
     </div>
-    <p id="glovebox-feedback" role="status">Keep what someone might want back. Bin the obvious garbage.</p>
+    <p id="glovebox-feedback" role="status"></p>
     <details id="glovebox-inventory"><summary>Pocket inventory · this call</summary><ul id="glovebox-inventory-list"></ul></details>
-    <p id="glovebox-hint">Tap to inspect · Drag to pocket or trash · Clear two, uncover one</p>
   </dialog>
 
   <script src="medication-aliases.js"></script>
@@ -1934,7 +1933,7 @@
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
   <script src="app.js?v=80"></script>
-  <script src="glovebox-catalog.js?v=1"></script>
-  <script src="glovebox.js?v=2"></script>
+  <script src="glovebox-catalog.js?v=2"></script>
+  <script src="glovebox.js?v=3"></script>
 </body>
 </html>

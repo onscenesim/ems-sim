@@ -21,9 +21,14 @@ function gloveboxView(state) {
     pocket: state.order.filter(id => state.sorted[id] === 'pocket'),
     trash: state.order.filter(id => state.sorted[id] === 'trash'),
     note: state.note,
-    xp: sorted * SORT_XP,
+    xp: Object.entries(state.sorted).reduce((xp, [id, destination]) => xp + sortAward(id, destination), 0),
     removed: sorted,
   };
+}
+
+function sortAward(itemId, destination) {
+  const item = items.find(candidate => candidate.id === itemId);
+  return item && (item.destination === destination || item.alternateDestination === destination) ? SORT_XP : 0;
 }
 
 function sortItem(state, itemId, destination) {
@@ -35,12 +40,8 @@ function sortItem(state, itemId, destination) {
   if (!gloveboxView(state).active.includes(itemId)) {
     throw Object.assign(new Error('That item has not been found in this call.'), { code: 'item_unavailable', status: 409 });
   }
-  if (item.destination !== destination) {
-    const message = destination === 'trash' ? 'Someone might want that back. Try your pocket.' : 'That one is clearly garbage. Try the trash.';
-    throw Object.assign(new Error(message), { code: 'wrong_destination', status: 400 });
-  }
   state.sorted[itemId] = destination;
-  return { awarded: SORT_XP, duplicate: false };
+  return { awarded: sortAward(itemId, destination), duplicate: false };
 }
 
-module.exports = { createGlovebox, gloveboxView, sortItem, SORT_XP, CALL_XP };
+module.exports = { createGlovebox, gloveboxView, sortItem, sortAward, SORT_XP, CALL_XP };

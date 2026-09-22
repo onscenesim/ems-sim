@@ -57,7 +57,6 @@
 #glovebox-empty { color: #a9b1a9; margin: 0; font-style: italic; }
 #glovebox-item-name { display: block; color: #e6d39f; font-weight: normal; font-size: 20px; }
 #glovebox-item-lore { margin: 5px 0 0; }
-#glovebox-hint { margin: 0; padding: 10px 20px 13px; color: #adb6b4; border-top: 1px solid #424c4c; font-size: 14px; }
 .glovebox-sorting { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 14px; }
 .glovebox-drop { display: flex; gap: 9px; align-items: center; padding: 8px 12px; min-height: 62px; flex: 1; background: #333f41; border: 1px dashed #768884; border-radius: 4px; color: #d8dccb; cursor: pointer; text-align: left; font: 15px var(--font-xp); }
 .glovebox-drop svg { width: 40px; height: 40px; flex-shrink: 0; }
@@ -99,14 +98,12 @@
   .glovebox-drop { padding: 5px 8px; gap: 4px; min-height: 56px; }
   .glovebox-drop svg { width: 28px; height: 32px; }
   #glovebox-feedback { font-size: 14px; margin-block: 6px; }
-  #glovebox-hint { padding-inline: 16px; }
 }
 @media (max-height: 500px) {
   .glovebox-titlebar { padding: 4px 10px; }
   #glovebox-close { min-width: 32px; min-height: 32px; width: 32px; height: 32px; }
   #glovebox-tray { height: 135px; }
   .glovebox-caption { min-height: 80px; }
-  #glovebox-hint { padding-block: 5px; font-size: 12px; }
   #glovebox-feedback { min-height: 0; margin-block: 6px; }
 }
 @media (max-width: 600px) and (max-height: 680px) {
@@ -114,7 +111,6 @@
   #glovebox-tray { height: 132px; }
   .glovebox-caption { font-size: 16px; }
   #glovebox-item-name { font-size: 18px; }
-  #glovebox-hint { font-size: 12px; padding: 6px 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .glovebox-item.is-jittering svg { animation: none; }

@@ -5,7 +5,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const { DATA_DIR } = require('./storagePath');
-const { SORT_XP, CALL_XP } = require('../engine/glovebox');
+const { sortAward, CALL_XP } = require('../engine/glovebox');
 
 const scrypt = promisify(crypto.scrypt);
 const STORE_PATH = path.join(DATA_DIR, 'players.json');
@@ -275,7 +275,7 @@ function recordGloveboxSorted(playerId, callId, itemId, destination) {
   if (player.xpEvents?.[key]) return;
   const previous = structuredClone(player);
   const stats = ensureStats(player);
-  stats.xp += SORT_XP;
+  stats.xp += sortAward(itemId, destination);
   stats[destination === 'pocket' ? 'itemsRecovered' : 'itemsDiscarded'] += 1;
   player.xpEvents ||= {};
   player.xpEvents[key] = true;

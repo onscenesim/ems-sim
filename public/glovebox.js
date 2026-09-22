@@ -6,7 +6,6 @@
   const dialog = document.getElementById('glovebox-dialog');
   const tray = document.getElementById('glovebox-tray');
   const tooltip = document.getElementById('glovebox-tooltip');
-  const hint = document.getElementById('glovebox-hint');
   const feedback = document.getElementById('glovebox-feedback');
   const dropZones = [...dialog.querySelectorAll('[data-destination]')];
   let callId = null;
@@ -18,7 +17,6 @@
   let cancelDrag = null;
   let positions = {};
   const clamp = (value, max) => Math.max(0, Math.min(value, max));
-  const pointerHint = 'Tap to inspect · Drag to pocket or trash · Clear two, uncover one';
 
   function revealLore() {
     const body = dialog.querySelector('.glovebox-body');
@@ -83,7 +81,7 @@
       selected = null;
       applyView(data.glovebox);
       const emerged = view.active.length >= oldCount;
-      feedback.textContent = data.duplicate ? 'Already sorted. No double-dipping.' : `+${data.awarded} XP · ${destination === 'pocket' ? 'Saved for its owner.' : 'A little less garbage.'}${emerged ? ' Something else slid out of the back.' : ''}`;
+      feedback.textContent = data.duplicate ? 'Already sorted. No double-dipping.' : `${data.awarded ? `+${data.awarded}` : '0'} XP · ${destination === 'pocket' ? 'Pocketed.' : 'Tossed.'}${emerged ? ' Something else slid out of the back.' : ''}`;
       dropZones.find(zone => zone.dataset.destination === destination).classList.add('just-sorted');
     } catch (error) {
       if (requestGeneration === generation) feedback.textContent = `${error.message} The item stays here; you can try again.`;
@@ -204,7 +202,7 @@
       tooltip.hidden = true;
       const empty = document.getElementById('glovebox-empty');
       empty.hidden = false;
-      empty.textContent = view.active.length ? 'Someone left their whole shift in here.' : 'Just crumbs now. A fresh assortment awaits next call.';
+      empty.textContent = view.active.length ? '' : 'Just crumbs now.';
     }
     document.getElementById('glovebox-xp').textContent = `${view.xp} XP`;
     document.getElementById('glovebox-pocket-count').textContent = `${view.pocket.length} kept`;
@@ -268,7 +266,7 @@
     dropZones.forEach(zone => { zone.disabled = true; });
     document.getElementById('glovebox-empty').hidden = false;
     document.getElementById('glovebox-empty').textContent = 'Opening the compartment…';
-    feedback.textContent = 'Keep what someone might want back. Bin the obvious garbage.';
+    feedback.textContent = '';
     dialog.showModal();
     if (view) applyView(view);
     const requestCall = callId;
@@ -295,10 +293,6 @@
     const bounds = dialog.getBoundingClientRect();
     if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) dialog.close();
   });
-  dialog.addEventListener('keydown', event => {
-    if (event.key === 'Tab' || event.key.startsWith('Arrow')) hint.textContent = 'Enter to inspect · Arrows to move · Tab to pocket/trash · Esc to close';
-  });
-  dialog.addEventListener('pointerdown', () => { hint.textContent = pointerHint; });
   new ResizeObserver(() => {
     if (!dialog.open) return;
     tray.querySelectorAll('.glovebox-item').forEach(node => {

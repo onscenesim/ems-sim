@@ -213,10 +213,51 @@
       lore: 'A phone number and a little heart, written in marker. A tradition as old as time, unfortunately. Nobody is admitting whose handwriting that is.',
       art: '<path d="m30 65-5-20-10-14q0-6 5-4l11 12-5-24q2-6 6-2l9 20-1-27q4-5 7 0l3 27 4-24q5-4 6 2l-1 26 7-15q6-3 6 4l-6 24-9 14 1 10z" fill="#759db6"/>' + label('555-0142', 47, 51, 7, '#34495c') + '<path d="M49 57c-7-7-11 2 0 7 11-5 7-14 0-7" fill="#415b79"/>',
     },
+    {
+      id: 'fatima-passport', name: 'Fatima’s passport',
+      lore: 'How’d this get here? The cover is decorated, and the pages have stamps from all over the world.',
+      art: '<path d="M23 7h49q5 0 5 5v57q0 5-5 5H23q-5 0-5-5V12q0-5 5-5z" fill="#364c79" stroke="#a4a9a4" stroke-width="2"/><path d="M25 13h45v54H25z" fill="none" stroke="#a98859"/><circle cx="47" cy="38" r="13" fill="none" stroke="#d4b577" stroke-width="2"/><path d="M34 38h26M47 25q-11 13 0 26 11-13 0-26M47 25v26" fill="none" stroke="#d4b577"/><path d="m26 17 5 3-2 5-5-2m35 39 5-5 6 3-3 5" fill="#db897b"/>' + label('PASSPORT', 47, 61, 7, '#dec693'),
+    },
+    {
+      id: 'covid-mask', name: 'Discarded COVID Mask',
+      lore: 'From a darker time.',
+      art: '<path d="M22 27Q48 12 74 27L70 58Q48 69 26 58z" fill="#9dbac1" stroke="#d5d9cf" stroke-width="2"/><path d="M23 31q-21-13-17 13 3 16 20 10M73 31q21-13 17 13-3 16-20 10M28 36q20 8 40 0M28 45q20 8 40 0" fill="none" stroke="#718f98" stroke-width="3"/>',
+    },
+    {
+      id: 'old-newspaper', name: 'Old newspaper',
+      lore: 'Who reads the newspaper anymore?',
+      art: '<path d="m12 13 69-5-4 58-64 6z" fill="#c8c2a8" stroke="#868478"/><path d="m17 17 59-4-4 49-55 5z" fill="#e6dfc6"/>' + label('THE DAILY', 46, 25, 9) + '<path d="M20 30h49M20 34h49M20 39h28v15H20zM52 39h18M52 44h18M52 49h18M20 58h50M20 62h38" stroke="#7c8076" stroke-width="2"/><path d="m25 45 8-5 9 10" stroke="#9b9a8c" fill="none"/>',
+    },
+    {
+      id: 'zynn-container', name: 'Empty Zynn container',
+      lore: 'The modern EMS vice. Could be anyone’s.',
+      art: '<ellipse cx="48" cy="53" rx="30" ry="15" fill="#6e7278"/><path d="M18 33h60v20q-30 18-60 0z" fill="#9ea6aa"/><ellipse cx="48" cy="33" rx="30" ry="14" fill="#d4d9d7" stroke="#758289" stroke-width="3"/><ellipse cx="48" cy="33" rx="23" ry="9" fill="none" stroke="#8ca0a8" stroke-width="2"/>' + label('ZYNN', 48, 37, 12, '#4e7184'),
+    },
+    {
+      id: 'french-fry', name: 'One petrified french fry',
+      lore: 'It has outlived two ambulance assignments and at least one station chief.',
+      art: '<path d="M15 48q28-15 62 5l-4 9Q42 51 19 60z" fill="#b9914f" stroke="#75613d" stroke-width="2"/><path d="m17 51 8 2m7-6 7 5m7-4 7 5m8-3 9 5" stroke="#dfbb72" stroke-width="3"/><path d="m27 57 7 3m18-6 8 5" stroke="#6f6742" stroke-width="2"/>',
+    },
+    {
+      id: 'parking-receipt', name: 'A parking receipt from 2019',
+      lore: 'Four dollars to park at a hospital that no longer exists. Accounting has questions.',
+      art: paper(label('PARKING', 47, 22, 8) + label('2019', 47, 32, 8) + '<path d="M29 38h36M29 44h36M29 50h36M29 56h36" stroke="#828a85" stroke-width="2"/>' + label('$4.00', 47, 66, 9)),
+    },
+    {
+      id: 'googly-eye', name: 'A single googly eye',
+      lore: 'The dashboard mascot has been staring at the wall for three weeks. Now you know why.',
+      art: '<ellipse cx="48" cy="43" rx="27" ry="26" fill="#e6e4d7" stroke="#8c918b" stroke-width="3"/><circle cx="57" cy="51" r="13" fill="#1d2428"/><circle cx="53" cy="46" r="4" fill="#f5f1e8"/><path d="M30 21q18-12 35 0" fill="none" stroke="#ffffff88" stroke-width="3"/>',
+    },
+    {
+      id: 'dead-marker', name: 'A marker with no cap and no ink',
+      lore: 'Still riding along because someone keeps hoping it will work this time.',
+      art: '<path d="m20 60 42-42 13 13-42 42z" fill="#353d43" stroke="#738087" stroke-width="2"/><path d="m57 23 8-8 13 13-8 8z" fill="#e2d1a0"/><path d="m16 64 10-10 10 10-10 10z" fill="#65686a"/><path d="m26 54 10 10M62 17l13 13" stroke="#a5a8a0" stroke-width="2"/>' + label('PERMANENT', 45, 47, 5, '#d4d1bd'),
+    },
   );
 
-  const trash = new Set(['coins', 'ekg', 'uncrustable', 'aux', 'pen', 'map-book', 'narcan', 'conference', 'csn-stickers', 'phone-glove']);
+  const trash = new Set(['coins', 'napkins', 'ekg', 'hot-sauce', 'uncrustable', 'aux', 'straw', 'pen', 'map-book', 'narcan', 'conference', 'csn-stickers', 'phone-glove', 'covid-mask', 'old-newspaper', 'zynn-container', 'french-fry', 'parking-receipt', 'googly-eye', 'dead-marker']);
   items.forEach(item => { item.destination = trash.has(item.id) ? 'trash' : 'pocket'; });
+  items.find(item => item.id === 'coins').alternateDestination = 'pocket';
   const notes = [
     'The new frequent caller on Birch says his smartwatch is “too accurate.” Please do not challenge it to a second opinion. — Ruth',
     'The passenger window goes down. Coming back up is now a team-building exercise. — Ruth',
