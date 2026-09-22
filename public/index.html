@@ -6,6 +6,7 @@
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css?v=83">
+  <link rel="stylesheet" href="glovebox.css?v=1">
 </head>
 <body>
 
@@ -343,6 +344,10 @@
           <path fill="currentColor" d="M3 2h4v4H3zM1 7h8v6H1zM10 3h3v3h-3zM10 7h5v5h-5z"/>
         </svg>
         <span>CREW</span>
+      </button>
+      <button id="glovebox-btn" type="button" title="Open the glovebox" aria-label="Open the glovebox" aria-haspopup="dialog" aria-controls="glovebox-dialog">
+        <svg viewBox="0 0 20 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 2h18v12H1z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2 5h16M7 8h6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        <span>GLOVEBOX</span>
       </button>
       <button id="sound-toggle-hdr" type="button" title="Mute sound" aria-label="Sound effects" aria-pressed="true">
         <svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges">
@@ -1884,10 +1889,31 @@
     </div>
   </div>
 
+  <dialog id="glovebox-dialog" aria-labelledby="glovebox-title" aria-describedby="glovebox-hint">
+    <header class="glovebox-titlebar">
+      <h2 id="glovebox-title">The Glovebox</h2>
+      <button id="glovebox-close" class="xp-close" type="button" aria-label="Close the glovebox" autofocus></button>
+    </header>
+    <div class="glovebox-liner">
+      <div class="glovebox-stamp" aria-hidden="true">PERSONAL EFFECTS / MISC.</div>
+      <div id="glovebox-tray" role="group" aria-label="Glovebox items"></div>
+      <div class="glovebox-latch" aria-hidden="true"></div>
+    </div>
+    <div class="glovebox-caption" aria-live="polite" aria-atomic="true">
+      <p id="glovebox-empty">Someone left their whole shift in here.</p>
+      <div id="glovebox-tooltip" role="tooltip" hidden>
+        <strong id="glovebox-item-name"></strong>
+        <p id="glovebox-item-lore"></p>
+      </div>
+    </div>
+    <p id="glovebox-hint">Tap to inspect · Hold and drag to rummage</p>
+  </dialog>
+
   <script src="medication-aliases.js"></script>
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-  <script src="app.js?v=78"></script>
+  <script src="app.js?v=79"></script>
+  <script src="glovebox.js?v=1"></script>
 </body>
 </html>

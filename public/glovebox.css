@@ -1,0 +1,75 @@
+#glovebox-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #555b5d;
+  font: 10px var(--font-block);
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+#glovebox-btn svg { width: 18px; height: 16px; }
+#glovebox-btn:hover { color: #1a4870; background: #00000009; border-color: #00000020; }
+#glovebox-btn:focus-visible { outline: 2px solid #456b80; outline-offset: -2px; }
+#glovebox-dialog {
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  margin: auto;
+  overflow: auto;
+  color: #d5d5c9;
+  background: #262d2e;
+  border: 2px solid;
+  border-color: #8a9493 #101617 #101617 #8a9493;
+  border-radius: 5px;
+  box-shadow: 0 24px 80px #0009, inset 0 0 0 1px #4a5354;
+  font: 18px/1.25 var(--font-xp);
+}
+#glovebox-dialog::backdrop { background: #081016a8; }
+.glovebox-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 12px; background: linear-gradient(#414b4d, #303a3c); border-bottom: 1px solid #11191b; }
+#glovebox-title { margin: 0; font: 15px var(--font-block); color: #e0e2d7; }
+#glovebox-close { min-width: 36px; min-height: 36px; }
+.glovebox-liner { position: relative; margin: 14px 14px 0; padding: 32px 8px 25px; background: repeating-linear-gradient(0deg, #171e20 0 2px, #1b2325 2px 4px); border: 3px solid; border-color: #111719 #485153 #485153 #111719; border-radius: 12px 12px 28px 28px; box-shadow: inset 0 12px 24px #0008; }
+.glovebox-stamp { position: absolute; top: 13px; left: 16px; color: #89948c; opacity: .6; font-size: 12px; letter-spacing: .12em; }
+#glovebox-tray { position: relative; height: 218px; }
+.glovebox-latch { position: absolute; bottom: 7px; left: calc(50% - 28px); width: 56px; height: 8px; background: #0e1416; border: 2px solid; border-color: #090e10 #536060 #536060 #090e10; border-radius: 3px; }
+.glovebox-item { position: absolute; width: 100px; height: 88px; padding: 4px; border: 0; border-radius: 12px; background: transparent; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.glovebox-item:hover { background: #f4e9be08; }
+.glovebox-item:focus-visible { outline: 2px dashed #d5c388; outline-offset: -1px; }
+.glovebox-item.is-dragging { cursor: grabbing; background: #f4e9be0b; }
+.glovebox-item svg { display: block; width: 100%; height: 100%; overflow: visible; pointer-events: none; filter: drop-shadow(3px 6px 2px #0008); transform: rotate(var(--tilt)); }
+.glovebox-item.is-dragging svg { filter: drop-shadow(5px 10px 3px #0009); }
+.glovebox-item.is-jittering svg { animation: glovebox-jitter .3s ease-out; }
+.glovebox-caption { min-height: 110px; padding: 16px 20px 8px; }
+#glovebox-empty { color: #a9b1a9; margin: 0; font-style: italic; }
+#glovebox-item-name { display: block; color: #e6d39f; font-weight: normal; font-size: 20px; }
+#glovebox-item-lore { margin: 5px 0 0; }
+#glovebox-hint { margin: 0; padding: 10px 20px 13px; color: #adb6b4; border-top: 1px solid #424c4c; font-size: 14px; }
+@keyframes glovebox-jitter {
+  20% { transform: translate(-3px, 1px) rotate(calc(var(--tilt) - 6deg)); }
+  45% { transform: translate(3px, -2px) rotate(calc(var(--tilt) + 5deg)); }
+  70% { transform: translate(-2px, 0) rotate(calc(var(--tilt) - 3deg)); }
+}
+@media (max-width: 600px) {
+  #glovebox-btn { width: 32px; height: 30px; min-height: 30px; padding: 6px; justify-content: center; }
+  #glovebox-btn span { display: none; }
+  #glovebox-title { font-size: 13px; }
+  #glovebox-close { min-width: 44px; min-height: 44px; }
+  .glovebox-liner { margin: 10px 10px 0; }
+  #glovebox-tray { height: 235px; }
+  .glovebox-item { width: 88px; height: 80px; }
+  .glovebox-caption { min-height: 130px; padding: 13px 16px 8px; }
+  #glovebox-hint { padding-inline: 16px; }
+}
+@media (max-height: 500px) {
+  #glovebox-tray { height: 135px; }
+  .glovebox-caption { min-height: 80px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glovebox-item.is-jittering svg { animation: none; }
+}

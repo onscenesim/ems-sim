@@ -2403,7 +2403,7 @@ body.light-mode .brief-options-note { color: #536159; }
 .notepad-patient .pcr-label,
 .notepad-patient .pcr-source,
 .notepad-patient .pcr-pending { color: #48555a; }
-.notepad-patient .pcr-field { padding: 5px 0; border-color: #7a80774a; }
+.notepad-patient .pcr-field { padding: 5px 0; border-bottom: 0; }
 .notepad-patient .pcr-value,
 .notepad-patient .pcr-field-top .pcr-value { color: #202f3e; font-size: 16px; }
 .notepad-patient .pcr-section-rule { height: 1px; background: #7a80774a; border: 0; }
