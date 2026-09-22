@@ -546,6 +546,7 @@ function renderPlayer() {
     playerProgress.hidden = false;
     playerLogout.hidden = true;
   }
+  window.EMSCosmetics?.refresh();
 }
 
 async function refreshPlayer() {
@@ -654,6 +655,7 @@ if (progressOverlay) progressOverlay.addEventListener('click', event => {
   if (event.target === progressOverlay) hideProgress();
 });
 document.addEventListener('keydown', event => {
+  if (document.getElementById('cosmetics-dialog').open) return;
   if (event.key === 'Escape' && authOverlay && !authOverlay.hidden) hideAuth();
   if (event.key === 'Escape' && progressOverlay && !progressOverlay.hidden) hideProgress();
 });
@@ -1221,7 +1223,7 @@ async function sendTurn(msg, opts = {}) {
     if (data.closed) {
       if (data.progressScope === 'guest') recordGuestProgress(sessionId, { completed: true, completionXP: data.completionXP || 0, category: localTranscript?.meta?.category });
       else refreshPlayer();
-      if (data.completionXP) print(`+${data.completionXP} XP · Call complete. A gloriously useless metric.`, 'system');
+      if (data.completionXP) print(`+${data.completionXP} XP · Call complete. Check your pens and stickers for new unlocks.`, 'system');
       isClosed = true;
       skipBtn.disabled = true;
       updateSkipBtn();          // hide the END CALL button once the call is closed
@@ -3518,8 +3520,9 @@ vitalsScratch.addEventListener('pointerdown', event => {
   event.preventDefault();
   scratchPointer = event.pointerId;
   vitalsScratch.setPointerCapture(event.pointerId);
-  scratchContext.strokeStyle = '#283a57';
-  scratchContext.fillStyle = '#283a57';
+  const ink = window.EMSCosmetics?.ink() || '#283a57';
+  scratchContext.strokeStyle = ink;
+  scratchContext.fillStyle = ink;
   scratchContext.lineWidth = 3;
   scratchContext.lineCap = 'round';
   scratchContext.lineJoin = 'round';

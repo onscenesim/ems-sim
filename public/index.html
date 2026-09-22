@@ -7,6 +7,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css?v=83">
   <link rel="stylesheet" href="glovebox.css?v=2">
+  <link rel="stylesheet" href="cosmetics.css?v=2">
 </head>
 <body>
 
@@ -297,10 +298,11 @@
           <div><strong id="progress-coverage">0/12</strong><span>CATEGORIES SEEN</span></div>
           <div><strong id="progress-debriefs">0</strong><span>DEBRIEFS RUN</span></div>
         </div>
-        <div class="progress-xp-card"><strong><span id="progress-xp">0</span> XP</strong><span>A gloriously useless metric.</span></div>
+        <div class="progress-xp-card"><strong><span id="progress-xp">0</span> XP</strong><span>Make this rig yours.</span></div>
         <p id="progress-sorted" class="progress-note"></p>
         <p class="progress-note">Completed calls: Easy +50 · Normal +100 · Hard +150 · Black Cloud +200. Correct glovebox sorts: +5 each.</p>
-        <p class="progress-note">Coming later: notebook stickers, stains, and different paper. For now, just for funnies.</p>
+        <button id="progress-cosmetics" type="button" class="cosmetics-open">PENS &amp; STICKERS <span id="cosmetics-unlocked-count"></span></button>
+        <p class="progress-note">Earn XP to unlock pen colors and stickers. Equipping cosmetics never spends XP.</p>
         <p id="progress-storage" class="progress-note"></p>
         <div class="progress-heading">CATEGORY COVERAGE</div>
         <div id="progress-categories"></div>
@@ -419,9 +421,10 @@
         </div>
         <div id="notepad-patient"></div>
       </div>
-      <div class="notepad-readings">
-      <div id="notepad-focus">Readings for: Current patient</div>
+      <div class="notepad-readings" id="notepad-personalization">
+      <div class="notepad-readings-heading"><div id="notepad-focus">Readings for: Current patient</div><button id="notepad-stickers-edit" type="button" aria-haspopup="dialog" aria-controls="cosmetics-dialog" title="Choose up to two notebook stickers">STICKERS ＋</button></div>
       <div class="vital-row"><span class="vital-row-label">Pulse ox</span><span class="vital-row-value" id="pulse-ox-status">Probe not placed</span></div>
+      <div class="notepad-measurements">
       <div class="vital-row"><span class="vital-row-label">RR</span><span class="vital-row-value" data-vital="RR">&mdash;</span></div>
       <!-- No Rhythm row: the rhythm is deliberately never named in the UI — the
            player has to interpret the ECG strip, like a real monitor. -->
@@ -430,8 +433,11 @@
       <div class="vital-row"><span class="vital-row-label">GCS</span><span class="vital-row-value" data-vital="GCS">&mdash;</span></div>
       <div class="vital-row"><span class="vital-row-label">Pain</span><span class="vital-row-value" data-vital="Pain">&mdash;</span></div>
       </div>
+      <div id="notepad-stickers" aria-label="Notebook stickers"></div>
+      </div>
       <div class="notepad-scratch">
-        <div class="scratch-toolbar"><span id="scratch-label">SCRATCH PAD</span><button id="scratch-clear" type="button">CLEAR</button></div>
+        <div class="scratch-toolbar"><span id="scratch-label">SCRATCH PAD</span><div class="scratch-tools"><label class="scratch-pen-label" for="scratch-pen">INK</label><select id="scratch-pen" aria-label="Scratch pad pen color"><option value="navy">Station blue</option></select><button id="scratch-clear" type="button">CLEAR</button></div></div>
+        <div id="scratch-pen-status" role="status"></div>
         <canvas id="vitals-scratch" width="800" height="300" aria-labelledby="scratch-label">Draw with your mouse or finger. These doodles are just for this call.</canvas>
       </div>
       </div>
@@ -1928,12 +1934,28 @@
     <details id="glovebox-inventory"><summary>Pocket inventory · this call</summary><ul id="glovebox-inventory-list"></ul></details>
   </dialog>
 
+  <dialog id="cosmetics-dialog" aria-labelledby="cosmetics-title" aria-describedby="cosmetics-description">
+    <header class="cosmetics-titlebar"><h2 id="cosmetics-title">THE STICKER DRAWER</h2><button id="cosmetics-close" class="xp-close" type="button" aria-label="Close cosmetics" autofocus></button></header>
+    <div class="cosmetics-toolbar"><span id="cosmetics-xp"></span><span id="cosmetics-slot-count">0 / 2 stickers</span></div>
+    <div class="cosmetics-scroll">
+      <p id="cosmetics-description">A little personality between calls. Pick up to two stickers for your notebook. Unlocks use lifetime XP; nothing gets spent.</p>
+      <div class="cosmetics-section-label">PEN CASE <span>Also beside CLEAR on your scratch pad</span></div>
+      <div id="cosmetics-pens" role="group" aria-label="Pen colors"></div>
+      <div class="cosmetics-section-label">STICKER COLLECTION <span id="cosmetics-next-unlock"></span></div>
+      <div id="cosmetics-sticker-grid" role="group" aria-label="Sticker collection"></div>
+      <div id="cosmetics-note-editor" hidden><label for="cosmetics-note">YOUR POST-IT</label><textarea id="cosmetics-note" rows="3" maxlength="80" placeholder="Leave yourself a note…"></textarea><span id="cosmetics-note-count">0 / 80</span></div>
+    </div>
+    <footer class="cosmetics-footer"><p id="cosmetics-status" role="status"></p><button id="cosmetics-apply" type="button">APPLY</button></footer>
+  </dialog>
+
   <script src="medication-aliases.js"></script>
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-  <script src="app.js?v=80"></script>
-  <script src="glovebox-catalog.js?v=2"></script>
+  <script src="app.js?v=81"></script>
+  <script src="cosmetics-catalog.js?v=1"></script>
+  <script src="cosmetics.js?v=2"></script>
+  <script src="glovebox-catalog.js?v=3"></script>
   <script src="glovebox.js?v=3"></script>
 </body>
 </html>

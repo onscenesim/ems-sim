@@ -75,4 +75,15 @@ router.post('/preferences', (req, res) => {
   }
 });
 
+router.post('/cosmetics', (req, res) => {
+  const player = currentPlayer(req);
+  if (!player) return res.status(401).json({ error: 'login_required', message: 'Log in to save cosmetics to your account.' });
+  try {
+    return res.json({ player: playerStore.updateCosmetics(player, req.body) });
+  } catch (error) {
+    const status = error.code === 'invalid_cosmetics' ? 400 : 500;
+    return res.status(status).json({ error: error.code || 'cosmetics_failed', message: status === 400 ? error.message : 'Could not save your cosmetics. Please try again.' });
+  }
+});
+
 module.exports = { router, currentPlayer };

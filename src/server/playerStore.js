@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const { DATA_DIR } = require('./storagePath');
 const { sortAward, CALL_XP } = require('../engine/glovebox');
+const cosmetics = require('../../public/cosmetics-catalog');
 
 const scrypt = promisify(crypto.scrypt);
 const STORE_PATH = path.join(DATA_DIR, 'players.json');
@@ -31,6 +32,22 @@ function loadStore() {
 }
 
 let store = loadStore();
+
+// Provision the explicitly configured admin player on each new durable store.
+// Only salted credential hashes are shipped; ordinary signup cannot grant roles.
+function provisionAdminPlayer() {
+  const seed = require('./adminPlayerSeed.json');
+  let player = store.players.find(candidate => candidate.nameKey === seed.nameKey);
+  if (player?.role === 'admin') return;
+  if (!player) {
+    player = { id: crypto.randomUUID(), createdAt: Date.now(), lastSeenAt: Date.now(), stats: {} };
+    store.players.push(player);
+  }
+  Object.assign(player, seed, { role: 'admin' });
+  saveStore();
+}
+
+provisionAdminPlayer();
 
 function saveStore() {
   const tmp = `${STORE_PATH}.tmp`;
@@ -107,8 +124,11 @@ function publicPlayer(player) {
   return {
     id: player.id,
     displayName: player.displayName,
+    role: player.role === 'admin' ? 'admin' : 'player',
+    cosmeticsUnlocked: player.role === 'admin',
     createdAt: player.createdAt,
     preferences: { showFieldBriefing: player.preferences?.showFieldBriefing !== false },
+    cosmetics: cosmetics.normalize(player.cosmetics, stats.xp, player.role === 'admin'),
     stats: {
       xp: stats.xp,
       itemsRecovered: stats.itemsRecovered,
@@ -248,6 +268,14 @@ function recordScenarioStarted(playerId) {
   try { saveStore(); } catch (err) { console.error('[playerStore] start tracking failed:', err.message); }
 }
 
+function updateCosmetics(player, selection) {
+  const next = cosmetics.validate(selection, ensureStats(player).xp, player.role === 'admin');
+  const previous = player.cosmetics;
+  player.cosmetics = next;
+  try { saveStore(); } catch (error) { player.cosmetics = previous; throw error; }
+  return publicPlayer(player);
+}
+
 function recordScenarioCompleted(playerId, seed = {}, callId = null) {
   const player = store.players.find(candidate => candidate.id === playerId);
   if (!player) return;
@@ -304,6 +332,7 @@ module.exports = {
   getPlayerByToken,
   publicPlayer,
   updatePreferences,
+  updateCosmetics,
   recordScenarioStarted,
   recordScenarioCompleted,
   recordGloveboxSorted,

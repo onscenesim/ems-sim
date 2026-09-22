@@ -1,0 +1,93 @@
+/* Stickers live on the field-notebook paper beside the written readings. */
+.notepad-readings { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; }
+.notepad-readings.has-stickers { grid-template-columns: minmax(0, 1fr) minmax(100px, .6fr); column-gap: 10px; }
+.notepad-readings-heading { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.notepad-readings > .vital-row { grid-column: 1 / -1; }
+.notepad-measurements { min-width: 0; grid-column: 1; grid-row: 3; }
+.notepad-measurements .vital-row { flex-wrap: wrap; column-gap: 6px; row-gap: 2px; }
+.notepad-measurements .vital-row-value { min-width: 0; overflow-wrap: anywhere; }
+#notepad-stickers { grid-column: 2; grid-row: 3; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; padding: 5px; }
+#notepad-stickers:empty { display: none; }
+#vitals-panel .notepad-sticker { display: block; flex-shrink: 0; border: 0; background: transparent; padding: 0; width: 86px; height: 70px; cursor: pointer; }
+.notepad-sticker:nth-child(1) { rotate: -7deg; align-self: flex-end; }
+.notepad-sticker:nth-child(2) { rotate: 6deg; align-self: flex-start; }
+.sticker-art { display: block; object-fit: contain; width: 100%; height: 100%; filter: drop-shadow(1px 3px 1px #0004); }
+.sticker-art-speed { object-fit: cover; object-position: center 29%; aspect-ratio: 1; border: 4px solid #f4efd8; border-radius: 22%; box-sizing: border-box; }
+.sticker-art-davita { object-fit: contain; background: white; border: 5px solid white; border-radius: 12px; box-sizing: border-box; }
+#vitals-panel #notepad-stickers-edit { color: #4d615d; background: transparent; border: 0; padding: 3px 0; font: 11px var(--font-xp); cursor: pointer; white-space: nowrap; }
+#vitals-panel #notepad-stickers-edit:hover { color: #243d3b; text-decoration: underline; }
+#notepad-stickers-edit:focus-visible, .notepad-sticker:focus-visible { outline: 2px solid #385d85; outline-offset: 3px; }
+.scratch-toolbar { flex-wrap: wrap; gap: 6px; }
+.scratch-tools { display: flex; align-items: center; gap: 5px; margin-left: auto; }
+.scratch-pen-label { font: 12px var(--font-xp); }
+#scratch-pen { min-width: 0; max-width: 155px; height: 30px; padding: 2px 4px; border: 1px solid #687a80; border-left: 5px solid var(--ink-color, #283a57); background: #e6e1c9; color: #273740; font: 14px var(--font-xp); }
+#scratch-pen:focus-visible { outline: 2px solid #385d85; outline-offset: 2px; }
+#scratch-pen-status { font-size: 13px; color: #792f29; }
+#scratch-pen-status:empty { display: none; }
+#progress-cosmetics { display: flex; width: 100%; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin: 12px 0; padding: 11px; background: #304740; color: #e0dec5; border: 1px solid #738875; font: 16px var(--font-xp); cursor: pointer; }
+#progress-cosmetics span { color: #b4c6a2; font-size: 14px; }
+#cosmetics-dialog { width: min(780px, calc(100vw - 24px)); max-width: none; max-height: min(880px, calc(100dvh - 24px)); margin: auto; padding: 0; border: 2px solid; border-color: #9daca8 #1d2728 #1d2728 #9daca8; border-radius: 4px; background: #d5d2bf; color: #263841; box-shadow: 0 20px 70px #0009; overflow: hidden; font: 18px/1.2 var(--font-xp); box-sizing: border-box; }
+#cosmetics-dialog[open] { display: flex; flex-direction: column; }
+#cosmetics-dialog::backdrop { background: #081014c4; }
+.cosmetics-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px 8px 16px; background: linear-gradient(90deg, #283e4d, #536969); color: #ede9d4; flex-shrink: 0; }
+#cosmetics-title { margin: 0; font: 14px var(--font-block); }
+#cosmetics-close { min-height: 40px; min-width: 40px; }
+.cosmetics-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 18px; background: #b9beab; border-bottom: 1px solid #899584; flex-shrink: 0; }
+#cosmetics-xp { color: #355339; }
+#cosmetics-slot-count { color: #435456; }
+.cosmetics-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 18px 20px; scrollbar-color: #8c9889 #d5d2bf; }
+#cosmetics-description { font-size: 16px; line-height: 1.3; max-width: 590px; margin: 12px 0 18px; color: #52615c; }
+.cosmetics-section-label { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; flex-wrap: wrap; color: #304949; font-size: 17px; margin: 14px 0 8px; border-bottom: 1px solid #9da696; padding-bottom: 6px; }
+.cosmetics-section-label span { font-size: 13px; color: #5f6e63; }
+#cosmetics-pens { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 7px; margin-bottom: 22px; }
+.cosmetic-pen { display: grid; grid-template-columns: 15px minmax(0,1fr); align-items: center; column-gap: 6px; text-align: left; padding: 7px; border: 1px solid #a0aa98; color: #314047; background: #e5e2cc; cursor: pointer; font: 15px var(--font-xp); }
+.cosmetic-ink { display: block; width: 12px; height: 23px; border: 1px solid #0004; border-radius: 3px 3px 1px 1px; grid-row: span 2; box-shadow: inset 3px 0 #ffffff22; }
+.cosmetic-pen small { color: #687565; font-size: 12px; }
+#cosmetics-sticker-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+.cosmetic-sticker { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 10px 8px 9px; gap: 6px; border: 1px solid #a5aa95; border-radius: 3px; background: #e8e5d0; color: #34454b; cursor: pointer; min-width: 0; font: 16px var(--font-xp); text-align: center; }
+.cosmetic-sticker > .sticker-art { height: 139px; width: 100%; }
+.cosmetic-sticker .sticker-art-speed { width: 139px; max-width: 100%; }
+.cosmetic-sticker .sticker-art-davita { height: 90px; margin-block: 24.5px; }
+.cosmetic-sticker strong { font-weight: normal; min-height: 38px; display: flex; align-items: center; }
+.cosmetic-sticker .cosmetic-cost { font-size: 13px; color: #5b6c5d; margin-top: auto; }
+.cosmetic-sticker.is-locked { background: #cfcebd; color: #646e63; }
+.cosmetic-sticker.is-locked .sticker-art { opacity: .67; }
+.cosmetic-pen:disabled, .cosmetic-sticker:disabled { cursor: default; }
+.cosmetic-pen:disabled { background: #d2d1bf; }
+.cosmetic-pen[aria-pressed="true"], .cosmetic-sticker[aria-pressed="true"] { border-color: #3b644f; box-shadow: inset 0 0 0 2px #56725a; background: #e0e4c9; }
+.cosmetic-pen:hover:not(:disabled), .cosmetic-sticker:hover:not(:disabled) { border-color: #375d57; background: #f0eed8; }
+#cosmetics-dialog button:focus-visible, #cosmetics-note:focus-visible { outline: 2px solid #305f80; outline-offset: 2px; }
+#cosmetics-note-editor { margin-top: 18px; padding: 12px; background: #e5d486; border: 1px solid #b5a366; }
+#cosmetics-note-editor label { display: block; font-size: 14px; margin-bottom: 6px; }
+#cosmetics-note { display: block; width: 100%; resize: vertical; min-height: 70px; max-height: 180px; box-sizing: border-box; border: 1px solid #a89b61; background: #f0dfa0; color: #30404b; padding: 8px; font: 18px var(--font-xp); }
+#cosmetics-note-count { display: block; font-size: 12px; text-align: right; margin-top: 4px; }
+.cosmetics-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; border-top: 1px solid #959f90; background: #bcc3ae; flex-shrink: 0; }
+#cosmetics-status { margin: 0; font-size: 16px; color: #514637; }
+#cosmetics-apply { padding: 9px 24px; min-height: 44px; background: #38594b; color: #edeacb; border: 2px solid; border-color: #6c8a70 #203c30 #203c30 #6c8a70; font: 17px var(--font-xp); cursor: pointer; }
+#cosmetics-apply:disabled { opacity: .6; cursor: wait; }
+@media (min-width: 601px) and (max-width: 1100px) {
+  .notepad-body { grid-template-columns: minmax(200px, 1fr) minmax(280px, 1fr); }
+  .notepad-scratch { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .notepad-readings.has-stickers { grid-template-columns: minmax(0, 1fr) 78px; column-gap: 6px; }
+  #vitals-panel .notepad-sticker { width: 68px; height: 60px; }
+  #vitals-panel #notepad-stickers-edit { min-height: 44px; }
+  #scratch-pen { min-height: 44px; max-width: 158px; font-size: 16px; }
+  .scratch-pen-label { display: none; }
+  #cosmetics-title { font-size: 12px; }
+  .cosmetics-titlebar { padding: 6px 8px 6px 12px; }
+  #cosmetics-close { min-width: 44px; min-height: 44px; }
+  .cosmetics-toolbar { padding: 10px 12px; font-size: 16px; }
+  .cosmetics-scroll { padding-inline: 10px; }
+  #cosmetics-pens { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+  .cosmetic-pen { min-height: 49px; }
+  #cosmetics-sticker-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .cosmetic-sticker { font-size: 15px; padding: 6px; }
+  .cosmetic-sticker > .sticker-art { height: 102px; }
+  .cosmetic-sticker .sticker-art-speed { width: 102px; }
+  .cosmetic-sticker .sticker-art-davita { height: 64px; margin-block: 19px; }
+  .cosmetic-sticker .cosmetic-cost { font-size: 12px; }
+  .cosmetics-footer { padding: 8px 10px; }
+  #cosmetics-apply { padding: 8px 18px; }
+}

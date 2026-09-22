@@ -256,6 +256,60 @@
   );
 
   const trash = new Set(['coins', 'napkins', 'ekg', 'hot-sauce', 'uncrustable', 'aux', 'straw', 'pen', 'map-book', 'narcan', 'conference', 'csn-stickers', 'phone-glove', 'covid-mask', 'old-newspaper', 'zynn-container', 'french-fry', 'parking-receipt', 'googly-eye', 'dead-marker']);
+  const moreJunk = [
+    {
+      id: 'dead-pager', name: 'A pager with a dead battery',
+      lore: 'Last message: CALL BASE. Base has changed buildings twice since then.',
+      art: '<rect x="13" y="21" width="70" height="40" rx="6" fill="#4b565d" stroke="#89958e" stroke-width="2"/><rect x="21" y="29" width="43" height="17" fill="#a2aa8d"/><circle cx="73" cy="37" r="4" fill="#829a83"/><path d="M23 54h28" stroke="#293b44" stroke-width="3"/>' + label('CALL BASE', 43, 40, 6),
+    },
+    {
+      id: 'fossil-cough-drop', name: 'A fossilized cough drop',
+      lore: 'Fused to its wrapper. It might soothe a throat if you could separate it from the geological record.',
+      art: '<path d="m10 30 17 7 41-8 17-6-4 24-15-3-37 11-17 8z" fill="#b6b596" opacity=".75"/><ellipse cx="47" cy="42" rx="21" ry="12" fill="#997642" stroke="#c6a66a" stroke-width="2"/><path d="m30 38 9 7 13-12 10 10M15 35l8 17m49-21 4 13" fill="none" stroke="#756c49" stroke-width="2"/>',
+    },
+    {
+      id: 'ancient-charger', name: 'A thirty-pin charging cable',
+      lore: 'For a phone nobody owns. It has survived three fleet upgrades by looking vaguely useful.',
+      art: '<path d="M28 27C7 72 67 68 56 39S81 24 75 51" fill="none" stroke="#c9c9b1" stroke-width="5"/><rect x="13" y="13" width="37" height="16" rx="3" fill="#d4d2bb"/><path d="M18 13v-4h27v4" stroke="#93a1a5" stroke-width="4"/><path d="M66 47h18v18H66z" fill="#d4d2bb"/><path d="M70 64h10v8H70z" fill="#879c9f"/>',
+    },
+    {
+      id: 'conference-lanyard', name: 'A conference lanyard from 2008',
+      lore: 'Sponsored by a company that has been acquired six times. The clip still works. The QR code predates QR codes.',
+      art: '<path d="M27 11q-18 29 20 45 39-16 22-45" fill="none" stroke="#9180a0" stroke-width="7"/><path d="M45 53h6v10h-6z" fill="#afb9b3"/><rect x="31" y="60" width="36" height="16" rx="2" fill="#d9d4b8"/>' + label('EMS 2008', 49, 70, 6),
+    },
+    {
+      id: 'earplug', name: 'One foam earplug',
+      lore: 'Just one. For when you only want to hear half of Tyler’s complaints.',
+      art: '<path d="M35 18q18-11 27 2l-1 35q-8 15-27 4z" fill="#d79a73" stroke="#b37b55" stroke-width="2"/><ellipse cx="47" cy="21" rx="12" ry="7" fill="#e6b087"/><path d="M39 30l16 3M38 42l18 2M40 53l13 2" stroke="#bd865f" stroke-width="2"/>',
+    },
+    {
+      id: 'pizza-coupon', name: 'An expired pizza coupon',
+      lore: 'One free topping. Valid Tuesdays. Dine-in only. Expired during an administration nobody misses.',
+      art: paper(label('STATION PIZZA', 47, 22, 6) + '<path d="m34 30 28 6-20 21z" fill="#d7b868"/><path d="m34 30 28 6" stroke="#a77d48" stroke-width="5"/><g fill="#a85e43"><circle cx="42" cy="39" r="3"/><circle cx="51" cy="40" r="3"/><circle cx="43" cy="48" r="3"/></g>' + label('EXPIRED', 47, 66, 8, '#a15849')),
+    },
+    {
+      id: 'radio-clip', name: 'A broken radio belt clip',
+      lore: 'The radio hit the pavement. The clip stayed on the belt. Technically, half of it did its job.',
+      art: '<path d="M32 11h27v25l-8 5 7 6-4 22H30V46l8-8-6-6z" fill="#34444c" stroke="#75848b" stroke-width="2"/><path d="M40 20v12l7 5-8 11v12h7" fill="none" stroke="#182b32" stroke-width="4"/><circle cx="46" cy="19" r="3" fill="#a9b3b0"/>',
+    },
+    {
+      id: 'flush-wrapper', name: 'An empty saline flush wrapper',
+      lore: 'The flush is long gone. Its packaging has been reassigned to permanent glovebox duty.',
+      art: '<path d="m8 26 12-3 13 4 12-5 16 2 20-4 7 26-12 6-14-2-17 7-14-4-15 4z" fill="#c8d2cb" opacity=".75"/><path d="M19 32h56v14H19z" fill="#98b6af"/>' + label('0.9% NaCl', 47, 41, 7) + '<path d="m27 25 6 27M68 25l-5 24" stroke="#899e9a"/>',
+    },
+    {
+      id: 'mix-cd', name: 'A scratched-up “NIGHT SHIFT MIX” CD',
+      lore: 'Track one is missing. Track two is missing. Track three is the sound the player makes before ejecting it.',
+      art: '<circle cx="48" cy="40" r="30" fill="#a8b7b8" stroke="#d1d4bd" stroke-width="2"/><path d="m25 21 14 15m17 12 15 13m-45-2 15-15m15-11 15-15" stroke="#83aab0" stroke-width="5"/><circle cx="48" cy="40" r="8" fill="#26373e" stroke="#dedcc6" stroke-width="3"/>' + label('NIGHT SHIFT', 48, 25, 6) + label('MIX', 48, 61, 7),
+    },
+    {
+      id: 'shift-swap', name: 'A shift-swap request from last Christmas',
+      lore: '“Can anyone cover?” There are six different handwriting styles on the paper. All of them say no.',
+      art: paper(label('SHIFT SWAP?', 47, 22, 7) + label('DEC 25', 47, 34, 7) + '<path d="m30 41 8 6m-1-6-6 7m14-7 9 6m-2-6-8 7m15-7 6 8m0-8-6 8" stroke="#8b6761" stroke-width="2"/>' + label('NO.  no.  NO.', 47, 62, 7)),
+    },
+  ];
+  items.push(...moreJunk);
+  moreJunk.forEach(item => trash.add(item.id));
   items.forEach(item => { item.destination = trash.has(item.id) ? 'trash' : 'pocket'; });
   items.find(item => item.id === 'coins').alternateDestination = 'pocket';
   const notes = [
