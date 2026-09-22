@@ -927,6 +927,7 @@ async function startScenario() {
 
     if (currentPlayer?.stats) currentPlayer.stats.scenariosStarted += 1;
 
+    resetVitals();
     sessionId      = data.session_id;
     isClosed       = false;
     waitingDebrief = false;
@@ -989,12 +990,8 @@ async function startScenario() {
     if (typeof data.scene_minute === 'number') {
       currentSceneMinute = data.scene_minute;
     }
-    if (data.multi_patient) {
-      setMultiPatientVitalsNotice(true);
-    } else {
-      setMultiPatientVitalsNotice(false);
-      applyVitals(data.vitals || null);
-    }
+    applyPatientFocus(data.patient_focus, data.multi_patient);
+    applyVitals(data.vitals || null);
     applyBackupStatus(data.backup || { status: 'not_called', eta: null });
     if (data.crewStatus) applyCrewStatus(data.crewStatus);
     if (data.demo_source && !patientDemoSource) {
@@ -1157,7 +1154,8 @@ async function sendTurn(msg, opts = {}) {
     if (typeof data.scene_minute === 'number') {
       currentSceneMinute = data.scene_minute;
     }
-    if (!vitalsBar.dataset.multiPatient) applyVitals(data.vitals || null);
+    applyPatientFocus(data.patient_focus, data.second_patient);
+    applyVitals(data.vitals || null);
     // Fire startup sound the first time the player asks for vitals,
     // or when CPR begins.
     if (!firstVitalsPlayed) {
@@ -2090,7 +2088,7 @@ function buildPatientCard(patient, scenarioId) {
     rule();
     const notice = document.createElement('div');
     notice.className = 'pcr-multi-notice';
-    notice.textContent = '⚠️  MULTI-PATIENT INCIDENT — Additional patients documented in narrative only.';
+    notice.textContent = '⚠️  MULTI-PATIENT INCIDENT — Monitor and readings follow your focused patient. This record belongs to the original patient.';
     wrap.appendChild(notice);
   }
 
@@ -2746,6 +2744,7 @@ function updateResumeTile(snap) {
 }
 
 async function resumeFromSnapshot(snap) {
+  resetVitals();
   sessionId       = snap.session_id;
   isClosed        = snap.closed || false;
   waitingDebrief  = false;
@@ -2770,7 +2769,8 @@ async function resumeFromSnapshot(snap) {
   skipBtn.disabled = isClosed;
   updateSkipBtn();
 
-  scenarioStartTime = Date.now() - (snap.sceneMinute || 0) * 60 * 1000;
+  currentSceneMinute = snap.sceneMinute || 0;
+  scenarioStartTime = Date.now() - currentSceneMinute * 60 * 1000;
 
   startScreen.style.display = 'none';
   terminal.style.display    = 'flex';
@@ -2792,12 +2792,8 @@ async function resumeFromSnapshot(snap) {
   // unit is already en route, it renders locked with the chosen side marked.
   if (hasPlayedLoading) showDestinationPanel(snap.transportDest || null);
 
-  if (snap.multi_patient) {
-    setMultiPatientVitalsNotice(true);
-  } else {
-    setMultiPatientVitalsNotice(false);
-    applyVitals(snap.lastVitals || null);
-  }
+  applyPatientFocus(snap.patient_focus, snap.multi_patient || snap.second_patient);
+  applyVitals(snap.lastVitals || null);
 
   if (snap.crew) populateCrewPanel(snap.crew);
 
@@ -2822,7 +2818,6 @@ async function resumeFromSnapshot(snap) {
 
 // ── Vitals monitor strip ─────────────────────────────────────────────────────
 
-const vitalsBar       = document.getElementById('vitals-bar');
 const vitalsPanel     = document.getElementById('vitals-panel');
 const vitalsExpand    = document.getElementById('vitals-expand');
 
@@ -3254,9 +3249,8 @@ function applyVitals(vitals) {
       }
     }
     // Mark BP cell as active (tappable) once first reading exists
-    // Only update the state when BP is explicitly present in THIS vitals update —
-    // if BP is absent from the update (Claude omitted it), keep whatever state we had.
-    if (name === 'BP' && vitals && Object.prototype.hasOwnProperty.call(vitals, 'BP')) {
+    // The server sends a full snapshot; an absent BP must clear the previous patient's control.
+    if (name === 'BP') {
       const nibpCell = document.getElementById('nibp-cell');
       if (nibpCell) nibpCell.classList.toggle('nibp-active', display !== null);
     }
@@ -3385,6 +3379,9 @@ function resetCrewStatus() {
 }
 
 function resetVitals() {
+  focusedPatientId = null;
+  multiPatientIncident = false;
+  applyPatientFocus(null, false);
   currentVitals = null;
   currentSceneMinute = 0;
   stopRhythmStrip();
@@ -3491,19 +3488,23 @@ document.addEventListener('click', e => {
   }
 });
 
-function setMultiPatientVitalsNotice(active) {
-  // Class toggle only — replacing the bar's innerHTML (the old approach)
-  // permanently destroyed the vital cells and the expand button for every
-  // subsequent scenario in the same page session.
-  if (active) {
-    vitalsBar.dataset.multiPatient = '1';
-    vitalsBar.classList.add('multi-patient');
+let focusedPatientId = null;
+let multiPatientIncident = false;
+function applyPatientFocus(focus, multiPatient = false) {
+  multiPatientIncident = multiPatientIncident || !!multiPatient || (!!focus?.id && focus.id !== 'patient_1');
+  const nextPatientId = focus?.id || null;
+  if (nextPatientId !== focusedPatientId) {
+    // Erase the old trace immediately when moving to a different patient.
     stopRhythmStrip();
     updatePlethStrip(null);
-  } else {
-    delete vitalsBar.dataset.multiPatient;
-    vitalsBar.classList.remove('multi-patient');
+    focusedPatientId = nextPatientId;
   }
+  const label = focus?.label || 'Current patient';
+  const notice = document.getElementById('patient-focus');
+  notice.hidden = !multiPatientIncident;
+  notice.textContent = `Focused on: ${label} · To switch, type “focus on” and the patient.`;
+  document.getElementById('notepad-focus').textContent = `Readings for: ${label}`;
+  document.getElementById('notepad-record-label').hidden = !multiPatientIncident;
 }
 
 // Tick staleness every 5s while the page is alive

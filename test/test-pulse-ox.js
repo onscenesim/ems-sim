@@ -173,3 +173,45 @@ test('Session parses signal tags, clears none, retains hidden truth and records 
   assert.equal(removed.vitals.SpO2, undefined); assert.equal(removed.vitals.PulseOx.trueSpO2, 98);
   assert.equal(removed.vitals.PulseOx.reason, 'disconnected');
 });
+
+
+test('multi-patient focus isolates readings and probe state across switches and restored sessions', async () => {
+  const seed = {
+    scenario_id: 'multi-patient-test', difficulty: 'NORMAL', provider_level: 'ALS',
+    region: 'SUBURBAN', category: 'ob', patient_age: 30, age_group: 'young_adult',
+    sex: 'female', patient_name: 'Test Patient', presentation: 'Delivery',
+    special_flags: 'two_patients', trajectory: 'stable', decompensation_clock: null,
+    complication_type: 'equipment_failure', complication_roll: 5, events: [],
+  };
+  let session = new Session(seed);
+  assert.match(session.systemPrompt, /PATIENT FOCUS/);
+  reply = 'Mother assessed. [PATIENT_FOCUS: patient_1 | Mother] [VITALS: HR=80 BP=110/70@T+1:00 TrueSpO2=98 PulseOxProbe=connected PulseOxArtifact=false_low] [TIME: 1:00]';
+  const mother = await session.send('Focus on the mother', true);
+  assert.equal(mother.vitals.SpO2, 86);
+  assert.ok(!mother.reply.includes('PATIENT_FOCUS'));
+  reply = 'Newborn assessed. [PATIENT_FOCUS: patient_2 | Newborn] [VITALS: HR=140 TrueSpO2=96 PulseOxProbe=connected] [TIME: 2:00]';
+  const newborn = await session.send('Focus on the newborn', true);
+  assert.equal(newborn.vitals.HR, 140);
+  assert.equal(newborn.vitals.BP, undefined, 'mother BP must not follow focus');
+  assert.equal(newborn.vitals.SpO2, 96, 'mother probe fault must not follow focus');
+  assert.deepEqual(session.patientFocus, { id: 'patient_2', label: 'Newborn' });
+  assert.equal(session.patientVitals.patient_1.HR, 80);
+  const { restoreSession, deleteSession } = require('../src/server/sessionStore');
+  session = restoreSession(JSON.parse(JSON.stringify({ ...session, id: 'multi-patient-restore-test' })));
+  assert.deepEqual(session.patientFocus, { id: 'patient_2', label: 'Newborn' });
+  assert.equal(session.lastVitals.HR, 140);
+  reply = 'Back to the mother. [PATIENT_FOCUS: patient_1 | Mother] [VITALS: HR=84 BP=110/70@T+1:00 TrueSpO2=98 PulseOxProbe=connected] [TIME: 3:00]';
+  const returned = await session.send('Focus on the mother', true);
+  assert.equal(returned.vitals.HR, 84);
+  assert.equal(returned.vitals.SpO2, 86, 'original probe fault survives resume');
+  assert.equal(returned.vitals.BP.t, 'T+1:00', 'switching does not remeasure BP');
+  const context = buildDebriefContext(seed, session.turns);
+  assert.match(context, /Mother \(patient_1\): HR 80/);
+  assert.match(context, /Newborn \(patient_2\): HR 140/);
+  reply = 'Now with the newborn. [PATIENT_FOCUS: patient_2 | Newborn] [TIME: 4:00]';
+  assert.equal((await session.send('Focus on the newborn', true)).vitals, null, 'missing snapshot on a switch clears the previous patient');
+  reply = 'Probe removed. [PATIENT_FOCUS: patient_2 | Newborn] [VITALS: GCS=15 PulseOxProbe=disconnected] [TIME: 5:00]';
+  assert.equal((await session.send('Observe', true)).vitals.SpO2, undefined);
+  assert.equal(session.patientVitals.patient_1.HR, 84);
+  deleteSession('multi-patient-restore-test');
+});

@@ -166,6 +166,8 @@ function restoreSession(snapshot) {
   session.lastReplyHadTime = snapshot.lastReplyHadTime ?? true;
   session.messages    = snapshot.messages    || [];
   session.lastVitals  = snapshot.lastVitals  || null;
+  session.patientFocus = snapshot.patientFocus || null;
+  session.patientVitals = snapshot.patientVitals || {};
   session.sceneMinute = snapshot.sceneMinute || 0;
   session.closed      = snapshot.closed      || false;
   session.turns       = snapshot.turns       || [];

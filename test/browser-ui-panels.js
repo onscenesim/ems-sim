@@ -233,6 +233,56 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
     assert.equal(await page.evaluate(() => window.confirmed), false);
     await page.evaluate(() => { toggleTheme(); showCrewPanel(); });
     await page.screenshot({ animations: 'disabled', path: path.join(output, 'mobile-light-crew.png') });
+    // Exercise actual start/turn/resume paths for the multi-patient notebook regression.
+    const motherVitals = { HR: 84, BP: { value: '110/70', t: 'T+1:00', tMin: 1 }, RR: 18, GCS: 15 };
+    const newbornVitals = { HR: 140, RR: 40, GCS: 15 };
+    const motherFocus = { id: 'patient_1', label: 'Mother' };
+    const newbornFocus = { id: 'patient_2', label: 'Newborn' };
+    let newCall = { session_id: 'multi-test', scenario_id: 'MULTI', reply: 'Two patients on scene.', multi_patient: true,
+      patient_focus: motherFocus, vitals: motherVitals, scene_minute: 1, patient: { name: 'Test Patient', age: 30, sex: 'female' } };
+    await page.route('**/api/scenario/new', route => route.fulfill({ json: newCall }));
+    await page.route('**/api/scenario/multi-test/turn', route => route.fulfill({ json: {
+      reply: 'You are assessing the newborn.', vitals: newbornVitals, patient_focus: newbornFocus,
+      second_patient: true, scene_minute: 2, rolls: [],
+    } }));
+    await page.evaluate(() => { hideCrewPanel(); hideDrugPanel(); return startScenario(); });
+    assert.match(await page.locator('#patient-focus').textContent(), /Mother/);
+    assert.equal(await page.locator('[data-vital="HR"]').first().textContent(), '84');
+    assert.equal(await page.locator('#vitals-expand').isVisible(), true);
+    await page.locator('#vitals-expand').click();
+    await page.evaluate(() => scratchContext.fillRect(10, 10, 20, 20));
+    const savedInk = await inkCount();
+    await page.locator('#vitals-close').click();
+    await page.evaluate(() => sendTurn('Focus on the newborn'));
+    assert.match(await page.locator('#patient-focus').textContent(), /Newborn/);
+    assert.equal(await page.locator('[data-vital="HR"]').first().textContent(), '140');
+    assert.equal(await page.locator('[data-vital="BP"]').first().textContent(), '——');
+    assert.equal(await page.locator('#nibp-cell').evaluate(e => e.classList.contains('nibp-active')), false);
+    for (const width of [320, 390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert.equal(await page.locator('#vitals-expand').isVisible(), true);
+      const bounds = await page.locator('#vitals-expand').boundingBox();
+      assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width, 'multi-patient notebook fits');
+      await page.locator('#vitals-expand').click();
+      assert.equal(await page.locator('#vitals-panel').isVisible(), true);
+      assert.match(await page.locator('#notepad-focus').textContent(), /Newborn/);
+      assert.equal(await inkCount(), savedInk, 'turns and focus switches preserve notes');
+      await page.screenshot({ animations: 'disabled', path: path.join(output, `multi-patient-${width}.png`) });
+      await page.locator('#vitals-close').click();
+    }
+    await page.evaluate(snap => resumeFromSnapshot(snap), {
+      session_id: 'multi-test', multi_patient: true, second_patient: true, patient_focus: newbornFocus,
+      lastVitals: newbornVitals, sceneMinute: 2, meta: {}, turns: [],
+    });
+    assert.match(await page.locator('#patient-focus').textContent(), /Newborn/);
+    assert.equal(await page.locator('[data-vital="HR"]').first().textContent(), '140');
+    await page.locator('#vitals-expand').click();
+    assert.equal(await page.locator('#vitals-panel').isVisible(), true, 'notebook reopens after resume');
+    newCall = { ...newCall, multi_patient: false, patient_focus: motherFocus, vitals: motherVitals };
+    await page.evaluate(() => startScenario());
+    assert.equal(await page.locator('#patient-focus').isVisible(), false, 'new single-patient call clears multi-patient status');
+    assert.equal(await page.locator('#vitals-expand').isVisible(), true);
+    assert.equal(await inkCount(), 0, 'new call clears notes');
     assert.deepEqual(errors, []);
     console.log('UI checks passed. Screenshots: ' + output);
   } finally { await browser.close(); }

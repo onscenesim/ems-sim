@@ -363,6 +363,27 @@ test('new scenario returns and persists initial demographic machine state', asyn
   assert.equal(saved.second_patient,true);
 });
 
+test('patient focus and separate vital snapshots flow through new, turn, persistence and resume', async () => {
+  generate = async () => ({ text: 'Mother assessed. [PATIENT_FOCUS: patient_1 | Mother] [VITALS: HR=84 GCS=15] [TIME: 1:00]' });
+  const created = await route('/new');
+  const id = created.body.session_id;
+  assert.deepEqual(created.body.patient_focus, { id: 'patient_1', label: 'Mother' });
+  assert.equal(snapshots.get(id).patientVitals.patient_1.HR, 84);
+  generate = async () => ({ text: 'Newborn assessed. [PATIENT_FOCUS: patient_2 | Newborn] [VITALS: HR=140 RR=40] [TIME: 2:00]' });
+  const changed = await route('/:id/turn', {
+    message: 'Focus on the newborn', operation_id: 'multi-focus-operation-001', procs_resolved: true,
+  }, { id });
+  assert.equal(changed.status, 200);
+  assert.deepEqual(changed.body.patient_focus, { id: 'patient_2', label: 'Newborn' });
+  assert.equal(changed.body.vitals.HR, 140);
+  const saved = snapshots.get(id);
+  assert.equal(saved.patientVitals.patient_1.HR, 84);
+  assert.equal(saved.patientVitals.patient_2.HR, 140);
+  const resumed = await route('/resume', {}, {}, { cookie: `ems_sid=${id}; ems_owner=${saved.ownerId}` });
+  assert.deepEqual(resumed.body.session.patient_focus, changed.body.patient_focus);
+  assert.equal(resumed.body.session.lastVitals.HR, 140);
+});
+
 test('multi-patient detection covers ordinary two-patient and MCI seeds', () => {
   assert.equal(isMultiPatientSeed({special_flags:'two_patients — mother and newborn'}),true);
   assert.equal(isMultiPatientSeed({special_flags:'mci. multiple_patients. incident_command'}),true);

@@ -359,6 +359,7 @@
     </div>
 
     <!-- Vitals monitor strip — LIFEPAK-style. Sits below header on all viewports. -->
+    <div id="patient-focus" hidden aria-live="polite"></div>
     <div id="vitals-bar" aria-label="Patient vitals monitor">
       <div class="vital-cell" id="rhythm-cell" data-waveform="ecg" aria-label="Monitor waveforms">
         <button id="waveform-toggle" type="button" aria-label="Show SpO₂ pleth waveform" aria-pressed="false" aria-controls="ecg-waveform pleth-waveform">ECG ⇄</button>
@@ -395,14 +396,15 @@
         <span><b>MORE VITALS</b><small>RR · TEMP · GLUCOSE · GCS</small></span>
         <span class="notepad-chevron" aria-hidden="true">▼</span>
       </button>
-      <span id="multi-patient-notice">Multiple patients on scene &mdash; vitals unavailable</span>
     </div>
 
     <!-- Field notepad keeps additional observations beside a scratch area. -->
     <div id="vitals-panel" aria-hidden="true" hidden>
       <div class="notepad-titlebar"><span>FIELD NOTES</span><button id="vitals-close" class="xp-close" type="button" aria-label="Close field notes"></button></div>
       <div class="notepad-body">
+      <div id="notepad-record-label" hidden>Original patient record</div>
       <div id="notepad-patient" class="notepad-patient"></div>
+      <div id="notepad-focus">Readings for: Current patient</div>
       <div class="notepad-readings">
       <div class="vital-row"><span class="vital-row-label">Pulse ox</span><span class="vital-row-value" id="pulse-ox-status">Probe not placed</span></div>
       <div class="vital-row"><span class="vital-row-label">RR</span><span class="vital-row-value" data-vital="RR">&mdash;</span></div>

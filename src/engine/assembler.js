@@ -223,6 +223,9 @@ function assembleSeedBlock(seed) {
   lines.push('13. POST-HANDOFF BOUNDARY: Once the receiving team takes over at bedside, accept no further clinical orders. Respond as charge nurse: "We have it from here." Redirect to debrief if user persists. Triggers at bedside handoff, not at loading or transport start.');
   lines.push('14. VITALS TAG — MANDATORY EVERY REPLY:');
   lines.push('  Format (nothing follows it): [VITALS: HR=110 SpO2=94 ETCO2=38 RR=22 Rhythm=sinus BP=92/60@T+4:20 Temp=98.6@T+2:00 GCS=14 Pain=7]');
+  lines.push('  PATIENT FOCUS — on EVERY reply emit [PATIENT_FOCUS: patient_1 | Primary patient] immediately before VITALS. patient_1 is the original seeded patient; assign patient_2, patient_3, etc. to additional patients in order of discovery and NEVER change or reuse an ID. Replace the label with a short recognizable description already revealed in narration (Mother, Newborn, Driver); do not reveal an unknown name or diagnosis.');
+  lines.push('  In multi-patient incidents, VITALS contains ONLY the patient the provider is currently focusing on. Follow explicit requests such as "focus on the newborn", "check the driver", or "back to the mother"; otherwise keep focus unchanged. Delegating care or mentioning another patient does not switch focus. If the target is ambiguous, ask and retain the previous focus. Emit exactly ONE PATIENT_FOCUS and ONE VITALS tag, for the final focused patient.');
+  lines.push('  Track measurements, equipment placement, probe faults, and timestamps SEPARATELY for each patient. Changing focus does not transfer equipment or obtain new measurements. Never copy readings, timestamps, or probe state from another patient. When returning to a patient, report their current continuous readings only if still monitored; episodic readings retain their original measurement times. Describe other patients in narration, not in additional VITALS tags.');
   lines.push('  Equipment gating — include field ONLY after equipment placed:');
   lines.push('    HR + Rhythm → monitor placed | SpO2 → pulse oximeter | BP → NIBP cuff + cycle taken | ETCO2 + RR → capnography (RR also OK from manual count) | Temp → thermometer used | Glucose → glucometer used');
   lines.push('    GCS + Pain → ALWAYS present from turn 1 (minimum tag: [VITALS: GCS=15 Pain=0]). Never omit. Estimate from appearance/behavior.');
@@ -399,7 +402,8 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   let lastRow = null;
   for (const t of turns) {
     if (!t.vitals) continue;
-    const row = formatVitals(t.vitals);
+    const readings = formatVitals(t.vitals);
+    const row = readings && (t.patientFocus ? `${t.patientFocus.label} (${t.patientFocus.id}): ${readings}` : readings);
     if (!row || row === lastRow) continue;   // skip empty + unchanged-from-previous
     lines.push(`  T+${formatMinutes(t.sceneMinute)} — ${row}`);
     lastRow = row;

@@ -246,6 +246,17 @@ function parseVitalsTag(reply) {
   return { cleanedReply, vitals };
 }
 
+// Stable IDs keep monitor/probe state separate even when a patient's name is learned later.
+function parsePatientFocusTag(reply) {
+  const re = /\[PATIENT_FOCUS:\s*([^\]]*)\]/gi;
+  const tags = [...reply.matchAll(re)];
+  const match = tags.at(-1)?.[1].trim().match(/^(patient_[1-9]\d*)\s*\|\s*([^|\r\n]{1,80})$/i);
+  return {
+    cleanedReply: reply.replace(re, '').trim(),
+    focus: match ? { id: match[1].toLowerCase(), label: match[2].trim() } : null,
+  };
+}
+
 /**
  * Parse [LOADING] and [EN_ROUTE:nearest|major] event tags from the reply.
  * Returns { cleanedReply, loading, enRoute, transportDest }.
@@ -475,6 +486,8 @@ class Session {
     this.closed = false;
     this.contextFlags = buildContextFlags(seed);
     this.lastVitals = null;       // most-recent parsed [VITALS:] tag, or null if none yet
+    this.patientFocus = null;
+    this.patientVitals = {};      // per-patient snapshots, including persistent probe state
     this.turns = [];
     this.backupStatus = null;        // { status, eta } from [BACKUP:] tag
     this.demoSource = null;          // who obtained demographics ([DEMO:] tag)
@@ -814,9 +827,18 @@ class Session {
     // remembers what it last reported. Strip the tag from the user-facing copy.
     this.messages.push({ role: 'assistant', content: rawReply });
 
-    const { cleanedReply: vitalsClean, vitals: rawVitals } = parseVitalsTag(rawReply);
-    const vitals = applyPulseOx(rawVitals, this.lastVitals, this.seed);
+    const { cleanedReply: focusClean, focus } = parsePatientFocusTag(rawReply);
+    const previousId = this.patientFocus?.id || 'patient_1';
+    if (this.lastVitals) this.patientVitals[previousId] = this.lastVitals;
+    if (focus) this.patientFocus = focus;
+    const patientId = this.patientFocus?.id || 'patient_1';
+    const switchedPatient = patientId !== previousId;
+    if (switchedPatient) this.lastVitals = null;
+    const { cleanedReply: vitalsClean, vitals: rawVitals } = parseVitalsTag(focusClean);
+    const vitals = applyPulseOx(rawVitals, this.patientVitals[patientId] || null,
+      patientId === 'patient_1' ? this.seed : { complication_type: this.seed.complication_type });
     if (vitals) this.lastVitals = vitals;
+    if (vitals) this.patientVitals[patientId] = vitals;
     const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);
     const { cleanedReply: crewClean, crewStatus } = parseCrewStatusTag(backupClean);
     const { cleanedReply: demoClean, demoSource } = parseDemoTag(crewClean);
@@ -1004,6 +1026,7 @@ class Session {
       rolls: reconciledRolls,
       sceneMinute: this.sceneMinute,
       vitals: vitals || null,
+      patientFocus: this.patientFocus,
       skip: !!skipMode,
       report: reportMode === true,
     });
