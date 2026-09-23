@@ -4,11 +4,11 @@
 // ── Audio ──────────────────────────────────────────────────────────────
 // ── Sound effects ─────────────────────────────────────────────────────────────────────────
 const SOUNDS = {
-  glovebox: new Audio('/sounds/GloveboxClick.wav'),
+  glovebox: new Audio('/sounds/Glovebox.mp3'),
   rummage: new Audio('/sounds/GloveboxRummage.wav'),
   pocket: new Audio('/sounds/PocketRustle.wav'),
   trash: new Audio('/sounds/TrashCrinkle.wav'),
-  paper: new Audio('/sounds/NotebookFlip.wav'),
+  paper: new Audio('/sounds/Notebook.mp3'),
   defib_outside: new Audio('/sounds/Defiboutsideambulance.m4a'),
   defib_amb:     new Audio('/sounds/Defibinambulance.m4a'),
   fail:     new Audio('/sounds/Diceroll_fail.m4a'),
