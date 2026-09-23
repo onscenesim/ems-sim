@@ -105,8 +105,8 @@
 #vitals-panel .pen-control, #cosmetics-dialog .pen-control { position: absolute; display: block; margin: 0; padding: 0; min-width: 0; min-height: 44px; background: transparent; border: 0; border-radius: 8px; box-shadow: none; cursor: pointer; touch-action: manipulation; top: 20%; height: 62%; }
 .pen-control-body { left: 3%; width: 92%; }
 .pen-control-back { left: 86%; width: 10%; }
-.pen-control-cap { left: 0; width: 56%; transition: left .28s ease; }
-.is-extended .pen-control-cap { left: 41.4%; }
+.pen-control-cap { left: 0; width: 53%; }
+#vitals-panel .is-extended .pen-control-cap, #cosmetics-dialog .is-extended .pen-control-cap { top: 56%; height: 42%; }
 #vitals-panel .pen-control-release, #cosmetics-dialog .pen-control-release { top: 57%; left: 79%; width: 10%; height: 43%; z-index: 2; }
 #vitals-panel .pen-control:hover, #cosmetics-dialog .pen-control:hover { background: #ffffff19; }
 #vitals-panel .pen-control:focus-visible, #cosmetics-dialog .pen-control:focus-visible { outline: 2px dashed #365c77; outline-offset: 1px; background: #f9f5d030; }
@@ -114,8 +114,22 @@
 .is-retracted .pen-tip { transform: translateX(29px); }
 .is-extended .pen-plunger { transform: translateX(-8px); }
 .is-extended .pen-slider { transform: translateX(-17px); }
-.pen-cap { transition-duration: .28s; }
-.is-extended .pen-cap { transform: translateX(240px); }
+.pen-cap { transition: none; }
+.is-extended .pen-cap { transform: translateY(60px); }
+.pen-actuating.is-extended .pen-cap { animation: myu-uncap .78s ease-in-out both; }
+.pen-actuating.is-retracted .pen-cap { animation: myu-recap .78s ease-in-out both; }
+@keyframes myu-uncap {
+  0% { transform: translate(0, 0); }
+  45% { transform: translate(-315px, 0); }
+  55% { transform: translate(-315px, 60px); }
+  100% { transform: translate(0, 60px); }
+}
+@keyframes myu-recap {
+  0% { transform: translate(0, 60px); }
+  45% { transform: translate(-315px, 60px); }
+  55% { transform: translate(-315px, 0); }
+  100% { transform: translate(0, 0); }
+}
 .pen-actuating .pen-spring { animation: pen-spring-return .23s ease-out; }
 .pen-actuating .pen-art-orange .pen-object { animation: pen-shake .55s ease-in-out; transform-origin: 50% 50%; }
 .pen-actuating .pen-bubbles circle { animation: pen-bubble-jiggle 1.15s ease-out both; animation-delay: var(--bubble-delay, 0ms); }

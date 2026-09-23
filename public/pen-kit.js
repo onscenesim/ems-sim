@@ -51,17 +51,17 @@
       <path d="M302 38v36" stroke="#656d66" stroke-width="2"/><path d="M305 38v36" stroke="#eff1e7" stroke-width="2"/>
       <text x="276" y="61" font-size="5" letter-spacing=".7" fill="#737a6f">F</text>
       <g class="pen-cap">
-        <path d="M10 54Q12 48 24 45Q57 37 96 36H234Q278 36 316 40L320 43V69L316 72Q278 76 234 76H96Q57 75 24 67Q12 64 10 58Z" fill="url(#${p}-myu)" stroke="#777f79"/>
-        <path d="M20 49Q55 39 97 39H236Q278 39 313 43" fill="none" stroke="#f5f7ed" stroke-width="1.4" opacity=".85"/>
-        <path d="M20 63Q56 72 97 73H236Q280 73 314 69" fill="none" stroke="#767e74" stroke-width=".8" opacity=".55"/>
-        <path d="M315 40Q319 55 315 72" fill="none" stroke="#68746c" stroke-width="1.2"/>
-        <path d="M318 43V69" fill="none" stroke="#e5e8dd" stroke-width="1.1"/>
-        <path d="M11 48Q24 38 61 31Q86 27 123 27L282 27Q305 27 318 33L310 35Q286 32 262 32H123Q82 32 60 36Q33 41 17 50Z" fill="url(#${p}-myu-clip)" stroke="#707a76" stroke-width=".9"/>
-        <path d="M14 46Q46 31 91 29Q150 27 282 29Q304 29 316 33" fill="none" stroke="#fbfcf2" stroke-width="1.2"/>
-        <path d="M310 35Q317 36 320 34" fill="none" stroke="#45504d" stroke-width="1.1"/>
-        <text x="277" y="67" font-size="6" letter-spacing="1.3" fill="#a0a79a">PILOT</text>
+        <path d="M10 54Q12 48 24 45Q57 37 96 36H300Q302 36 302 38V75H96Q57 75 24 67Q12 64 10 58Z" fill="url(#${p}-myu)" stroke="#777f79"/>
+        <path d="M20 49Q55 39 97 39H297" fill="none" stroke="#f5f7ed" stroke-width="1.4" opacity=".85"/>
+        <path d="M20 63Q56 72 97 72H298" fill="none" stroke="#767e74" stroke-width=".8" opacity=".55"/>
+        <path d="M299 37V75" fill="none" stroke="#68746c" stroke-width="1.2"/>
+        <path d="M301 38V74" fill="none" stroke="#e5e8dd" stroke-width="1.1"/>
+        <path d="M12 49Q28 38 62 31Q90 27 125 27H225Q237 27 244 31L237 34Q232 37 227 39L222 39L226 33H125Q87 33 61 36Q34 42 18 51Z" fill="url(#${p}-myu-clip)" stroke="#707a76" stroke-width=".9"/>
+        <path d="M15 46Q44 32 91 29Q155 27 225 29Q235 29 241 31" fill="none" stroke="#fbfcf2" stroke-width="1.2"/>
+        <path d="M227 39Q233 39 237 34" fill="none" stroke="#45504d" stroke-width="1.1"/>
+        <circle cx="24" cy="45" r="1.8" fill="#7a8580" stroke="#e6ece4" stroke-width=".6"/>
       </g>`;
-    return `<svg class="pen-art pen-art-${id}" viewBox="0 0 580 112" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    return `<svg class="pen-art pen-art-${id}" viewBox="0 0 580 ${id === 'green' ? 150 : 112}" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
       <linearGradient id="${p}-myu" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#939b91"/><stop offset=".2" stop-color="#d0d5cb"/><stop offset=".43" stop-color="#e5e8de"/><stop offset=".66" stop-color="#d5d8cb"/><stop offset=".88" stop-color="#aeb5a8"/><stop offset="1" stop-color="#747f72"/></linearGradient>
       <linearGradient id="${p}-myu-clip" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fafbf6"/><stop offset=".5" stop-color="#cbd2c8"/><stop offset="1" stop-color="#8a968a"/></linearGradient>
       <linearGradient id="${p}-metal" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#61727d"/><stop offset=".22" stop-color="#d7e0e4"/><stop offset=".42" stop-color="#fafdfb"/><stop offset=".57" stop-color="#a2b0b9"/><stop offset=".85" stop-color="#cad4d9"/><stop offset="1" stop-color="#5c6e7b"/></linearGradient>
@@ -117,6 +117,8 @@
     caption.append(name, hint, status);
     host.append(stage, caption);
     const controls = [];
+    const capMotionMs = 780;
+    let capMoving = false;
     const update = () => {
       host.classList.toggle('is-extended', state.extended);
       host.classList.toggle('is-retracted', !state.extended);
@@ -132,12 +134,23 @@
       const button = document.createElement('button'); button.type = 'button';
       button.className = `pen-control pen-control-${action}`;
       button.addEventListener('click', () => {
+        if (id === 'green' && capMoving) return;
         state = transition(id, state, action);
         update();
         host.classList.remove('pen-actuating'); void host.offsetWidth; host.classList.add('pen-actuating');
         const cue = id === 'green' ? (state.extended ? 'unsheathe' : 'sheathe')
           : id === 'teal' ? 'spacepen' : id === 'orange' ? 'bubbles' : 'click';
-        sound(cue, options.soundEnabled?.() ?? true);
+        if (id === 'green') {
+          const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+          if (!reducedMotion) {
+            capMoving = true;
+            setTimeout(() => { capMoving = false; host.classList.remove('pen-actuating'); }, capMotionMs);
+          }
+          if (cue === 'sheathe' && !reducedMotion) {
+            // The cap first lifts from its resting spot; the click belongs to the slide onto the nib.
+            setTimeout(() => sound(cue, options.soundEnabled?.() ?? true), capMotionMs * .55);
+          } else sound(cue, options.soundEnabled?.() ?? true);
+        } else sound(cue, options.soundEnabled?.() ?? true);
       });
       stage.appendChild(button); controls.push([button, action]);
     }
