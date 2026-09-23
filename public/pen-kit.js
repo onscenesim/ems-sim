@@ -51,14 +51,15 @@
       <path d="M302 38v36" stroke="#656d66" stroke-width="2"/><path d="M305 38v36" stroke="#eff1e7" stroke-width="2"/>
       <text x="276" y="61" font-size="5" letter-spacing=".7" fill="#737a6f">F</text>
       <g class="pen-cap">
-        <path d="M25 33Q10 33 10 56T25 79L318 77Q324 56 318 35Z" fill="url(#${p}-myu)" stroke="#777f79"/>
-        <path d="M27 37 311 39" stroke="#f5f7ed" stroke-width="1.5" opacity=".85"/>
-        <path d="M26 75 312 73" stroke="#767e74" stroke-width=".8" opacity=".55"/>
-        <path d="M317 36Q322 56 317 76" fill="none" stroke="#e5e8dd" stroke-width="2"/>
-        <path d="M40 36 45 30 230 32 229 39Z" fill="#5f675f" opacity=".6"/>
-        <path d="M39 34 43 27 230 29 230 35Z" fill="url(#${p}-myu-clip)" stroke="#79827a" stroke-width=".8"/>
-        <path d="M45 28 226 30" stroke="#fbfcf2" stroke-width="1.3"/>
-        <path d="M227 30v4" stroke="#68736a"/>
+        <path d="M39 39Q45 36 54 36L316 36Q320 36 320 41V72Q320 76 316 76H54Q45 76 39 73Z" fill="url(#${p}-myu)" stroke="#777f79"/>
+        <path d="M39 39Q27 40 16 45Q10 48 10 57L37 58Q42 54 42 46Z" fill="url(#${p}-myu)" stroke="#747d77"/>
+        <path d="M15 47Q23 43 39 41M55 39H312" fill="none" stroke="#f5f7ed" stroke-width="1.4" opacity=".85"/>
+        <path d="M54 73H312" stroke="#767e74" stroke-width=".8" opacity=".55"/>
+        <path d="M42 40V73M316 37V75" fill="none" stroke="#737c75" stroke-width="1.2"/>
+        <path d="M317 37V74" fill="none" stroke="#e5e8dd" stroke-width="1.2"/>
+        <path d="M13 43Q30 34 56 30L224 27Q234 27 237 31L223 32Q185 31 64 34Q36 35 20 47L11 48Z" fill="url(#${p}-myu-clip)" stroke="#707a76" stroke-width=".9"/>
+        <path d="M15 43Q39 33 64 31L222 28" fill="none" stroke="#fbfcf2" stroke-width="1.2"/>
+        <path d="M224 32Q232 33 237 30" fill="none" stroke="#45504d" stroke-width="1.1"/>
         <text x="277" y="67" font-size="6" letter-spacing="1.3" fill="#a0a79a">PILOT</text>
       </g>`;
     return `<svg class="pen-art pen-art-${id}" viewBox="0 0 580 112" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
