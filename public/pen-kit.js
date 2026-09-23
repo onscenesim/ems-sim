@@ -51,15 +51,14 @@
       <path d="M302 38v36" stroke="#656d66" stroke-width="2"/><path d="M305 38v36" stroke="#eff1e7" stroke-width="2"/>
       <text x="276" y="61" font-size="5" letter-spacing=".7" fill="#737a6f">F</text>
       <g class="pen-cap">
-        <path d="M39 39Q45 36 54 36L316 36Q320 36 320 41V72Q320 76 316 76H54Q45 76 39 73Z" fill="url(#${p}-myu)" stroke="#777f79"/>
-        <path d="M39 39Q27 40 16 45Q10 48 10 57L37 58Q42 54 42 46Z" fill="url(#${p}-myu)" stroke="#747d77"/>
-        <path d="M15 47Q23 43 39 41M55 39H312" fill="none" stroke="#f5f7ed" stroke-width="1.4" opacity=".85"/>
-        <path d="M54 73H312" stroke="#767e74" stroke-width=".8" opacity=".55"/>
-        <path d="M42 40V73M316 37V75" fill="none" stroke="#737c75" stroke-width="1.2"/>
-        <path d="M317 37V74" fill="none" stroke="#e5e8dd" stroke-width="1.2"/>
-        <path d="M13 43Q30 34 56 30L224 27Q234 27 237 31L223 32Q185 31 64 34Q36 35 20 47L11 48Z" fill="url(#${p}-myu-clip)" stroke="#707a76" stroke-width=".9"/>
-        <path d="M15 43Q39 33 64 31L222 28" fill="none" stroke="#fbfcf2" stroke-width="1.2"/>
-        <path d="M224 32Q232 33 237 30" fill="none" stroke="#45504d" stroke-width="1.1"/>
+        <path d="M10 54Q12 48 24 45Q57 37 96 36H234Q278 36 316 40L320 43V69L316 72Q278 76 234 76H96Q57 75 24 67Q12 64 10 58Z" fill="url(#${p}-myu)" stroke="#777f79"/>
+        <path d="M20 49Q55 39 97 39H236Q278 39 313 43" fill="none" stroke="#f5f7ed" stroke-width="1.4" opacity=".85"/>
+        <path d="M20 63Q56 72 97 73H236Q280 73 314 69" fill="none" stroke="#767e74" stroke-width=".8" opacity=".55"/>
+        <path d="M315 40Q319 55 315 72" fill="none" stroke="#68746c" stroke-width="1.2"/>
+        <path d="M318 43V69" fill="none" stroke="#e5e8dd" stroke-width="1.1"/>
+        <path d="M11 48Q24 38 61 31Q86 27 123 27L282 27Q305 27 318 33L310 35Q286 32 262 32H123Q82 32 60 36Q33 41 17 50Z" fill="url(#${p}-myu-clip)" stroke="#707a76" stroke-width=".9"/>
+        <path d="M14 46Q46 31 91 29Q150 27 282 29Q304 29 316 33" fill="none" stroke="#fbfcf2" stroke-width="1.2"/>
+        <path d="M310 35Q317 36 320 34" fill="none" stroke="#45504d" stroke-width="1.1"/>
         <text x="277" y="67" font-size="6" letter-spacing="1.3" fill="#a0a79a">PILOT</text>
       </g>`;
     return `<svg class="pen-art pen-art-${id}" viewBox="0 0 580 112" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
