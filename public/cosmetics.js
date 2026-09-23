@@ -77,6 +77,12 @@
     select.value = selected.pen;
     select.style.setProperty('--ink-color', pens.find(pen => pen.id === selected.pen).color);
     select.disabled = saving;
+    PenKit.mount(document.getElementById('scratch-pen-display'), selected.pen, { soundEnabled: () => soundEnabled });
+    const menuPen = document.getElementById('menu-default-pen');
+    menuPen.innerHTML = PenKit.art(selected.pen);
+    const menuPenName = document.createElement('span');
+    menuPenName.textContent = `Default pen: ${pens.find(pen => pen.id === selected.pen).name}`;
+    menuPen.replaceChildren(menuPen.firstChild, menuPenName);
     const notebook = document.getElementById('notepad-stickers');
     notebook.replaceChildren();
     selected.stickers.forEach(id => {
@@ -105,15 +111,17 @@
     document.getElementById('cosmetics-slot-count').textContent = `${draft.stickers.length} / 2 stickers`;
     const upcoming = [...pens, ...stickers].filter(item => !unlocked(item)).sort((a, b) => a.xp - b.xp)[0];
     document.getElementById('cosmetics-next-unlock').textContent = upcoming ? `Next: ${requirement(upcoming)}` : 'Collection complete';
+    PenKit.mount(document.getElementById('cosmetics-pen-preview'), draft.pen, { soundEnabled: () => soundEnabled });
     const penCase = document.getElementById('cosmetics-pens');
     if (!penCase.children.length) {
       pens.forEach(pen => {
         const button = document.createElement('button');
         button.type = 'button'; button.className = 'cosmetic-pen'; button.dataset.pen = pen.id;
-        const swatch = document.createElement('span');
-        swatch.className = 'cosmetic-ink'; swatch.style.background = pen.color;
-        button.appendChild(swatch);
+        const artwork = document.createElement('span');
+        artwork.className = 'cosmetic-pen-art'; artwork.innerHTML = PenKit.art(pen.id);
+        button.appendChild(artwork);
         const label = document.createElement('span'); label.textContent = pen.name;
+        label.style.setProperty('--pen-ink', pen.color); label.className = 'cosmetic-pen-name';
         button.appendChild(label);
         const cost = document.createElement('small'); cost.className = 'cosmetic-cost'; button.appendChild(cost);
         button.addEventListener('click', () => { draft.pen = pen.id; status.textContent = ''; renderDrawer(); });
@@ -124,7 +132,7 @@
       const button = penCase.querySelector(`[data-pen="${pen.id}"]`);
       button.disabled = saving || pen.xp > availableXP;
       button.setAttribute('aria-pressed', String(draft.pen === pen.id));
-      button.querySelector('small').textContent = pen.xp > availableXP ? `${pen.xp} XP` : draft.pen === pen.id ? 'Selected' : 'Unlocked';
+      button.querySelector('small').textContent = pen.xp > availableXP ? `${pen.xp} XP` : draft.pen === pen.id ? 'Default on apply' : 'Unlocked';
     }
     const grid = document.getElementById('cosmetics-sticker-grid');
     if (!grid.children.length) {
@@ -222,6 +230,6 @@
   window.addEventListener('storage', event => {
     if (!currentPlayer && ['ems_guest_cosmetics', 'ems_guest_progress'].includes(event.key)) refresh();
   });
-  window.EMSCosmetics = { refresh, ink: () => pens.find(pen => pen.id === selection().pen).color };
+  window.EMSCosmetics = { refresh, canWrite: () => document.getElementById('scratch-pen-display').dataset.ready !== 'false', ink: () => pens.find(pen => pen.id === selection().pen).color };
   refresh();
 })();

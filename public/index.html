@@ -7,7 +7,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css?v=83">
   <link rel="stylesheet" href="glovebox.css?v=2">
-  <link rel="stylesheet" href="cosmetics.css?v=2">
+  <link rel="stylesheet" href="cosmetics.css?v=4">
 </head>
 <body>
 
@@ -301,7 +301,7 @@
         <div class="progress-xp-card"><strong><span id="progress-xp">0</span> XP</strong><span>Make this rig yours.</span></div>
         <p id="progress-sorted" class="progress-note"></p>
         <p class="progress-note">Completed calls: Easy +50 · Normal +100 · Hard +150 · Black Cloud +200. Correct glovebox sorts: +5 each.</p>
-        <button id="progress-cosmetics" type="button" class="cosmetics-open">PENS &amp; STICKERS <span id="cosmetics-unlocked-count"></span></button>
+        <button id="progress-cosmetics" type="button" class="cosmetics-open">PENS &amp; STICKERS <span id="cosmetics-unlocked-count"></span><span id="menu-default-pen"></span></button>
         <p class="progress-note">Earn XP to unlock pen colors and stickers. Equipping cosmetics never spends XP.</p>
         <p id="progress-storage" class="progress-note"></p>
         <div class="progress-heading">CATEGORY COVERAGE</div>
@@ -439,6 +439,7 @@
         <div class="scratch-toolbar"><span id="scratch-label">SCRATCH PAD</span><div class="scratch-tools"><label class="scratch-pen-label" for="scratch-pen">INK</label><select id="scratch-pen" aria-label="Scratch pad pen color"><option value="navy">Station blue</option></select><button id="scratch-clear" type="button">CLEAR</button></div></div>
         <div id="scratch-pen-status" role="status"></div>
         <canvas id="vitals-scratch" width="800" height="300" aria-labelledby="scratch-label">Draw with your mouse or finger. These doodles are just for this call.</canvas>
+        <div id="scratch-pen-display" aria-label="Selected scratch pad pen"></div>
       </div>
       </div>
     </div>
@@ -1939,8 +1940,9 @@
     <div class="cosmetics-toolbar"><span id="cosmetics-xp"></span><span id="cosmetics-slot-count">0 / 2 stickers</span></div>
     <div class="cosmetics-scroll">
       <p id="cosmetics-description">A little personality between calls. Pick up to two stickers for your notebook. Unlocks use lifetime XP; nothing gets spent.</p>
-      <div class="cosmetics-section-label">PEN CASE <span>Also beside CLEAR on your scratch pad</span></div>
-      <div id="cosmetics-pens" role="group" aria-label="Pen colors"></div>
+      <div class="cosmetics-section-label">PEN CASE <span>Your default pen · also on the scratch pad</span></div>
+      <div id="cosmetics-pen-preview" aria-label="Default pen preview"></div>
+      <div id="cosmetics-pens" role="group" aria-label="Default pen collection"></div>
       <div class="cosmetics-section-label">STICKER COLLECTION <span id="cosmetics-next-unlock"></span></div>
       <div id="cosmetics-sticker-grid" role="group" aria-label="Sticker collection"></div>
       <div id="cosmetics-note-editor" hidden><label for="cosmetics-note">YOUR POST-IT</label><textarea id="cosmetics-note" rows="3" maxlength="80" placeholder="Leave yourself a note…"></textarea><span id="cosmetics-note-count">0 / 80</span></div>
@@ -1952,9 +1954,10 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-  <script src="app.js?v=81"></script>
-  <script src="cosmetics-catalog.js?v=2"></script>
-  <script src="cosmetics.js?v=3"></script>
+  <script src="app.js?v=82"></script>
+  <script src="cosmetics-catalog.js?v=3"></script>
+  <script src="pen-kit.js?v=2"></script>
+  <script src="cosmetics.js?v=4"></script>
   <script src="glovebox-catalog.js?v=5"></script>
   <script src="glovebox.js?v=3"></script>
 </body>

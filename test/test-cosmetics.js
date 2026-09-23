@@ -117,3 +117,61 @@ test('full collection requires twenty completions even with excess glovebox XP',
   assert.deepEqual(catalog.validate(input, 4800, false, 20), input);
   assert.deepEqual(catalog.normalize(input, 99999, false, 19).stickers, []);
 });
+
+const penKit = require('../public/pen-kit');
+test('fountain pen is the final pen unlock and Crossout red retains saved red selections', () => {
+  const green = catalog.pens.find(pen => pen.id === 'green');
+  assert.equal(catalog.pens.at(-1), green);
+  assert.ok(catalog.pens.filter(pen => pen !== green).every(pen => pen.xp < green.xp));
+  assert.equal(catalog.pens.find(pen => pen.id === 'red').name, 'Crossout red');
+  assert.equal(catalog.normalize({ pen: 'red' }, 200).pen, 'red');
+});
+
+test('AG7 latches when pressed and only its side release retracts it', () => {
+  let state = penKit.initial('teal');
+  state = penKit.transition('teal', state, 'body');
+  assert.equal(state.extended, true, 'pressing an extended AG7 must not retract it');
+  state = penKit.transition('teal', state, 'release');
+  assert.equal(state.extended, false);
+  state = penKit.transition('teal', state, 'body');
+  assert.equal(state.extended, true);
+});
+
+test('back buttons, sliding clip, spring button, and cap have distinct activation targets', () => {
+  for (const [id, action] of [['black', 'back'], ['red', 'back'], ['purple', 'body'], ['pink', 'body'], ['green', 'cap']]) {
+    const start = penKit.initial(id);
+    assert.deepEqual(penKit.transition(id, start, 'wrong-target'), start);
+    const activated = penKit.transition(id, start, action);
+    assert.equal(activated.extended, !start.extended, id);
+    assert.deepEqual(penKit.transition(id, activated, action), start);
+  }
+  for (const id of ['navy', 'orange']) assert.equal(penKit.transition(id, penKit.initial(id), 'body').extended, true);
+});
+
+test('retracted and capped pens do not mark the scratchpad; extending resumes drawing', () => {
+  const vm = require('node:vm');
+  const listeners = {};
+  let marks = 0, ready = false, lastInk;
+  const context = {
+    clearRect() {}, beginPath() {}, arc() {}, fill() { marks++; }, moveTo() {}, lineTo() {}, stroke() { marks++; },
+    set strokeStyle(ink) { lastInk = ink; },
+  };
+  const canvas = {
+    width: 800, height: 300, getContext: () => context,
+    addEventListener(name, listener) { listeners[name] = listener; },
+    setPointerCapture() {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 300 }),
+  };
+  const scope = vm.createContext({
+    document: { getElementById: id => id === 'vitals-scratch' ? canvas : { addEventListener() {} } },
+    window: { EMSCosmetics: { canWrite: () => ready, ink: () => '#a52c37' } },
+  });
+  const app = fs.readFileSync(require.resolve('../public/app.js'), 'utf8');
+  vm.runInContext(app.slice(app.indexOf('const vitalsScratch ='), app.indexOf('// The terminal uses 100dvh')), scope);
+  const event = { isPrimary: true, button: 0, pointerId: 1, clientX: 10, clientY: 10, preventDefault() {} };
+  listeners.pointerdown(event); listeners.pointermove(event);
+  assert.equal(marks, 0);
+  ready = true;
+  listeners.pointerdown(event); listeners.pointermove(event); listeners.pointerup(event);
+  assert.equal(marks, 2);
+  assert.equal(lastInk, '#a52c37');
+});

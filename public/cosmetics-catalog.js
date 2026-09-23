@@ -8,12 +8,12 @@
   const pens = [
     { id: 'navy', name: 'Station blue', color: '#283a57', xp: 0 },
     { id: 'black', name: 'Black ink', color: '#242323', xp: 100 },
-    { id: 'red', name: 'Chart red', color: '#a52c37', xp: 200 },
-    { id: 'green', name: 'Monitor green', color: '#24623b', xp: 400 },
+    { id: 'red', name: 'Crossout red', color: '#a52c37', xp: 200 },
     { id: 'purple', name: 'Purple top', color: '#71378b', xp: 800 },
     { id: 'teal', name: 'Scrub teal', color: '#006b71', xp: 1200 },
     { id: 'pink', name: 'Hot pink', color: '#ac266c', xp: 1800 },
     { id: 'orange', name: 'Hazmat orange', color: '#9e4815', xp: 2600 },
+    { id: 'green', name: 'Monitor green', color: '#24623b', xp: 3600 },
   ];
   const stickers = [
     { id: 'emt', name: 'EMT patch', xp: 200 },

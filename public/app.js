@@ -3517,6 +3517,7 @@ function scratchPoint(event) {
 }
 vitalsScratch.addEventListener('pointerdown', event => {
   if (!event.isPrimary || event.button !== 0 || scratchPointer !== null) return;
+  if (window.EMSCosmetics?.canWrite() === false) return;
   event.preventDefault();
   scratchPointer = event.pointerId;
   vitalsScratch.setPointerCapture(event.pointerId);
