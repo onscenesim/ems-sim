@@ -19,7 +19,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-cosmetics-ui-'));
       if (url.pathname === '/api/auth/me') return route.fulfill({ json: { player } });
       if (url.pathname === '/api/auth/cosmetics') {
         if (failSave) return route.fulfill({ status: 500, json: { message: 'Save failed. Please try again.' } });
-        try { player.cosmetics = validate(route.request().postDataJSON(), player.stats.xp, player.cosmeticsUnlocked === true); return route.fulfill({ json: { player } }); }
+        try { player.cosmetics = validate(route.request().postDataJSON(), player.stats.xp, player.cosmeticsUnlocked === true, player.stats.scenariosCompleted || 0); return route.fulfill({ json: { player } }); }
         catch (error) { return route.fulfill({ status: 400, json: { message: error.message } }); }
       }
       if (url.pathname.startsWith('/api/')) return route.fulfill({ json: {} });
@@ -51,7 +51,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-cosmetics-ui-'));
     assert.equal(await page.locator('.cosmetic-pen').count(), 8);
     assert.equal(await page.locator('[data-sticker="emt"]').isDisabled(), true);
     await page.keyboard.press('Escape');
-    await page.evaluate(() => recordGuestProgress('earned-call', { completed: true, completionXP: 1200 }));
+    await page.evaluate(() => { for (let i = 0; i < 24; i++) recordGuestProgress('earned-call-' + i, { completed: true, completionXP: 200 }); });
     await open();
     assert.equal(await page.locator('.cosmetic-sticker:disabled').count(), 0);
     await page.waitForFunction(() => [...document.querySelectorAll('.cosmetic-sticker img')].every(img => img.complete));
@@ -69,7 +69,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-cosmetics-ui-'));
     await apply();
     assert.equal(await page.locator('.notepad-sticker').count(), 2);
     assert.equal(await page.locator('#scratch-pen').inputValue(), 'red');
-    assert.equal(await page.evaluate(() => guestProgressStats().xp), 1200, 'equipping spends no XP');
+    assert.equal(await page.evaluate(() => guestProgressStats().xp), 4800, 'equipping spends no XP');
     assert.equal(await page.evaluate(() => window.stickerXSS), undefined, 'note is inert text');
     assert.match(await page.locator('#notepad-stickers .sticker-art-custom-note').getAttribute('alt'), /Return the gas card/);
 
@@ -127,7 +127,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-cosmetics-ui-'));
       await page.waitForFunction(() => !document.getElementById('cosmetics-dialog').open);
     }
     // Saving to an account is separate from guest cosmetics, with visible rollback on failure.
-    player = { id: 'one', displayName: 'Player One', stats: { xp: 1200 }, cosmetics: { pen: 'purple', stickers: ['speed', 'house'], note: 'Account note' } };
+    player = { id: 'one', displayName: 'Player One', stats: { xp: 4800, scenariosCompleted: 24 }, cosmetics: { pen: 'purple', stickers: ['speed', 'house'], note: 'Account note' } };
     await page.evaluate(() => refreshPlayer());
     assert.equal(await page.locator('#scratch-pen').inputValue(), 'purple');
     assert.equal(await page.locator('#notepad-stickers .sticker-art-speed').count(), 1);
@@ -144,6 +144,15 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-cosmetics-ui-'));
     assert.equal(player.cosmetics.pen, 'teal');
     assert.deepEqual(player.cosmetics.stickers, ['speed', 'house']);
     await page.evaluate(() => setVitalsPanelOpen(false));
+    player.stats.scenariosCompleted = 19;
+    await page.evaluate(() => refreshPlayer());
+    await open();
+    assert.equal(await page.locator('[data-sticker="lifepak12"]').isDisabled(), true);
+    assert.match(await page.locator('[data-sticker="lifepak12"] .cosmetic-cost').textContent(), /20 completed scenarios/);
+    player.stats.scenariosCompleted = 20;
+    await page.evaluate(() => refreshPlayer());
+    assert.equal(await page.locator('[data-sticker="lifepak12"]').isDisabled(), false);
+    await page.keyboard.press('Escape');
     player = { id: 'admin', displayName: 'ADMIN', role: 'admin', cosmeticsUnlocked: true, stats: { xp: 0 }, cosmetics: { pen: 'navy', stickers: [], note: '' } };
     await page.evaluate(() => refreshPlayer());
     await open();

@@ -11,6 +11,9 @@
   let drawerOwner = null;
   let saving = false;
   const xp = () => currentPlayer?.stats?.xp || (!currentPlayer ? guestProgressStats().xp : 0);
+  const completed = () => (currentPlayer?.stats || guestProgressStats()).scenariosCompleted || 0;
+  const unlocked = item => item.xp <= allowance() && (currentPlayer?.cosmeticsUnlocked === true || completed() >= (item.runs || 0));
+  const requirement = item => `${item.xp} XP${item.runs ? ` + ${item.runs} completed scenarios` : ''}`;
   const owner = () => currentPlayer?.id || 'guest';
   const allowance = () => currentPlayer?.cosmeticsUnlocked === true ? Infinity : xp();
   function selection() {
@@ -18,7 +21,7 @@
     if (!currentPlayer) {
       try { saved = JSON.parse(localStorage.getItem('ems_guest_cosmetics') || '{}'); } catch { saved = {}; }
     }
-    return normalize(saved, xp(), currentPlayer?.cosmeticsUnlocked === true);
+    return normalize(saved, xp(), currentPlayer?.cosmeticsUnlocked === true, completed());
   }
 
   function noteImage(message) {
@@ -88,7 +91,7 @@
       button.addEventListener('click', open);
       notebook.appendChild(button);
     });
-    const count = stickers.filter(item => item.xp <= availableXP).length + pens.filter(item => item.xp <= availableXP).length;
+    const count = stickers.filter(item => unlocked(item)).length + pens.filter(item => unlocked(item)).length;
     document.getElementById('cosmetics-unlocked-count').textContent = `${count} / ${pens.length + stickers.length} unlocked`;
     document.getElementById('notepad-personalization').classList.toggle('has-stickers', selected.stickers.length > 0);
     if (dialog.open && drawerOwner !== owner()) {
@@ -100,8 +103,8 @@
     const availableXP = allowance();
     document.getElementById('cosmetics-xp').textContent = currentPlayer?.cosmeticsUnlocked ? 'ADMIN · ALL COSMETICS UNLOCKED' : `${xp()} LIFETIME XP`;
     document.getElementById('cosmetics-slot-count').textContent = `${draft.stickers.length} / 2 stickers`;
-    const upcoming = [...pens, ...stickers].filter(item => item.xp > availableXP).sort((a, b) => a.xp - b.xp)[0];
-    document.getElementById('cosmetics-next-unlock').textContent = upcoming ? `Next unlock in ${upcoming.xp - availableXP} XP` : 'Collection complete';
+    const upcoming = [...pens, ...stickers].filter(item => !unlocked(item)).sort((a, b) => a.xp - b.xp)[0];
+    document.getElementById('cosmetics-next-unlock').textContent = upcoming ? `Next: ${requirement(upcoming)}` : 'Collection complete';
     const penCase = document.getElementById('cosmetics-pens');
     if (!penCase.children.length) {
       pens.forEach(pen => {
@@ -149,11 +152,11 @@
     for (const sticker of stickers) {
       const button = grid.querySelector(`[data-sticker="${sticker.id}"]`);
       const selected = draft.stickers.includes(sticker.id);
-      const locked = sticker.xp > availableXP;
+      const locked = !unlocked(sticker);
       button.disabled = saving || locked;
       button.setAttribute('aria-pressed', String(selected));
       button.classList.toggle('is-locked', locked);
-      button.querySelector('.cosmetic-cost').textContent = locked ? `${sticker.xp} XP · ${sticker.xp - availableXP} to go` : selected ? '✓ Equipped on apply' : 'Unlocked · select';
+      button.querySelector('.cosmetic-cost').textContent = locked ? requirement(sticker) : selected ? '✓ Equipped on apply' : 'Unlocked · select';
       if (sticker.id === 'custom-note') {
         const image = button.querySelector('img');
         image.src = noteImage(draft.note); image.alt = `Post-it: ${draft.note}`;
@@ -177,7 +180,7 @@
   }
 
   async function save(next) {
-    const valid = validate(next, xp(), currentPlayer?.cosmeticsUnlocked === true);
+    const valid = validate(next, xp(), currentPlayer?.cosmeticsUnlocked === true, completed());
     const savingFor = owner();
     saving = true;
     select.disabled = true;

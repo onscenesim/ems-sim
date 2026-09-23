@@ -128,7 +128,7 @@ function publicPlayer(player) {
     cosmeticsUnlocked: player.role === 'admin',
     createdAt: player.createdAt,
     preferences: { showFieldBriefing: player.preferences?.showFieldBriefing !== false },
-    cosmetics: cosmetics.normalize(player.cosmetics, stats.xp, player.role === 'admin'),
+    cosmetics: cosmetics.normalize(player.cosmetics, stats.xp, player.role === 'admin', stats.scenariosCompleted),
     stats: {
       xp: stats.xp,
       itemsRecovered: stats.itemsRecovered,
@@ -269,7 +269,7 @@ function recordScenarioStarted(playerId) {
 }
 
 function updateCosmetics(player, selection) {
-  const next = cosmetics.validate(selection, ensureStats(player).xp, player.role === 'admin');
+  const next = cosmetics.validate(selection, ensureStats(player).xp, player.role === 'admin', player.stats.scenariosCompleted);
   const previous = player.cosmetics;
   player.cosmetics = next;
   try { saveStore(); } catch (error) { player.cosmetics = previous; throw error; }

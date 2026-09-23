@@ -35,7 +35,7 @@ test('all requested stickers have local artwork and unlock only at earned XP thr
     assert.ok(fs.existsSync(path.join(__dirname, '../public', sticker.src)));
     const input = { pen: 'navy', stickers: [sticker.id], note: '' };
     assert.throws(() => catalog.validate(input, sticker.xp - 1), { code: 'invalid_cosmetics' });
-    assert.deepEqual(catalog.validate(input, sticker.xp).stickers, [sticker.id]);
+    assert.deepEqual(catalog.validate(input, sticker.xp, false, 20).stickers, [sticker.id]);
   }
   for (const pen of catalog.pens.filter(pen => pen.xp > 0)) {
     assert.throws(() => catalog.validate({ pen: pen.id, stickers: [], note: '' }, pen.xp - 1));
@@ -51,7 +51,7 @@ test('validation rejects unknown, duplicate, excess, and oversized cosmetic inpu
     { stickers: ['emt', 'paramedic', 'glove-balloon'] }, { stickers: 'emt' },
     { note: 'a'.repeat(81) }, { note: { text: 'x' } },
   ]) assert.throws(() => catalog.validate({ ...valid, ...change }, 9999), { code: 'invalid_cosmetics' });
-  assert.deepEqual(catalog.normalize({ pen: 'red', stickers: ['emt', 'house'], note: 'hello\nworld' }, 50), { pen: 'red', stickers: ['emt'], note: 'hello world' });
+  assert.deepEqual(catalog.normalize({ pen: 'red', stickers: ['emt', 'house'], note: 'hello\nworld' }, 200), { pen: 'red', stickers: ['emt'], note: 'hello world' });
 });
 
 test('account equip saves durably without spending XP or overwriting briefing preferences', async () => {
@@ -63,12 +63,12 @@ test('account equip saves durably without spending XP or overwriting briefing pr
   const equipped = { pen: 'purple', stickers: ['custom-note', 'house'], note: 'Ask me about my stickers.' };
   const locked = await route('post', '/cosmetics', { ...equipped, xp: 999999 }, cookie);
   assert.equal(locked.status, 400, 'client cannot invent unlock XP');
-  for (let i = 0; i < 6; i++) players.recordScenarioCompleted(id, { difficulty: 'HARD' }, `cosmetic-call-${i}`);
+  for (let i = 0; i < 24; i++) players.recordScenarioCompleted(id, { difficulty: 'HARD' }, `cosmetic-call-${i}`);
   await route('post', '/preferences', { showFieldBriefing: false }, cookie);
   const result = await route('post', '/cosmetics', equipped, cookie);
   assert.equal(result.status, 200);
   assert.deepEqual(result.body.player.cosmetics, equipped);
-  assert.equal(result.body.player.stats.xp, 900);
+  assert.equal(result.body.player.stats.xp, 3600);
   assert.equal(result.body.player.preferences.showFieldBriefing, false);
   await route('post', '/preferences', { showFieldBriefing: true }, cookie);
   assert.deepEqual((await route('get', '/me', {}, cookie)).body.player.cosmetics, equipped);
@@ -77,7 +77,7 @@ test('account equip saves durably without spending XP or overwriting briefing pr
   const reloaded = require(publicPath);
   const login = await reloaded.login('Sticker Medic', '2468');
   assert.deepEqual(login.player.cosmetics, equipped);
-  assert.equal(login.player.stats.xp, 900);
+  assert.equal(login.player.stats.xp, 3600);
   const other = await reloaded.signup('Other Medic', '1357');
   assert.deepEqual(other.player.cosmetics, catalog.defaults, 'cosmetics are account-specific');
 });
@@ -109,4 +109,11 @@ test('ADMIN is permanently unlocked at zero XP and ordinary clients cannot grant
   catalog.stickers.push({ id: 'future-sticker', xp: 999999 });
   try { assert.deepEqual(catalog.validate({ ...cosmetics, stickers: ['future-sticker'] }, 0, true).stickers, ['future-sticker']); }
   finally { catalog.stickers.pop(); }
+});
+
+test('full collection requires twenty completions even with excess glovebox XP', () => {
+  const input = { pen: 'orange', stickers: ['lifepak12'], note: '' };
+  assert.throws(() => catalog.validate(input, 99999, false, 19), /20 completed/);
+  assert.deepEqual(catalog.validate(input, 4800, false, 20), input);
+  assert.deepEqual(catalog.normalize(input, 99999, false, 19).stickers, []);
 });

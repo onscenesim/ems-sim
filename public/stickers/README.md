@@ -42,3 +42,7 @@ redrawn as SVGs using the user’s September 22 screenshots. EMT and paramedic
 patches now use circular embroidery-style badges. LIFEPAK 15 and Zoll X have
 distinct housings and control layouts following the user’s specifications.
 The eight-ball lettering is fitted inside its inverted triangle.
+
+Paid unlocks require four times their initial XP thresholds. The last sticker
+requires 4,800 lifetime XP and 20 completed scenarios; both conditions are
+validated for guests and accounts, with the permanent ADMIN bypass preserved.
