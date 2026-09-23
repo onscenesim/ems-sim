@@ -37,10 +37,13 @@
     { id: 'lifepak12', runs: 20, name: 'LIFEPAK 12 · Still running', xp: 4800 },
   ].map(item => ({ ...item, src: `/stickers/${item.id}.${item.id === 'house' ? 'png' : ['davita', 'speed'].includes(item.id) ? 'jpg' : 'svg'}` }));
   const defaults = { pen: 'navy', stickers: [], note: 'Back in service. Probably.' };
+  // Temporary collection preview: keep XP/runs data for when progression returns.
+  const unlockAllForNow = true;
   const earnedXP = value => Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0;
   const cleanNote = value => typeof value === 'string' ? value.replace(/[\x00-\x1f\x7f]/g, ' ').trim() : defaults.note;
 
   function normalize(saved = {}, xp = 0, unlockAll = false, completed = 0) {
+    unlockAll ||= unlockAllForNow;
     const eligible = unlockAll ? Infinity : earnedXP(xp);
     const pen = pens.find(pen => pen.id === saved?.pen && pen.xp <= eligible)?.id || defaults.pen;
     const selected = Array.isArray(saved?.stickers) ? [...new Set(saved.stickers)].filter(id => stickers.some(sticker => sticker.id === id && sticker.xp <= eligible && (unlockAll || completed >= (sticker.runs || 0)))).slice(0, 2) : [];
@@ -48,6 +51,7 @@
   }
 
   function validate(input, xp, unlockAll = false, completed = 0) {
+    unlockAll ||= unlockAllForNow;
     const invalid = message => { throw Object.assign(new Error(message), { code: 'invalid_cosmetics' }); };
     if (!input || typeof input !== 'object' || Array.isArray(input)) invalid('Choose your pen and up to two stickers.');
     const pen = pens.find(pen => pen.id === input.pen);
@@ -64,5 +68,5 @@
     return normalize(input, xp, unlockAll, completed);
   }
 
-  return { pens, stickers, defaults, normalize, validate };
+  return { pens, stickers, defaults, unlockAllForNow, normalize, validate };
 });

@@ -12,16 +12,17 @@
   let saving = false;
   const xp = () => currentPlayer?.stats?.xp || (!currentPlayer ? guestProgressStats().xp : 0);
   const completed = () => (currentPlayer?.stats || guestProgressStats()).scenariosCompleted || 0;
-  const unlocked = item => item.xp <= allowance() && (currentPlayer?.cosmeticsUnlocked === true || completed() >= (item.runs || 0));
+  const allUnlocked = () => CosmeticsCatalog.unlockAllForNow || currentPlayer?.cosmeticsUnlocked === true;
+  const unlocked = item => item.xp <= allowance() && (allUnlocked() || completed() >= (item.runs || 0));
   const requirement = item => `${item.xp} XP${item.runs ? ` + ${item.runs} completed scenarios` : ''}`;
   const owner = () => currentPlayer?.id || 'guest';
-  const allowance = () => currentPlayer?.cosmeticsUnlocked === true ? Infinity : xp();
+  const allowance = () => allUnlocked() ? Infinity : xp();
   function selection() {
     let saved = currentPlayer?.cosmetics;
     if (!currentPlayer) {
       try { saved = JSON.parse(localStorage.getItem('ems_guest_cosmetics') || '{}'); } catch { saved = {}; }
     }
-    return normalize(saved, xp(), currentPlayer?.cosmeticsUnlocked === true, completed());
+    return normalize(saved, xp(), allUnlocked(), completed());
   }
 
   function noteImage(message) {
@@ -107,7 +108,7 @@
 
   function renderDrawer() {
     const availableXP = allowance();
-    document.getElementById('cosmetics-xp').textContent = currentPlayer?.cosmeticsUnlocked ? 'ADMIN · ALL COSMETICS UNLOCKED' : `${xp()} LIFETIME XP`;
+    document.getElementById('cosmetics-xp').textContent = allUnlocked() ? 'ALL PENS & STICKERS AVAILABLE' : `${xp()} LIFETIME XP`;
     document.getElementById('cosmetics-slot-count').textContent = `${draft.stickers.length} / 2 stickers`;
     const upcoming = [...pens, ...stickers].filter(item => !unlocked(item)).sort((a, b) => a.xp - b.xp)[0];
     document.getElementById('cosmetics-next-unlock').textContent = upcoming ? `Next: ${requirement(upcoming)}` : 'Collection complete';
@@ -188,7 +189,7 @@
   }
 
   async function save(next) {
-    const valid = validate(next, xp(), currentPlayer?.cosmeticsUnlocked === true, completed());
+    const valid = validate(next, xp(), allUnlocked(), completed());
     const savingFor = owner();
     saving = true;
     select.disabled = true;

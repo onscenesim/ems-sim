@@ -125,7 +125,7 @@ function publicPlayer(player) {
     id: player.id,
     displayName: player.displayName,
     role: player.role === 'admin' ? 'admin' : 'player',
-    cosmeticsUnlocked: player.role === 'admin',
+    cosmeticsUnlocked: cosmetics.unlockAllForNow || player.role === 'admin',
     createdAt: player.createdAt,
     preferences: { showFieldBriefing: player.preferences?.showFieldBriefing !== false },
     cosmetics: cosmetics.normalize(player.cosmetics, stats.xp, player.role === 'admin', stats.scenariosCompleted),

@@ -8,6 +8,10 @@ local storage and player accounts keep theirs in the durable player store.
 The two sticker positions are on the Field Notes paper beside the written vitals;
 pen colors are selected beside the scratch pad’s Clear button.
 
+For now, `unlockAllForNow` in the shared catalog makes every pen and sticker
+available to guests and player accounts. XP and completed-call requirements remain
+in the catalog for when progression is restored.
+
 ## Sources
 
 - `speed.jpg`: the user's supplied **IMG_1245.jpeg**, copied unchanged. The sticker
@@ -44,6 +48,6 @@ patches now use circular embroidery-style badges. LIFEPAK 15 and Zoll X have
 distinct housings and control layouts following the user’s specifications.
 The eight-ball lettering is fitted inside its inverted triangle.
 
-Paid unlocks require four times their initial XP thresholds. The last sticker
-requires 4,800 lifetime XP and 20 completed scenarios; both conditions are
-validated for guests and accounts, with the permanent ADMIN bypass preserved.
+The stored progression requirements culminate in a sticker at 4,800 lifetime XP
+and 20 completed scenarios. Those requirements are bypassed while the temporary
+collection preview is active; the permanent ADMIN bypass is preserved.
