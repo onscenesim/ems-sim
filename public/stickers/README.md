@@ -26,11 +26,12 @@ pen colors are selected beside the scratch pad’s Clear button.
 
 ## House image generation
 
-`house.png` was created with the built-in image-generation tool (not the CLI).
-The generated original was copied into this directory, preserving transparency.
-Final prompt:
+`house.png` was replaced with a die-cut version of the user's supplied iconic
+House M.D. meme image. The built-in image-generation tool was used to remove
+the screenshot background and preserve the portrait as a transparent sticker.
+Edit prompt:
 
-> Create one finished die-cut vinyl sticker asset for a retro EMS simulation game. Subject: an instantly recognizable comically zoomed-in portrait of Dr. Gregory House (Hugh Laurie) from House M.D., piercing blue eyes, furrowed brows, scruffy stubble, slightly crooked sardonic grin; exaggerated extreme close-up with the forehead and chin cropped by the die-cut silhouette. Style: high-quality photographic meme cutout with slightly posterized colors, not generic cartoon. Face fills nearly the entire sticker; thick off-white die-cut sticker edge. Single isolated sticker centered, transparent background, no text, no additional objects, no shadow beyond the sticker. Square composition, usable small at 100px.
+> Use the provided image as the exact edit source. Create a finished transparent-background die-cut vinyl sticker asset for the existing game UI. Preserve the subject's identity, frontal composition, serious expression, blue eyes, hair, beard, clothing collar, and photographic appearance exactly; do not stylize, redraw, or change the face. Remove the white screenshot background and the thin line at the bottom, retaining only the portrait silhouette. Add a clean, even off-white sticker border around the portrait silhouette with a very subtle dark edge, matching the existing sticker treatment. Center the portrait in a square canvas with transparent pixels outside the sticker. No text, logos, watermark, extra objects, or background.
 
 An initially generated Speed variant was superseded by the user's supplied image
 and is not used by the project.
