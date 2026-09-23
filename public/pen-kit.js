@@ -73,23 +73,31 @@
       </defs><g class="pen-object">${body}</g></svg>`;
   }
 
-  let audio;
-  function sound(slide, enabled) {
+  const soundFiles = {
+    click: '/sounds/PlasticPenClick.mp3',
+    spacepen: '/sounds/ChunkyPenClick.mp3',
+    bubbles: '/sounds/MULTIPOP.mp3',
+    unsheathe: '/sounds/PenUnsheathe.mp3',
+    sheathe: '/sounds/PenSheathe.mp3',
+  };
+  // These close-miked recordings sit above the existing interface cues at full gain.
+  const soundLevels = { click: .55, spacepen: .4, bubbles: .55, unsheathe: .5, sheathe: .55 };
+  const voices = new Map();
+  function sound(cue, enabled) {
     if (!enabled || typeof window === 'undefined' || document.hidden) return;
     try {
-      const Context = window.AudioContext || window.webkitAudioContext;
-      if (!Context) return;
-      audio ||= new Context();
-      if (audio.state === 'suspended') audio.resume().catch(() => {});
-      const length = slide ? .23 : .045;
-      const buffer = audio.createBuffer(1, Math.ceil(audio.sampleRate * length), audio.sampleRate);
-      const samples = buffer.getChannelData(0);
-      for (let i = 0; i < samples.length; i++) samples[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / samples.length) * Math.exp(-i / samples.length * (slide ? 1 : 6));
-      const source = audio.createBufferSource(), filter = audio.createBiquadFilter(), gain = audio.createGain();
-      source.buffer = buffer; filter.type = 'bandpass'; filter.frequency.value = slide ? 3700 : 1900; filter.Q.value = slide ? 2 : .8; gain.gain.value = slide ? .13 : .3;
-      source.connect(filter); filter.connect(gain); gain.connect(audio.destination); source.start();
-      source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
-    } catch { /* Sound is optional; mechanisms still work without Web Audio. */ }
+      let pool = voices.get(cue);
+      if (!pool) {
+        pool = [new Audio(soundFiles[cue])];
+        pool[0].preload = 'auto';
+        voices.set(cue, pool);
+      }
+      let voice = pool.find(item => item.paused || item.ended);
+      if (!voice) { voice = pool[0].cloneNode(true); pool.push(voice); }
+      voice.volume = soundLevels[cue];
+      voice.currentTime = 0;
+      voice.play().catch(() => {});
+    } catch { /* Sound is optional; mechanisms still work without audio. */ }
   }
 
   function mount(host, id, options = {}) {
@@ -127,7 +135,9 @@
         state = transition(id, state, action);
         update();
         host.classList.remove('pen-actuating'); void host.offsetWidth; host.classList.add('pen-actuating');
-        sound(id === 'green', options.soundEnabled?.() ?? true);
+        const cue = id === 'green' ? (state.extended ? 'unsheathe' : 'sheathe')
+          : id === 'teal' ? 'spacepen' : id === 'orange' ? 'bubbles' : 'click';
+        sound(cue, options.soundEnabled?.() ?? true);
       });
       stage.appendChild(button); controls.push([button, action]);
     }

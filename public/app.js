@@ -44,6 +44,8 @@ const SOUNDS = {
   sfx_loading_bls:  new Audio('/sounds/BLSStretcher.m4a'),
   sfx_depart:       new Audio('/sounds/AmbulanceDeparting.m4a'),
 };
+// Match these close-up interface recordings to the established effect bed.
+const SOUND_LEVELS = { glovebox: .65, paper: .8 };
 // A single HTMLAudioElement cannot play over itself: calling play() again
 // rewinds the effect already in progress. Keep a small, warmed voice pool per
 // sound so two animation/action cues can overlap without cancelling either.
@@ -121,6 +123,7 @@ function playSound(name) {
   const voice = soundVoice(name, s);
   console.log('[sound] playing:', name);
   voice.muted = false;  // ensure not silenced from unlock phase
+  voice.volume = SOUND_LEVELS[name] ?? 1;
   voice.currentTime = 0;
   voice.play().catch(err => console.warn('[sound] play error:', name, err.message));
 }
