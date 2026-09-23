@@ -34,7 +34,7 @@
     {
       id: 'ekg', name: 'A crumpled 12-lead EKG',
       lore: 'Flawless baseline. Every patient field filled in. This can only be Captain Yolanda Ferris’s work.',
-      art: '<path d="m5 21 23-8 22 8 23-6 16 6-5 42-20-5-20 8-20-8-17 5z" fill="#efdbce"/><path d="M10 32h74M9 42h76M9 52h75M20 21v37M30 21v40M40 23v38M50 23v40M60 22v38M70 21v38M80 24v34" stroke="#d5aba4" stroke-width=".6"/><path d="M11 38h10l3-4 3 5 3-15 3 24 3-10h11l3-4 3 5 3-15 3 24 3-10h19M10 53h14l3-4 3 4 3-9 3 16 3-7h17l3-4 3 4 3-9 3 16 3-7h9" stroke="#565052" fill="none" stroke-width="1.2"/><path d="m28 13-4 44M50 21l-6 45M73 15l-9 43" stroke="#b7a494" fill="none"/>' + label('FERRIS / 12:04', 49, 19, 5),
+      art: '<path d="m5 21 23-8 22 8 23-6 16 6-5 42-20-5-20 8-20-8-17 5z" fill="#efdbce"/><path d="M10 32h74M9 42h76M9 52h75M20 21v37M30 21v40M40 23v38M50 23v40M60 22v38M70 21v38M80 24v34" stroke="#d5aba4" stroke-width=".6"/><path d="M11 38h10l3-4 3 5 3-15 3 24 3-10h11l3-4 3 5 3-15 3 24 3-10h19M10 53h14l3-4 3 4 3-9 3 16 3-7h17l3-4 3 4 3-9 3 16 3-7h9" stroke="#565052" fill="none" stroke-width="1.2"/><path d="m28 13-4 44M50 21l-6 45M73 15l-9 43" stroke="#b7a494" fill="none"/>',
     },
     {
       id: 'eightball', name: 'A magic 8-ball',
@@ -251,11 +251,11 @@
     {
       id: 'dead-marker', name: 'A marker with no cap and no ink',
       lore: 'Its the only marker on the ambulance, so no one has thrown it out.',
-      art: '<path d="m20 60 42-42 13 13-42 42z" fill="#353d43" stroke="#738087" stroke-width="2"/><path d="m57 23 8-8 13 13-8 8z" fill="#e2d1a0"/><path d="m16 64 10-10 10 10-10 10z" fill="#65686a"/><path d="m26 54 10 10M62 17l13 13" stroke="#a5a8a0" stroke-width="2"/>' + label('PERMANENT', 45, 47, 5, '#d4d1bd'),
+      art: '<g transform="rotate(32 48 40)"><path d="M46.5 7Q47 3 48 2q1 1 1.5 5z" fill="#292722"/><path d="M46 7h4v4h-4z" fill="#141717"/><path d="M46 11q-2.3 3-2.3 6v7h8.6v-7q0-3-2.3-6z" fill="#181c1c" stroke="#363c3a" stroke-width=".6"/><path d="M45.5 15q-.8 2-.8 6" fill="none" stroke="#4c5350" stroke-width=".7"/><path d="M43.5 24q4.5-1 9 0v45q0 7-2.7 8h-3.6q-2.7-1-2.7-8z" fill="#babdb2" stroke="#838b82" stroke-width=".7"/><path d="M44.7 26v43q0 5 1.6 6" fill="none" stroke="#d9dbd0" stroke-width=".8"/><path d="M44 24q4-1 8 0" fill="none" stroke="#d5d8ce" stroke-width=".8"/><g transform="translate(48 48) rotate(90)" fill="#191f22"><text x="0" y="0" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="bold" font-size="5" textLength="23" lengthAdjust="spacingAndGlyphs">Sharpie</text><text x="0" y="2.8" text-anchor="middle" font-family="Arial,sans-serif" font-size="1.8" font-weight="bold">Permanent Marker</text></g><g transform="translate(48 65) rotate(90)" fill="#242b2c" font-family="Arial,sans-serif" font-size="2.1" font-weight="bold" text-anchor="middle"><text y="0">FINE</text><text y="2.2">POINT</text></g></g>',
     },
   );
 
-  const trash = new Set(['coins', 'napkins', 'ekg', 'hot-sauce', 'uncrustable', 'aux', 'straw', 'pen', 'map-book', 'narcan', 'conference', 'csn-stickers', 'phone-glove', 'covid-mask', 'old-newspaper', 'zynn-container', 'french-fry', 'parking-receipt', 'googly-eye', 'dead-marker']);
+  const trash = new Set(['coins', 'napkins', 'glove', 'ekg', 'hot-sauce', 'uncrustable', 'aux', 'straw', 'pen', 'hazmat', 'map-book', 'narcan', 'conference', 'csn-stickers', 'phone-glove', 'covid-mask', 'old-newspaper', 'zynn-container', 'french-fry', 'parking-receipt', 'googly-eye', 'dead-marker', 'blood-vial']);
   const moreJunk = [
     {
       id: 'dead-pager', name: 'A pager with a dead battery',

@@ -39,6 +39,9 @@ test('each call retains unique finds and its Post-it variant across serializatio
   assert.equal(resolve('napkins').destination, 'trash');
   assert.equal(resolve('hot-sauce').destination, 'trash');
   assert.equal(resolve('straw').destination, 'trash');
+  assert.equal(resolve('glove').destination, 'trash');
+  assert.equal(resolve('hazmat').destination, 'trash');
+  assert.equal(resolve('blood-vial').destination, 'trash');
 });
 
 test('sorting accepts mistakes without XP, reveals after two removals, and cannot farm XP', () => {
