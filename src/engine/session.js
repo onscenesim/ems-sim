@@ -1093,6 +1093,10 @@ class Session {
       messages:     this.messages,
       debriefText:  this.debriefText || null,
       patientOutcome: this.patientOutcome || null,
+      learningReview: this.closed ? {
+        ...(this.learningReview?.version >= 5 ? this.learningReview : evaluateObjectives(this.seed, this.turns)),
+        debriefText: this.debriefText || null,
+      } : null,
     };
   }
 

@@ -392,7 +392,6 @@ function rollScenario(opts = {}) {
     timestamp_start: new Date().toISOString(),
     category,
     presentation: presentation.presentation || presentation.surface_presentation,
-    learning_objectives: [...presentation.learning_objectives],
     true_diagnosis: isCurveball ? presentation.true_diagnosis : null,
     reveal_trigger: isCurveball ? presentation.reveal_trigger : null,
     // Arrest entries store the case key as `reversible_cause_hint` — reading

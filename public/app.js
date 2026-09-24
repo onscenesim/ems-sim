@@ -1005,6 +1005,7 @@ async function startScenario(replayOf = null) {
       turns:      [],
       debriefText: null,
       patientOutcome: null,
+      learningReview: null,
     };
     output.innerHTML = '';
 
@@ -1554,12 +1555,10 @@ function showDebriefCTA() {
       if (localTranscript) {
         localTranscript.debriefText = data.debrief;
         localTranscript.patientOutcome = data.patientOutcome || null;
+        localTranscript.learningReview = data.learning || null;
       }
       cta.remove();
-      printHr();
-      print('Note: Debrief is experimental. Take what it says with a grain of salt.', 'system');
-      print(data.debrief, 'debrief');
-      if (data.learning) output.appendChild(PracticeUI.learning(data.learning));
+      if (data.learning) { output.appendChild(PracticeUI.learning(data.learning)); scrollBottom(); }
       if (data.comparison) output.appendChild(PracticeUI.comparison(data.comparison));
       if (data.practice?.available) {
         const sourceId = sessionId;
@@ -2753,6 +2752,7 @@ function formatBackendSection(t, backend) {
 function formatTranscript(t, backend) {
   const { meta, turns, debriefText } = t;
   const patientOutcome = backend?.patientOutcome || t.patientOutcome;
+  const review = backend?.learningReview || t.learningReview;
   const lines = [];
 
   // ── Header ──────────────────────────────────────────────────────────────
@@ -2790,21 +2790,12 @@ function formatTranscript(t, backend) {
     }
   }
 
-  // ── Debrief ──────────────────────────────────────────────────────────────
-  if (debriefText) {
-    lines.push('DEBRIEF');
-    lines.push('─'.repeat(60));
-    lines.push('');
-    lines.push(debriefText);
-    lines.push('');
+  // ── Learning Review ──────────────────────────────────────────────────────
+  if (review || debriefText) {
+    lines.push(PracticeUI.exportText(review || { debriefText, timeline: [] }), '');
   }
-
   if (patientOutcome) {
-    lines.push('PATIENT OUTCOME');
-    lines.push('─'.repeat(60));
-    lines.push('');
-    lines.push(patientOutcome);
-    lines.push('');
+    lines.push('PATIENT OUTCOME', '─'.repeat(60), '', patientOutcome, '');
   }
 
   // ── Backend data (ground truth + engine log) ─────────────────────────────
@@ -2888,9 +2879,13 @@ async function resumeFromSnapshot(snap) {
 
   localTranscript = {
     meta:        snap.meta || {},
-    turns:       (snap.turns || []).map(t => ({ user: t.user, assistant: t.assistant, rolls: t.rolls || [] })),
-    debriefText: null,
-    patientOutcome: null,
+    turns:       (snap.turns || []).map(t => ({ user: t.user, assistant: t.assistant,
+      rolls: t.rolls || [], suppressed: t.suppressed || [], vitals: t.vitals || null,
+      scene_minute: t.sceneMinute ?? null })),
+    debriefText: snap.debriefText || null,
+    patientOutcome: snap.patientOutcome || null,
+    learningReview: snap.learningReview ? { ...snap.learningReview,
+      debriefText: snap.debriefText || null } : null,
   };
 
   output.innerHTML = '';
@@ -2938,7 +2933,14 @@ async function resumeFromSnapshot(snap) {
 
   if (isClosed) {
     setInputEnabled(false);
-    showDebriefCTA();
+    if (snap.debriefText) {
+      if (!localTranscript.learningReview || localTranscript.learningReview.version < 5) {
+        try { localTranscript.learningReview = (await apiGet(`/api/scenario/${sessionId}/transcript`)).learningReview; }
+        catch (_) { /* show the debrief even if the session export is unavailable */ }
+      }
+      output.appendChild(PracticeUI.learning(localTranscript.learningReview || {
+        debriefText: snap.debriefText, timeline: [] }));
+    } else showDebriefCTA();
   } else {
     setLoading(false);
     focusActionInput();
@@ -3783,8 +3785,7 @@ async function showSavedCall(id) {
     if (request !== libraryRequest || !libraryDialog.open) return;
     libraryContent.replaceChildren(libraryButton('Back to calls', showCallLibrary), PracticeUI.el('h2', run.title),
       PracticeUI.el('p', `${new Date(run.date).toLocaleString()} · ${run.category} · ${run.difficulty} · ${run.region}`),
-      PracticeUI.el('p', run.caseId ? `Case ${run.caseId} · Seed ${run.randomSeed}` : 'Legacy call — no saved replay setup.'),
-      PracticeUI.el('h3', 'Debrief'), PracticeUI.el('pre', run.debrief || 'No debrief has been generated for this call.'));
+      PracticeUI.el('p', run.caseId ? `Case ${run.caseId} · Seed ${run.randomSeed}` : 'Legacy call — no saved replay setup.'));
     if (run.learning) libraryContent.append(PracticeUI.learning(run.learning));
     if (run.comparison) libraryContent.append(PracticeUI.comparison(run.comparison));
     if (run.replayAvailable) libraryContent.append(libraryButton('Practice this case again', async event => {
@@ -3801,7 +3802,9 @@ async function showSavedCall(id) {
       button.disabled = true;
       try {
         const saved = await apiGet(`/api/scenario/runs/${encodeURIComponent(id)}/transcript`);
-        downloadFile(`ems-call-${id}.txt`, `${saved.title}\n${saved.date}\n\n${saved.turns.map(t => `T+${t.minute ?? '?'} min\nYOU: ${t.action}\nSCENE: ${t.response}`).join('\n\n')}\n\nPATIENT OUTCOME\n${saved.patientOutcome || 'Not generated.'}\n\nDEBRIEF\n${saved.debrief || 'Not generated.'}`);
+        const review = saved.learning ? `\n\n${PracticeUI.exportText(saved.learning)}` : '';
+        const outcome = saved.patientOutcome ? `\n\nPATIENT OUTCOME\n${saved.patientOutcome}` : '';
+        downloadFile(`ems-call-${id}.txt`, `${saved.title}\n${saved.date}\n\n${saved.turns.map(t => `T+${t.minute ?? '?'} min\nYOU: ${t.action}\nSCENE: ${t.response}`).join('\n\n')}${review}${outcome}`);
       } catch (err) { libraryContent.append(PracticeUI.el('p', `Download failed: ${err.message}`)); }
       finally { button.disabled = false; }
     }));

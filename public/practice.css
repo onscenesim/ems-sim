@@ -72,7 +72,7 @@
 .review-workspace-label { color: #536461; }
 .review-toolbar label { display: flex; gap: 8px; align-items: center; }
 .learning-window select { min-height: 34px; padding: 4px 6px; background: #faf9f2; border-color: #858b83 #f6f4e9 #f6f4e9 #858b83; }
-.review-summary { display: grid; grid-template-columns: repeat(3,1fr); margin: 12px; border: 2px solid; border-color: #999c90 #f7f5e7 #f7f5e7 #999c90; background: #e9e8dc; }
+.review-summary { display: grid; grid-template-columns: repeat(2,1fr); margin: 12px; border: 2px solid; border-color: #999c90 #f7f5e7 #f7f5e7 #999c90; background: #e9e8dc; }
 .review-summary > div { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-right: 1px solid #bec1b4; }
 .review-summary > div:last-child { border-right: 0; }
 .review-summary strong { font: 28px/1 var(--font-xp); color: #345568; }
@@ -84,24 +84,13 @@
 .review-panel { margin: 0 8px 8px; padding: 16px; background: #ebe9df; border: 2px solid; border-color: #fffdf4 #898d81 #898d81 #fffdf4; min-height: 220px; }
 .review-intro { color: #4d5a59; margin: 0 0 14px; max-width: 85ch; }
 .review-panel > label + .review-intro { margin-top: 12px; }
-.learning-window .review-objective { padding: 0; margin-bottom: 9px; background: #f7f5e9; border: 1px solid #b0b3a4; }
-.review-objective > summary { display: flex; gap: 10px; align-items: center; padding: 12px; list-style: none; font-weight: normal; }
-.review-objective > summary::-webkit-details-marker { display: none; }
-.review-objective > summary::before { content: '+'; display: grid; place-items: center; flex: 0 0 16px; width: 16px; height: 16px; border: 1px solid #6f7b71; background: white; font: 18px/1 var(--font-xp); color: #334c58; }
-.review-objective[open] > summary::before { content: '−'; }
-.review-objective[open] > summary { background: #dfe5db; border-bottom: 1px solid #b0b3a4; }
-.review-objective-number { color: #6d7974; font-size: 16px; }
-.review-objective-label { flex: 1; }
-.review-objective-body { padding: 14px; }
-.review-focus { font-weight: bold; margin-bottom: 12px; }
-.review-reflection { margin-top: 14px; padding: 12px 16px; background: #f2edcf; border: 1px solid #c2ba8e; border-left: 4px solid #b1a267; }
-.review-reflection h3 { margin: 0 0 6px; font-size: 18px; color: #64562e; }
-.review-reflection ul { padding-left: 20px; margin-bottom: 14px; }
-.review-reflection li { margin: 5px 0; }
+.review-debrief-text { overflow-wrap: anywhere; font: 18px/1.45 var(--font-xp); color: #26343a; }
+.review-debrief-text h3 { margin: 20px 0 8px; font: bold 20px/1.3 var(--font-xp); color: #25485f; }
+.review-debrief-text h3:first-child { margin-top: 0; }
+.review-debrief-text p { margin: 0 0 14px; }
+.review-debrief-text ul { margin: 0 0 14px; padding-left: 25px; }
+.review-debrief-text li { margin: 0 0 8px; }
 .review-empty { margin: 12px 0; padding: 12px; border: 1px dashed #a6ac9e; color: #525d58; background: #f7f6ee; }
-.review-method { margin-top: 16px; color: #57605a; font-size: 16px; }
-.review-method p { margin-top: 8px; }
-.learning-window .review-method summary { font-weight: normal; }
 .review-status { display: flex; flex-wrap: wrap; gap: 5px 16px; margin: 8px; padding: 6px 10px; border: 1px solid; border-color: #9a9e92 #f3f1e5 #f3f1e5 #9a9e92; font-size: 15px; color: #596358; }
 .review-status strong { font-weight: normal; color: #655c40; }
 .review-moments .is-selected { outline: 2px solid #557d99; background: #f1f7f6; }
@@ -150,10 +139,6 @@
   .review-summary { margin: 10px 8px; }
   .review-summary > div { flex-direction: column; gap: 3px; text-align: center; padding: 9px 4px; }
   .review-summary span { font-size: 16px; }
-  .review-objective > summary { flex-wrap: wrap; gap: 8px; padding: 10px; }
-  .review-objective-label { flex-basis: calc(100% - 65px); }
-  .review-objective > summary .review-badge { margin-left: 26px; }
-  .review-objective-body { padding: 10px; }
   .learning-window .review-tab { min-width: 0; flex: 1; min-height: 44px; }
   .review-toolbar { padding: 10px 8px; }
   .practice-review :is(button,select) { min-height: 44px; }

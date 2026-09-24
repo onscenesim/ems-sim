@@ -118,9 +118,13 @@ function runComparison(req, session) {
   return { previousId: prior.id, previous: decisionTimeline(prior.turns), current: decisionTimeline(session.turns) };
 }
 function currentLearningReview(run) {
-  return run.learningReview?.version >= 4
+  const review = run.learningReview?.version >= 5
     ? run.learningReview
     : evaluateObjectives(run.seed, run.turns);
+  return {
+    ...review,
+    debriefText: run.debriefText || null,
+  };
 }
 
 function ownedSession(req, res) {
@@ -205,6 +209,7 @@ router.get('/runs/:runId/transcript', (req, res) => {
   const run = playerRun(req, res);
   if (!run) return;
   return res.json({ ...runSummary(run), debrief: run.debriefText || null,
+    learning: run.closed ? currentLearningReview(run) : null,
     turns: (run.turns || []).map(t => ({ minute: t.sceneMinute ?? null, action: t.user || '', response: t.assistant || '' })),
   });
 });

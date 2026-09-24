@@ -2,6 +2,7 @@
 'use strict';
 const PracticeUI = (() => {
   let reviewSerial = 0;
+  const debriefNote = 'Debrief is experimental. Check its clinical claims against your local protocols.';
   function el(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -28,12 +29,48 @@ const PracticeUI = (() => {
   function vitalsLine(vitals) {
     return Object.entries(vitals || {}).map(([key, value]) => `${key}: ${valueText(value)}`).join(' · ');
   }
+  function debriefContent(value) {
+    const container = el('div', undefined, 'review-debrief-text');
+    const lines = String(value || '').split(/\r?\n/);
+    let paragraph = [], list = null;
+    const flushParagraph = () => {
+      if (paragraph.length) container.append(el('p', paragraph.join(' ')));
+      paragraph = [];
+    };
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) { flushParagraph(); list = null; continue; }
+      const heading = line.match(/^#{1,6}\s+(.+)$/);
+      if (heading) { flushParagraph(); list = null; container.append(el('h3', heading[1])); continue; }
+      const bullet = line.match(/^\*\s+(.+)$/);
+      if (bullet) {
+        flushParagraph();
+        if (!list) { list = el('ul'); container.append(list); }
+        const item = el('li');
+        const lead = bullet[1].match(/^\*\*(.+?)\*\*\s*(.*)$/);
+        if (lead) item.append(el('strong', lead[1]), document.createTextNode(lead[2] ? ` ${lead[2]}` : ''));
+        else item.textContent = bullet[1];
+        list.append(item);
+        continue;
+      }
+      list = null;
+      paragraph.push(line);
+    }
+    flushParagraph();
+    return container;
+  }
   function procedureName(procedure) {
     if (procedure.id === 'medication_push' && procedure.matchedDrug) return procedure.matchedDrug;
+    const names = {
+      cpr: 'CPR', peripheral_iv: 'Peripheral IV', io_access: 'IO access',
+      twelve_lead: '12-lead ECG', bvm: 'BVM', cpap: 'CPAP',
+      vitals_manual: 'Manual vitals', vitals_monitor: 'Monitor vitals',
+    };
+    if (names[procedure.id]) return names[procedure.id];
     return String(procedure.id || 'Recorded procedure').replaceAll('_', ' ');
   }
   function titleCase(value) {
-    return String(value || '').replace(/\b\w/g, letter => letter.toUpperCase());
+    return String(value || '').replace(/\b[a-z]/g, letter => letter.toUpperCase());
   }
   function procedureMeta(procedure) {
     const parts = [];
@@ -113,7 +150,6 @@ const PracticeUI = (() => {
   function learning(data) {
     const id = `learning-${++reviewSerial}`;
     const allTurns = data.timeline || [];
-    const findings = data.findings || [];
     const section = el('section', undefined, 'practice-review learning-window');
     section.setAttribute('aria-label', 'Learning review');
     const titlebar = el('header', undefined, 'review-titlebar');
@@ -141,7 +177,7 @@ const PracticeUI = (() => {
     const patientSelect = el('select');
     patientSelect.setAttribute('aria-label', 'Review patient');
     patientSelect.append(new Option('All patients', ''));
-    const patients = [...new Set([...allTurns, ...findings.flatMap(f => f.evidence || [])].map(t => t.patient).filter(Boolean))];
+    const patients = [...new Set(allTurns.map(t => t.patient).filter(Boolean))];
     patients.forEach(patient => patientSelect.append(new Option(patientName(patient), patient)));
     patientLabel.append(patientSelect);
     toolbar.append(patientLabel);
@@ -153,9 +189,9 @@ const PracticeUI = (() => {
     tabs.setAttribute('aria-label', 'Learning review views');
     body.append(tabs);
     const panels = {}, tabButtons = {};
-    let active = 'Objectives', selectedTurn = null, filter = 'all';
+    let active = 'Debrief', selectedTurn = null, filter = 'all';
     const status = el('footer', undefined, 'review-status');
-    status.append(el('strong', 'DRAFT · UNSCORED'), el('span', 'Evidence is for reflection. No grade or XP impact.'));
+    status.append(el('strong', 'UNSCORED RECORD'), el('span', 'Procedure outcomes are simulation results, not a grade.'));
     const rows = () => allTurns.filter(t => !patientSelect.value || t.patient === patientSelect.value);
     function activate(name, focus = false) {
       active = name;
@@ -166,7 +202,7 @@ const PracticeUI = (() => {
       });
       if (focus) tabButtons[name].focus();
     }
-    const names = ['Objectives', 'Timeline', 'Vitals'];
+    const names = ['Debrief', 'Timeline', 'Vitals'];
     names.forEach((name, index) => {
       const tab = button(name, () => activate(name), 'review-tab');
       tab.id = `${id}-${name}-tab`;
@@ -195,46 +231,12 @@ const PracticeUI = (() => {
       const target = panels.Timeline.querySelector(`[data-turn="${Number(turn)}"]`);
       if (target) { target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'nearest', behavior: 'auto' }); }
     }
-    function renderObjectives() {
-      const panel = panels.Objectives;
-      panel.replaceChildren(el('p', 'Organized around choices you controlled: how you started, the interventions you recorded, and your handoff. Automatic patient updates do not count as actions.', 'review-intro'));
-      findings.forEach((finding, index) => {
-        const evidence = (finding.evidence || []).filter(t => !patientSelect.value || t.patient === patientSelect.value);
-        const detail = el('details', undefined, 'review-objective');
-        const summary = el('summary');
-        summary.append(el('span', String(index + 1).padStart(2, '0'), 'review-objective-number'),
-          el('span', finding.label, 'review-objective-label'),
-          el('span', evidence.length ? `${evidence.length} moment${evidence.length === 1 ? '' : 's'}` : 'No recorded moment', 'review-badge'));
-        detail.append(summary);
-        const contents = el('div', undefined, 'review-objective-body');
-        const reflection = (patientSelect.value && finding.patientReflections?.[patientSelect.value])
-          || finding.reflection || { focus: null, questions: [], practice: null };
-        if (reflection.focus) contents.append(el('p', reflection.focus, 'review-focus'));
-        if (evidence.length) {
-          const list = el('ol', undefined, 'review-moments');
-          evidence.forEach(t => list.append(moment(t, openMoment)));
-          contents.append(list);
-        } else contents.append(el('p', 'No matching structured evidence for this selection. Check whether the objective applied and review the transcript for verbal assessments or logging gaps.', 'review-empty'));
-        const questions = reflection.questions || [];
-        if (questions.length || reflection.practice) {
-          const promptBox = el('aside', undefined, 'review-reflection');
-          if (questions.length) {
-            promptBox.append(el('h3', 'Questions from this call'));
-            const questionList = el('ul');
-            questions.forEach(question => questionList.append(el('li', question)));
-            promptBox.append(questionList);
-          }
-          if (reflection.practice) promptBox.append(el('h3', 'Next practice'), el('p', reflection.practice));
-          contents.append(promptBox);
-        }
-        detail.append(contents);
-        panel.append(detail);
-      });
-      if (!findings.length) panel.append(el('p', 'No review areas were saved for this call.', 'review-empty'));
-      const note = el('details', undefined, 'review-method');
-      note.append(el('summary', 'About this review'), el('p', data.notice || 'Draft review areas. No clinical score is assigned.'),
-        el('p', 'Times mark the end of each turn. Procedure outcomes reflect the simulation, not decision quality. Observations after treatment do not prove that treatment caused a change.'));
-      panel.append(note);
+    function renderDebrief() {
+      const panel = panels.Debrief;
+      panel.replaceChildren();
+      if (patientSelect.value) panel.append(el('p', 'The debrief covers the whole call, including every patient.', 'review-intro'));
+      if (data.debriefText) panel.append(el('p', debriefNote, 'review-intro'));
+      panel.append(debriefContent(data.debriefText || 'No debrief has been generated for this call.'));
     }
     function renderTimeline() {
       const panel = panels.Timeline;
@@ -246,7 +248,7 @@ const PracticeUI = (() => {
       select.value = filter;
       select.addEventListener('change', () => { filter = select.value; selectedTurn = null; renderTimeline(); panels.Timeline.querySelector('select').focus(); });
       label.append(select);
-      panel.append(label, el('p', 'Follow the sequence of orders, recorded attempts, and scene responses. Select a patient above to focus the record.', 'review-intro'));
+      panel.append(label, el('p', 'Follow your actions, the scene responses, and recorded attempts. Select a patient above to focus the record.', 'review-intro'));
       const entries = rows().filter(t => filter === 'all'
         || (filter === 'interventions' && t.procedures?.some(procedure => procedure.intervention))
         || (filter === 'assessments' && t.procedures?.some(procedure => !procedure.intervention))
@@ -295,10 +297,10 @@ const PracticeUI = (() => {
     function render() {
       stats.replaceChildren();
       const interventionCount = rows().reduce((count, turn) => count + (turn.procedures || []).filter(procedure => procedure.intervention).length, 0);
-      [[findings.length, 'Review areas'], [interventionCount, 'Interventions'], [rows().length, 'Logged moments']].forEach(([value, label]) => {
+      [[interventionCount, 'Interventions'], [rows().length, 'Logged moments']].forEach(([value, label]) => {
         const cell = el('div'); cell.append(el('strong', String(value)), el('span', label)); stats.append(cell);
       });
-      renderObjectives(); renderTimeline(); renderVitals(); activate(active);
+      renderDebrief(); renderTimeline(); renderVitals(); activate(active);
     }
     patientSelect.addEventListener('change', () => { selectedTurn = null; render(); });
     render();
@@ -312,5 +314,52 @@ const PracticeUI = (() => {
     section.append(grid);
     return section;
   }
-  return { el, learning, timeline, comparison };
+  function exportText(data) {
+    const turns = data?.timeline || [];
+    const interventionCount = turns.reduce((count, turn) => count + (turn.procedures || []).filter(procedure => procedure.intervention).length, 0);
+    const lines = ['LEARNING REVIEW', '═'.repeat(60), '', 'After-call workspace',
+      `${interventionCount} Interventions · ${turns.length} Logged moments`, '',
+      'DEBRIEF', '─'.repeat(60),
+      ...(data?.debriefText ? [debriefNote, ''] : []),
+      data?.debriefText || 'No debrief has been generated for this call.', ''];
+    lines.push('TIMELINE', '─'.repeat(60), 'Follow your actions, the scene responses, and recorded attempts.');
+    if (!turns.length) lines.push('No entries recorded.');
+    for (const turn of turns) {
+      const labels = [time(turn.minute), `Turn ${turn.turn}`, patientName(turn.patient)];
+      if (turn.report) labels.push('Report');
+      if (turn.skip) labels.push('Time skip');
+      lines.push('', labels.join(' · '), `PLAYER ACTION: ${turn.action || 'No player action recorded.'}`);
+      for (const [intervention, heading] of [[true, 'INTERVENTIONS'], [false, 'ASSESSMENT / MONITORING']]) {
+        const procedures = (turn.procedures || []).filter(procedure => !!procedure.intervention === intervention);
+        if (!procedures.length) continue;
+        lines.push(heading);
+        for (const procedure of procedures) {
+          const name = titleCase(procedureName(procedure));
+          const result = !procedure.noRoll && procedure.outcome ? ` · ${procedure.outcome}` : '';
+          const meta = procedureMeta(procedure);
+          lines.push(`  ${name}${result} · ${patientName(procedure.patient)}${meta ? ` · ${meta}` : ''}`);
+        }
+      }
+      lines.push(`RECORDED VITALS: ${vitalsLine(turn.vitals) || 'No vitals recorded in this turn.'}`);
+      if (turn.priorObservation) lines.push(`EARLIER OBSERVATION: ${time(turn.priorObservation.minute)} · Turn ${turn.priorObservation.turn} · ${vitalsLine(turn.priorObservation.vitals)}`);
+      if (turn.precedingIntervention) lines.push(`PRECEDING INTERVENTION: Turn ${turn.precedingIntervention.turn}: ${turn.precedingIntervention.action}`);
+      if (turn.elapsedMinutes !== null && turn.elapsedMinutes !== undefined) lines.push(`${turn.elapsedMinutes} min between recorded turns. This interval does not establish clinical timeliness.`);
+      if (turn.scene) lines.push(`SIMULATION RESPONSE: ${turn.scene}`);
+    }
+    lines.push('', 'VITALS', '─'.repeat(60), 'Recorded observations only. A dash means no value was logged in that turn; values are never carried forward.');
+    const observations = turns.filter(turn => Object.keys(turn.vitals || {}).length);
+    if (!observations.length) lines.push('No vitals were recorded.');
+    for (const patient of [...new Set(observations.map(turn => turn.patient))]) {
+      const entries = observations.filter(turn => turn.patient === patient);
+      const fields = [...new Set(entries.flatMap(turn => Object.keys(turn.vitals)))];
+      lines.push('', `${patientName(patient)} · ${entries.length} observation${entries.length === 1 ? '' : 's'}`);
+      for (const turn of entries) {
+        lines.push(`${time(turn.minute)} · #${turn.turn} · ${fields.map(field => `${field}: ${valueText(turn.vitals[field])}`).join(' · ')}`);
+      }
+    }
+    lines.push('', 'UNSCORED RECORD · Procedure outcomes are simulation results, not a grade.',
+      data?.notice || 'Times mark the end of a turn, not the exact intervention time.');
+    return lines.join('\n');
+  }
+  return { el, learning, timeline, comparison, exportText };
 })();
