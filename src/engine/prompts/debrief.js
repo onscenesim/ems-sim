@@ -26,7 +26,7 @@ EVIDENCE & CLINICAL RULES:
 
 ---
 
-REQUIRED OUTPUT FORMAT (Five sections, strictly follow length caps):
+REQUIRED OUTPUT FORMAT (Five visible sections, strictly follow length caps):
 
 1. SCENE & ASSESSMENT
 Evaluate scene size-up, thoroughness, and assessment sequence. Highlight specific critical findings that were either correctly identified or missed. Maximum 4 sentences.
@@ -42,7 +42,30 @@ Provide 3 specific, actionable bullet points tied directly to the clinical event
 
 5. PROTOCOL CHECK
 Output this exact line verbatim:
-"This is your cue to pull your own local protocols and the NREMT skills checklist and check them against how you ran this call. Simulation scope and your real-world scope may differ — your protocols are the final authority."`;
+"This is your cue to pull your own local protocols and the NREMT skills checklist and check them against how you ran this call. Simulation scope and your real-world scope may differ — your protocols are the final authority."
+
+After section 5, output exactly one machine-readable line in this format:
+[PATIENT_OUTCOME: concise likely disposition]
+Keep the disposition under 14 words and grounded in the scenario and course. Every outcome must use a calendar date in Month D, YYYY form, calculated from the call date in the RUN LOG. Never say "after X days." Examples: Discharged home on September 26, 2026; Discharged to skilled nursing on September 28, 2026; Discharged to hospice on September 25, 2026; Expired on September 26, 2026; DOA — September 24, 2026; Terminated on scene September 24, 2026, time of death T+18:00. Do not mention or explain this outcome anywhere in sections 1–5.`;
 }
 
-module.exports = { buildDebriefPrompt };
+const OUTCOME_RE = /\[PATIENT_OUTCOME:\s*([^\]\r\n]{1,160})\s*\]/i;
+function normalizePatientOutcome(outcome, callDate) {
+  const relative = outcome.match(/\bafter\s+(\d{1,4})\s+days?\b/i);
+  if (!callDate) return outcome;
+  const base = new Date(callDate);
+  if (!relative || !Number.isFinite(base.getTime())) return outcome;
+  base.setUTCDate(base.getUTCDate() + Number(relative[1]));
+  const date = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(base);
+  return outcome.replace(relative[0], `on ${date}`);
+}
+function parseDebriefResponse(value, callDate = null) {
+  const raw = String(value || '');
+  const match = raw.match(OUTCOME_RE);
+  const parsedOutcome = match?.[1].replace(/\s+/g, ' ').trim().slice(0, 160) || null;
+  const patientOutcome = parsedOutcome ? normalizePatientOutcome(parsedOutcome, callDate) : null;
+  const debrief = raw.replace(/\s*\[PATIENT_OUTCOME:[^\]]*\]\s*/gi, '\n').trim();
+  return { debrief, patientOutcome };
+}
+
+module.exports = { buildDebriefPrompt, parseDebriefResponse, normalizePatientOutcome };

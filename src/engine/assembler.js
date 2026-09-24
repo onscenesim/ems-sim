@@ -355,6 +355,7 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   lines.push('');
   lines.push('[1] SCENARIO GROUND TRUTH (what was actually true — the student could not see this)');
   lines.push(`  Scenario ID: ${seed.scenario_id}`);
+  lines.push(`  Call date (day 0 for the patient outcome): ${String(seed.timestamp_start || '').slice(0, 10) || 'unknown'}`);
   lines.push(`  Category: ${seed.category} | Difficulty: ${seed.difficulty}`);
   lines.push(`  Presentation: ${seed.presentation}`);
   if (seed.true_diagnosis) lines.push(`  True diagnosis: ${seed.true_diagnosis}`);

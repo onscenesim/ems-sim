@@ -45,6 +45,16 @@ function update(id, patch) {
   save(data);
 }
 
+function remove(id) {
+  try {
+    fs.unlinkSync(sessionPath(id));
+    return true;
+  } catch (err) {
+    if (err.code === 'ENOENT') return false;
+    throw err;
+  }
+}
+
 function markDebriefed(id) {
   update(id, { debriefed: true });
 }
@@ -85,4 +95,4 @@ function pruneOld() {
 
 pruneOld();
 
-module.exports = { save, load, update, markDebriefed, listPlayerRuns };
+module.exports = { save, load, update, remove, markDebriefed, listPlayerRuns };

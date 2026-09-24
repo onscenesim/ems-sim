@@ -467,6 +467,20 @@ async function apiGet(path) {
   return data;
 }
 
+async function apiDelete(path, body) {
+  let res;
+  try {
+    res = await fetch(path, { method: 'DELETE', headers: authHeaders(), body: JSON.stringify(body) });
+  } catch {
+    throw Object.assign(new Error('Connection dropped — check your network and retry.'), { code: 'network_error' });
+  }
+  let data;
+  try { data = await res.json(); }
+  catch { throw Object.assign(new Error(`Server returned an unreadable response (HTTP ${res.status}) — please retry.`), { code: 'bad_response' }); }
+  if (!res.ok) throw Object.assign(new Error(data.message || `HTTP ${res.status}`), { code: data.error });
+  return data;
+}
+
 // ── Lightweight player profiles ─────────────────────────────────────────
 
 const authOverlay = document.getElementById('auth-overlay');
@@ -990,6 +1004,7 @@ async function startScenario(replayOf = null) {
       },
       turns:      [],
       debriefText: null,
+      patientOutcome: null,
     };
     output.innerHTML = '';
 
@@ -1536,7 +1551,10 @@ function showDebriefCTA() {
       debriefOperationId ||= newOperationId();
       const data = await apiOperation(`/api/scenario/${sessionId}/debrief`, {}, debriefOperationId);
       if (!currentPlayer) recordGuestProgress(sessionId, { debrief: true });
-      if (localTranscript) localTranscript.debriefText = data.debrief;
+      if (localTranscript) {
+        localTranscript.debriefText = data.debrief;
+        localTranscript.patientOutcome = data.patientOutcome || null;
+      }
       cta.remove();
       printHr();
       print('Note: Debrief is experimental. Take what it says with a grain of salt.', 'system');
@@ -1605,7 +1623,7 @@ skipBtn.addEventListener('click', () => {
 });
 
 // ── Confirm dialog ──────────────────────────────────────────────────────────
-function showConfirm({ title, body, confirmLabel, onConfirm }) {
+function showConfirm({ title, body, confirmLabel, onConfirm, onCancel }) {
   const existing = document.getElementById('confirm-overlay');
   if (existing) existing.remove();
 
@@ -1635,14 +1653,18 @@ function showConfirm({ title, body, confirmLabel, onConfirm }) {
   ok.className = 'confirm-ok';
   ok.textContent = confirmLabel || 'CONFIRM';
 
-  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+  const close = (cancelled = true) => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+    if (cancelled) onCancel?.();
+  };
   const onKey = (e) => {
     if (e.key === 'Escape') { close(); }
-    else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { close(); onConfirm(); }
+    else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { close(false); onConfirm(); }
   };
 
   cancel.addEventListener('click', close);
-  ok.addEventListener('click', () => { close(); onConfirm(); });
+  ok.addEventListener('click', () => { close(false); onConfirm(); });
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   document.addEventListener('keydown', onKey);
 
@@ -1660,7 +1682,8 @@ function showConfirm({ title, body, confirmLabel, onConfirm }) {
   box.appendChild(p);
   box.appendChild(row);
   overlay.appendChild(box);
-  document.body.appendChild(overlay);
+  const openDialog = document.querySelector('dialog[open]');
+  (openDialog || document.body).appendChild(overlay);
   ok.focus();
 }
 
@@ -2729,6 +2752,7 @@ function formatBackendSection(t, backend) {
 
 function formatTranscript(t, backend) {
   const { meta, turns, debriefText } = t;
+  const patientOutcome = backend?.patientOutcome || t.patientOutcome;
   const lines = [];
 
   // ── Header ──────────────────────────────────────────────────────────────
@@ -2772,6 +2796,14 @@ function formatTranscript(t, backend) {
     lines.push('─'.repeat(60));
     lines.push('');
     lines.push(debriefText);
+    lines.push('');
+  }
+
+  if (patientOutcome) {
+    lines.push('PATIENT OUTCOME');
+    lines.push('─'.repeat(60));
+    lines.push('');
+    lines.push(patientOutcome);
     lines.push('');
   }
 
@@ -2858,6 +2890,7 @@ async function resumeFromSnapshot(snap) {
     meta:        snap.meta || {},
     turns:       (snap.turns || []).map(t => ({ user: t.user, assistant: t.assistant, rolls: t.rolls || [] })),
     debriefText: null,
+    patientOutcome: null,
   };
 
   output.innerHTML = '';
@@ -3616,16 +3649,75 @@ stalenessInterval = setInterval(tickStaleness, 5000);
 // Saved calls always come from the authenticated player's server-side library.
 const libraryDialog = document.getElementById('library-dialog');
 const libraryContent = document.getElementById('library-content');
+const libraryDeleteButton = document.getElementById('library-delete');
 let libraryRequest = 0;
 let libraryPage = 0;
 let libraryCategory = '';
+let libraryDeleteMode = false;
+let libraryVisibleCount = 0;
+const libraryDeleteSelection = new Set();
+function updateLibraryDeleteControl() {
+  const count = libraryDeleteSelection.size;
+  libraryDeleteButton.disabled = !currentPlayer;
+  libraryDeleteButton.classList.toggle('is-confirm', libraryDeleteMode);
+  libraryDeleteButton.setAttribute('aria-label', libraryDeleteMode
+    ? (count ? `Confirm deletion of ${count} selected call${count === 1 ? '' : 's'}` : 'Exit delete mode')
+    : 'Select calls to delete');
+  libraryDeleteButton.title = libraryDeleteMode
+    ? (count ? `Delete ${count} selected call${count === 1 ? '' : 's'}` : 'Exit delete mode')
+    : 'Delete saved calls';
+  const hint = libraryContent.querySelector('.library-delete-hint');
+  if (hint) hint.textContent = count
+    ? `${count} call${count === 1 ? '' : 's'} selected. Press ✓ to continue.`
+    : 'Select the calls to delete. Press ✓ again to cancel.';
+}
+function leaveLibraryDeleteMode(render = false) {
+  libraryDeleteMode = false;
+  libraryDeleteSelection.clear();
+  updateLibraryDeleteControl();
+  if (render && libraryDialog.open) showCallLibrary();
+}
 document.getElementById('player-library').addEventListener('click', () => {
   libraryDialog.showModal();
   libraryPage = 0;
+  leaveLibraryDeleteMode();
   showCallLibrary();
 });
 document.getElementById('library-close').addEventListener('click', () => libraryDialog.close());
-libraryDialog.addEventListener('close', () => { libraryRequest++; libraryContent.replaceChildren(); });
+libraryDialog.addEventListener('close', () => { libraryRequest++; leaveLibraryDeleteMode(); libraryContent.replaceChildren(); });
+libraryDeleteButton.addEventListener('click', () => {
+  if (!libraryDeleteMode) {
+    libraryDeleteMode = true;
+    libraryDeleteSelection.clear();
+    updateLibraryDeleteControl();
+    showCallLibrary();
+    return;
+  }
+  if (!libraryDeleteSelection.size) {
+    leaveLibraryDeleteMode(true);
+    return;
+  }
+  const ids = [...libraryDeleteSelection];
+  const count = ids.length;
+  showConfirm({
+    title: `DELETE ${count} SAVED CALL${count === 1 ? '' : 'S'}?`,
+    body: 'This permanently removes the selected call records and transcripts from your library. This cannot be undone.',
+    confirmLabel: 'DELETE',
+    onCancel: () => leaveLibraryDeleteMode(true),
+    onConfirm: async () => {
+      try {
+        await apiDelete('/api/scenario/runs', { ids });
+        if (count >= libraryVisibleCount && libraryPage > 0) libraryPage--;
+        leaveLibraryDeleteMode();
+        await showCallLibrary();
+      } catch (err) {
+        leaveLibraryDeleteMode();
+        await showCallLibrary();
+        libraryContent.prepend(PracticeUI.el('p', `Could not delete calls: ${err.message}`, 'library-delete-error'));
+      }
+    },
+  });
+});
 function libraryButton(label, action) {
   const button = PracticeUI.el('button', label);
   button.type = 'button';
@@ -3642,26 +3734,43 @@ async function showCallLibrary() {
   try {
     const data = await apiGet(`/api/scenario/runs?page=${libraryPage}&category=${encodeURIComponent(libraryCategory)}`);
     if (request !== libraryRequest || !libraryDialog.open) return;
+    libraryVisibleCount = data.runs.length;
     libraryContent.replaceChildren(PracticeUI.el('p', 'Completed player calls are saved to your account. Unfinished calls expire after 30 days. Guest calls are not added to this library.'));
+    if (libraryDeleteMode) libraryContent.append(PracticeUI.el('p', '', 'library-delete-hint'));
     const label = PracticeUI.el('label', 'Category');
     const select = PracticeUI.el('select');
     select.setAttribute('aria-label', 'Category');
     select.append(new Option('All categories', ''));
     Object.entries(PLAYER_CATEGORY_LABELS).forEach(([value, name]) => select.append(new Option(name, value)));
     select.value = libraryCategory;
-    select.addEventListener('change', () => { libraryCategory = select.value; libraryPage = 0; showCallLibrary(); });
+    select.addEventListener('change', () => { libraryCategory = select.value; libraryPage = 0; libraryDeleteSelection.clear(); showCallLibrary(); });
     label.append(select);
     libraryContent.append(label, PracticeUI.el('p', `${data.total} saved call${data.total === 1 ? '' : 's'}`));
     if (!data.runs.length) libraryContent.append(PracticeUI.el('p', 'No calls here yet. Start a scenario while logged in, then return to review it.'));
     for (const run of data.runs) {
-      const button = libraryButton('', () => showSavedCall(run.id));
+      const button = libraryButton('', () => {
+        if (!libraryDeleteMode) return showSavedCall(run.id);
+        if (libraryDeleteSelection.has(run.id)) libraryDeleteSelection.delete(run.id);
+        else libraryDeleteSelection.add(run.id);
+        button.classList.toggle('is-selected', libraryDeleteSelection.has(run.id));
+        button.setAttribute('aria-pressed', String(libraryDeleteSelection.has(run.id)));
+        updateLibraryDeleteControl();
+      });
       button.className = 'library-run';
+      if (libraryDeleteMode) {
+        button.classList.add('delete-option');
+        button.classList.toggle('is-selected', libraryDeleteSelection.has(run.id));
+        button.setAttribute('aria-pressed', String(libraryDeleteSelection.has(run.id)));
+      }
       button.append(PracticeUI.el('strong', `${PLAYER_CATEGORY_LABELS[run.category] || run.category} · ${new Date(run.date).toLocaleString()}`),
-        PracticeUI.el('span', run.title), PracticeUI.el('small', `${run.difficulty} · ${run.region} · ${run.debriefed ? 'Debrief available' : run.closed ? 'Completed · no debrief yet' : 'In progress'}`));
+        PracticeUI.el('span', run.title));
+      if (run.patientOutcome) button.append(PracticeUI.el('span', `OUTCOME · ${run.patientOutcome}`, 'library-outcome'));
+      button.append(PracticeUI.el('small', `${run.difficulty} · ${run.region} · ${run.debriefed ? 'Debrief available' : run.closed ? 'Completed · no debrief yet' : 'In progress'}`));
       libraryContent.append(button);
     }
     if (libraryPage > 0) libraryContent.append(libraryButton('Previous page', () => { libraryPage--; showCallLibrary(); }));
     if (data.hasMore) libraryContent.append(libraryButton('Next page', () => { libraryPage++; showCallLibrary(); }));
+    updateLibraryDeleteControl();
   } catch (err) {
     if (request === libraryRequest && libraryDialog.open) libraryContent.replaceChildren(PracticeUI.el('p', err.code === 'login_required' ? 'Log in or create a player to keep a call library across devices.' : `Could not load calls: ${err.message}`), libraryButton('Try again', showCallLibrary));
   }
@@ -3692,7 +3801,7 @@ async function showSavedCall(id) {
       button.disabled = true;
       try {
         const saved = await apiGet(`/api/scenario/runs/${encodeURIComponent(id)}/transcript`);
-        downloadFile(`ems-call-${id}.txt`, `${saved.title}\n${saved.date}\n\n${saved.turns.map(t => `T+${t.minute ?? '?'} min\nYOU: ${t.action}\nSCENE: ${t.response}`).join('\n\n')}\n\nDEBRIEF\n${saved.debrief || 'Not generated.'}`);
+        downloadFile(`ems-call-${id}.txt`, `${saved.title}\n${saved.date}\n\n${saved.turns.map(t => `T+${t.minute ?? '?'} min\nYOU: ${t.action}\nSCENE: ${t.response}`).join('\n\n')}\n\nPATIENT OUTCOME\n${saved.patientOutcome || 'Not generated.'}\n\nDEBRIEF\n${saved.debrief || 'Not generated.'}`);
       } catch (err) { libraryContent.append(PracticeUI.el('p', `Download failed: ${err.message}`)); }
       finally { button.disabled = false; }
     }));

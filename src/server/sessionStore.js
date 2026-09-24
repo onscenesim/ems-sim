@@ -166,6 +166,7 @@ function restoreSession(snapshot) {
   session.initialSeed = snapshot.initialSeed || null;
   session.replayOf = snapshot.replayOf || null;
   session.debriefText = snapshot.debriefText || null;
+  session.patientOutcome = snapshot.patientOutcome || null;
   session.learningReview = snapshot.learningReview || null;
   session.lastReplyHadTime = snapshot.lastReplyHadTime ?? true;
   session.messages    = snapshot.messages    || [];

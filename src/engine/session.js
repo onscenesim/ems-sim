@@ -6,6 +6,7 @@ const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, getProcedure, PRECHARGE_RE } = require('./dice');
 const { evaluateObjectives } = require('./learning');
 const { sendTurn, sendDebrief } = require('./api');
+const { parseDebriefResponse } = require('./prompts/debrief');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 const { applyPulseOx } = require('./pulse-ox');
 const { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords } = require('./patient-records');
@@ -510,6 +511,7 @@ class Session {
     this.lastReplyHadTime = true; // whether the previous reply carried a [TIME:] tag — drives a self-healing reminder
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
     this.arrivedAtHospital = false; // true once a transport skip reaches the bay — gates END server-side
+    this.patientOutcome = null; // generated with the debrief, hidden from its visible text
   }
 
   /**
@@ -1069,12 +1071,14 @@ class Session {
     options.signal?.throwIfAborted();
     if (this.debriefText) return this.debriefText;
     const context = buildDebriefContext(this.seed, this.turns, this.departSceneMinute, this._accessSummary());
-    const text = await sendDebrief(context, this.seed.provider_level, options);
+    const response = await sendDebrief(context, this.seed.provider_level, options);
     options.signal?.throwIfAborted();
-    updateRunDebrief(this.sessionId, text);
-    this.debriefText = text;   // kept for transcript export
+    const { debrief, patientOutcome } = parseDebriefResponse(response, this.seed.timestamp_start);
+    updateRunDebrief(this.sessionId, debrief);
+    this.debriefText = debrief;   // kept for transcript export
+    this.patientOutcome = patientOutcome;
     this.learningReview = evaluateObjectives(this.seed, this.turns);
-    return text;
+    return debrief;
   }
 
   /**
@@ -1088,6 +1092,7 @@ class Session {
       systemPrompt: this.systemPrompt || null,
       messages:     this.messages,
       debriefText:  this.debriefText || null,
+      patientOutcome: this.patientOutcome || null,
     };
   }
 

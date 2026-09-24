@@ -207,23 +207,26 @@ const PracticeUI = (() => {
           el('span', evidence.length ? `${evidence.length} moment${evidence.length === 1 ? '' : 's'}` : 'No recorded moment', 'review-badge'));
         detail.append(summary);
         const contents = el('div', undefined, 'review-objective-body');
-        const reflection = finding.reflection || {
-          focus: 'Review the information available to you at this point in the call.',
-          questions: ['What information supported your decision?', 'What would you repeat or change on your next attempt?'],
-          practice: 'Choose one decision to revisit when you practice this case again.',
-        };
-        contents.append(el('p', reflection.focus, 'review-focus'));
+        const reflection = (patientSelect.value && finding.patientReflections?.[patientSelect.value])
+          || finding.reflection || { focus: null, questions: [], practice: null };
+        if (reflection.focus) contents.append(el('p', reflection.focus, 'review-focus'));
         if (evidence.length) {
           const list = el('ol', undefined, 'review-moments');
           evidence.forEach(t => list.append(moment(t, openMoment)));
           contents.append(list);
         } else contents.append(el('p', 'No matching structured evidence for this selection. Check whether the objective applied and review the transcript for verbal assessments or logging gaps.', 'review-empty'));
-        const promptBox = el('aside', undefined, 'review-reflection');
-        promptBox.append(el('h3', 'Reflect on this decision'));
-        const questions = el('ul');
-        reflection.questions.forEach(question => questions.append(el('li', question)));
-        promptBox.append(questions, el('h3', 'Next practice'), el('p', reflection.practice));
-        contents.append(promptBox);
+        const questions = reflection.questions || [];
+        if (questions.length || reflection.practice) {
+          const promptBox = el('aside', undefined, 'review-reflection');
+          if (questions.length) {
+            promptBox.append(el('h3', 'Questions from this call'));
+            const questionList = el('ul');
+            questions.forEach(question => questionList.append(el('li', question)));
+            promptBox.append(questionList);
+          }
+          if (reflection.practice) promptBox.append(el('h3', 'Next practice'), el('p', reflection.practice));
+          contents.append(promptBox);
+        }
         detail.append(contents);
         panel.append(detail);
       });

@@ -1,6 +1,7 @@
 'use strict';
 
 const { evaluateObjectives, decisionTimeline } = require('../../engine/learning');
+const { normalizePatientOutcome } = require('../../engine/prompts/debrief');
 const express = require('express');
 const router  = express.Router();
 const { randomUUID } = require('node:crypto');
@@ -85,6 +86,7 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     demo_source:          session.demoSource,
     second_patient:       session.secondPatientFound,
     debriefText:          session.debriefText || null,
+    patientOutcome:       session.patientOutcome || null,
     learningReview: session.learningReview || null,
     operationResults:     operationsFor(session).snapshot(),
     meta,
@@ -116,7 +118,7 @@ function runComparison(req, session) {
   return { previousId: prior.id, previous: decisionTimeline(prior.turns), current: decisionTimeline(session.turns) };
 }
 function currentLearningReview(run) {
-  return run.learningReview?.version >= 3
+  return run.learningReview?.version >= 4
     ? run.learningReview
     : evaluateObjectives(run.seed, run.turns);
 }
@@ -149,6 +151,7 @@ function runSummary(run) {
     category: run.seed.category, date: run.seed.timestamp_start,
     difficulty: run.seed.difficulty, region: run.seed.region,
     closed: !!run.closed, debriefed: !!run.debriefText,
+    patientOutcome: run.patientOutcome ? normalizePatientOutcome(run.patientOutcome, run.seed.timestamp_start) : null,
     title: run.closed ? run.seed.presentation : 'Call in progress',
     replayAvailable: !!(run.closed && run.debriefText && run.initialSeed),
   };
@@ -168,6 +171,25 @@ router.get('/runs', (req, res) => {
   if (typeof category !== 'string' || (category && !Object.hasOwn(require('../../data/scenarios').SCENARIO_POOLS, category)) || !Number.isSafeInteger(page) || page < 0) return res.status(400).json({ error: 'invalid_filter' });
   const runs = persistence.listPlayerRuns(player.id).filter(run => !category || run.seed.category === category);
   return res.json({ runs: runs.slice(page * 20, (page + 1) * 20).map(runSummary), page, total: runs.length, hasMore: (page + 1) * 20 < runs.length });
+});
+router.delete('/runs', (req, res) => {
+  const player = currentPlayer(req);
+  if (!player) return res.status(401).json({ error: 'login_required', message: 'Log in to delete saved calls.' });
+  const ids = req.body?.ids;
+  if (!Array.isArray(ids) || ids.length < 1 || ids.length > 100
+    || new Set(ids).size !== ids.length
+    || ids.some(id => typeof id !== 'string' || !/^[a-zA-Z0-9-]{1,100}$/.test(id))) {
+    return res.status(400).json({ error: 'invalid_run_ids', message: 'Select between 1 and 100 saved calls.' });
+  }
+  const runs = ids.map(id => persistence.load(id));
+  if (runs.some(run => !run || run.playerId !== player.id)) {
+    return res.status(404).json({ error: 'run_not_found', message: 'One or more saved calls are unavailable.' });
+  }
+  for (const id of ids) {
+    persistence.remove(id);
+    deleteSession(id);
+  }
+  return res.json({ deleted: ids.length });
 });
 router.get('/runs/:runId', (req, res) => {
   const run = playerRun(req, res);
@@ -210,6 +232,7 @@ function persistSession(id, session) {
     access: session.access, contextFlags: session.contextFlags,
     lastReplyHadTime: session.lastReplyHadTime,
     debriefText: session.debriefText || null,
+    patientOutcome: session.patientOutcome || null,
     learningReview: session.learningReview || null,
     playerId: session.playerId || null,
     completionCredited: session.completionCredited || false,
@@ -568,6 +591,7 @@ router.post('/:id/debrief', async (req, res) => {
   try {
     const payload = await operationsFor(session).run(operation_id, 'debrief', async signal => ({
       operation_id, debrief: await session.debrief({ signal }),
+      patientOutcome: session.patientOutcome || null,
       learning: currentLearningReview(session),
       practice: { available: !!session.initialSeed, caseId: session.seed.case_id || null, randomSeed: session.seed.random_seed || null },
     }));

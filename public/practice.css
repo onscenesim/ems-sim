@@ -117,13 +117,31 @@
 #library-dialog::backdrop { background: #0009; }
 #library-dialog .dialog-titlebar { position: sticky; top: -3px; z-index: 2; margin: 0; display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: linear-gradient(90deg, #25485f, #547d8e); color: #fffbed; }
 #library-title { font: 12px/1.4 var(--font-block); letter-spacing: .04em; }
+.library-title-actions { display: flex; align-items: center; gap: 7px; }
+.library-delete-toggle { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; color: #f8f4df; background: linear-gradient(135deg, #526876, #28404f); border: 2px solid; border-color: #a9bdc7 #14242d #14242d #a9bdc7; border-radius: 2px; cursor: pointer; }
+.library-delete-toggle:hover { background: #375668; }
+.library-delete-toggle:disabled { opacity: .45; cursor: default; }
+.library-delete-toggle:active { border-color: #14242d #a9bdc7 #a9bdc7 #14242d; }
+.library-delete-toggle:focus-visible { outline: 2px solid #f7e59d; outline-offset: 2px; }
+.library-delete-toggle svg { width: 25px; height: 25px; fill: currentColor; image-rendering: pixelated; }
+.library-delete-toggle .library-check-icon { display: none; font: bold 28px/1 var(--font-xp); }
+.library-delete-toggle.is-confirm { color: #efffe5; background: linear-gradient(135deg, #5b8a54, #28512d); border-color: #bde2ae #17341b #17341b #bde2ae; }
+.library-delete-toggle.is-confirm .library-trash-icon { display: none; }
+.library-delete-toggle.is-confirm .library-check-icon { display: block; }
 #library-content { margin: 0; border: 0; }
 #library-content pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 18px/1.35 var(--font-xp); }
 #library-content > label > select { padding: 6px; margin: 8px; }
 #library-content > button { margin: 6px 6px 6px 0; }
 #library-content > :is(p,h3) { margin: 10px 0; }
 .library-run { display: block; width: 100%; text-align: left; white-space: normal; }
+.library-run.delete-option { position: relative; padding-left: 48px; }
+.library-run.delete-option::before { content: ''; position: absolute; left: 14px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); border: 2px solid #586b72; background: #f6f4e8; box-shadow: inset 1px 1px 0 #a6aba2; }
+.library-run.delete-option.is-selected { background: #dce8dc; border-color: #f4fff1 #37543b #37543b #f4fff1; }
+.library-run.delete-option.is-selected::before { content: '✓'; display: grid; place-items: center; color: #244b2a; font: bold 21px/1 var(--font-xp); }
+.library-delete-hint { margin: 10px 0; padding: 8px 10px; border: 1px solid #78898b; background: #e5ece8; color: #27414b; }
+.library-delete-error { color: #76241d; font-weight: bold; }
 .library-run strong, .library-run small { display: block; }
+.library-run .library-outcome { display: block; margin-top: 5px; color: #254f63; font-weight: bold; }
 .library-run small { margin-top: 5px; color: #526453; font-size: 16px; }
 @media(max-width:700px) {
   .practice-comparison { grid-template-columns: 1fr; }
