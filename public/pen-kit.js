@@ -37,7 +37,7 @@
     if (id === 'purple') body = `${tip()}${cone()}<rect x="81" y="42" width="433" height="28" rx="12" fill="${purple}" stroke="#543d6e"/><path d="M95 45h388" stroke="#e8c8ff" opacity=".65"/><path d="M113 43v26M486 43v26" stroke="#4f3069"/><g class="pen-slider">${clip('#1b1c24', 393, 505)}</g><text x="112" y="60" font-size="9" fill="#fff">PUPIL • mm</text>${[2,3,4,5,6,7,8].map((n,i)=>`<circle cx="${205+i*30}" cy="54" r="${n*.65}" fill="#fff"/><text x="${205+i*30}" y="66" text-anchor="middle" font-size="7" fill="#fff">${n}</text>`).join('')}<path d="M512 45q13 11 0 22" fill="#332a41" stroke="#b9a4c9"/>`;
     if (id === 'teal') body = `${button(metal)}${tip()}<path d="M43 52q55-17 109-14h346q17 0 17 18t-17 18H152q-54 3-109-14Z" fill="${metal}" stroke="#647079"/><path d="M90 47q35-6 73-6h318" fill="none" stroke="#fff" stroke-width="2"/><path d="M151 39v34M485 39v34" stroke="#77868c"/>${clip(metal, 365, 502)}<g class="pen-side-button"><rect x="474" y="68" width="17" height="9" rx="3" fill="#687982" stroke="#303d47"/><path d="M478 70h9" stroke="#dfe8ea"/></g><text x="231" y="61" font-size="11" letter-spacing="1" fill="#58656e">fisher SPACE PEN • AG7</text>${ribs(118, 5, '#85949b')}`;
     if (id === 'pink') body = `<g class="pen-spring"><path d="M452 45h30v22h-30Z" fill="${rose}" stroke="#9c6658"/><path d="M456 51h22v10h-22Z" fill="#6d444b"/><path d="m458 52 4 8 4-8 4 8 4-8" fill="none" stroke="#efc5ab"/><rect x="482" y="42" width="39" height="28" rx="5" fill="url(#${p}-pink)" stroke="#b67c96"/>${ribs(489, 5, '#b87394')}<path d="M521 43q23 0 23 13t-23 13Z" fill="#292730" stroke="#55434c"/><path d="M525 46q10 0 13 6" fill="none" stroke="#69616d"/></g>${tip()}${cone(rose)}<rect x="81" y="42" width="371" height="28" rx="11" fill="#e8a3bf" stroke="#a9708d"/><rect x="84" y="41" width="116" height="30" rx="9" fill="url(#${p}-pink)"/>${ribs(95, 19, '#b87394')}<path d="M210 45h219" stroke="#ffe3ed" stroke-width="2"/>${clip(rose, 350, 443)}<text x="238" y="60" font-size="9" letter-spacing="3" fill="#97536f">TOUCH</text>`;
-    if (id === 'orange') body = `${tip()}${cone()}<rect x="82" y="40" width="242" height="32" rx="8" fill="url(#${p}-orange)" stroke="#bd6b28"/><rect x="324" y="41" width="183" height="30" rx="10" fill="#e6f0e6" fill-opacity=".6" stroke="#93a3a4"/><rect x="330" y="44" width="169" height="24" rx="9" fill="#ffc45b" fill-opacity=".35"/><g class="pen-bubbles">${[0,1,2,3,4,5,6,7,8,9,10,11].map((n)=>`<circle style="--bubble-delay:${n*-47}ms;--bubble-drift:${n%2 ? -4 : 4}px" cx="${340+n*13}" cy="${50+(n%3)*6}" r="${3+n%3}" fill="#f59423" fill-opacity=".78" stroke="#db6b1e" stroke-width=".6"/><circle cx="${339+n*13}" cy="${49+(n%3)*6}" r="1" fill="#fff5c4"/>`).join('')}</g><path d="M334 46h157" stroke="#fff" stroke-width="2" opacity=".8"/><path d="M324 40v32M504 43v26" stroke="#adb9bc" stroke-width="5"/>${clip(metal, 380, 508)}<path d="M508 42q26 0 26 14t-26 14Z" fill="${metal}" stroke="#7d8b93"/><text x="105" y="61" font-family="Georgia, serif" font-style="italic" font-size="20" fill="#fff">Chudville Hospital</text>`;
+    if (id === 'orange') body = `${tip()}${cone()}<rect x="82" y="40" width="242" height="32" rx="8" fill="url(#${p}-orange)" stroke="#bd6b28"/><rect x="324" y="41" width="183" height="30" rx="10" fill="#e6f0e6" fill-opacity=".6" stroke="#93a3a4"/><rect x="330" y="44" width="169" height="24" rx="9" fill="#ffc45b" fill-opacity=".35"/><g class="pen-bubbles">${[0,1,2].map(group => `<g class="pen-bubble-cluster">${[0,1,2,3].map(i => { const n = i * 3 + group; return `<circle cx="${340+n*13}" cy="${50+(n%3)*6}" r="${3+n%3}" fill="#f59423" fill-opacity=".78" stroke="#db6b1e" stroke-width=".6"/><circle cx="${339+n*13}" cy="${49+(n%3)*6}" r="1" fill="#fff5c4"/>`; }).join('')}</g>`).join('')}</g><path d="M334 46h157" stroke="#fff" stroke-width="2" opacity=".8"/><path d="M324 40v32M504 43v26" stroke="#adb9bc" stroke-width="5"/>${clip(metal, 380, 508)}<path d="M508 42q26 0 26 14t-26 14Z" fill="${metal}" stroke="#7d8b93"/><text x="105" y="61" font-family="Georgia, serif" font-style="italic" font-size="20" fill="#fff">Chudville Hospital</text>`;
     // MYU: the nib and long steel section are one continuous surface. The only
     // barrel seam is at the rear section; there is no separate diamond-shaped nib.
     if (id === 'green') body = `
@@ -119,6 +119,31 @@
     const controls = [];
     const capMotionMs = 780;
     let capMoving = false;
+    let motion = [];
+    // Restart only moving pieces, without forcing a synchronous layout to reset CSS.
+    const animate = (selector, frames, duration, extra = {}) => {
+      for (const element of stage.querySelectorAll(selector)) {
+        if (element.animate) motion.push(element.animate(frames, { duration, easing: 'ease-in-out', ...extra }));
+      }
+    };
+    const playMotion = reduced => {
+      motion.forEach(animation => animation.cancel());
+      motion = [];
+      if (reduced) return;
+      if (id === 'green') {
+        const positions = state.extended ? [[0,0],[-315,0],[-315,60],[0,60]] : [[0,60],[-315,60],[-315,0],[0,0]];
+        animate('.pen-cap', positions.map(([x,y], i) => ({ transform: `translate(${x}px, ${y}px)`, offset: [0,.45,.55,1][i] })), capMotionMs);
+      } else if (id === 'pink') {
+        animate('.pen-spring', [{transform:'translateX(0)',offset:0},{transform:'translateX(-10px)',offset:.35},{transform:'translateX(0)',offset:1}], 230, {easing:'ease-out'});
+      } else if (id === 'orange') {
+        animate('.pen-object', [0,-2,2,-2,2,0].map(degrees => ({transform:`rotate(${degrees}deg)`})), 550);
+        stage.querySelectorAll('.pen-bubble-cluster').forEach((cluster, index) => {
+          if (!cluster.animate) return;
+          const drift = index % 2 ? -3 : 3;
+          motion.push(cluster.animate([ [0,0],[5,drift],[-4,-drift],[3,drift],[-2,-drift],[0,0] ].map(([x,y]) => ({transform:`translate(${x}px, ${y}px)`})), {duration: 950 + index * 100, easing:'ease-out'}));
+        });
+      }
+    };
     const update = () => {
       host.classList.toggle('is-extended', state.extended);
       host.classList.toggle('is-retracted', !state.extended);
@@ -137,14 +162,14 @@
         if (id === 'green' && capMoving) return;
         state = transition(id, state, action);
         update();
-        host.classList.remove('pen-actuating'); void host.offsetWidth; host.classList.add('pen-actuating');
+        const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        playMotion(reducedMotion);
         const cue = id === 'green' ? (state.extended ? 'unsheathe' : 'sheathe')
           : id === 'teal' ? 'spacepen' : id === 'orange' ? 'bubbles' : 'click';
         if (id === 'green') {
-          const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
           if (!reducedMotion) {
             capMoving = true;
-            setTimeout(() => { capMoving = false; host.classList.remove('pen-actuating'); }, capMotionMs);
+            setTimeout(() => { capMoving = false; }, capMotionMs);
           }
           if (cue === 'sheathe' && !reducedMotion) {
             // The cap first lifts from its resting spot; the click belongs to the slide onto the nib.

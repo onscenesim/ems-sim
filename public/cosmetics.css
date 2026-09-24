@@ -96,7 +96,13 @@
 .pen-display { --pen-shadow: #24334340; min-width: 0; padding: 3px 0 7px; }
 .pen-stage { position: relative; width: 100%; max-width: 640px; margin-inline: auto; }
 .pen-art { width: 100%; height: auto; display: block; overflow: visible; }
-.pen-object { filter: drop-shadow(0 4px 2px var(--pen-shadow, #24334340)); }
+/* Keep the shadow static; filtering a moving SVG repaints the entire pen. */
+.pen-stage::before { content: ''; position: absolute; pointer-events: none; left: 9%; right: 9%; top: 56%; height: 3px; border-radius: 50%; background: #24334316; box-shadow: 0 2px 3px #24334312; }
+.pen-stage { isolation: isolate; contain: layout style; }
+.pen-art { position: relative; }
+.pen-display .pen-tip, .pen-display .pen-plunger, .pen-display .pen-slider, .pen-display .pen-cap, .pen-display .pen-spring { will-change: transform; }
+.pen-art-orange .pen-object { transform-origin: 50% 50%; }
+.pen-state { min-width: 95px; }
 .pen-caption { display: flex; justify-content: center; align-items: baseline; gap: 3px 12px; flex-wrap: wrap; text-align: center; font: 12px/1.35 var(--font-xp); color: #53615d; }
 .pen-caption strong { font-weight: normal; color: #30434a; font-size: 14px; }
 .pen-state { color: #425d42; }
@@ -116,26 +122,6 @@
 .is-extended .pen-slider { transform: translateX(-17px); }
 .pen-cap { transition: none; }
 .is-extended .pen-cap { transform: translateY(60px); }
-.pen-actuating.is-extended .pen-cap { animation: myu-uncap .78s ease-in-out both; }
-.pen-actuating.is-retracted .pen-cap { animation: myu-recap .78s ease-in-out both; }
-@keyframes myu-uncap {
-  0% { transform: translate(0, 0); }
-  45% { transform: translate(-315px, 0); }
-  55% { transform: translate(-315px, 60px); }
-  100% { transform: translate(0, 60px); }
-}
-@keyframes myu-recap {
-  0% { transform: translate(0, 60px); }
-  45% { transform: translate(-315px, 60px); }
-  55% { transform: translate(-315px, 0); }
-  100% { transform: translate(0, 0); }
-}
-.pen-actuating .pen-spring { animation: pen-spring-return .23s ease-out; }
-.pen-actuating .pen-art-orange .pen-object { animation: pen-shake .55s ease-in-out; transform-origin: 50% 50%; }
-.pen-actuating .pen-bubbles circle { animation: pen-bubble-jiggle 1.15s ease-out both; animation-delay: var(--bubble-delay, 0ms); }
-@keyframes pen-spring-return { 0%,100% { transform: translateX(0); } 35% { transform: translateX(-10px); } }
-@keyframes pen-shake { 0%,100% { transform: rotate(0); } 20%,60% { transform: rotate(-2deg); } 40%,80% { transform: rotate(2deg); } }
-@keyframes pen-bubble-jiggle { 0%,100% { transform: translate(0,0); } 20%,60% { transform: translate(5px,var(--bubble-drift, 3px)); } 40%,80% { transform: translate(-4px,calc(var(--bubble-drift, 3px) * -1)); } }
 #cosmetics-pen-preview { background: #e8e5d1; border: 1px solid #b4baa6; border-radius: 4px; padding: 0 12px 12px; margin: 10px 0; }
 #cosmetics-pen-preview .pen-stage { max-width: 580px; }
 .cosmetic-pen { grid-template-columns: minmax(0,1fr); gap: 4px; text-align: center; padding: 8px 5px; }

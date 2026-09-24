@@ -168,3 +168,65 @@ test('retracted and capped pens do not mark the scratchpad; extending resumes dr
   assert.equal(marks, 2);
   assert.equal(lastInk, '#a52c37');
 });
+
+function penMotionFixture(id, reduced = false) {
+  const vm = require('node:vm');
+  const animations = [], timers = [];
+  class Element {
+    constructor() {
+      this.dataset = {}; this.children = []; this.handlers = {}; this.attributes = {};
+      this.classList = { add() {}, toggle() {} };
+    }
+    get offsetWidth() { throw new Error('Pen input must not force layout'); }
+    replaceChildren(...children) { this.children = children; }
+    append(...children) { this.children.push(...children); }
+    appendChild(child) { this.children.push(child); }
+    setAttribute(name, value) { this.attributes[name] = value; }
+    addEventListener(name, fn) { this.handlers[name] = fn; }
+    querySelectorAll(selector) { return Array.from({ length: selector === '.pen-bubble-cluster' ? 3 : 1 }, () => new Element()); }
+    animate(frames, options) {
+      const animation = { frames, options, cancelled: false, cancel() { this.cancelled = true; } };
+      animations.push(animation); return animation;
+    }
+  }
+  const scope = vm.createContext({ document: { createElement: () => new Element() }, window: { matchMedia: () => ({ matches: reduced }) }, setTimeout: fn => timers.push(fn) });
+  vm.runInContext(fs.readFileSync(require.resolve('../public/pen-kit'), 'utf8'), scope);
+  const host = new Element();
+  scope.PenKit.mount(host, id, { soundEnabled: () => false });
+  const click = () => host.children[0].children[0].handlers.click();
+  return { host, animations, timers, click };
+}
+
+test('repeated bubble and spring clicks replace motion instead of accumulating animations or forcing layout', () => {
+  for (const id of ['orange', 'pink']) {
+    const fixture = penMotionFixture(id);
+    fixture.click();
+    const first = fixture.animations.slice();
+    assert.ok(first.length > 0);
+    fixture.click();
+    assert.ok(first.every(animation => animation.cancelled));
+    assert.equal(fixture.animations.filter(animation => !animation.cancelled).length, first.length);
+  }
+});
+
+test('MYU locks only during its cap movement and returns to the capped state', () => {
+  const fixture = penMotionFixture('green');
+  fixture.click();
+  assert.equal(fixture.host.dataset.ready, 'true');
+  fixture.click();
+  assert.equal(fixture.animations.length, 1, 'rapid second tap cannot interrupt cap travel');
+  fixture.timers.shift()();
+  fixture.click();
+  assert.equal(fixture.host.dataset.ready, 'false');
+  assert.equal(fixture.animations.length, 2);
+});
+
+test('reduced motion keeps pen controls immediate without scheduling animations', () => {
+  for (const id of ['green', 'pink', 'orange']) {
+    const fixture = penMotionFixture(id, true);
+    fixture.click(); fixture.click();
+    assert.equal(fixture.animations.length, 0);
+    assert.equal(fixture.timers.length, 0);
+    assert.equal(fixture.host.dataset.ready, String(penKit.initial(id).extended));
+  }
+});
