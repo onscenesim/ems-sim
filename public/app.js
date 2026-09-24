@@ -953,7 +953,8 @@ checkResume();
 
 startBtn.addEventListener('click', startScenario);
 
-async function startScenario() {
+async function startScenario(replayOf = null) {
+  replayOf = typeof replayOf === 'string' ? replayOf : null;
   const difficulty    = document.getElementById('cfg-difficulty').value;
   const provider_level = document.getElementById('cfg-provider').value;
   const region_id     = document.getElementById('cfg-region').value;
@@ -967,10 +968,11 @@ async function startScenario() {
   try {
     const partner_name = partnerSelect ? (partnerSelect.value || null) : null;
     const captain_name = captainSelect ? (captainSelect.value || null) : null;
-    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name, partner_name, captain_name, category });
+    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name, partner_name, captain_name, category, ...(replayOf ? { replay_of: replayOf } : {}) });
 
     if (currentPlayer?.stats) currentPlayer.stats.scenariosStarted += 1;
 
+    resetToStart(false);
     resetVitals();
     sessionId      = data.session_id;
     isClosed       = false;
@@ -1003,6 +1005,7 @@ async function startScenario() {
 
     playSound(getDispatchSound(data.region));
     print(`Scenario ID: ${data.scenario_id}`, 'system');
+    if (data.replay_of) print('Practice retry — same saved setup. Narration and procedure outcomes may vary.', 'system');
     await initialPlayerReady;
     printBriefing();
     printHr();
@@ -1042,12 +1045,14 @@ async function startScenario() {
 
     setLoading(false);
     focusActionInput();
-
+    return true;
 
   } catch (err) {
     startBtn.disabled = false;
     startBtn.textContent = 'BEGIN SCENARIO';
     if (tierMsg) tierMsg.textContent = `Error: ${err.message}`;
+    if (replayOf) print(`Practice retry failed: ${err.message}`, 'error');
+    return false;
   }
 }
 
@@ -1536,6 +1541,22 @@ function showDebriefCTA() {
       printHr();
       print('Note: Debrief is experimental. Take what it says with a grain of salt.', 'system');
       print(data.debrief, 'debrief');
+      if (data.learning) output.appendChild(PracticeUI.learning(data.learning));
+      if (data.comparison) output.appendChild(PracticeUI.comparison(data.comparison));
+      if (data.practice?.available) {
+        const sourceId = sessionId;
+        const practice = PracticeUI.el('section', undefined, 'practice-review');
+        practice.append(PracticeUI.el('p', `Case ${data.practice.caseId} · Seed ${data.practice.randomSeed}`));
+        practice.append(PracticeUI.el('p', 'Retry the same saved setup. Narration and procedure outcomes may vary; compare decisions after your next debrief.'));
+        const retry = PracticeUI.el('button', 'Practice this case again');
+        retry.addEventListener('click', async () => {
+          retry.disabled = true;
+          retry.textContent = 'Starting practice…';
+          if (!await startScenario(sourceId)) { retry.disabled = false; retry.textContent = 'Practice this case again'; }
+        });
+        practice.append(retry);
+        output.append(practice);
+      }
       printHr();
     } catch (err) {
       if (err.code === 'operation_cancelled') {
@@ -1665,7 +1686,7 @@ function showNewScenarioBtn() {
   scrollBottom();
 }
 
-function resetToStart() {
+function resetToStart(refresh = true) {
   retryTurn       = null;
   sessionId       = null;
   isClosed        = false;
@@ -1701,8 +1722,7 @@ function resetToStart() {
   setInputEnabled(true);
   setLoading(false);
 
-  checkResume();
-  refreshPlayer();
+  if (refresh) { checkResume(); refreshPlayer(); }
 }
 
 // ── Input controls ────────────────────────────────────────────────────────
@@ -3592,3 +3612,92 @@ function applyPatientFocus(focus, multiPatient = false) {
 
 // Tick staleness every 5s while the page is alive
 stalenessInterval = setInterval(tickStaleness, 5000);
+
+// Saved calls always come from the authenticated player's server-side library.
+const libraryDialog = document.getElementById('library-dialog');
+const libraryContent = document.getElementById('library-content');
+let libraryRequest = 0;
+let libraryPage = 0;
+let libraryCategory = '';
+document.getElementById('player-library').addEventListener('click', () => {
+  libraryDialog.showModal();
+  libraryPage = 0;
+  showCallLibrary();
+});
+document.getElementById('library-close').addEventListener('click', () => libraryDialog.close());
+libraryDialog.addEventListener('close', () => { libraryRequest++; libraryContent.replaceChildren(); });
+function libraryButton(label, action) {
+  const button = PracticeUI.el('button', label);
+  button.type = 'button';
+  button.addEventListener('click', action);
+  return button;
+}
+async function showCallLibrary() {
+  const request = ++libraryRequest;
+  if (!currentPlayer) {
+    libraryContent.replaceChildren(PracticeUI.el('p', 'Log in or create a player to keep a call library across devices.'), libraryButton('Log in', () => { libraryDialog.close(); showAuth('login'); }));
+    return;
+  }
+  libraryContent.replaceChildren(PracticeUI.el('p', 'Loading your calls…'));
+  try {
+    const data = await apiGet(`/api/scenario/runs?page=${libraryPage}&category=${encodeURIComponent(libraryCategory)}`);
+    if (request !== libraryRequest || !libraryDialog.open) return;
+    libraryContent.replaceChildren(PracticeUI.el('p', 'Completed player calls are saved to your account. Unfinished calls expire after 30 days. Guest calls are not added to this library.'));
+    const label = PracticeUI.el('label', 'Category');
+    const select = PracticeUI.el('select');
+    select.setAttribute('aria-label', 'Category');
+    select.append(new Option('All categories', ''));
+    Object.entries(PLAYER_CATEGORY_LABELS).forEach(([value, name]) => select.append(new Option(name, value)));
+    select.value = libraryCategory;
+    select.addEventListener('change', () => { libraryCategory = select.value; libraryPage = 0; showCallLibrary(); });
+    label.append(select);
+    libraryContent.append(label, PracticeUI.el('p', `${data.total} saved call${data.total === 1 ? '' : 's'}`));
+    if (!data.runs.length) libraryContent.append(PracticeUI.el('p', 'No calls here yet. Start a scenario while logged in, then return to review it.'));
+    for (const run of data.runs) {
+      const button = libraryButton('', () => showSavedCall(run.id));
+      button.className = 'library-run';
+      button.append(PracticeUI.el('strong', `${PLAYER_CATEGORY_LABELS[run.category] || run.category} · ${new Date(run.date).toLocaleString()}`),
+        PracticeUI.el('span', run.title), PracticeUI.el('small', `${run.difficulty} · ${run.region} · ${run.debriefed ? 'Debrief available' : run.closed ? 'Completed · no debrief yet' : 'In progress'}`));
+      libraryContent.append(button);
+    }
+    if (libraryPage > 0) libraryContent.append(libraryButton('Previous page', () => { libraryPage--; showCallLibrary(); }));
+    if (data.hasMore) libraryContent.append(libraryButton('Next page', () => { libraryPage++; showCallLibrary(); }));
+  } catch (err) {
+    if (request === libraryRequest && libraryDialog.open) libraryContent.replaceChildren(PracticeUI.el('p', err.code === 'login_required' ? 'Log in or create a player to keep a call library across devices.' : `Could not load calls: ${err.message}`), libraryButton('Try again', showCallLibrary));
+  }
+}
+async function showSavedCall(id) {
+  const request = ++libraryRequest;
+  libraryContent.replaceChildren(PracticeUI.el('p', 'Opening saved call…'));
+  try {
+    const run = await apiGet(`/api/scenario/runs/${encodeURIComponent(id)}`);
+    if (request !== libraryRequest || !libraryDialog.open) return;
+    libraryContent.replaceChildren(libraryButton('Back to calls', showCallLibrary), PracticeUI.el('h2', run.title),
+      PracticeUI.el('p', `${new Date(run.date).toLocaleString()} · ${run.category} · ${run.difficulty} · ${run.region}`),
+      PracticeUI.el('p', run.caseId ? `Case ${run.caseId} · Seed ${run.randomSeed}` : 'Legacy call — no saved replay setup.'),
+      PracticeUI.el('h3', 'Debrief'), PracticeUI.el('pre', run.debrief || 'No debrief has been generated for this call.'));
+    if (run.learning) libraryContent.append(PracticeUI.learning(run.learning));
+    if (run.comparison) libraryContent.append(PracticeUI.comparison(run.comparison));
+    if (run.replayAvailable) libraryContent.append(libraryButton('Practice this case again', async event => {
+      event.currentTarget.disabled = true;
+      const success = await startScenario(id);
+      if (success) libraryDialog.close();
+      else showSavedCall(id);
+    }));
+    const transcript = PracticeUI.el('details');
+    transcript.append(PracticeUI.el('summary', 'Transcript'));
+    transcript.append(PracticeUI.el('pre', run.transcript.length ? run.transcript.map(t => `T+${t.minute ?? '?'} min\nYOU: ${t.action}\nSCENE: ${t.response}`).join('\n\n') : 'No transcript recorded.'));
+    libraryContent.append(transcript, libraryButton('Download transcript', async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const saved = await apiGet(`/api/scenario/runs/${encodeURIComponent(id)}/transcript`);
+        downloadFile(`ems-call-${id}.txt`, `${saved.title}\n${saved.date}\n\n${saved.turns.map(t => `T+${t.minute ?? '?'} min\nYOU: ${t.action}\nSCENE: ${t.response}`).join('\n\n')}\n\nDEBRIEF\n${saved.debrief || 'Not generated.'}`);
+      } catch (err) { libraryContent.append(PracticeUI.el('p', `Download failed: ${err.message}`)); }
+      finally { button.disabled = false; }
+    }));
+    libraryDialog.scrollTop = 0;
+  } catch (err) {
+    if (request === libraryRequest && libraryDialog.open) libraryContent.replaceChildren(libraryButton('Back to calls', showCallLibrary), PracticeUI.el('p', `Could not open call: ${err.message}`));
+  }
+}

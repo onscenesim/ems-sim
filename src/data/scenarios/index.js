@@ -28,4 +28,13 @@ const SCENARIO_POOLS = {
   curveballs:  CURVEBALLS,
 };
 
+const { createHash } = require('node:crypto');
+const { objectivesForCase } = require('../learningObjectives');
+for (const [category, entries] of Object.entries(SCENARIO_POOLS)) {
+  for (const entry of entries) {
+    entry.case_id = `${category}-${createHash('sha256').update(entry.presentation || entry.surface_presentation).digest('hex').slice(0, 16)}`;
+    entry.learning_objectives ||= objectivesForCase(category);
+  }
+}
+
 module.exports = { SCENARIO_POOLS };

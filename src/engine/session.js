@@ -4,6 +4,7 @@ const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, getProcedure, PRECHARGE_RE } = require('./dice');
+const { evaluateObjectives } = require('./learning');
 const { sendTurn, sendDebrief } = require('./api');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 const { applyPulseOx } = require('./pulse-ox');
@@ -480,6 +481,7 @@ function buildTurnContextFlags(seed, baseFlags, lastVitals, userText, moving = f
 class Session {
   constructor(seed, sessionId = null) {
     this.seed = seed;
+    this.initialSeed = structuredClone(seed);
     this.sessionId = sessionId;   // set by sessionStore after creation
     this.systemPrompt = assembleSeedBlock(seed);
     this.messages = [];
@@ -594,10 +596,11 @@ class Session {
     // NOT short-circuited here — they still get the ED's acknowledgment and close
     // via the post-reply check below.)
     if (!reportMode && !skipMode && isDebriefTrigger(userText)) {
+      const unit = this.seed.unit_name || 'Unit';
+      this.turns.push({ user: userText, assistant: `${unit} is clear. — End of call —`, sceneMinute: this.sceneMinute, rolls: [], vitals: null, patientFocus: this.patientFocus });
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);
-      const unit = this.seed.unit_name || 'Unit';
       return {
         reply: `${unit} is clear. — End of call —`,
         rolls: [], suppressed: [], vitals: this.lastVitals, loading: false, enRoute: false,
@@ -1070,6 +1073,7 @@ class Session {
     options.signal?.throwIfAborted();
     updateRunDebrief(this.sessionId, text);
     this.debriefText = text;   // kept for transcript export
+    this.learningReview = evaluateObjectives(this.seed, this.turns);
     return text;
   }
 

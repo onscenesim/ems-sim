@@ -115,10 +115,10 @@ function updateHistory(userId, seed) {
  * Roll a new scenario, wrap it in a Session, and persist it.
  * Returns { id, seed }.
  */
-function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', partner_name = null, captain_name = null, category = null } = {}, userId = 'anon', tier = 'free') {
+function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', partner_name = null, captain_name = null, category = null, replay_seed = null } = {}, userId = 'anon', tier = 'free') {
   const history = getOrInitHistory(userId);
 
-  const seed = rollScenario({
+  const seed = replay_seed ? { ...structuredClone(replay_seed), scenario_id: uuidv4(), user_id: userId, timestamp_start: new Date().toISOString(), events: [] } : rollScenario({
     difficulty,
     provider_level,
     region_id,
@@ -163,7 +163,10 @@ function restoreSession(snapshot) {
   const session = new Session(snapshot.seed, snapshot.id);
   session.operationResults = snapshot.operationResults || [];
   session.ownerId = snapshot.ownerId || null;
+  session.initialSeed = snapshot.initialSeed || null;
+  session.replayOf = snapshot.replayOf || null;
   session.debriefText = snapshot.debriefText || null;
+  session.learningReview = snapshot.learningReview || null;
   session.lastReplyHadTime = snapshot.lastReplyHadTime ?? true;
   session.messages    = snapshot.messages    || [];
   session.lastVitals  = snapshot.lastVitals  || null;

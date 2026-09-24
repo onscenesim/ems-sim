@@ -1,7 +1,7 @@
 node_modules/
 .env
 *.log
-data/
+/data/
 sessions/
 .DS_Store
 .aider*

@@ -1,0 +1,24 @@
+.practice-review { margin: 18px 0; padding: 18px; border: 1px solid #657c7b; border-radius: 6px; color: inherit; background: rgba(110,150,145,.08); font: 14px/1.6 system-ui, sans-serif; }
+.practice-review h2 { margin: 0 0 8px; font-size: 20px; }
+.practice-review h3 { font-size: 16px; }
+.practice-note { opacity: .8; }
+.practice-review details { border-top: 1px solid #657c7b66; padding: 12px 0; }
+.practice-review summary { cursor: pointer; font-weight: 600; }
+.practice-review ol { padding-left: 24px; }
+.practice-moment { padding: 8px 0; overflow-wrap: anywhere; }
+.practice-moment p { margin: 5px 0; white-space: pre-wrap; }
+.practice-review button { padding: 9px 14px; cursor: pointer; margin: 6px 6px 6px 0; }
+.practice-comparison { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; }
+@media(max-width:700px) { .practice-comparison { grid-template-columns: 1fr; } }
+#output .practice-review { color: var(--text-term, #d1d5db); }
+body.light-mode #output .practice-review { color: #1a1a2a; }
+#library-dialog { margin: auto; width: min(960px, 94vw); max-height: 88vh; padding: 0; border: 2px solid #64746d; background: #f4f2ec; color: #1a2420; }
+#library-dialog::backdrop { background: #0009; }
+#library-dialog .dialog-titlebar { position: sticky; top: 0; z-index: 1; background: #f4f2ec; display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; }
+#library-title { font: bold 16px system-ui, sans-serif; }
+#library-close { padding: 4px 12px; font-size: 24px; }
+#library-content { margin: 0; border: 0; border-radius: 0; }
+#library-content pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.6 system-ui, sans-serif; }
+#library-content select { padding: 8px; margin: 8px; }
+.library-run { display: block; width: 100%; text-align: left; white-space: normal; border: 1px solid #9ba9a1; background: #fff; color: #18251e; }
+.library-run strong, .library-run small { display: block; }

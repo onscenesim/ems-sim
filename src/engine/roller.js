@@ -7,11 +7,16 @@ const { CREW } = require('../data/crew');
 const { REGIONS } = require('../data/regions');
 const { COMORBIDITIES } = require('../data/comorbidities');
 const { AGE_GROUPS } = require('../data/ageGroups');
+const { SEASONS, compatibleWeather, caseCompatible, validateCombination } = require('./compatibility');
 const { rollPatientName } = require('../data/patientNames');
 
+const { randomUUID } = require('node:crypto');
+const { createRandom } = require('./random');
+
+function createRoller(random) {
 function weightedRandom(items, weightFn) {
   const total = items.reduce((sum, item) => sum + weightFn(item), 0);
-  let r = Math.random() * total;
+  let r = random() * total;
   for (const item of items) {
     r -= weightFn(item);
     if (r <= 0) return item;
@@ -20,11 +25,11 @@ function weightedRandom(items, weightFn) {
 }
 
 function pickRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(random() * arr.length)];
 }
 
-function d6() { return Math.floor(Math.random() * 6) + 1; }
-function d20() { return Math.floor(Math.random() * 20) + 1; }
+function d6() { return Math.floor(random() * 6) + 1; }
+function d20() { return Math.floor(random() * 20) + 1; }
 
 // Categories a player may explicitly request from the menu. Curveballs and DOA
 // are deliberately excluded — they occur naturally and must not be selectable.
@@ -67,8 +72,8 @@ function pickCategory(difficulty, history, curveBallWeight) {
   return weightedRandom(eligible, ([, w]) => w)[0];
 }
 
-function pickPresentation(category, difficulty, history) {
-  const pool = SCENARIO_POOLS[category];
+function pickPresentation(category, difficulty, history, region, season) {
+  const pool = (SCENARIO_POOLS[category] || []).filter(entry => caseCompatible(entry, region, season));
   if (!pool || pool.length === 0) return null;
 
   const diffPool = DIFFICULTY_POOL[difficulty];
@@ -145,7 +150,7 @@ function rollAgeFromGroup(group) {
     }
     if (lo !== null) { min = lo; max = hi; }
   }
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(random() * (max - min + 1)) + min;
 }
 
 // Human-readable age for the patient card and UI. Infants (age 0) render in
@@ -154,10 +159,10 @@ function rollAgeFromGroup(group) {
 function formatAgeDisplay(group, ageYears) {
   if (ageYears === 0) {
     if (/neonate|newborn/i.test(group)) {
-      const days = 1 + Math.floor(Math.random() * 27); // 1–27 days
+      const days = 1 + Math.floor(random() * 27); // 1–27 days
       return `${days} day${days === 1 ? '' : 's'} old (newborn)`;
     }
-    const months = 1 + Math.floor(Math.random() * 11); // 1–11 months
+    const months = 1 + Math.floor(random() * 11); // 1–11 months
     return `${months} month${months === 1 ? '' : 's'} old (infant)`;
   }
   return `${ageYears} year${ageYears === 1 ? '' : 's'} old`;
@@ -169,12 +174,12 @@ function rollSex(presentationEntry, category = null) {
   // OB scenarios are pregnancies — most entries never set sex_override, and a
   // coin-flip was rolling male patients for deliveries and eclampsia.
   if (category === 'ob') return 'female';
-  return Math.random() < 0.5 ? 'male' : 'female';
+  return random() < 0.5 ? 'male' : 'female';
 }
 
 function rollTrajectory(difficulty) {
   if (difficulty === 'BLACK_CLOUD') return 'rapidly_deteriorating'; // always
-  const r = Math.random();
+  const r = random();
   if (difficulty === 'EASY') {
     return r < 0.7 ? 'stable' : 'slowly_deteriorating';
   } else if (difficulty === 'NORMAL') {
@@ -191,10 +196,10 @@ function rollTrajectory(difficulty) {
 
 function rollDecompensationClock(difficulty, trajectory) {
   if (trajectory === 'stable') return null;
-  if (difficulty === 'BLACK_CLOUD') return Math.floor(Math.random() * 4) + 1; // 1-4 min
-  if (difficulty === 'EASY') return Math.floor(Math.random() * 6) + 15;   // 15-20 min — forgiving even for sick calls
-  if (difficulty === 'NORMAL') return Math.floor(Math.random() * 10) + 8;  // 8-17 min
-  return Math.floor(Math.random() * 6) + 3;                                // HARD: 3-8 min — earlier
+  if (difficulty === 'BLACK_CLOUD') return Math.floor(random() * 4) + 1; // 1-4 min
+  if (difficulty === 'EASY') return Math.floor(random() * 6) + 15;   // 15-20 min — forgiving even for sick calls
+  if (difficulty === 'NORMAL') return Math.floor(random() * 10) + 8;  // 8-17 min
+  return Math.floor(random() * 6) + 3;                                // HARD: 3-8 min — earlier
 }
 
 function rollComplication(difficulty) {
@@ -207,11 +212,11 @@ function rollComplication(difficulty) {
   // HARD — guaranteed complication every call (EMS on a bad day).
   if (difficulty === 'HARD') {
     if (roll >= 5) return { roll, type: 'clinical_curveball' };
-    return { roll, type: Math.random() < 0.5 ? 'equipment_failure' : 'unreliable_bystander' };
+    return { roll, type: random() < 0.5 ? 'equipment_failure' : 'unreliable_bystander' };
   }
   // NORMAL — complications fire at the baseline rate.
   if (roll === 6) return { roll, type: 'clinical_curveball' };
-  if (roll === 5) return { roll, type: Math.random() < 0.5 ? 'equipment_failure' : 'unreliable_bystander' };
+  if (roll === 5) return { roll, type: random() < 0.5 ? 'equipment_failure' : 'unreliable_bystander' };
   return { roll, type: 'none' };
 }
 
@@ -240,26 +245,13 @@ function rollTimeOfDay() {
   }).text;
 }
 
-function rollWeather(difficulty, region) {
-  const rates = MODIFIER_FIRE_RATES[difficulty];
-  if (Math.random() > rates.weather) return null;
-  const regionExcludes = region ? region.toLowerCase() : '';
-  const isCA = regionExcludes.includes('california');
-  const eligible = WEATHER.filter(w => {
-    if (!w.requires) return true;
-    const exc = w.requires.toLowerCase();
-    if (exc.includes('not in southern us') && regionExcludes.includes('tropical')) return false;
-    if (exc.includes('not in desert southwest') && regionExcludes.includes('sprawl')) return false;
-    return true;
-  });
-  if (eligible.length === 0) return null;
-  // Weighted pick so everyday weather dominates and dramatic events stay rare
-  // (weights live on each WEATHER entry). Wildfire smoke is a California signature,
-  // so weight it up there and leave it as a rare surprise elsewhere.
-  return weightedRandom(eligible, w => {
-    if (w.text.toLowerCase().includes('wildfire')) return isCA ? 4 : w.weight;
-    return w.weight;
-  }).text;
+function rollWeather(difficulty, region, season, presentation) {
+  const eligible = compatibleWeather(presentation, region, season);
+  if (!eligible.length) throw new Error('No compatible weather for case');
+  const clear = eligible.find(w => w.id === 'clear');
+  if (clear && random() > MODIFIER_FIRE_RATES[difficulty].weather) return clear;
+  const conditions = eligible.filter(w => w.id !== 'clear');
+  return conditions.length ? weightedRandom(conditions, w => w.weight) : clear;
 }
 
 function specialCircumstanceEligible(sc, { category, ageGroup, presentation, trajectory } = {}) {
@@ -291,7 +283,7 @@ function specialCircumstanceEligible(sc, { category, ageGroup, presentation, tra
 
 function rollSpecialCircumstance(difficulty, category, ageGroup, presentation, trajectory) {
   const rates = MODIFIER_FIRE_RATES[difficulty];
-  if (Math.random() > rates.special_circumstances) return null;
+  if (random() > rates.special_circumstances) return null;
   const eligible = SPECIAL_CIRCUMSTANCES.filter(sc => specialCircumstanceEligible(sc, {
     category, ageGroup, presentation, trajectory,
   }));
@@ -300,7 +292,7 @@ function rollSpecialCircumstance(difficulty, category, ageGroup, presentation, t
 
 function rollComorbidity(difficulty, category, ageGroup) {
   const rate = MODIFIER_FIRE_RATES[difficulty].comorbidity_gate;
-  if (Math.random() > rate) return null;
+  if (random() > rate) return null;
 
   const eligible = COMORBIDITIES.filter(b => {
     if (b.id === 'otherwise_healthy') return false;
@@ -347,13 +339,15 @@ function pickCrew(regionId, history) {
 function rollScenario(opts = {}) {
   const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', user_id = null, history = {}, partner_name = null, captain_name = null, category: requestedCategory = null } = opts;
 
+  const season = opts.season || pickRandom(SEASONS);
+  if (!SEASONS.includes(season) || !REGIONS.some(r => r.id === region_id)) throw new Error('Invalid region or season');
   const curveballWeight = CURVEBALL_WEIGHTS[difficulty];
   // Honor an explicit player choice (if it's a selectable category); otherwise
   // pick by weight. A forced choice intentionally bypasses the no-repeat history.
   const category = (requestedCategory && PLAYER_SELECTABLE_CATEGORIES.has(requestedCategory))
     ? requestedCategory
     : pickCategory(difficulty, history, curveballWeight);
-  const presentation = pickPresentation(category, difficulty, history);
+  const presentation = pickPresentation(category, difficulty, history, region_id, season);
 
   if (!presentation) throw new Error(`No eligible presentation for category: ${category}`);
 
@@ -361,7 +355,7 @@ function rollScenario(opts = {}) {
   const age = rollAgeFromGroup(ageGroup);
   const ageDisplay = formatAgeDisplay(ageGroup, age);
   const sex = rollSex(presentation, category);
-  const patientName = rollPatientName(sex);
+  const patientName = rollPatientName(sex, random);
   const trajectory = category === 'doa' ? 'stable' : rollTrajectory(difficulty);
   const decompensationClock = category === 'doa' ? null : rollDecompensationClock(difficulty, trajectory);
   const complication = rollComplication(difficulty);
@@ -370,7 +364,9 @@ function rollScenario(opts = {}) {
 
   const region = REGIONS.find(r => r.id === region_id);
   const regionLabel = region ? region.id : region_id;
-  const weather = rollWeather(difficulty, regionLabel);
+  const weatherEntry = rollWeather(difficulty, regionLabel, season, presentation);
+  const weather = weatherEntry.text;
+  if (!validateCombination(presentation, { region: region_id, season, weather_id: weatherEntry.id })) throw new Error('Incompatible scenario setting');
   const specialCircumstance = rollSpecialCircumstance(
     difficulty, category, ageGroup, presentation, trajectory
   );
@@ -388,11 +384,15 @@ function rollScenario(opts = {}) {
   const isCurveball = category === 'curveballs';
 
   return {
-    scenario_id: generateId(),
+    scenario_id: randomUUID(),
+    case_id: presentation.case_id,
+    random_seed: opts.random_seed,
+    generator_version: 1,
     user_id,
     timestamp_start: new Date().toISOString(),
     category,
     presentation: presentation.presentation || presentation.surface_presentation,
+    learning_objectives: [...presentation.learning_objectives],
     true_diagnosis: isCurveball ? presentation.true_diagnosis : null,
     reveal_trigger: isCurveball ? presentation.reveal_trigger : null,
     // Arrest entries store the case key as `reversible_cause_hint` — reading
@@ -415,6 +415,8 @@ function rollScenario(opts = {}) {
     caller_behavior: callerBehavior,
     time_of_day: timeOfDay,
     weather,
+    weather_id: weatherEntry.id,
+    season,
     special_circumstance: specialCircumstance,
     crew_partner: crew.partner,
     crew_captain: crew.captain,
@@ -427,9 +429,9 @@ function rollScenario(opts = {}) {
     crew_transport_driver: crew.partner,
     crew_in_back: [],
     backup_present_on_arrival:
-      category === 'arrest' ? Math.random() < 0.40 :
+      category === 'arrest' ? random() < 0.40 :
       isMultiPatientSeed(presentation) ? true :
-      Math.random() < 0.08,
+      random() < 0.08,
     region: region_id,
     // The two transport destinations for this region: `nearest` (closer, lower
     // capability — community/basic ED) vs `major` (farther, higher capability —
@@ -442,16 +444,12 @@ function rollScenario(opts = {}) {
   };
 }
 
-function generateId() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
+return { rollScenario, PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed, specialCircumstanceEligible };
 }
-
-module.exports = {
-  rollScenario,
-  PLAYER_SELECTABLE_CATEGORIES,
-  isMultiPatientSeed,
-  specialCircumstanceEligible,
-};
+const { PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed, specialCircumstanceEligible } = createRoller(Math.random);
+function rollScenario(opts = {}) {
+  const random_seed = opts.random_seed ?? randomUUID();
+  if (typeof random_seed !== 'string' || !random_seed.length || random_seed.length > 128) throw new Error('Invalid random seed');
+  return createRoller(createRandom(random_seed)).rollScenario({ ...opts, random_seed });
+}
+module.exports = { rollScenario, PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed, specialCircumstanceEligible };

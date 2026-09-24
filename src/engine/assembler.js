@@ -39,6 +39,7 @@ function assembleSeedBlock(seed) {
 
   lines.push('=== SCENARIO SEED ===');
   lines.push(`Scenario ID: ${seed.scenario_id}`);
+  lines.push(`Season: ${seed.season || 'unspecified'}; weather: ${seed.weather || 'no significant weather'}. Keep the setting consistent with these conditions.`);
   lines.push(`Difficulty: ${seed.difficulty}`);
   lines.push(`Provider level: ${seed.provider_level}`);
   lines.push(`User unit identifier: ${seed.unit_name || 'Medic 1'}`);
@@ -383,11 +384,11 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   // ── 2. Chronological call timeline: orders + dice + scene narration ──────
   lines.push("[2] CALL TIMELINE (chronological). Each entry: the provider's order, its dice results, then SCENE — what the simulation narrated back. The SCENE text is the provider's ONLY source of information: anything it has not yet mentioned, the provider does not know.");
   let actionCount = 0;
-  for (const t of turns) {
+  for (const [index, t] of turns.entries()) {
     const action = cleanProviderAction(t);
     if (action === null) continue;   // pure meta turn (end scenario) — omit
     actionCount++;
-    lines.push(`  T+${formatMinutes(t.sceneMinute)} — PROVIDER: ${action}`);
+    lines.push(`  T+${formatMinutes(t.sceneMinute)} · Turn ${index + 1} — PROVIDER: ${action}`);
     for (const r of (t.rolls || [])) {
       if (r.no_roll) continue;
       lines.push(`        - ${formatRoll(r, isMultiPatient)}`);

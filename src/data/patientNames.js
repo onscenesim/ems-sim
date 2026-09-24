@@ -70,10 +70,10 @@ const LAST_NAMES = [
  * Pick a patient name matching the rolled sex.
  * Returns a full name string: "FirstName LastName"
  */
-function rollPatientName(sex) {
+function rollPatientName(sex, random = Math.random) {
   const firstPool = sex === 'female' ? FIRST_NAMES_FEMALE : FIRST_NAMES_MALE;
-  const first = firstPool[Math.floor(Math.random() * firstPool.length)];
-  const last  = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+  const first = firstPool[Math.floor(random() * firstPool.length)];
+  const last  = LAST_NAMES[Math.floor(random() * LAST_NAMES.length)];
   return `${first} ${last}`;
 }
 

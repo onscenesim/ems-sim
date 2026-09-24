@@ -1,5 +1,6 @@
 'use strict';
 
+const { evaluateObjectives, decisionTimeline } = require('../../engine/learning');
 const express = require('express');
 const router  = express.Router();
 const { randomUUID } = require('node:crypto');
@@ -59,6 +60,8 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     glovebox: session.glovebox || null,
     tier,
     seed:        session.seed,
+    initialSeed: session.initialSeed,
+    replayOf: session.replayOf || null,
     messages:    session.messages,
     lastVitals:  session.lastVitals,
     patientFocus: session.patientFocus,
@@ -82,6 +85,7 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     demo_source:          session.demoSource,
     second_patient:       session.secondPatientFound,
     debriefText:          session.debriefText || null,
+    learningReview: session.learningReview || null,
     operationResults:     operationsFor(session).snapshot(),
     meta,
     crew,
@@ -100,6 +104,18 @@ function validCrewSelection(name, role, providerLevel) {
   return providerLevel !== 'BLS' || record.role === `${role}_BLS`;
 }
 
+function canReadRun(req, run) {
+  if (!run) return false;
+  if (run.playerId) return currentPlayer(req)?.id === run.playerId;
+  return !!run.ownerId && getCookie(req, OWNER_COOKIE_NAME) === run.ownerId;
+}
+function runComparison(req, session) {
+  if (!session.replayOf) return null;
+  const prior = persistence.load(session.replayOf);
+  if (!canReadRun(req, prior)) return null;
+  return { previousId: prior.id, previous: decisionTimeline(prior.turns), current: decisionTimeline(session.turns) };
+}
+
 function ownedSession(req, res) {
   let session = getSession(req.params.id);
   if (!session) {
@@ -110,8 +126,8 @@ function ownedSession(req, res) {
     res.status(404).json({ error: 'session_not_found', message: 'Session not found or expired.' });
     return null;
   }
-  if (!session.ownerId || getCookie(req, OWNER_COOKIE_NAME) !== session.ownerId) {
-    res.status(403).json({ error: 'session_forbidden', message: 'This session belongs to a different browser.' });
+  if (!canReadRun(req, session)) {
+    res.status(403).json({ error: 'session_forbidden', message: 'This session belongs to a different player or browser.' });
     return null;
   }
   return session;
@@ -122,6 +138,50 @@ router.get('/status', (_req, res) => {
   res.json({ scenarios_remaining: null, free_daily_limit: null });
 });
 
+function runSummary(run) {
+  return {
+    id: run.id, caseId: run.seed.case_id || null,
+    category: run.seed.category, date: run.seed.timestamp_start,
+    difficulty: run.seed.difficulty, region: run.seed.region,
+    closed: !!run.closed, debriefed: !!run.debriefText,
+    title: run.closed ? run.seed.presentation : 'Call in progress',
+    replayAvailable: !!(run.closed && run.debriefText && run.initialSeed),
+  };
+}
+function playerRun(req, res) {
+  const player = currentPlayer(req);
+  if (!player) { res.status(401).json({ error: 'login_required', message: 'Log in to view your saved calls.' }); return null; }
+  const run = persistence.load(req.params.runId);
+  if (!run || run.playerId !== player.id) { res.status(404).json({ error: 'run_not_found', message: 'Saved call unavailable.' }); return null; }
+  return run;
+}
+router.get('/runs', (req, res) => {
+  const player = currentPlayer(req);
+  if (!player) return res.status(401).json({ error: 'login_required', message: 'Log in to view your saved calls.' });
+  const category = req.query.category || '';
+  const page = Number(req.query.page || 0);
+  if (typeof category !== 'string' || (category && !Object.hasOwn(require('../../data/scenarios').SCENARIO_POOLS, category)) || !Number.isSafeInteger(page) || page < 0) return res.status(400).json({ error: 'invalid_filter' });
+  const runs = persistence.listPlayerRuns(player.id).filter(run => !category || run.seed.category === category);
+  return res.json({ runs: runs.slice(page * 20, (page + 1) * 20).map(runSummary), page, total: runs.length, hasMore: (page + 1) * 20 < runs.length });
+});
+router.get('/runs/:runId', (req, res) => {
+  const run = playerRun(req, res);
+  if (!run) return;
+  return res.json({ ...runSummary(run), debrief: run.debriefText || null,
+    randomSeed: run.seed.random_seed || null,
+    learning: run.closed ? (run.learningReview || evaluateObjectives(run.seed, run.turns)) : null,
+    comparison: run.closed ? runComparison(req, run) : null,
+    transcript: (run.turns || []).map(t => ({ minute: t.sceneMinute ?? null, action: t.user || '', response: t.assistant || '' })),
+  });
+});
+router.get('/runs/:runId/transcript', (req, res) => {
+  const run = playerRun(req, res);
+  if (!run) return;
+  return res.json({ ...runSummary(run), debrief: run.debriefText || null,
+    turns: (run.turns || []).map(t => ({ minute: t.sceneMinute ?? null, action: t.user || '', response: t.assistant || '' })),
+  });
+});
+
 function validOperationId(id) {
   return typeof id === 'string' && /^[a-zA-Z0-9_-]{16,80}$/.test(id);
 }
@@ -129,6 +189,8 @@ function validOperationId(id) {
 function persistSession(id, session) {
   persistence.update(id, {
     seed: session.seed,
+    initialSeed: session.initialSeed,
+    replayOf: session.replayOf || null,
     ownerId: session.ownerId,
     messages: session.messages, lastVitals: session.lastVitals,
     patientFocus: session.patientFocus, patientVitals: session.patientVitals,
@@ -143,6 +205,7 @@ function persistSession(id, session) {
     access: session.access, contextFlags: session.contextFlags,
     lastReplyHadTime: session.lastReplyHadTime,
     debriefText: session.debriefText || null,
+    learningReview: session.learningReview || null,
     playerId: session.playerId || null,
     completionCredited: session.completionCredited || false,
     debriefCredited: session.debriefCredited || false,
@@ -213,6 +276,7 @@ router.get('/resume', (req, res) => {
 
   const snapshot = persistence.load(sid);
   if (!snapshot || snapshot.debriefed) return res.json({ session: null });
+  if (snapshot.playerId && currentPlayer(req)?.id !== snapshot.playerId) return res.json({ session: null });
 
   // Migrate pre-owner snapshots on first resume. New snapshots require the
   // stable browser-owner cookie, which supports multiple active tabs without
@@ -269,6 +333,13 @@ router.post('/new', async (req, res) => {
   const player = currentPlayer(req);
   const userId = player ? `player:${player.id}` : ip;
 
+  let replay = null;
+  if (req.body.replay_of !== undefined) {
+    if (typeof req.body.replay_of !== 'string' || !/^[a-zA-Z0-9-]{1,80}$/.test(req.body.replay_of)) return res.status(400).json({ error: 'invalid_replay_id' });
+    replay = persistence.load(req.body.replay_of);
+    if (!canReadRun(req, replay)) return res.status(404).json({ error: 'run_not_found', message: 'Saved call unavailable.' });
+    if (!replay.closed || !replay.debriefText || !replay.initialSeed) return res.status(409).json({ error: 'replay_unavailable', message: 'Replay requires a completed, debriefed call with a saved initial setup.' });
+  }
   const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name, partner_name = null, captain_name = null, category = null } = req.body;
 
   if (!Object.hasOwn(DIFFICULTY_POOL, difficulty) || !['BLS', 'ALS'].includes(provider_level)
@@ -289,10 +360,11 @@ router.post('/new', async (req, res) => {
     const existingOwner = getCookie(req, OWNER_COOKIE_NAME);
     const ownerId = existingOwner && /^[a-zA-Z0-9_-]{16,80}$/.test(existingOwner)
       ? existingOwner : randomUUID();
-    const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null }, userId, tier);
+    const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null, replay_seed: replay?.initialSeed || null }, userId, tier);
     createdId = id;
     const session = getSession(id);
     session.ownerId = ownerId;
+    session.replayOf = replay?.id || null;
     session.playerId = player?.id || null;
     session.completionCredited = false;
     session.debriefCredited = false;
@@ -334,6 +406,10 @@ router.post('/new', async (req, res) => {
     return res.json({
       session_id:          id,
       scenario_id:         seed.scenario_id,
+      case_id: seed.case_id,
+      random_seed: seed.random_seed,
+      replay_of: session.replayOf,
+      season: seed.season,
       category:            seed.category,
       difficulty:          seed.difficulty,
       provider_level:      seed.provider_level,
@@ -487,6 +563,8 @@ router.post('/:id/debrief', async (req, res) => {
   try {
     const payload = await operationsFor(session).run(operation_id, 'debrief', async signal => ({
       operation_id, debrief: await session.debrief({ signal }),
+      learning: session.learningReview || evaluateObjectives(session.seed, session.turns),
+      practice: { available: !!session.initialSeed, caseId: session.seed.case_id || null, randomSeed: session.seed.random_seed || null },
     }));
     if (session.playerId && !session.debriefCredited) {
       recordDebriefGenerated(session.playerId);
@@ -494,7 +572,7 @@ router.post('/:id/debrief', async (req, res) => {
     }
     persistSession(req.params.id, session);
     persistence.markDebriefed(req.params.id);
-    return res.json(payload);
+    return res.json({ ...payload, comparison: runComparison(req, session) });
   } catch (err) {
     console.error('[scenario/debrief]', err.message);
     return sendOperationError(res, err);
