@@ -1,44 +1,252 @@
-/* Shared by the live debrief and the saved call library. Text is never HTML. */
+/* Shared by the live debrief and saved call library. All run text is plain text. */
 'use strict';
 const PracticeUI = (() => {
+  let reviewSerial = 0;
   function el(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
     if (className) node.className = className;
     return node;
   }
-  function moment(t) {
+  function button(text, action, className) {
+    const node = el('button', text, className);
+    node.type = 'button';
+    node.addEventListener('click', action);
+    return node;
+  }
+  function time(minute) {
+    if (!Number.isFinite(minute)) return 'Time unavailable';
+    const seconds = Math.max(0, Math.round(minute * 60));
+    return `T+${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  }
+  function patientName(id) { return String(id || 'Patient').replace(/^patient_(\d+)$/, 'Patient $1'); }
+  function valueText(value) {
+    if (value === undefined || value === null) return '—';
+    if (typeof value === 'object') return value.value !== undefined ? String(value.value) : JSON.stringify(value);
+    return String(value);
+  }
+  function vitalsLine(vitals) {
+    return Object.entries(vitals || {}).map(([key, value]) => `${key}: ${valueText(value)}`).join(' · ');
+  }
+  function moment(t, onOpen) {
     const card = el('li', undefined, 'practice-moment');
-    card.append(el('strong', `T+${t.minute ?? '?'} min · Turn ${t.turn} · ${t.patient}`), el('p', t.action));
-    if (t.procedures.length) card.append(el('p', t.procedures.map(p => `${p.id.replaceAll('_', ' ')} (${p.patient}): ${p.outcome}`).join(' · ')));
-    const observations = Object.entries(t.vitals).map(([key, value]) => `${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`);
-    card.append(el('small', observations.length ? observations.join(' · ') : 'No vitals recorded in this turn.'));
+    const heading = el('div', undefined, 'practice-moment-heading');
+    heading.append(el('strong', time(t.minute)), el('span', `Turn ${t.turn} · ${patientName(t.patient)}`));
+    if (t.report || t.skip) heading.append(el('span', t.report ? 'Report' : 'Time skip', 'review-badge'));
+    card.append(heading, el('p', t.action));
+    if (t.procedures?.length) {
+      const attempts = el('ul', undefined, 'review-attempts');
+      t.procedures.forEach(p => attempts.append(el('li', `${p.id.replaceAll('_', ' ')} · ${patientName(p.patient)} · ${p.outcome || 'Outcome not recorded'}`)));
+      card.append(attempts);
+    }
+    card.append(el('p', vitalsLine(t.vitals) || 'No vitals recorded in this turn.', 'review-observation'));
+    if (t.priorObservation) card.append(el('p', `Earlier observation · ${time(t.priorObservation.minute)} · Turn ${t.priorObservation.turn}\n${vitalsLine(t.priorObservation.vitals)}`, 'review-earlier'));
+    if (t.precedingIntervention) {
+      card.append(el('p', `Preceding intervention · Turn ${t.precedingIntervention.turn}: ${t.precedingIntervention.action}`, 'review-context'));
+      if (t.elapsedMinutes !== null) card.append(el('p', `${t.elapsedMinutes} min between recorded turns. This interval does not establish clinical timeliness.`, 'review-context'));
+    }
+    if (t.scene) {
+      const scene = el('details', undefined, 'review-scene');
+      scene.append(el('summary', 'Scene response at this moment'), el('p', t.scene));
+      card.append(scene);
+    }
+    if (onOpen) card.append(button('View in timeline →', () => onOpen(t.turn), 'review-evidence-link'));
     return card;
   }
   function timeline(turns, label = 'Decision timeline') {
     const section = el('section', undefined, 'practice-timeline');
     section.append(el('h3', label));
-    const list = el('ol');
+    const list = el('ol', undefined, 'review-moments');
     turns.forEach(t => list.append(moment(t)));
-    if (!turns.length) section.append(el('p', 'No decisions recorded.'));
+    if (!turns.length) section.append(el('p', 'No decisions recorded.', 'review-empty'));
     section.append(list);
     return section;
   }
   function learning(data) {
-    const section = el('section', undefined, 'practice-review');
-    section.append(el('h2', 'Learning review'), el('p', data.notice, 'practice-note'));
-    for (const finding of data.findings) {
-      const detail = el('details');
-      detail.append(el('summary', `${finding.label} — ${finding.evidence.length ? 'Evidence recorded' : 'Not observed'}`));
-      detail.append(el('p', finding.feedback));
-      const list = el('ol');
-      finding.evidence.forEach(t => list.append(moment(t)));
-      detail.append(list);
-      section.append(detail);
+    const id = `learning-${++reviewSerial}`;
+    const allTurns = data.timeline || [];
+    const findings = data.findings || [];
+    const section = el('section', undefined, 'practice-review learning-window');
+    section.setAttribute('aria-label', 'Learning review');
+    const titlebar = el('header', undefined, 'review-titlebar');
+    const title = el('h2', 'LEARNING REVIEW');
+    const icon = el('span', '▤', 'review-window-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    title.prepend(icon);
+    const body = el('div', undefined, 'review-window-body');
+    body.id = `${id}-body`;
+    const collapse = button('−', () => {
+      body.hidden = !body.hidden;
+      collapse.textContent = body.hidden ? '+' : '−';
+      collapse.setAttribute('aria-expanded', String(!body.hidden));
+      collapse.setAttribute('aria-label', body.hidden ? 'Expand learning review' : 'Collapse learning review');
+    }, 'review-window-control');
+    collapse.setAttribute('aria-controls', body.id);
+    collapse.setAttribute('aria-expanded', 'true');
+    collapse.setAttribute('aria-label', 'Collapse learning review');
+    titlebar.append(title, collapse);
+    section.append(titlebar, body);
+
+    const toolbar = el('div', undefined, 'review-toolbar');
+    toolbar.append(el('span', 'After-call workspace', 'review-workspace-label'));
+    const patientLabel = el('label', 'Patient ');
+    const patientSelect = el('select');
+    patientSelect.setAttribute('aria-label', 'Review patient');
+    patientSelect.append(new Option('All patients', ''));
+    const patients = [...new Set([...allTurns, ...findings.flatMap(f => f.evidence || [])].map(t => t.patient).filter(Boolean))];
+    patients.forEach(patient => patientSelect.append(new Option(patientName(patient), patient)));
+    patientLabel.append(patientSelect);
+    toolbar.append(patientLabel);
+    body.append(toolbar);
+    const stats = el('div', undefined, 'review-summary');
+    body.append(stats);
+    const tabs = el('div', undefined, 'review-tabs');
+    tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-label', 'Learning review views');
+    body.append(tabs);
+    const panels = {}, tabButtons = {};
+    let active = 'Objectives', selectedTurn = null, filter = 'all';
+    const status = el('footer', undefined, 'review-status');
+    status.append(el('strong', 'DRAFT · UNSCORED'), el('span', 'Evidence is for reflection. No grade or XP impact.'));
+    const rows = () => allTurns.filter(t => !patientSelect.value || t.patient === patientSelect.value);
+    function activate(name, focus = false) {
+      active = name;
+      Object.keys(panels).forEach(key => {
+        panels[key].hidden = key !== name;
+        tabButtons[key].setAttribute('aria-selected', String(key === name));
+        tabButtons[key].tabIndex = key === name ? 0 : -1;
+      });
+      if (focus) tabButtons[name].focus();
     }
-    const details = el('details');
-    details.append(el('summary', 'Full decision timeline'), timeline(data.timeline));
-    section.append(details);
+    const names = ['Objectives', 'Timeline', 'Vitals'];
+    names.forEach((name, index) => {
+      const tab = button(name, () => activate(name), 'review-tab');
+      tab.id = `${id}-${name}-tab`;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-controls', `${id}-${name}-panel`);
+      tab.addEventListener('keydown', event => {
+        const target = event.key === 'ArrowRight' ? (index + 1) % names.length
+          : event.key === 'ArrowLeft' ? (index + names.length - 1) % names.length
+          : event.key === 'Home' ? 0 : event.key === 'End' ? names.length - 1 : null;
+        if (target !== null) { event.preventDefault(); activate(names[target], true); }
+      });
+      const panel = el('div', undefined, 'review-panel');
+      panel.id = `${id}-${name}-panel`;
+      panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', tab.id);
+      panel.tabIndex = 0;
+      panels[name] = panel;
+      tabButtons[name] = tab;
+      tabs.append(tab);
+      body.append(panel);
+    });
+    body.append(status);
+    function openMoment(turn) {
+      filter = 'all'; selectedTurn = turn;
+      renderTimeline(); activate('Timeline');
+      const target = panels.Timeline.querySelector(`[data-turn="${Number(turn)}"]`);
+      if (target) { target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'nearest', behavior: 'auto' }); }
+    }
+    function renderObjectives() {
+      const panel = panels.Objectives;
+      panel.replaceChildren(el('p', 'Review the decisions behind the record. Evidence found is not a clinical pass; missing evidence is not a failure.', 'review-intro'));
+      findings.forEach((finding, index) => {
+        const evidence = (finding.evidence || []).filter(t => !patientSelect.value || t.patient === patientSelect.value);
+        const detail = el('details', undefined, 'review-objective');
+        const summary = el('summary');
+        summary.append(el('span', String(index + 1).padStart(2, '0'), 'review-objective-number'),
+          el('span', finding.label, 'review-objective-label'),
+          el('span', evidence.length ? `${evidence.length} recorded` : 'Not observed', 'review-badge'));
+        detail.append(summary);
+        const contents = el('div', undefined, 'review-objective-body');
+        const reflection = finding.reflection || {
+          focus: 'Review the information available to you at this point in the call.',
+          questions: ['What information supported your decision?', 'What would you repeat or change on your next attempt?'],
+          practice: 'Choose one decision to revisit when you practice this case again.',
+        };
+        contents.append(el('p', reflection.focus, 'review-focus'));
+        if (evidence.length) {
+          const list = el('ol', undefined, 'review-moments');
+          evidence.forEach(t => list.append(moment(t, openMoment)));
+          contents.append(list);
+        } else contents.append(el('p', 'No matching structured evidence for this selection. Check whether the objective applied and review the transcript for verbal assessments or logging gaps.', 'review-empty'));
+        const promptBox = el('aside', undefined, 'review-reflection');
+        promptBox.append(el('h3', 'Reflect on this decision'));
+        const questions = el('ul');
+        reflection.questions.forEach(question => questions.append(el('li', question)));
+        promptBox.append(questions, el('h3', 'Next practice'), el('p', reflection.practice));
+        contents.append(promptBox);
+        detail.append(contents);
+        panel.append(detail);
+      });
+      if (!findings.length) panel.append(el('p', 'No learning objectives were saved for this call.', 'review-empty'));
+      const note = el('details', undefined, 'review-method');
+      note.append(el('summary', 'About this review'), el('p', data.notice || 'Draft objectives. No clinical score is assigned.'),
+        el('p', 'Times mark the end of each turn. Procedure outcomes reflect the simulation, not decision quality. Observations after treatment do not prove that treatment caused a change.'));
+      panel.append(note);
+    }
+    function renderTimeline() {
+      const panel = panels.Timeline;
+      panel.replaceChildren();
+      const label = el('label', 'Show ');
+      const select = el('select');
+      select.setAttribute('aria-label', 'Timeline entries');
+      [['all', 'All entries'], ['procedures', 'With procedures'], ['vitals', 'With observations'], ['reports', 'Reports']].forEach(([value, text]) => select.append(new Option(text, value)));
+      select.value = filter;
+      select.addEventListener('change', () => { filter = select.value; selectedTurn = null; renderTimeline(); panels.Timeline.querySelector('select').focus(); });
+      label.append(select);
+      panel.append(label, el('p', 'Follow the sequence of orders, recorded attempts, and scene responses. Select a patient above to focus the record.', 'review-intro'));
+      const entries = rows().filter(t => filter === 'all' || (filter === 'procedures' && t.procedures?.length) || (filter === 'vitals' && Object.keys(t.vitals || {}).length) || (filter === 'reports' && t.report));
+      const list = el('ol', undefined, 'review-moments');
+      entries.forEach(t => {
+        const card = moment(t);
+        card.dataset.turn = t.turn;
+        card.tabIndex = -1;
+        if (t.turn === selectedTurn) card.classList.add('is-selected');
+        list.append(card);
+      });
+      panel.append(list);
+      if (!entries.length) panel.append(el('p', 'No entries match this filter.', 'review-empty'));
+    }
+    function renderVitals() {
+      const panel = panels.Vitals;
+      panel.replaceChildren(el('p', 'Recorded observations only. A dash means no value was logged in that turn; values are never carried forward. Compare each patient separately.', 'review-intro'));
+      const observations = rows().filter(t => Object.keys(t.vitals || {}).length);
+      const groups = [...new Set(observations.map(t => t.patient))];
+      groups.forEach(patient => {
+        const entries = observations.filter(t => t.patient === patient);
+        const fields = [...new Set(entries.flatMap(t => Object.keys(t.vitals)))];
+        const wrap = el('div', undefined, 'review-table-scroll');
+        wrap.tabIndex = 0;
+        wrap.setAttribute('role', 'region');
+        wrap.setAttribute('aria-label', `${patientName(patient)} recorded vitals`);
+        const table = el('table', undefined, 'review-vitals-table');
+        table.append(el('caption', `${patientName(patient)} · ${entries.length} observation${entries.length === 1 ? '' : 's'}`));
+        const head = el('thead'), headRow = el('tr');
+        ['Moment', ...fields].forEach(field => { const th = el('th', field); th.scope = 'col'; headRow.append(th); });
+        head.append(headRow); table.append(head);
+        const tbody = el('tbody');
+        entries.forEach(t => {
+          const row = el('tr'), label = el('th'); label.scope = 'row';
+          label.append(button(`${time(t.minute)} · #${t.turn}`, () => openMoment(t.turn), 'review-evidence-link'));
+          row.append(label);
+          fields.forEach(field => row.append(el('td', valueText(t.vitals[field]))));
+          tbody.append(row);
+        });
+        table.append(tbody); wrap.append(table); panel.append(wrap);
+      });
+      if (!observations.length) panel.append(el('p', 'No vitals were recorded for this selection. Review the transcript for any assessment described in words.', 'review-empty'));
+    }
+    function render() {
+      stats.replaceChildren();
+      const withEvidence = findings.filter(f => (f.evidence || []).some(t => !patientSelect.value || t.patient === patientSelect.value)).length;
+      [[findings.length, 'Objectives'], [withEvidence, 'With evidence'], [rows().length, 'Logged moments']].forEach(([value, label]) => {
+        const cell = el('div'); cell.append(el('strong', String(value)), el('span', label)); stats.append(cell);
+      });
+      renderObjectives(); renderTimeline(); renderVitals(); activate(active);
+    }
+    patientSelect.addEventListener('change', () => { selectedTurn = null; render(); });
+    render();
     return section;
   }
   function comparison(data) {

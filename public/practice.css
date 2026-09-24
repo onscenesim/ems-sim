@@ -1,24 +1,118 @@
-.practice-review { margin: 18px 0; padding: 18px; border: 1px solid #657c7b; border-radius: 6px; color: inherit; background: rgba(110,150,145,.08); font: 14px/1.6 system-ui, sans-serif; }
-.practice-review h2 { margin: 0 0 8px; font-size: 20px; }
-.practice-review h3 { font-size: 16px; }
-.practice-note { opacity: .8; }
-.practice-review details { border-top: 1px solid #657c7b66; padding: 12px 0; }
-.practice-review summary { cursor: pointer; font-weight: 600; }
+/* After-call tools share the simulator's pixel fonts and beveled desktop chrome. */
+.practice-review {
+  margin: 18px 0; padding: 16px; border: 2px solid;
+  border-color: #f2f0e6 #696a63 #696a63 #f2f0e6;
+  border-radius: 0; color: #242e32; background: var(--chrome-bg, #d0cdc8);
+  font: 18px/1.3 var(--font-xp); overflow-wrap: anywhere;
+}
+.practice-review h2 { margin: 0 0 10px; font: 13px/1.5 var(--font-block); }
+.practice-review h3 { margin: 10px 0 6px; font: bold 19px/1.3 var(--font-xp); }
+.practice-note { color: #505953; }
+.practice-review details { border-top: 1px solid #96998e; padding: 10px 0; }
+.practice-review summary { cursor: pointer; font-weight: bold; }
 .practice-review ol { padding-left: 24px; }
-.practice-moment { padding: 8px 0; overflow-wrap: anywhere; }
-.practice-moment p { margin: 5px 0; white-space: pre-wrap; }
-.practice-review button { padding: 9px 14px; cursor: pointer; margin: 6px 6px 6px 0; }
+.practice-review button, .practice-review select {
+  color: #253139; background: #e0ddd2; font: 18px/1.2 var(--font-xp);
+  border: 2px solid; border-color: #fffdf2 #767970 #767970 #fffdf2;
+  border-radius: 0; padding: 7px 12px; min-height: 36px;
+}
+.practice-review button { cursor: pointer; }
+.practice-review button:hover { background: #ece9dd; }
+.practice-review button:active { border-color: #767970 #fffdf2 #fffdf2 #767970; background: #cdcbbf; }
+.practice-review button:disabled { color: #6a6e66; cursor: wait; }
+.practice-review :is(button, select, summary, [tabindex]):focus-visible { outline: 2px dotted #1d4a75; outline-offset: -4px; }
 .practice-comparison { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; }
-@media(max-width:700px) { .practice-comparison { grid-template-columns: 1fr; } }
-#output .practice-review { color: var(--text-term, #d1d5db); }
-body.light-mode #output .practice-review { color: #1a1a2a; }
-#library-dialog { margin: auto; width: min(960px, 94vw); max-height: 88vh; padding: 0; border: 2px solid #64746d; background: #f4f2ec; color: #1a2420; }
+.practice-review .review-moments { padding: 0; margin: 0; list-style: none; }
+.practice-moment { padding: 12px; margin: 10px 0; background: #faf9f0; border: 1px solid #a4a99b; overflow-wrap: anywhere; }
+.practice-moment p { margin: 7px 0; white-space: pre-wrap; }
+.practice-moment-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 6px; border-bottom: 1px solid #dbddcf; }
+.practice-moment-heading > strong { color: #244d70; }
+.practice-moment-heading > span { font-size: 16px; color: #515e64; }
+.practice-review .review-attempts { margin: 8px 0; padding-left: 20px; color: #45544b; }
+.review-observation { color: #283d46; }
+.review-earlier, .review-context { font-size: 16px; color: #515b58; }
+.practice-moment .review-earlier { padding: 8px; background: #eeeee3; border-left: 3px solid #919e92; }
+.practice-review .review-scene { border: 0; padding: 4px 0; font-size: 17px; }
+.practice-review .review-scene summary { color: #355773; font-weight: normal; }
+.practice-review .review-evidence-link { min-height: 32px; margin-top: 6px; color: #214c73; font-size: 16px; }
+.review-badge { flex-shrink: 0; padding: 2px 7px; border: 1px solid #a4afa7; color: #46584d; background: #e5e9de; font-size: 16px; font-weight: normal; white-space: nowrap; }
+/* Inset learning workspace, equally readable in either terminal theme. */
+.practice-review.learning-window { padding: 3px; border: 3px solid; border-color: #e8e9de #515956 #515956 #e8e9de; box-shadow: 3px 3px 0 #0003; background: #d0cdc8; color: #242e32; }
+.review-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 7px 5px 12px; background: linear-gradient(90deg, #25485f, #547d8e); border: 1px solid; border-color: #8bafbd #233e4f #233e4f #8bafbd; color: #fffbed; }
+.learning-window .review-titlebar h2 { margin: 0; display: flex; align-items: center; gap: 10px; font: 12px/1.4 var(--font-block); letter-spacing: .05em; }
+.review-window-icon { font: 26px/1 var(--font-xp); color: #eadfb6; }
+.learning-window .review-window-control { min-width: 36px; height: 34px; min-height: 34px; padding: 0; font: bold 26px/1 var(--font-xp); }
+.learning-window [hidden] { display: none !important; }
+.review-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #a2a298; }
+.review-workspace-label { color: #536461; }
+.review-toolbar label { display: flex; gap: 8px; align-items: center; }
+.learning-window select { min-height: 34px; padding: 4px 6px; background: #faf9f2; border-color: #858b83 #f6f4e9 #f6f4e9 #858b83; }
+.review-summary { display: grid; grid-template-columns: repeat(3,1fr); margin: 12px; border: 2px solid; border-color: #999c90 #f7f5e7 #f7f5e7 #999c90; background: #e9e8dc; }
+.review-summary > div { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-right: 1px solid #bec1b4; }
+.review-summary > div:last-child { border-right: 0; }
+.review-summary strong { font: 28px/1 var(--font-xp); color: #345568; }
+.review-summary span { color: #535d54; font-size: 17px; }
+.review-tabs { display: flex; gap: 3px; padding: 4px 12px 0; }
+.learning-window .review-tab { margin: 0; position: relative; min-width: 105px; border-bottom: 0; background: #c0beb3; }
+.learning-window .review-tab[aria-selected="true"] { background: #ebe9df; border-top: 3px solid #c1a153; padding-top: 6px; z-index: 1; }
+.learning-window .review-tab[aria-selected="true"]::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: #ebe9df; }
+.review-panel { margin: 0 8px 8px; padding: 16px; background: #ebe9df; border: 2px solid; border-color: #fffdf4 #898d81 #898d81 #fffdf4; min-height: 220px; }
+.review-intro { color: #4d5a59; margin: 0 0 14px; max-width: 85ch; }
+.review-panel > label + .review-intro { margin-top: 12px; }
+.learning-window .review-objective { padding: 0; margin-bottom: 9px; background: #f7f5e9; border: 1px solid #b0b3a4; }
+.review-objective > summary { display: flex; gap: 10px; align-items: center; padding: 12px; list-style: none; font-weight: normal; }
+.review-objective > summary::-webkit-details-marker { display: none; }
+.review-objective > summary::before { content: '+'; display: grid; place-items: center; flex: 0 0 16px; width: 16px; height: 16px; border: 1px solid #6f7b71; background: white; font: 18px/1 var(--font-xp); color: #334c58; }
+.review-objective[open] > summary::before { content: '−'; }
+.review-objective[open] > summary { background: #dfe5db; border-bottom: 1px solid #b0b3a4; }
+.review-objective-number { color: #6d7974; font-size: 16px; }
+.review-objective-label { flex: 1; }
+.review-objective-body { padding: 14px; }
+.review-focus { font-weight: bold; margin-bottom: 12px; }
+.review-reflection { margin-top: 14px; padding: 12px 16px; background: #f2edcf; border: 1px solid #c2ba8e; border-left: 4px solid #b1a267; }
+.review-reflection h3 { margin: 0 0 6px; font-size: 18px; color: #64562e; }
+.review-reflection ul { padding-left: 20px; margin-bottom: 14px; }
+.review-reflection li { margin: 5px 0; }
+.review-empty { margin: 12px 0; padding: 12px; border: 1px dashed #a6ac9e; color: #525d58; background: #f7f6ee; }
+.review-method { margin-top: 16px; color: #57605a; font-size: 16px; }
+.review-method p { margin-top: 8px; }
+.learning-window .review-method summary { font-weight: normal; }
+.review-status { display: flex; flex-wrap: wrap; gap: 5px 16px; margin: 8px; padding: 6px 10px; border: 1px solid; border-color: #9a9e92 #f3f1e5 #f3f1e5 #9a9e92; font-size: 15px; color: #596358; }
+.review-status strong { font-weight: normal; color: #655c40; }
+.review-moments .is-selected { outline: 2px solid #557d99; background: #f1f7f6; }
+.review-table-scroll { max-width: 100%; overflow-x: auto; margin: 14px 0; border: 1px solid #a6ad9f; background: #fffdf5; }
+.review-vitals-table { width: 100%; border-collapse: collapse; font-size: 17px; white-space: nowrap; }
+.review-vitals-table caption { text-align: left; padding: 9px 12px; background: #dbe2d7; color: #355346; font-weight: bold; }
+.review-vitals-table th { background: #e9ebdf; font-weight: normal; text-align: left; }
+.review-vitals-table :is(th,td) { padding: 9px 12px; border: 1px solid #c1c7b9; }
+.review-vitals-table tbody tr:nth-child(even) td { background: #f1f3e9; }
+.learning-window .review-vitals-table button { margin: 0; }
+/* Library is the containing desktop window for saved learning reviews. */
+#library-dialog { margin: auto; width: min(1000px, 94vw); max-height: 88vh; padding: 3px; border: 3px solid; border-color: #eeeee3 #525b56 #525b56 #eeeee3; background: var(--chrome-bg, #d0cdc8); color: #242e32; box-shadow: 6px 8px 0 #0004; }
 #library-dialog::backdrop { background: #0009; }
-#library-dialog .dialog-titlebar { position: sticky; top: 0; z-index: 1; background: #f4f2ec; display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; }
-#library-title { font: bold 16px system-ui, sans-serif; }
-#library-close { padding: 4px 12px; font-size: 24px; }
-#library-content { margin: 0; border: 0; border-radius: 0; }
-#library-content pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.6 system-ui, sans-serif; }
-#library-content select { padding: 8px; margin: 8px; }
-.library-run { display: block; width: 100%; text-align: left; white-space: normal; border: 1px solid #9ba9a1; background: #fff; color: #18251e; }
+#library-dialog .dialog-titlebar { position: sticky; top: -3px; z-index: 2; margin: 0; display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: linear-gradient(90deg, #25485f, #547d8e); color: #fffbed; }
+#library-title { font: 12px/1.4 var(--font-block); letter-spacing: .04em; }
+#library-content { margin: 0; border: 0; }
+#library-content pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 18px/1.35 var(--font-xp); }
+#library-content > label > select { padding: 6px; margin: 8px; }
+#library-content > button { margin: 6px 6px 6px 0; }
+#library-content > :is(p,h3) { margin: 10px 0; }
+.library-run { display: block; width: 100%; text-align: left; white-space: normal; }
 .library-run strong, .library-run small { display: block; }
+.library-run small { margin-top: 5px; color: #526453; font-size: 16px; }
+@media(max-width:700px) {
+  .practice-comparison { grid-template-columns: 1fr; }
+  .practice-review { padding: 10px; }
+  .review-panel { padding: 10px; }
+  .review-summary { margin: 10px 8px; }
+  .review-summary > div { flex-direction: column; gap: 3px; text-align: center; padding: 9px 4px; }
+  .review-summary span { font-size: 16px; }
+  .review-objective > summary { flex-wrap: wrap; gap: 8px; padding: 10px; }
+  .review-objective-label { flex-basis: calc(100% - 65px); }
+  .review-objective > summary .review-badge { margin-left: 26px; }
+  .review-objective-body { padding: 10px; }
+  .learning-window .review-tab { min-width: 0; flex: 1; min-height: 44px; }
+  .review-toolbar { padding: 10px 8px; }
+  .practice-review :is(button,select) { min-height: 44px; }
+  #library-dialog { max-height: calc(100dvh - 16px); width: calc(100vw - 16px); }
+}

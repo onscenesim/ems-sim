@@ -23,10 +23,13 @@ const playerStore = require('../src/server/playerStore');
 async function main() {
   const { player, token } = await playerStore.signup('Preview Medic', '2468');
   const seed = rollScenario({ category: 'trauma', random_seed: 'library-preview', user_id: `player:${player.id}` });
+  seed.special_flags = 'two_patients';
   const first = { id: randomUUID(), playerId: player.id, ownerId: randomUUID(), seed, initialSeed: structuredClone(seed), closed: true, debriefText: 'LOCAL PREVIEW FIXTURE. Review your assessment and reassessment in the learning review. No clinical score has been assigned.', turns: [
     { user: 'Check vitals', assistant: 'Preview patient has recorded observations.', sceneMinute: 2, vitals: { HR: 120, BP: '100/60' }, rolls: [{ procedure_id: 'vitals_manual', outcome: 'SUCCESS' }] },
-    { user: 'Apply direct pressure', assistant: 'Pressure is applied.', sceneMinute: 3, rolls: [{ procedure_id: 'bleeding_control', outcome: 'SUCCESS' }] },
+    { user: 'Assess the second patient', assistant: 'The second patient answers questions.', sceneMinute: 2.5, patientFocus: { id: 'patient_2' }, vitals: { HR: 75, BP: '124/78' }, rolls: [] },
+    { user: 'Apply direct pressure', assistant: 'The dressing shifts; the bleeding remains visible.', sceneMinute: 3, rolls: [{ procedure_id: 'bleeding_control', outcome: 'FAILURE' }] },
     { user: 'Recheck vitals', assistant: 'Repeat observations recorded.', sceneMinute: 5, vitals: { HR: 110, BP: '110/70' }, rolls: [{ procedure_id: 'reassessment', outcome: 'SUCCESS' }] },
+    { user: 'Report the assessment and care to the receiving team', assistant: 'The receiving team acknowledges the report.', sceneMinute: 6, report: true, rolls: [] },
   ], messages: [], meta: {}, crew: {} };
   persistence.save(first);
   const wrapper = require('express')();
@@ -35,6 +38,7 @@ async function main() {
     res.redirect('/');
   });
   wrapper.use(app);
-  wrapper.listen(3010, '127.0.0.1', () => console.log('Synthetic UI preview: http://127.0.0.1:3010 — fixture player: /__preview/player'));
+  const port = Number(process.env.PREVIEW_PORT || 3010);
+  wrapper.listen(port, '127.0.0.1', () => console.log(`Synthetic UI preview: http://127.0.0.1:${port} — fixture player: /__preview/player`));
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
