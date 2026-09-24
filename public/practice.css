@@ -24,14 +24,39 @@
 .practice-comparison { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; }
 .practice-review .review-moments { padding: 0; margin: 0; list-style: none; }
 .practice-moment { padding: 12px; margin: 10px 0; background: #faf9f0; border: 1px solid #a4a99b; overflow-wrap: anywhere; }
+.practice-moment.has-intervention { padding: 0; border: 2px solid #94722f; background: #fffaf0; box-shadow: 3px 3px 0 #6e542733; }
 .practice-moment p { margin: 7px 0; white-space: pre-wrap; }
 .practice-moment-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 6px; border-bottom: 1px solid #dbddcf; }
+.has-intervention .practice-moment-heading { padding: 9px 12px; border-bottom-color: #c5ae7c; background: #eee2bd; }
 .practice-moment-heading > strong { color: #244d70; }
 .practice-moment-heading > span { font-size: 16px; color: #515e64; }
-.practice-review .review-attempts { margin: 8px 0; padding-left: 20px; color: #45544b; }
+.review-intervention-badge { margin-left: auto; padding: 3px 8px; border: 1px solid #75591f; background: #795b24; color: #fff8de !important; font-weight: bold; letter-spacing: .04em; }
+.review-action { padding: 8px 0; }
+.has-intervention > .review-action { padding: 10px 12px 7px; }
+.review-action > span { display: block; color: #68716c; font-size: 13px; font-weight: bold; letter-spacing: .08em; }
+.review-action > p { font-size: 19px; }
+.review-procedure-group { margin: 8px 0; padding: 10px 12px; border: 1px solid #aab0a3; background: #f0f1e7; }
+.review-procedure-group.is-intervention { margin: 3px 12px 10px; border: 2px solid #b18b3f; border-left-width: 7px; background: #fff3ce; }
+.review-procedure-group h4, .review-intervention-response h4 { margin: 0 0 8px; color: #6c5425; font: 12px/1.4 var(--font-block); letter-spacing: .06em; }
+.practice-review .review-attempts { margin: 0; padding: 0; color: #45544b; list-style: none; }
+.review-procedure { padding: 7px 0; border-top: 1px solid #d6c58f; }
+.review-procedure:first-child { padding-top: 0; border-top: 0; }
+.review-procedure:last-child { padding-bottom: 0; }
+.review-procedure-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 10px; }
+.review-procedure-heading strong { color: #342e20; font-size: 20px; }
+.review-procedure p { margin: 2px 0; }
+.review-procedure-patient, .review-procedure-meta { color: #626354; font-size: 16px; }
+.review-outcome { padding: 1px 7px; border: 1px solid #8b8c7e; background: #e6e5d8; font-size: 14px; font-weight: bold; letter-spacing: .04em; }
+.review-outcome.is-success { border-color: #56785e; background: #dcebd9; color: #315039; }
+.review-outcome.is-marginal { border-color: #9a7d36; background: #f1e3b9; color: #674f17; }
+.review-outcome:is(.is-failure,.is-complication) { border-color: #9b584c; background: #f0d6ce; color: #70362e; }
+.has-intervention > .review-observation { margin: 0 12px 10px; }
+.review-intervention-response { margin: 0; padding: 11px 12px 12px; border-top: 1px solid #ccb77e; background: #fbf3dd; }
+.review-intervention-response h4 { margin-bottom: 4px; }
 .review-observation { color: #283d46; }
 .review-earlier, .review-context { font-size: 16px; color: #515b58; }
 .practice-moment .review-earlier { padding: 8px; background: #eeeee3; border-left: 3px solid #919e92; }
+.has-intervention > :is(.review-earlier,.review-context,.review-evidence-link) { margin-left: 12px; margin-right: 12px; }
 .practice-review .review-scene { border: 0; padding: 4px 0; font-size: 17px; }
 .practice-review .review-scene summary { color: #355773; font-weight: normal; }
 .practice-review .review-evidence-link { min-height: 32px; margin-top: 6px; color: #214c73; font-size: 16px; }

@@ -18,6 +18,7 @@ require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports
 const app = require('../src/server/app');
 const { randomUUID } = require('node:crypto');
 const { rollScenario } = require('../src/engine/roller');
+const { evaluateObjectives } = require('../src/engine/learning');
 const persistence = require('../src/server/persistence');
 const playerStore = require('../src/server/playerStore');
 async function main() {
@@ -27,10 +28,11 @@ async function main() {
   const first = { id: randomUUID(), playerId: player.id, ownerId: randomUUID(), seed, initialSeed: structuredClone(seed), closed: true, debriefText: 'LOCAL PREVIEW FIXTURE. Review your assessment and reassessment in the learning review. No clinical score has been assigned.', turns: [
     { user: 'Check vitals', assistant: 'Preview patient has recorded observations.', sceneMinute: 2, vitals: { HR: 120, BP: '100/60' }, rolls: [{ procedure_id: 'vitals_manual', outcome: 'SUCCESS' }] },
     { user: 'Assess the second patient', assistant: 'The second patient answers questions.', sceneMinute: 2.5, patientFocus: { id: 'patient_2' }, vitals: { HR: 75, BP: '124/78' }, rolls: [] },
-    { user: 'Apply direct pressure', assistant: 'The dressing shifts; the bleeding remains visible.', sceneMinute: 3, rolls: [{ procedure_id: 'bleeding_control', outcome: 'FAILURE' }] },
+    { user: 'Apply direct pressure', assistant: 'The dressing shifts; the bleeding remains visible.', sceneMinute: 3, rolls: [{ procedure_id: 'bleeding_control', outcome: 'FAILURE', roll: 6, dc: 12 }] },
     { user: 'Recheck vitals', assistant: 'Repeat observations recorded.', sceneMinute: 5, vitals: { HR: 110, BP: '110/70' }, rolls: [{ procedure_id: 'reassessment', outcome: 'SUCCESS' }] },
     { user: 'Report the assessment and care to the receiving team', assistant: 'The receiving team acknowledges the report.', sceneMinute: 6, report: true, rolls: [] },
   ], messages: [], meta: {}, crew: {} };
+  first.learningReview = evaluateObjectives(seed, first.turns);
   persistence.save(first);
   const wrapper = require('express')();
   wrapper.get('/__preview/player', (_req, res) => {

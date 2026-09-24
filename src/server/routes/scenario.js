@@ -115,6 +115,11 @@ function runComparison(req, session) {
   if (!canReadRun(req, prior)) return null;
   return { previousId: prior.id, previous: decisionTimeline(prior.turns), current: decisionTimeline(session.turns) };
 }
+function currentLearningReview(run) {
+  return run.learningReview?.version >= 3
+    ? run.learningReview
+    : evaluateObjectives(run.seed, run.turns);
+}
 
 function ownedSession(req, res) {
   let session = getSession(req.params.id);
@@ -169,7 +174,7 @@ router.get('/runs/:runId', (req, res) => {
   if (!run) return;
   return res.json({ ...runSummary(run), debrief: run.debriefText || null,
     randomSeed: run.seed.random_seed || null,
-    learning: run.closed ? (run.learningReview || evaluateObjectives(run.seed, run.turns)) : null,
+    learning: run.closed ? currentLearningReview(run) : null,
     comparison: run.closed ? runComparison(req, run) : null,
     transcript: (run.turns || []).map(t => ({ minute: t.sceneMinute ?? null, action: t.user || '', response: t.assistant || '' })),
   });
@@ -563,7 +568,7 @@ router.post('/:id/debrief', async (req, res) => {
   try {
     const payload = await operationsFor(session).run(operation_id, 'debrief', async signal => ({
       operation_id, debrief: await session.debrief({ signal }),
-      learning: session.learningReview || evaluateObjectives(session.seed, session.turns),
+      learning: currentLearningReview(session),
       practice: { available: !!session.initialSeed, caseId: session.seed.case_id || null, randomSeed: session.seed.random_seed || null },
     }));
     if (session.playerId && !session.debriefCredited) {

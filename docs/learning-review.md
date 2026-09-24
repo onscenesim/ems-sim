@@ -1,6 +1,6 @@
 # Clinical review gate
 
-All objectives in `src/data/learningObjectives.js` are draft, version 2. Every case currently receives three observation objectives; category-specific observation prompts are not required-treatment checklists. No objective contributes to a score or XP. Completion XP retains its existing meaning.
+All objectives in `src/data/learningObjectives.js` are draft, version 3. Every case currently receives three player-action review areas: initial approach, recorded interventions, and handoff. Initial approach uses the player's first substantive turn for each patient, not the first turn containing vitals. Intervention evidence comes only from recorded treatment/procedure actions; automatic vitals and presentation updates remain context. No objective contributes to a score or XP. Completion XP retains its existing meaning.
 
 Before enabling any clinical score, a qualified clinical reviewer must review each objective against the individual cases and local provider scopes, define indication and exclusion criteria, validate timestamps and patient attribution, and review false-positive/false-negative examples. Record reviewer identity, date, objective version, approved scope/protocol reference, and signed review in source control. A model response, browser request, or test fixture is not approval. Scoring requires a separately reviewed implementation; setting a status field alone cannot activate it.
 

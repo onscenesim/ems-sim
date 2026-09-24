@@ -28,24 +28,72 @@ const PracticeUI = (() => {
   function vitalsLine(vitals) {
     return Object.entries(vitals || {}).map(([key, value]) => `${key}: ${valueText(value)}`).join(' · ');
   }
+  function procedureName(procedure) {
+    if (procedure.id === 'medication_push' && procedure.matchedDrug) return procedure.matchedDrug;
+    return String(procedure.id || 'Recorded procedure').replaceAll('_', ' ');
+  }
+  function titleCase(value) {
+    return String(value || '').replace(/\b\w/g, letter => letter.toUpperCase());
+  }
+  function procedureMeta(procedure) {
+    const parts = [];
+    if (procedure.id === 'medication_push') parts.push('Medication');
+    if (procedure.administrationRoute) parts.push(`Route ${procedure.administrationRoute}`);
+    if (procedure.noRoll) parts.push('No skill check');
+    else if (procedure.attempts?.length) {
+      parts.push(procedure.attempts.map((attempt, index) => `Check ${index + 1}: d20 ${valueText(attempt.roll)} vs DC ${valueText(attempt.dc)} · ${attempt.outcome || 'outcome not recorded'}`).join(' | '));
+    } else if (procedure.roll !== null && procedure.roll !== undefined) {
+      parts.push(`d20 ${procedure.roll} vs DC ${Array.isArray(procedure.dc) ? procedure.dc.join('/') : valueText(procedure.dc)}`);
+    }
+    if (procedure.disadvantage) parts.push('Disadvantage');
+    return parts.join(' · ');
+  }
+  function procedureList(procedures, intervention) {
+    const relevant = procedures.filter(procedure => !!procedure.intervention === intervention);
+    if (!relevant.length) return null;
+    const section = el('section', undefined, intervention ? 'review-procedure-group is-intervention' : 'review-procedure-group is-assessment');
+    section.append(el('h4', intervention ? `INTERVENTION${relevant.length === 1 ? '' : 'S'}` : 'ASSESSMENT / MONITORING'));
+    const list = el('ul', undefined, 'review-attempts');
+    relevant.forEach(procedure => {
+      const item = el('li', undefined, 'review-procedure');
+      const heading = el('div', undefined, 'review-procedure-heading');
+      heading.append(el('strong', titleCase(procedureName(procedure))));
+      if (!procedure.noRoll && procedure.outcome) heading.append(el('span', procedure.outcome, `review-outcome is-${String(procedure.outcome).toLowerCase()}`));
+      item.append(heading, el('p', patientName(procedure.patient), 'review-procedure-patient'));
+      const meta = procedureMeta(procedure);
+      if (meta) item.append(el('p', meta, 'review-procedure-meta'));
+      list.append(item);
+    });
+    section.append(list);
+    return section;
+  }
   function moment(t, onOpen) {
     const card = el('li', undefined, 'practice-moment');
+    const interventions = (t.procedures || []).filter(procedure => procedure.intervention);
+    if (interventions.length) card.classList.add('has-intervention');
     const heading = el('div', undefined, 'practice-moment-heading');
     heading.append(el('strong', time(t.minute)), el('span', `Turn ${t.turn} · ${patientName(t.patient)}`));
     if (t.report || t.skip) heading.append(el('span', t.report ? 'Report' : 'Time skip', 'review-badge'));
-    card.append(heading, el('p', t.action));
-    if (t.procedures?.length) {
-      const attempts = el('ul', undefined, 'review-attempts');
-      t.procedures.forEach(p => attempts.append(el('li', `${p.id.replaceAll('_', ' ')} · ${patientName(p.patient)} · ${p.outcome || 'Outcome not recorded'}`)));
-      card.append(attempts);
-    }
+    if (interventions.length) heading.append(el('span', `${interventions.length} INTERVENTION${interventions.length === 1 ? '' : 'S'}`, 'review-intervention-badge'));
+    card.append(heading);
+    const action = el('div', undefined, 'review-action');
+    action.append(el('span', 'PLAYER ACTION'), el('p', t.action || 'No player action recorded.'));
+    card.append(action);
+    const interventionList = procedureList(t.procedures || [], true);
+    const assessmentList = procedureList(t.procedures || [], false);
+    if (interventionList) card.append(interventionList);
+    if (assessmentList) card.append(assessmentList);
     card.append(el('p', vitalsLine(t.vitals) || 'No vitals recorded in this turn.', 'review-observation'));
     if (t.priorObservation) card.append(el('p', `Earlier observation · ${time(t.priorObservation.minute)} · Turn ${t.priorObservation.turn}\n${vitalsLine(t.priorObservation.vitals)}`, 'review-earlier'));
     if (t.precedingIntervention) {
       card.append(el('p', `Preceding intervention · Turn ${t.precedingIntervention.turn}: ${t.precedingIntervention.action}`, 'review-context'));
       if (t.elapsedMinutes !== null) card.append(el('p', `${t.elapsedMinutes} min between recorded turns. This interval does not establish clinical timeliness.`, 'review-context'));
     }
-    if (t.scene) {
+    if (t.scene && interventions.length) {
+      const response = el('section', undefined, 'review-intervention-response');
+      response.append(el('h4', 'SIMULATION RESPONSE'), el('p', t.scene));
+      card.append(response);
+    } else if (t.scene) {
       const scene = el('details', undefined, 'review-scene');
       scene.append(el('summary', 'Scene response at this moment'), el('p', t.scene));
       card.append(scene);
@@ -149,14 +197,14 @@ const PracticeUI = (() => {
     }
     function renderObjectives() {
       const panel = panels.Objectives;
-      panel.replaceChildren(el('p', 'Review the decisions behind the record. Evidence found is not a clinical pass; missing evidence is not a failure.', 'review-intro'));
+      panel.replaceChildren(el('p', 'Organized around choices you controlled: how you started, the interventions you recorded, and your handoff. Automatic patient updates do not count as actions.', 'review-intro'));
       findings.forEach((finding, index) => {
         const evidence = (finding.evidence || []).filter(t => !patientSelect.value || t.patient === patientSelect.value);
         const detail = el('details', undefined, 'review-objective');
         const summary = el('summary');
         summary.append(el('span', String(index + 1).padStart(2, '0'), 'review-objective-number'),
           el('span', finding.label, 'review-objective-label'),
-          el('span', evidence.length ? `${evidence.length} recorded` : 'Not observed', 'review-badge'));
+          el('span', evidence.length ? `${evidence.length} moment${evidence.length === 1 ? '' : 's'}` : 'No recorded moment', 'review-badge'));
         detail.append(summary);
         const contents = el('div', undefined, 'review-objective-body');
         const reflection = finding.reflection || {
@@ -179,9 +227,9 @@ const PracticeUI = (() => {
         detail.append(contents);
         panel.append(detail);
       });
-      if (!findings.length) panel.append(el('p', 'No learning objectives were saved for this call.', 'review-empty'));
+      if (!findings.length) panel.append(el('p', 'No review areas were saved for this call.', 'review-empty'));
       const note = el('details', undefined, 'review-method');
-      note.append(el('summary', 'About this review'), el('p', data.notice || 'Draft objectives. No clinical score is assigned.'),
+      note.append(el('summary', 'About this review'), el('p', data.notice || 'Draft review areas. No clinical score is assigned.'),
         el('p', 'Times mark the end of each turn. Procedure outcomes reflect the simulation, not decision quality. Observations after treatment do not prove that treatment caused a change.'));
       panel.append(note);
     }
@@ -191,12 +239,16 @@ const PracticeUI = (() => {
       const label = el('label', 'Show ');
       const select = el('select');
       select.setAttribute('aria-label', 'Timeline entries');
-      [['all', 'All entries'], ['procedures', 'With procedures'], ['vitals', 'With observations'], ['reports', 'Reports']].forEach(([value, text]) => select.append(new Option(text, value)));
+      [['all', 'All entries'], ['interventions', 'Interventions'], ['assessments', 'Assessment / monitoring'], ['vitals', 'With observations'], ['reports', 'Reports']].forEach(([value, text]) => select.append(new Option(text, value)));
       select.value = filter;
       select.addEventListener('change', () => { filter = select.value; selectedTurn = null; renderTimeline(); panels.Timeline.querySelector('select').focus(); });
       label.append(select);
       panel.append(label, el('p', 'Follow the sequence of orders, recorded attempts, and scene responses. Select a patient above to focus the record.', 'review-intro'));
-      const entries = rows().filter(t => filter === 'all' || (filter === 'procedures' && t.procedures?.length) || (filter === 'vitals' && Object.keys(t.vitals || {}).length) || (filter === 'reports' && t.report));
+      const entries = rows().filter(t => filter === 'all'
+        || (filter === 'interventions' && t.procedures?.some(procedure => procedure.intervention))
+        || (filter === 'assessments' && t.procedures?.some(procedure => !procedure.intervention))
+        || (filter === 'vitals' && Object.keys(t.vitals || {}).length)
+        || (filter === 'reports' && t.report));
       const list = el('ol', undefined, 'review-moments');
       entries.forEach(t => {
         const card = moment(t);
@@ -239,8 +291,8 @@ const PracticeUI = (() => {
     }
     function render() {
       stats.replaceChildren();
-      const withEvidence = findings.filter(f => (f.evidence || []).some(t => !patientSelect.value || t.patient === patientSelect.value)).length;
-      [[findings.length, 'Objectives'], [withEvidence, 'With evidence'], [rows().length, 'Logged moments']].forEach(([value, label]) => {
+      const interventionCount = rows().reduce((count, turn) => count + (turn.procedures || []).filter(procedure => procedure.intervention).length, 0);
+      [[findings.length, 'Review areas'], [interventionCount, 'Interventions'], [rows().length, 'Logged moments']].forEach(([value, label]) => {
         const cell = el('div'); cell.append(el('strong', String(value)), el('span', label)); stats.append(cell);
       });
       renderObjectives(); renderTimeline(); renderVitals(); activate(active);

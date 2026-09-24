@@ -4,8 +4,8 @@
 // change with reviewer identity, date, scope and objective version. No client
 // request or generated debrief can approve an objective or award points.
 const OBJECTIVES = {
-  baseline: { label: 'Establish and document a baseline assessment', kind: 'baseline' },
-  reassessment: { label: 'Reassess after a recorded intervention', kind: 'reassessment' },
+  initial_approach: { label: 'Review your initial approach', kind: 'initial_approach' },
+  interventions: { label: 'Review your intervention decisions', kind: 'intervention' },
   handoff: { label: 'Communicate the assessment and care in a handoff', kind: 'handoff' },
   cardiac_observation: { label: 'Review recorded ECG assessment decisions', kind: 'procedure', procedures: ['twelve_lead', 'cardiac_monitor'] },
   breathing_support: { label: 'Review recorded breathing-support decisions', kind: 'procedure', procedures: ['oxygen', 'bvm', 'cpap', 'supraglottic_airway', 'intubation'] },
@@ -13,15 +13,15 @@ const OBJECTIVES = {
   resuscitation: { label: 'Review recorded resuscitation decisions', kind: 'procedure', procedures: ['cpr', 'defibrillation'] },
 };
 const REFLECTION = {
-  baseline: {
-    focus: 'Look at what you knew before choosing your first intervention.',
-    questions: ['Which findings shaped your initial plan?', 'What important information was still unknown at that point?'],
-    practice: 'On your next attempt, state the initial findings and the uncertainty behind your plan.',
+  initial_approach: {
+    focus: 'Start with your first recorded decision for each patient, whether or not vitals had appeared yet.',
+    questions: ['What information was available when you chose this approach?', 'What did you still need to learn before committing to treatment?'],
+    practice: 'On your next attempt, make the reasoning behind your opening approach explicit.',
   },
-  reassessment: {
-    focus: 'Compare observations before and after a recorded intervention for the same patient.',
-    questions: ['What changed, and what stayed the same?', 'How did the repeat assessment influence your next decision?'],
-    practice: 'On your next attempt, make your reassessment and the resulting decision explicit.',
+  interventions: {
+    focus: 'Review the treatments and procedures you chose. Automatically updated vitals are context, not evidence of a player-led reassessment.',
+    questions: ['Which patient findings supported each intervention?', 'How did the simulation response affect your next decision?'],
+    practice: 'On your next attempt, connect each intervention to the finding or concern it addresses.',
   },
   handoff: {
     focus: 'Review what you communicated and what the receiving team could infer from it.',
@@ -50,10 +50,9 @@ const REFLECTION = {
   },
 };
 for (const [id, objective] of Object.entries(OBJECTIVES)) {
-  Object.assign(objective, { id, reflection: REFLECTION[id], version: 2, review: { status: 'draft', reviewer: null, date: null } });
+  Object.assign(objective, { id, reflection: REFLECTION[id], version: 3, review: { status: 'draft', reviewer: null, date: null } });
 }
-const CATEGORY_OBJECTIVE = { cardiac: 'cardiac_observation', respiratory: 'breathing_support', trauma: 'hemorrhage', arrest: 'resuscitation' };
-function objectivesForCase(category) {
-  return ['baseline', CATEGORY_OBJECTIVE[category] || 'handoff', 'reassessment'];
+function objectivesForCase() {
+  return ['initial_approach', 'interventions', 'handoff'];
 }
 module.exports = { OBJECTIVES, objectivesForCase };
