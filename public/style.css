@@ -4812,3 +4812,25 @@ body.light-mode {
   #report-btn span { display: none; }
   #report-btn svg { display: block; width: 26px; height: 26px; margin: auto; }
 }
+
+/* Instructor setup follows the menu's window and form treatment. */
+#instructor-panel { margin: 16px 0; padding: 18px; border: 1px solid var(--border, #63778b); background: var(--bg-panel, #16212c); color: var(--text, #dce5ee); }
+#instructor-panel[hidden] { display: none; }
+#instructor-panel h2 { font-size: 20px; margin: 0 0 12px; }
+#instructor-panel h3 { font-size: 17px; margin: 20px 0 10px; }
+#instructor-panel p { font: 14px/1.5 sans-serif; margin: 10px 0; }
+#instructor-panel label { display: flex; flex-direction: column; gap: 6px; font: 14px/1.4 sans-serif; min-width: 0; }
+#instructor-panel input, #instructor-panel textarea, #instructor-panel select { width: 100%; box-sizing: border-box; padding: 8px; font: 14px/1.45 sans-serif; color: inherit; background: var(--bg, #101821); border: 1px solid #748397; }
+#instructor-panel textarea { resize: vertical; }
+#instructor-panel button { padding: 8px 12px; margin: 8px 0; cursor: pointer; }
+.instructor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 12px 0; }
+.instructor-details { font: 14px/1.6 sans-serif; overflow-wrap: anywhere; }
+.instructor-details dt { font-weight: bold; margin-top: 12px; }
+.instructor-details dd { margin: 2px 0 0; white-space: pre-wrap; }
+#instructor-panel summary { padding: 10px 0; cursor: pointer; }
+#instructor-panel .instructor-check { flex-direction: row; align-items: flex-start; margin: 16px 0; }
+#instructor-panel .instructor-check input { width: auto; margin-top: 3px; }
+.instructor-tag { display: inline-block; padding: 3px 7px; border: 1px solid currentColor; font-size: 12px; }
+body.light-mode #instructor-panel { background: #f3f1e8; color: #172a35; }
+body.light-mode #instructor-panel input, body.light-mode #instructor-panel textarea, body.light-mode #instructor-panel select { background: white; }
+@media (max-width: 650px) { .instructor-grid { grid-template-columns: 1fr; } }

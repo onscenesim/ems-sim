@@ -189,7 +189,8 @@ const PracticeUI = (() => {
     tabs.setAttribute('aria-label', 'Learning review views');
     body.append(tabs);
     const panels = {}, tabButtons = {};
-    let active = 'Debrief', selectedTurn = null, filter = 'all';
+    const reviewTab = data.hideDebrief ? 'Instructor review' : 'Debrief';
+    let active = reviewTab, selectedTurn = null, filter = 'all';
     const status = el('footer', undefined, 'review-status');
     status.append(el('strong', 'UNSCORED RECORD'), el('span', 'Procedure outcomes are simulation results, not a grade.'));
     const rows = () => allTurns.filter(t => !patientSelect.value || t.patient === patientSelect.value);
@@ -202,7 +203,7 @@ const PracticeUI = (() => {
       });
       if (focus) tabButtons[name].focus();
     }
-    const names = ['Debrief', 'Timeline', 'Vitals'];
+    const names = [reviewTab, 'Timeline', 'Vitals'];
     names.forEach((name, index) => {
       const tab = button(name, () => activate(name), 'review-tab');
       tab.id = `${id}-${name}-tab`;
@@ -232,8 +233,9 @@ const PracticeUI = (() => {
       if (target) { target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'nearest', behavior: 'auto' }); }
     }
     function renderDebrief() {
-      const panel = panels.Debrief;
+      const panel = panels[reviewTab];
       panel.replaceChildren();
+      if (data.hideDebrief) { panel.append(el('p', 'Turn in this call to your instructor for review.', 'review-intro')); return; }
       if (patientSelect.value) panel.append(el('p', 'The debrief covers the whole call, including every patient.', 'review-intro'));
       if (data.debriefText) panel.append(el('p', debriefNote, 'review-intro'));
       panel.append(debriefContent(data.debriefText || 'No debrief has been generated for this call.'));
@@ -314,14 +316,14 @@ const PracticeUI = (() => {
     section.append(grid);
     return section;
   }
-  function exportText(data) {
+  function exportText(data, { debug = false } = {}) {
     const turns = data?.timeline || [];
     const interventionCount = turns.reduce((count, turn) => count + (turn.procedures || []).filter(procedure => procedure.intervention).length, 0);
     const lines = ['LEARNING REVIEW', '═'.repeat(60), '', 'After-call workspace',
       `${interventionCount} Interventions · ${turns.length} Logged moments`, '',
-      'DEBRIEF', '─'.repeat(60),
-      ...(data?.debriefText ? [debriefNote, ''] : []),
-      data?.debriefText || 'No debrief has been generated for this call.', ''];
+      data?.hideDebrief ? 'INSTRUCTOR REVIEW' : 'DEBRIEF', '─'.repeat(60),
+      ...(data?.debriefText && !data.hideDebrief ? [debriefNote, ''] : []),
+      (data?.hideDebrief ? 'Turn in this call to your instructor for review.' : data?.debriefText) || 'No debrief has been generated for this call.', ''];
     lines.push('TIMELINE', '─'.repeat(60), 'Follow your actions, the scene responses, and recorded attempts.');
     if (!turns.length) lines.push('No entries recorded.');
     for (const turn of turns) {
@@ -336,7 +338,7 @@ const PracticeUI = (() => {
         for (const procedure of procedures) {
           const name = titleCase(procedureName(procedure));
           const result = !procedure.noRoll && procedure.outcome ? ` · ${procedure.outcome}` : '';
-          const meta = procedureMeta(procedure);
+          const meta = debug ? procedureMeta(procedure) : (procedure.administrationRoute ? `Route ${procedure.administrationRoute}` : '');
           lines.push(`  ${name}${result} · ${patientName(procedure.patient)}${meta ? ` · ${meta}` : ''}`);
         }
       }
@@ -358,7 +360,7 @@ const PracticeUI = (() => {
       }
     }
     lines.push('', 'UNSCORED RECORD · Procedure outcomes are simulation results, not a grade.',
-      data?.notice || 'Times mark the end of a turn, not the exact intervention time.');
+      (data?.hideDebrief ? 'Turn in this call to your instructor for review.' : data?.notice) || 'Times mark the end of a turn, not the exact intervention time.');
     return lines.join('\n');
   }
   return { el, learning, timeline, comparison, exportText };

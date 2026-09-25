@@ -10,6 +10,7 @@ const { AGE_GROUPS } = require('../data/ageGroups');
 const { SEASONS, compatibleWeather, caseCompatible, validateCombination } = require('./compatibility');
 const { rollPatientName } = require('../data/patientNames');
 
+const { applyInstructor } = require('./instructor');
 const { randomUUID } = require('node:crypto');
 const { createRandom } = require('./random');
 
@@ -339,24 +340,27 @@ function pickCrew(regionId, history) {
 function rollScenario(opts = {}) {
   const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', user_id = null, history = {}, partner_name = null, captain_name = null, category: requestedCategory = null } = opts;
 
-  const season = opts.season || pickRandom(SEASONS);
+  const instructor = opts.instructor;
+  const season = instructor?.seed.season || opts.season || pickRandom(SEASONS);
   if (!SEASONS.includes(season) || !REGIONS.some(r => r.id === region_id)) throw new Error('Invalid region or season');
   const curveballWeight = CURVEBALL_WEIGHTS[difficulty];
   // Honor an explicit player choice (if it's a selectable category); otherwise
   // pick by weight. A forced choice intentionally bypasses the no-repeat history.
-  const category = (requestedCategory && PLAYER_SELECTABLE_CATEGORIES.has(requestedCategory))
+  const category = instructor?.entry.category || ((requestedCategory && PLAYER_SELECTABLE_CATEGORIES.has(requestedCategory))
     ? requestedCategory
-    : pickCategory(difficulty, history, curveballWeight);
-  const presentation = pickPresentation(category, difficulty, history, region_id, season);
+    : pickCategory(difficulty, history, curveballWeight));
+  const presentation = instructor?.entry || pickPresentation(category, difficulty, history, region_id, season);
 
   if (!presentation) throw new Error(`No eligible presentation for category: ${category}`);
 
-  const ageGroup = rollAgeGroup(category, presentation);
-  const age = rollAgeFromGroup(ageGroup);
+  const forcedAge = instructor?.seed.patient_age;
+  const ageGroup = forcedAge === undefined ? rollAgeGroup(category, presentation)
+    : forcedAge < 18 ? 'pediatric' : forcedAge < 40 ? 'young_adult' : forcedAge < 65 ? 'middle_aged' : 'elderly';
+  const age = forcedAge ?? rollAgeFromGroup(ageGroup);
   const ageDisplay = formatAgeDisplay(ageGroup, age);
-  const sex = rollSex(presentation, category);
+  const sex = instructor?.seed.sex || rollSex(presentation, category);
   const patientName = rollPatientName(sex, random);
-  const trajectory = category === 'doa' ? 'stable' : rollTrajectory(difficulty);
+  const trajectory = instructor?.seed.trajectory || (category === 'doa' ? 'stable' : rollTrajectory(difficulty));
   const decompensationClock = category === 'doa' ? null : rollDecompensationClock(difficulty, trajectory);
   const complication = rollComplication(difficulty);
   const callerBehavior = rollCallerBehavior(category);
@@ -364,9 +368,9 @@ function rollScenario(opts = {}) {
 
   const region = REGIONS.find(r => r.id === region_id);
   const regionLabel = region ? region.id : region_id;
-  const weatherEntry = rollWeather(difficulty, regionLabel, season, presentation);
+  const weatherEntry = rollWeather(difficulty, regionLabel, season, instructor ? {} : presentation);
   const weather = weatherEntry.text;
-  if (!validateCombination(presentation, { region: region_id, season, weather_id: weatherEntry.id })) throw new Error('Incompatible scenario setting');
+  if (!instructor && !validateCombination(presentation, { region: region_id, season, weather_id: weatherEntry.id })) throw new Error('Incompatible scenario setting');
   const specialCircumstance = rollSpecialCircumstance(
     difficulty, category, ageGroup, presentation, trajectory
   );
@@ -381,9 +385,7 @@ function rollScenario(opts = {}) {
     if (override) crew = { partner: crew.partner, captain: override.name };
   }
 
-  const isCurveball = category === 'curveballs';
-
-  return {
+  const seed = {
     scenario_id: randomUUID(),
     case_id: presentation.case_id,
     random_seed: opts.random_seed,
@@ -392,11 +394,12 @@ function rollScenario(opts = {}) {
     timestamp_start: new Date().toISOString(),
     category,
     presentation: presentation.presentation || presentation.surface_presentation,
-    true_diagnosis: isCurveball ? presentation.true_diagnosis : null,
-    reveal_trigger: isCurveball ? presentation.reveal_trigger : null,
+    true_diagnosis: presentation.true_diagnosis || null,
+    reveal_trigger: presentation.reveal_trigger || null,
     // Arrest entries store the case key as `reversible_cause_hint` — reading
     // only `.hint` shipped every arrest scenario with NO hidden case key.
-    hint: presentation.hint || presentation.reversible_cause_hint || null,
+    hint: presentation.hint ?? presentation.reversible_cause_hint ?? null,
+    obvious_death_signs: presentation.obvious_death_signs || null,
     // Arrest entries also seed the arrest rhythm — drive the monitor with it
     // instead of letting the model invent one.
     arrest_rhythm: presentation.rhythm || null,
@@ -441,13 +444,14 @@ function rollScenario(opts = {}) {
     unit_name,
     events: [],
   };
+  return instructor ? applyInstructor(seed, instructor) : seed;
 }
 
 return { rollScenario, PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed, specialCircumstanceEligible };
 }
 const { PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed, specialCircumstanceEligible } = createRoller(Math.random);
 function rollScenario(opts = {}) {
-  const random_seed = opts.random_seed ?? randomUUID();
+  const random_seed = opts.instructor?.seed.random_seed ?? opts.random_seed ?? randomUUID();
   if (typeof random_seed !== 'string' || !random_seed.length || random_seed.length > 128) throw new Error('Invalid random seed');
   return createRoller(createRandom(random_seed)).rollScenario({ ...opts, random_seed });
 }

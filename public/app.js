@@ -987,8 +987,10 @@ async function startScenario(replayOf = null) {
   try {
     const partner_name = partnerSelect ? (partnerSelect.value || null) : null;
     const captain_name = captainSelect ? (captainSelect.value || null) : null;
-    const data = await apiPost('/api/scenario/new', { difficulty, provider_level, region_id, unit_name, partner_name, captain_name, category, ...(replayOf ? { replay_of: replayOf } : {}) });
+    const instructorRequest = replayOf ? {} : InstructorUI.request();
+    const data = await apiPost('/api/scenario/new', { ...instructorRequest, difficulty, provider_level, region_id, unit_name, partner_name, captain_name, category, ...(replayOf ? { replay_of: replayOf } : {}) });
 
+    if (!replayOf) InstructorUI.started();
     if (currentPlayer?.stats) currentPlayer.stats.scenariosStarted += 1;
 
     trackAnalytics('scenario_started', {
@@ -1008,6 +1010,7 @@ async function startScenario(replayOf = null) {
     destinationShown = false;
     localTranscript = {
       meta: {
+        instructor_mode: !!data.instructor_mode, hide_debrief: !!data.hide_debrief,
         scenario_id:    data.scenario_id,
         category:       data.category,
         difficulty:     data.difficulty,
@@ -1015,7 +1018,7 @@ async function startScenario(replayOf = null) {
         region:         data.region,
         patient:        data.patient || null,
       },
-      turns:      [],
+      turns: [{ user: 'begin', assistant: data.reply, scene_minute: data.scene_minute ?? null, rolls: data.rolls || [], vitals: data.vitals || null }],
       debriefText: null,
       patientOutcome: null,
       learningReview: null,
@@ -1543,11 +1546,12 @@ function showDebriefCTA() {
 
   const btn = document.createElement('button');
   btn.id = 'gen-debrief-btn';
-  btn.textContent = 'GENERATE DEBRIEF';
+  const hideDebrief = !!localTranscript?.meta?.hide_debrief;
+  btn.textContent = hideDebrief ? 'PREPARE CALL REVIEW' : 'GENERATE DEBRIEF';
 
   const hint = document.createElement('span');
   hint.className = 'debrief-cta-hint';
-  hint.textContent = 'Scenario complete. Run a full medical director debrief.';
+  hint.textContent = hideDebrief ? 'Turn in this call to your instructor for review.' : 'Scenario complete. Run a full medical director debrief.';
 
   cta.appendChild(btn);
   cta.appendChild(hint);
@@ -1578,6 +1582,7 @@ function showDebriefCTA() {
       });
       cta.remove();
       if (data.learning) { output.appendChild(PracticeUI.learning(data.learning)); scrollBottom(); }
+      if (data.patientOutcome) output.appendChild(PracticeUI.el('p', `OUTCOME · ${data.patientOutcome}`, 'library-outcome'));
       if (data.comparison) output.appendChild(PracticeUI.comparison(data.comparison));
       if (data.practice?.available) {
         const sourceId = sessionId;
@@ -1598,12 +1603,12 @@ function showDebriefCTA() {
       if (err.code === 'operation_cancelled') {
         debriefOperationId = null;
         btn.disabled = false;
-        btn.textContent = 'GENERATE DEBRIEF';
+        btn.textContent = hideDebrief ? 'PREPARE CALL REVIEW' : 'GENERATE DEBRIEF';
         hint.textContent = 'Cancelled. Click to try again.';
       } else {
         if (!['network_error', 'bad_response'].includes(err.code)) debriefOperationId = null;
         btn.disabled = false;
-        btn.textContent = 'GENERATE DEBRIEF';
+        btn.textContent = hideDebrief ? 'PREPARE CALL REVIEW' : 'GENERATE DEBRIEF';
         hint.textContent = `Error: ${err.message}`;
       }
     } finally {
@@ -1634,8 +1639,8 @@ skipBtn.addEventListener('click', () => {
   if (isClosed || skipBtn.disabled || !sessionId) return;
   showConfirm({
     title:        'END CALL?',
-    body:         'Close the call and run the debrief. Do this once you have given your handoff report — or whenever the call is over.',
-    confirmLabel: 'END & DEBRIEF',
+    body:         localTranscript?.meta?.hide_debrief ? 'Close the call and prepare it for instructor review. Do this once you have given your handoff report — or whenever the call is over.' : 'Close the call and run the debrief. Do this once you have given your handoff report — or whenever the call is over.',
+    confirmLabel: localTranscript?.meta?.hide_debrief ? 'END & REVIEW' : 'END & DEBRIEF',
     onConfirm:    () => sendTurn('end scenario'),   // closes server-side → debrief CTA
   });
 });
@@ -1718,11 +1723,16 @@ function showNewScenarioBtn() {
 
   const exportBtn = document.createElement('button');
   exportBtn.className = 'export-btn';
-  exportBtn.textContent = 'EXPORT TRANSCRIPT';
-  exportBtn.addEventListener('click', exportTranscript);
+  exportBtn.textContent = 'Download transcript';
+  exportBtn.addEventListener('click', () => exportTranscript());
+  const debugBtn = document.createElement('button');
+  debugBtn.className = 'export-btn';
+  debugBtn.textContent = 'Debug transcript';
+  debugBtn.addEventListener('click', () => confirmDebugExport(() => exportTranscript(true)));
 
   wrap.appendChild(newBtn);
   wrap.appendChild(exportBtn);
+  wrap.appendChild(debugBtn);
   output.appendChild(wrap);
   scrollBottom();
 }
@@ -2671,7 +2681,11 @@ eightball.addEventListener('animationend', () => eightball.classList.remove('sha
 
 // ── Export transcript ─────────────────────────────────────────────────────
 
-async function exportTranscript() {
+function confirmDebugExport(onConfirm) {
+  showConfirm({ title: 'DEBUG TRANSCRIPT', body: 'Caution: this transcript is messy and includes backend data, hidden scenario details, and engine logs. It is meant for sending to the developer for debugging purposes.', confirmLabel: 'DOWNLOAD DEBUG TRANSCRIPT', onConfirm });
+}
+
+async function exportTranscript(debug = false) {
   if (!localTranscript) return;
   // Pull the server-side seed + engine log so exports carry the ground truth
   // and dice record for post-run analysis. Falls back gracefully if the
@@ -2680,9 +2694,9 @@ async function exportTranscript() {
   if (sessionId) {
     try { backend = await apiGet(`/api/scenario/${sessionId}/transcript`); } catch (_) { /* session gone */ }
   }
-  const text = formatTranscript(localTranscript, backend);
+  const text = formatTranscript(localTranscript, backend, { debug });
   const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  downloadFile(`ems-transcript-${ts}.txt`, text);
+  downloadFile(`ems-${debug ? 'debug-' : ''}transcript-${ts}.txt`, text);
 }
 
 function formatBackendSection(t, backend) {
@@ -2709,7 +2723,7 @@ function formatBackendSection(t, backend) {
     if (Array.isArray(seed.events) && seed.events.length) {
       lines.push('[ENGINE EVENT LOG]');
       for (const ev of seed.events) {
-        const t2 = `T+${(ev.scene_minute ?? 0).toFixed ? ev.scene_minute.toFixed(1) : ev.scene_minute}m`;
+        const t2 = `T+${Number(ev.scene_minute ?? 0).toFixed(1)}m`;
         if (ev.event_type === 'procedure') {
           const dice = ev.dice_roll != null ? ` d20=${ev.dice_roll} vs DC${ev.dc_value} -> ${ev.outcome}` : ` ${ev.outcome || ''}`;
           lines.push(`  ${t2} procedure ${ev.procedure_id}${ev.patient && ev.patient !== 'primary' ? ' [' + ev.patient + ']' : ''}${dice}`);
@@ -2725,8 +2739,9 @@ function formatBackendSection(t, backend) {
   }
 
   lines.push('[PER-TURN CLIENT LOG — rolls, vitals, suppressed mentions]');
-  for (const turn of (t.turns || [])) {
-    const tm = turn.scene_minute != null ? `T+${Math.round(turn.scene_minute)}m` : 'T+?';
+  for (const turn of (backend?.turns || t.turns || [])) {
+    const minute = turn.sceneMinute ?? turn.scene_minute;
+    const tm = minute != null ? `T+${Math.round(minute)}m` : 'T+?';
     lines.push(`  ${tm} > ${(turn.user || '').slice(0, 90)}`);
     for (const r of (turn.rolls || [])) {
       if (r.no_roll) { lines.push(`      roll: ${r.procedure_id} (no roll — routine)`); continue; }
@@ -2765,20 +2780,25 @@ function formatBackendSection(t, backend) {
     lines.push('');
   }
 
+  if (backend?.messages) lines.push('[MODEL MESSAGE LOG]', JSON.stringify(backend.messages, null, 2), '');
   return lines;
 }
 
-function formatTranscript(t, backend) {
-  const { meta, turns, debriefText } = t;
+function formatTranscript(t, backend, { debug = false } = {}) {
+  const { meta, debriefText } = t;
+  const turns = backend?.turns || t.turns;
   const patientOutcome = backend?.patientOutcome || t.patientOutcome;
   const review = backend?.learningReview || t.learningReview;
   const lines = [];
 
   // ── Header ──────────────────────────────────────────────────────────────
-  lines.push('EMS TERMINAL — SCENARIO TRANSCRIPT');
+  lines.push(debug ? 'EMS TERMINAL — DEBUG TRANSCRIPT' : 'EMS TERMINAL — CALL REVIEW');
   lines.push('═'.repeat(60));
   lines.push('');
   if (meta) {
+    if (meta.instructor_mode || backend?.seed?.instructor_mode) lines.push('Instructor mode');
+    if (backend?.seed?.timestamp_start) lines.push(`Call date:      ${new Date(backend.seed.timestamp_start).toLocaleString()}`);
+    if (review && backend?.seed?.presentation) lines.push(`Call:           ${backend.seed.presentation}`);
     lines.push(`Category:       ${(meta.category || '').toUpperCase()}`);
     lines.push(`Difficulty:     ${meta.difficulty || ''}`);
     lines.push(`Provider Level: ${meta.provider_level || ''}`);
@@ -2800,6 +2820,7 @@ function formatTranscript(t, backend) {
 
   if (Array.isArray(turns)) {
     for (const turn of turns) {
+      if ((turn.sceneMinute ?? turn.scene_minute) != null) lines.push(`T+${turn.sceneMinute ?? turn.scene_minute} min`);
       lines.push('> ' + (turn.user || '').split('\n').join('\n  '));
       lines.push('');
       if (turn.assistant) {
@@ -2811,14 +2832,17 @@ function formatTranscript(t, backend) {
 
   // ── Learning Review ──────────────────────────────────────────────────────
   if (review || debriefText) {
-    lines.push(PracticeUI.exportText(review || { debriefText, timeline: [] }), '');
+    lines.push(PracticeUI.exportText(review || { debriefText, timeline: [] }, { debug }), '');
   }
   if (patientOutcome) {
     lines.push('PATIENT OUTCOME', '─'.repeat(60), '', patientOutcome, '');
   }
 
   // ── Backend data (ground truth + engine log) ─────────────────────────────
-  lines.push(...formatBackendSection(t, backend));
+  if (debug) {
+    if (backend?.debriefText) lines.push('DEVELOPER DEBRIEF', backend.debriefText, '');
+    lines.push(...formatBackendSection(t, backend));
+  }
 
   lines.push('─'.repeat(60));
   lines.push('Generated by EMS TERMINAL  |  onscenesim.com');
@@ -2959,6 +2983,7 @@ async function resumeFromSnapshot(snap) {
       }
       output.appendChild(PracticeUI.learning(localTranscript.learningReview || {
         debriefText: snap.debriefText, timeline: [] }));
+      showNewScenarioBtn();
     } else showDebriefCTA();
   } else {
     setLoading(false);
@@ -3762,7 +3787,7 @@ async function showCallLibrary() {
     const select = PracticeUI.el('select');
     select.setAttribute('aria-label', 'Category');
     select.append(new Option('All categories', ''));
-    Object.entries(PLAYER_CATEGORY_LABELS).forEach(([value, name]) => select.append(new Option(name, value)));
+    Object.entries({ ...PLAYER_CATEGORY_LABELS, doa: 'DOA', curveballs: 'Curveballs' }).forEach(([value, name]) => select.append(new Option(name, value)));
     select.value = libraryCategory;
     select.addEventListener('change', () => { libraryCategory = select.value; libraryPage = 0; libraryDeleteSelection.clear(); showCallLibrary(); });
     label.append(select);
@@ -3785,8 +3810,9 @@ async function showCallLibrary() {
       }
       button.append(PracticeUI.el('strong', `${PLAYER_CATEGORY_LABELS[run.category] || run.category} · ${new Date(run.date).toLocaleString()}`),
         PracticeUI.el('span', run.title));
+      if (run.instructorMode) button.append(PracticeUI.el('span', 'Instructor mode', 'instructor-tag'));
       if (run.patientOutcome) button.append(PracticeUI.el('span', `OUTCOME · ${run.patientOutcome}`, 'library-outcome'));
-      button.append(PracticeUI.el('small', `${run.difficulty} · ${run.region} · ${run.debriefed ? 'Debrief available' : run.closed ? 'Completed · no debrief yet' : 'In progress'}`));
+      button.append(PracticeUI.el('small', `${run.difficulty} · ${run.region} · ${run.hideDebrief && run.closed ? 'Instructor review' : run.debriefed ? 'Debrief available' : run.closed ? 'Completed · no debrief yet' : 'In progress'}`));
       libraryContent.append(button);
     }
     if (libraryPage > 0) libraryContent.append(libraryButton('Previous page', () => { libraryPage--; showCallLibrary(); }));
@@ -3805,6 +3831,8 @@ async function showSavedCall(id) {
     libraryContent.replaceChildren(libraryButton('Back to calls', showCallLibrary), PracticeUI.el('h2', run.title),
       PracticeUI.el('p', `${new Date(run.date).toLocaleString()} · ${run.category} · ${run.difficulty} · ${run.region}`),
       PracticeUI.el('p', run.caseId ? `Case ${run.caseId} · Seed ${run.randomSeed}` : 'Legacy call — no saved replay setup.'));
+    if (run.instructorMode) libraryContent.append(PracticeUI.el('span', 'Instructor mode', 'instructor-tag'));
+    if (run.patientOutcome) libraryContent.append(PracticeUI.el('p', `OUTCOME · ${run.patientOutcome}`, 'library-outcome'));
     if (run.learning) libraryContent.append(PracticeUI.learning(run.learning));
     if (run.comparison) libraryContent.append(PracticeUI.comparison(run.comparison));
     if (run.replayAvailable) libraryContent.append(libraryButton('Practice this case again', async event => {
@@ -3823,10 +3851,16 @@ async function showSavedCall(id) {
         const saved = await apiGet(`/api/scenario/runs/${encodeURIComponent(id)}/transcript`);
         const review = saved.learning ? `\n\n${PracticeUI.exportText(saved.learning)}` : '';
         const outcome = saved.patientOutcome ? `\n\nPATIENT OUTCOME\n${saved.patientOutcome}` : '';
-        downloadFile(`ems-call-${id}.txt`, `${saved.title}\n${saved.date}\n\n${saved.turns.map(t => `T+${t.minute ?? '?'} min\nYOU: ${t.action}\nSCENE: ${t.response}`).join('\n\n')}${review}${outcome}`);
+        downloadFile(`ems-call-${id}.txt`, `${saved.title}\n${saved.date}\n${saved.category} · ${saved.difficulty} · ${saved.region}${saved.instructorMode ? '\nInstructor mode' : ''}\n\n${saved.turns.map(t => `T+${t.minute ?? '?'} min\nYOU: ${t.action}\nSCENE: ${t.response}`).join('\n\n')}${review}${outcome}`);
       } catch (err) { libraryContent.append(PracticeUI.el('p', `Download failed: ${err.message}`)); }
       finally { button.disabled = false; }
     }));
+    libraryContent.append(libraryButton('Debug transcript', () => confirmDebugExport(async () => {
+      try {
+        const backend = await apiGet(`/api/scenario/${encodeURIComponent(id)}/transcript`);
+        downloadFile(`ems-debug-call-${id}.txt`, formatTranscript({ meta: { category: run.category, difficulty: run.difficulty, region: run.region, instructor_mode: run.instructorMode }, turns: run.transcript.map(t => ({ user: t.action, assistant: t.response, scene_minute: t.minute })) }, backend, { debug: true }));
+      } catch (err) { libraryContent.append(PracticeUI.el('p', `Download failed: ${err.message}`)); }
+    })));
     libraryDialog.scrollTop = 0;
   } catch (err) {
     if (request === libraryRequest && libraryDialog.open) libraryContent.replaceChildren(libraryButton('Back to calls', showCallLibrary), PracticeUI.el('p', `Could not open call: ${err.message}`));

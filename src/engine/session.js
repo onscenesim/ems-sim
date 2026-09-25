@@ -1,6 +1,7 @@
 'use strict';
 
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
+const { reviewText } = require('./instructor');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, getProcedure, PRECHARGE_RE } = require('./dice');
@@ -1086,6 +1087,7 @@ class Session {
    */
   getTranscriptData() {
     return {
+      turns:        this.turns,
       seed:         this.seed,
       // The fully-assembled seed block — literally everything injected into the
       // model's system prompt for this run. Exported verbatim for analysis.
@@ -1095,7 +1097,8 @@ class Session {
       patientOutcome: this.patientOutcome || null,
       learningReview: this.closed ? {
         ...(this.learningReview?.version >= 5 ? this.learningReview : evaluateObjectives(this.seed, this.turns)),
-        debriefText: this.debriefText || null,
+        debriefText: reviewText(this),
+        hideDebrief: !!this.seed.hide_debrief,
       } : null,
     };
   }

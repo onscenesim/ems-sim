@@ -63,6 +63,7 @@ function assembleSeedBlock(seed) {
   if (seed.arrest_rhythm) {
     lines.push(`Arrest rhythm (hidden — this is what the monitor shows when leads go on): ${seed.arrest_rhythm}`);
   }
+  if (seed.obvious_death_signs) lines.push(`Observable death signs: ${seed.obvious_death_signs}`);
   if (seed.special_flags) {
     lines.push(`Special flags: ${seed.special_flags}`);
   }

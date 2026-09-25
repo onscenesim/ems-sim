@@ -210,6 +210,17 @@ const MEDICATION_ALIASES = {
     "ketamine drip",
     "ketamine infusion"
   ],
+  "Haloperidol": [
+    "haldol",
+    "haloperidol"
+  ],
+  "B52": [
+    "b52",
+    "b-52",
+    "b 52",
+    "b52 cocktail",
+    "b-52 cocktail"
+  ],
   "Midazolam": [
     "versed",
     "midazolam",

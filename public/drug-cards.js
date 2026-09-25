@@ -469,6 +469,36 @@ const DRUG_CARDS = [
   },
 
   {
+    name: 'Haloperidol',
+    drugClass: 'sedation',
+    synonyms: ['haldol', 'haloperidol'],
+    doses: [
+      {
+        indication: 'Acute Agitation / Chemical Restraint',
+        dose: '5 mg IM',
+        route: 'IM',
+        notes: 'Antipsychotic used for severe agitation. Monitor mental status, airway, blood pressure, and ECG when available; dystonia and QT prolongation are possible. Follow local protocol and use de-escalation when safe.',
+      },
+    ],
+    packaging: '5 mg/mL — 1 mL (5 mg) vials',
+  },
+
+  {
+    name: 'B52',
+    drugClass: 'sedation',
+    synonyms: ['b52', 'b-52', 'b 52', 'b52 cocktail', 'b-52 cocktail'],
+    doses: [
+      {
+        indication: 'Acute Severe Agitation / Chemical Restraint',
+        dose: 'Diphenhydramine (Benadryl) 50 mg + Haloperidol (Haldol) 5 mg + Lorazepam (Ativan) 2 mg',
+        route: 'IM',
+        notes: 'Combination used for rapid control of severe agitation when indicated by local protocol. Monitor airway, respiratory rate, SpO₂, blood pressure, and level of consciousness continuously; avoid stacking sedatives without reassessment.',
+      },
+    ],
+    packaging: 'Diphenhydramine 50 mg/mL — 1 mL vial; haloperidol 5 mg/mL — 1 mL vial; lorazepam 2 mg/mL — 1 mL vial',
+  },
+
+  {
     name: 'Midazolam',
     drugClass: 'sedation',
     synonyms: ['midazolam', 'versed'],

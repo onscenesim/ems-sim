@@ -2,6 +2,7 @@
 
 const { evaluateObjectives, decisionTimeline } = require('../../engine/learning');
 const { normalizePatientOutcome } = require('../../engine/prompts/debrief');
+const { catalog, scenarioFields, seedFields, prepareInstructor, reviewText } = require('../../engine/instructor');
 const express = require('express');
 const router  = express.Router();
 const { randomUUID } = require('node:crypto');
@@ -123,7 +124,8 @@ function currentLearningReview(run) {
     : evaluateObjectives(run.seed, run.turns);
   return {
     ...review,
-    debriefText: run.debriefText || null,
+    debriefText: reviewText(run),
+    hideDebrief: !!run.seed.hide_debrief,
   };
 }
 
@@ -149,8 +151,11 @@ router.get('/status', (_req, res) => {
   res.json({ scenarios_remaining: null, free_daily_limit: null });
 });
 
+router.get('/instructor/catalog', (_req, res) => res.json({ scenarios: catalog(), scenarioFields, seedFields }));
+
 function runSummary(run) {
   return {
+    instructorMode: !!run.seed.instructor_mode, hideDebrief: !!run.seed.hide_debrief,
     id: run.id, caseId: run.seed.case_id || null,
     category: run.seed.category, date: run.seed.timestamp_start,
     difficulty: run.seed.difficulty, region: run.seed.region,
@@ -198,7 +203,7 @@ router.delete('/runs', (req, res) => {
 router.get('/runs/:runId', (req, res) => {
   const run = playerRun(req, res);
   if (!run) return;
-  return res.json({ ...runSummary(run), debrief: run.debriefText || null,
+  return res.json({ ...runSummary(run), debrief: reviewText(run),
     randomSeed: run.seed.random_seed || null,
     learning: run.closed ? currentLearningReview(run) : null,
     comparison: run.closed ? runComparison(req, run) : null,
@@ -208,7 +213,7 @@ router.get('/runs/:runId', (req, res) => {
 router.get('/runs/:runId/transcript', (req, res) => {
   const run = playerRun(req, res);
   if (!run) return;
-  return res.json({ ...runSummary(run), debrief: run.debriefText || null,
+  return res.json({ ...runSummary(run), debrief: reviewText(run),
     learning: run.closed ? currentLearningReview(run) : null,
     turns: (run.turns || []).map(t => ({ minute: t.sceneMinute ?? null, action: t.user || '', response: t.assistant || '' })),
   });
@@ -331,7 +336,10 @@ router.get('/resume', (req, res) => {
     session: {
       session_id:   sid,
       savedAt:      snapshot.savedAt     || null,
-      meta:         snapshot.meta,
+      meta:         { ...snapshot.meta, instructor_mode: !!snapshot.seed.instructor_mode, hide_debrief: !!snapshot.seed.hide_debrief },
+      debriefText: snapshot.debriefText ? reviewText(snapshot) : null,
+      learningReview: snapshot.closed ? currentLearningReview(snapshot) : null,
+      patientOutcome: snapshot.patientOutcome || null,
       crew:         snapshot.crew,
       tier:         snapshot.tier,
       turns:        snapshot.turns       || [],
@@ -373,6 +381,11 @@ router.post('/new', async (req, res) => {
     if (!canReadRun(req, replay)) return res.status(404).json({ error: 'run_not_found', message: 'Saved call unavailable.' });
     if (!replay.closed || !replay.debriefText || !replay.initialSeed) return res.status(409).json({ error: 'replay_unavailable', message: 'Replay requires a completed, debriefed call with a saved initial setup.' });
   }
+  let instructor = null;
+  if (!replay && req.body.instructor !== undefined) {
+    try { instructor = prepareInstructor(req.body.instructor); }
+    catch (err) { return res.status(400).json({ error: 'invalid_instructor_config', message: err.message }); }
+  }
   const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name, partner_name = null, captain_name = null, category = null } = req.body;
 
   if (!Object.hasOwn(DIFFICULTY_POOL, difficulty) || !['BLS', 'ALS'].includes(provider_level)
@@ -393,7 +406,7 @@ router.post('/new', async (req, res) => {
     const existingOwner = getCookie(req, OWNER_COOKIE_NAME);
     const ownerId = existingOwner && /^[a-zA-Z0-9_-]{16,80}$/.test(existingOwner)
       ? existingOwner : randomUUID();
-    const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null, replay_seed: replay?.initialSeed || null }, userId, tier);
+    const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null, instructor, replay_seed: replay?.initialSeed || null }, userId, tier);
     createdId = id;
     const session = getSession(id);
     session.ownerId = ownerId;
@@ -415,6 +428,7 @@ router.post('/new', async (req, res) => {
       userId,
       tier,
       meta: {
+        instructor_mode: !!seed.instructor_mode, hide_debrief: !!seed.hide_debrief,
         scenario_id:    seed.scenario_id,
         category:       seed.category,
         difficulty:     seed.difficulty,
@@ -438,6 +452,7 @@ router.post('/new', async (req, res) => {
 
     return res.json({
       session_id:          id,
+      instructor_mode: !!seed.instructor_mode, hide_debrief: !!seed.hide_debrief,
       scenario_id:         seed.scenario_id,
       case_id: seed.case_id,
       random_seed: seed.random_seed,
@@ -594,12 +609,15 @@ router.post('/:id/debrief', async (req, res) => {
   }
 
   try {
-    const payload = await operationsFor(session).run(operation_id, 'debrief', async signal => ({
-      operation_id, debrief: await session.debrief({ signal }),
-      patientOutcome: session.patientOutcome || null,
-      learning: currentLearningReview(session),
-      practice: { available: !!session.initialSeed, caseId: session.seed.case_id || null, randomSeed: session.seed.random_seed || null },
-    }));
+    const payload = await operationsFor(session).run(operation_id, 'debrief', async signal => {
+      await session.debrief({ signal });
+      return {
+        operation_id, debrief: reviewText(session),
+        patientOutcome: session.patientOutcome || null,
+        learning: currentLearningReview(session),
+        practice: { available: !!session.initialSeed, caseId: session.seed.case_id || null, randomSeed: session.seed.random_seed || null },
+      };
+    });
     if (session.playerId && !session.debriefCredited) {
       recordDebriefGenerated(session.playerId);
       session.debriefCredited = true;

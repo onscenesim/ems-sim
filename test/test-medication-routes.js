@@ -105,6 +105,8 @@ test('drug and formulation defaults select artwork without prescribing a route',
     ['Narcan','IN'],['naloxone','IN'],['oral glucose','PO'],
     ['activated charcoal','PO'],['charcoal','PO'],['Actidose','PO'],
     ['albuterol','NEB'],['DuoNeb','NEB'],['levalbuterol','NEB'],['racemic epi','NEB'],
+    ['versed','IM'],['midazolam','IM'],['haldol','IM'],['haloperidol','IM'],
+    ['ketamine','IM'],['B52','IM'],['b-52 cocktail','IM'],
   ]) {
     const text=`Give ${drug}.`;
     for (const rolls of [medications(text),detectAllAndRoll(text).filter(r=>r.procedure_id==='medication_push')]) {
@@ -132,4 +134,15 @@ test('explicit routes override defaults and unsupported or ambiguous routes bloc
   }
   const mixed=medications('Give aspirin and Narcan Intravenous and albuterol.');
   assert.deepEqual(Object.fromEntries(mixed.map(r=>[r.matched_drug.toLowerCase(),r.medication_animation_route])),{aspirin:'PO',narcan:'IV',albuterol:'NEB'});
+});
+
+test('explicit routes override IM animation defaults', () => {
+  for (const [text, route] of [
+    ['Give Versed IV.', 'IV'], ['Give Haldol PO.', 'PO'],
+    ['Give ketamine IN.', 'IN'], ['Give B52 IV.', 'IV'],
+  ]) {
+    const [roll] = medications(text);
+    assert.equal(roll.administration_route, route, text);
+    assert.equal(roll.medication_animation_route, route, text);
+  }
 });

@@ -59,6 +59,8 @@ const MEDICATION_ANIMATION_DEFAULTS = new Map([
   ['Nitroglycerin', 'PO'], ['Aspirin', 'PO'], ['Naloxone', 'IN'],
   ['Oral Glucose', 'PO'], ['Activated Charcoal', 'PO'],
   ['Albuterol / DuoNeb', 'NEB'], ['Levalbuterol', 'NEB'],
+  ['Midazolam', 'IM'], ['Haloperidol', 'IM'], ['Ketamine', 'IM'],
+  ['B52', 'IM'],
 ]);
 
 function medicationPresentationAt(text, start, length, medication, matchedKey) {

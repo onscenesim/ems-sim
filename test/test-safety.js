@@ -105,6 +105,24 @@ test('same-turn suction lowers intubation DC and mainstem obstruction gets its o
   assert.equal(rollProcedure('intubation', { suction_assisted: true }).dc, 8);
 });
 
+test('ongoing and pronoun suction orders trigger suctioning', () => {
+  for (const phrase of [
+    'Continue suctioning.', 'continue suction', 'keep suctioning the airway',
+    'suction them', 'suction her mouth', 'suction him',
+  ]) {
+    assert.deepEqual(detectWithConfirmation(phrase).rolls.map(r => r.procedure_id), ['suction'], phrase);
+  }
+});
+
+test('singular and plural needle decompression orders trigger one NCD roll', () => {
+  for (const phrase of [
+    'Perform needle decompression', 'Perform needle decompressions',
+    'Perform bilateral needle decompression', 'Perform bilateral needle decompressions',
+  ]) {
+    assert.deepEqual(detectWithConfirmation(phrase).rolls.map(r => r.procedure_id), ['needle_decompression'], phrase);
+  }
+});
+
 test('typos still work and context survives consumption of longer matches', () => {
   assert.equal(normalizeForDetection('give epinephrin'), 'give epinephrine');
   for (const phrase of ['No wound packing.', 'If needed, give epi.', 'We gave epinephrine.', 'Stop CPR.']) {
