@@ -249,6 +249,11 @@ let localTranscript = null;   // built client-side so export never hits the serv
 let scenarioStartTime = null; // Date.now() when the current scenario started
 let currentPlayer = null;
 
+// No player name, email, scenario ID, or clinical text is sent to analytics.
+function trackAnalytics(eventName, parameters) {
+  window.EMSAnalytics?.track(eventName, parameters);
+}
+
 // ── Input history (↑ / ↓ arrow keys) ───────────────────────────────────
 
 const history = [];
@@ -986,6 +991,14 @@ async function startScenario(replayOf = null) {
 
     if (currentPlayer?.stats) currentPlayer.stats.scenariosStarted += 1;
 
+    trackAnalytics('scenario_started', {
+      difficulty: data.difficulty,
+      provider_level: data.provider_level,
+      region: data.region,
+      category: data.category,
+      replay: Boolean(data.replay_of),
+    });
+
     resetToStart(false);
     resetVitals();
     sessionId      = data.session_id;
@@ -1557,6 +1570,12 @@ function showDebriefCTA() {
         localTranscript.patientOutcome = data.patientOutcome || null;
         localTranscript.learningReview = data.learning || null;
       }
+      trackAnalytics('scenario_completed', {
+        difficulty: localTranscript?.meta?.difficulty,
+        provider_level: localTranscript?.meta?.provider_level,
+        region: localTranscript?.meta?.region,
+        category: localTranscript?.meta?.category,
+      });
       cta.remove();
       if (data.learning) { output.appendChild(PracticeUI.learning(data.learning)); scrollBottom(); }
       if (data.comparison) output.appendChild(PracticeUI.comparison(data.comparison));

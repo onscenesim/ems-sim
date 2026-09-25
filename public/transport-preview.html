@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transport animation preview</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .preview-controls { position: fixed; z-index: 200; top: 12px; left: 12px; display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100vw - 24px); }
+    .preview-controls button { padding: 7px 10px; font: 13px monospace; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="preview-controls">
+    <button data-scene="loading" data-mode="start">Loading start</button>
+    <button data-scene="loading" data-mode="play">Play loading</button>
+    <button data-scene="loading" data-mode="end">Loading end</button>
+    <button data-scene="depart" data-mode="start">Transport start</button>
+    <button data-scene="depart" data-mode="play">Play transport</button>
+    <button data-scene="depart" data-mode="end">Transport end</button>
+  </div>
+  <script>
+    (async () => {
+      const source = new DOMParser().parseFromString(await (await fetch('index.html')).text(), 'text/html');
+      document.body.append(document.importNode(source.querySelector('svg.procedure-defs'), true));
+      for (const id of ['loading', 'depart']) {
+        document.body.append(document.importNode(source.getElementById(`${id}-overlay`), true));
+      }
+      let timer;
+      document.querySelector('.preview-controls').addEventListener('click', event => {
+        const { scene, mode } = event.target.dataset;
+        if (!scene) return;
+        clearTimeout(timer);
+        for (const id of ['loading', 'depart']) {
+          document.getElementById(`${id}-overlay`).classList.remove('visible', 'is-fading');
+        }
+        const overlay = document.getElementById(`${scene}-overlay`);
+        const travel = scene === 'loading' ? 2200 : 1100;
+        overlay.style.setProperty('--transport-travel', `${travel}ms`);
+        overlay.style.setProperty('--transport-start', mode === 'start' ? '100000ms' : mode === 'end' ? `${-travel}ms` : scene === 'loading' ? '100ms' : '700ms');
+        overlay.style.setProperty('--transport-fade', scene === 'loading' ? '220ms' : '250ms');
+        void overlay.offsetWidth;
+        overlay.classList.add('visible');
+        if (mode === 'play') {
+          timer = setTimeout(() => overlay.classList.add('is-fading'), scene === 'loading' ? 2600 : 1800);
+        }
+      });
+      document.querySelector('[data-scene="loading"][data-mode="start"]').click();
+    })();
+  </script>
+</body>
+</html>

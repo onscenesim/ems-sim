@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
   <link rel="stylesheet" href="practice.css?v=9">
+  <script src="/analytics-config.js"></script>
+  <script src="/analytics.js?v=1"></script>
 </head>
 <body>
 
@@ -499,51 +501,50 @@
       <svg id="loading-svg" viewBox="0 0 360 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs><clipPath id="loading-viewport"><rect x="1" y="1" width="358" height="188" rx="5"/></clipPath></defs>
         <g clip-path="url(#loading-viewport)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="1" y="1" width="358" height="188" rx="5" fill="#bcc6c7" stroke="none"/>
-          <g id="loading-background" stroke="#6d8388" stroke-width="1.5" opacity="0.5">
+          <rect x="1" y="1" width="358" height="188" rx="5" fill="#d7d5cf" stroke="none"/>
+          <g id="loading-background" stroke="#8b918f" stroke-width="1.5" opacity="0.55">
             <path d="M-140 129 H570 M-140 35 H570 M-70 35 V129 M100 35 V129 M270 35 V129 M440 35 V129"/>
-            <path d="M-40 54 H69 V105 H-40 Z M130 54 H239 V105 H130 Z M300 54 H409 V105 H300 Z M470 54 H579 V105 H470 Z" fill="#a3b7bd"/>
-            <path d="M-25 61 H55 M145 61 H225 M315 61 H395 M485 61 H565" stroke="#e2e9e8"/>
+            <path d="M-40 54 H69 V105 H-40 Z M130 54 H239 V105 H130 Z M300 54 H409 V105 H300 Z M470 54 H579 V105 H470 Z"/>
+            <path d="M-25 61 H55 M145 61 H225 M315 61 H395 M485 61 H565"/>
           </g>
-          <path d="M0 170 H360" stroke="#52636a" stroke-width="2"/>
-          <g id="loading-ground" stroke="#718188" stroke-width="2" opacity="0.65">
+          <path d="M0 170 H360" stroke="#596367" stroke-width="2"/>
+          <g id="loading-ground" stroke="#89908d" stroke-width="2" opacity="0.65">
             <path d="M-100 179 H-62 M-10 179 H28 M80 179 H118 M170 179 H208 M260 179 H298 M350 179 H388 M440 179 H478 M530 179 H568"/>
           </g>
           <g id="loading-cart">
             <g id="loading-platform" stroke-width="2.4">
               <!-- Smaller shared upper body leaves room for legs on the mattress. -->
-              <g id="loading-patient" stroke="#43535b" stroke-width="1.5">
+              <g id="loading-patient" stroke="#465157" stroke-width="1.5">
                 <g transform="translate(120 34) scale(0.42)" stroke-width="2.8">
                   <use href="#procedure-patient-body"/><use href="#procedure-patient-head"/>
                 </g>
                 <!-- Tapered trouser legs, a subtle seam, and simple feet. -->
                 <path d="M133 95 Q115 92 97 95 L65 98 L60 89 Q56 87 54 91 L53 102 H133"
-                  fill="#80949d"/>
+                  fill="#737f82" fill-opacity="0.2"/>
                 <path d="M126 99 L70 101 M61 99 L59 102" opacity="0.65"/>
               </g>
-              <path d="M42 103 H278 Q286 103 286 109 V115 H35 V109 Q35 103 42 103 Z" fill="#527f91" stroke="#294f61"/>
-              <path d="M41 107 H279" stroke="#a9c7d0" stroke-width="1.5"/>
-              <path d="M119 94 L123 105 H132 L130 94 M202 83 L205 105 H214 L212 83" fill="#394f5b" stroke="#394f5b" stroke-width="1.5"/>
-              <path d="M72 105 V90 Q72 86 77 86 H177 Q182 86 182 90 V105 M78 92 H175" stroke="#486371"/>
-              <path d="M35 110 H24 V102 M286 110 H298 V102" stroke="#4b606c"/>
-              <path d="M80 117 L250 147 M249 117 L79 147" stroke="#a57530" stroke-width="6"/>
-              <path d="M87 119 L243 145 M242 119 L86 145" stroke="#d5b976" stroke-width="1.5"/>
-              <circle cx="165" cy="132" r="4" fill="#607480"/>
-              <path d="M80 147 H250 M80 147 V159 M250 147 V159" stroke="#425968" stroke-width="4"/>
-              <path d="M153 129 L203 120" stroke="#526c79" stroke-width="4"/>
+              <path d="M42 103 H278 Q286 103 286 109 V115 H35 V109 Q35 103 42 103 Z" fill="#6b8589" fill-opacity="0.16" stroke="#46575d"/>
+              <path d="M41 107 H279" stroke="#64858d" stroke-width="1.5"/>
+              <path d="M119 94 L123 105 H132 L130 94 M202 83 L205 105 H214 L212 83" stroke="#465157" stroke-width="1.5"/>
+              <path d="M72 105 V90 Q72 86 77 86 H177 Q182 86 182 90 V105 M78 92 H175" stroke="#59666a"/>
+              <path d="M35 110 H24 V102 M286 110 H298 V102" stroke="#59666a"/>
+              <path d="M80 117 L250 147 M249 117 L79 147" stroke="#586368" stroke-width="3"/>
+              <circle cx="165" cy="132" r="4" fill="#7d9393"/>
+              <path d="M80 147 H250 M80 147 V159 M250 147 V159" stroke="#465157" stroke-width="3"/>
+              <path d="M153 129 L203 120" stroke="#59666a" stroke-width="3"/>
             </g>
             <g transform="translate(80 160)">
-              <circle r="10" fill="#334550" stroke="#243943" stroke-width="2"/>
-              <g class="loading-wheel" stroke="#bed0d5" stroke-width="1.8">
+              <circle r="10" fill="#c7c8c3" stroke="#465157" stroke-width="2"/>
+              <g class="loading-wheel" stroke="#667276" stroke-width="1.8">
                 <circle r="6"/><path d="M0 -6 V6 M-6 0 H6 M-4 -4 L4 4"/>
-                <circle r="1.5" fill="#bed0d5" stroke="none"/>
+                <circle r="1.5" fill="#667276" stroke="none"/>
               </g>
             </g>
             <g transform="translate(250 160)">
-              <circle r="10" fill="#334550" stroke="#243943" stroke-width="2"/>
-              <g class="loading-wheel" stroke="#bed0d5" stroke-width="1.8">
+              <circle r="10" fill="#c7c8c3" stroke="#465157" stroke-width="2"/>
+              <g class="loading-wheel" stroke="#667276" stroke-width="1.8">
                 <circle r="6"/><path d="M0 -6 V6 M-6 0 H6 M-4 -4 L4 4"/>
-                <circle r="1.5" fill="#bed0d5" stroke="none"/>
+                <circle r="1.5" fill="#667276" stroke="none"/>
               </g>
             </g>
           </g>
@@ -1770,52 +1771,51 @@
         <svg id="depart-svg" viewBox="0 0 360 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs><clipPath id="depart-viewport"><rect x="1" y="1" width="358" height="188" rx="5"/></clipPath></defs>
           <g clip-path="url(#depart-viewport)" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">
-            <rect x="1" y="1" width="358" height="188" rx="5" fill="#bac8ce" stroke="none"/>
-            <g id="depart-background" stroke="#718b96" stroke-width="1.5" opacity="0.6">
-              <path d="M-90 132 V67 H-20 V132 M-12 132 V39 H69 V132 M85 132 V57 H150 V132 M169 132 V29 H250 V132 M268 132 V69 H335 V132 M349 132 V45 H428 V132 M446 132 V62 H524 V132" fill="#a9bbc0"/>
-              <path d="M0 57 H55 M0 76 H55 M0 95 H55 M183 49 H235 M183 70 H235 M183 91 H235 M363 65 H414 M363 86 H414" stroke-dasharray="9 9" stroke-width="5" opacity="0.6"/>
+            <rect x="1" y="1" width="358" height="188" rx="5" fill="#d7d5cf" stroke="none"/>
+            <g id="depart-background" stroke="#89908d" stroke-width="1.5" opacity="0.55">
+              <path d="M-90 132 V67 H-20 V132 M-12 132 V39 H69 V132 M85 132 V57 H150 V132 M169 132 V29 H250 V132 M268 132 V69 H335 V132 M349 132 V45 H428 V132 M446 132 V62 H524 V132"/>
+              <path d="M0 57 H55 M0 76 H55 M0 95 H55 M183 49 H235 M183 70 H235 M183 91 H235 M363 65 H414 M363 86 H414" stroke-dasharray="9 9" stroke-width="3" opacity="0.7"/>
             </g>
-            <path d="M0 169 H360 V190 H0 Z" fill="#9daeb5" stroke="none"/>
-            <path d="M0 168 H360" stroke="#526671" stroke-width="2"/>
-            <g id="depart-road" stroke="#e1e7e7" stroke-width="3">
+            <path d="M0 168 H360" stroke="#596367" stroke-width="2"/>
+            <g id="depart-road" stroke="#929994" stroke-width="2" opacity="0.7">
               <path d="M-80 181 H-41 M10 181 H49 M100 181 H139 M190 181 H229 M280 181 H319 M370 181 H409 M460 181 H499 M550 181 H589"/>
             </g>
             <g id="depart-car">
-              <g id="depart-body" stroke="#334f60" stroke-width="2.1">
+              <g id="depart-body" stroke="#465157" stroke-width="2.1">
                 <!-- Suspension moves the body; the tires stay on the road. -->
-                <path d="M62 64 Q62 60 67 60 H195 V140 H62 Z" fill="#dce3df"/>
-                <path d="M195 83 H230 Q237 83 242 91 L258 114 L293 120 Q301 123 301 132 V142 H195 Z" fill="#dce3df"/>
-                <path d="M64 118 H248 L260 123 H298 V131 H64 Z" fill="#416e86" stroke="none"/>
+                <path d="M62 64 Q62 60 67 60 H195 V140 H62 Z" fill="#e1e0da"/>
+                <path d="M195 83 H230 Q237 83 242 91 L258 114 L293 120 Q301 123 301 132 V142 H195 Z" fill="#e1e0da"/>
+                <path d="M64 121 H250 L261 125 H298" fill="none" stroke="#66858b" stroke-width="2"/>
                 <path d="M76 64 V135 M87 66 H181 V109 H87 Z" stroke-width="1.2"/>
                 <path d="M82 87 V99 M90 134 H180 M153 112 V117" stroke-width="2"/>
-                <path d="M202 91 H229 Q232 91 235 96 L246 112 H202 Z" fill="#739cab"/>
-                <path d="M209 94 H226 L236 109" stroke="#b6d0d6" stroke-width="1.5"/>
+                <path d="M202 91 H229 Q232 91 235 96 L246 112 H202 Z" fill="#718c91" fill-opacity="0.18"/>
+                <path d="M209 94 H226 L236 109" stroke="#80999c" stroke-width="1.5"/>
                 <path d="M199 86 V137 M221 117 H229 M249 105 H256 V115"/>
                 <path d="M70 140 H297" stroke-width="5"/>
-                <path d="M90 142 A22 22 0 0 1 134 142 M242 142 A22 22 0 0 1 286 142" fill="#a6b7bd"/>
-                <rect x="291" y="122" width="10" height="7" rx="2" fill="#efe1ac"/>
+                <path d="M90 142 A22 22 0 0 1 134 142 M242 142 A22 22 0 0 1 286 142" fill="#c5c8c3"/>
+                <rect x="291" y="122" width="10" height="7" rx="2" fill="#c9b98a" fill-opacity="0.7"/>
                 <path d="M299 136 H307 V143 H293 M58 134 H67" stroke-width="3"/>
-                <rect x="87" y="52" width="53" height="7" rx="2" fill="#546c7a"/>
-                <path d="M91 55 H108" stroke="#aa4f4c" stroke-width="4"/>
-                <path d="M120 55 H136" stroke="#487da0" stroke-width="4"/>
-                <g transform="translate(132 87)" stroke="#416e86" stroke-width="6">
+                <rect x="87" y="52" width="53" height="7" rx="2" fill="#c4c6c1"/>
+                <path d="M91 55 H108" stroke="#9e6866" stroke-width="3"/>
+                <path d="M120 55 H136" stroke="#64858e" stroke-width="3"/>
+                <g transform="translate(132 87)" stroke="#64858e" stroke-width="4">
                   <path d="M0 -13 V13 M-11 -6.5 L11 6.5 M-11 6.5 L11 -6.5"/>
-                  <path d="M0 -7 V7" stroke="#e2eceb" stroke-width="1.4"/>
+                  <path d="M0 -7 V7" stroke="#d4ddd9" stroke-width="1.4"/>
                 </g>
-                <text x="91" y="128" fill="#e8eeee" stroke="none" font-family="monospace" font-size="8" letter-spacing="1">EMS</text>
+                <text x="151" y="128" fill="#465157" stroke="none" font-family="monospace" font-size="8" letter-spacing="1">EMS</text>
               </g>
               <g transform="translate(112 150)">
-                <circle r="18" fill="#2b3e49" stroke="#203541" stroke-width="2"/>
-                <g class="depart-wheel" stroke="#becfd5" stroke-width="2">
-                  <circle r="11" fill="#607785"/><path d="M0 -10 V10 M-10 0 H10 M-7 -7 L7 7"/>
-                  <circle r="3" fill="#c8d8db" stroke="none"/>
+                <circle r="18" fill="#c3c6c1" stroke="#465157" stroke-width="2"/>
+                <g class="depart-wheel" stroke="#667276" stroke-width="2">
+                  <circle r="11" fill="#d7d5cf"/><path d="M0 -10 V10 M-10 0 H10 M-7 -7 L7 7"/>
+                  <circle r="3" fill="#667276" stroke="none"/>
                 </g>
               </g>
               <g transform="translate(264 150)">
-                <circle r="18" fill="#2b3e49" stroke="#203541" stroke-width="2"/>
-                <g class="depart-wheel" stroke="#becfd5" stroke-width="2">
-                  <circle r="11" fill="#607785"/><path d="M0 -10 V10 M-10 0 H10 M-7 -7 L7 7"/>
-                  <circle r="3" fill="#c8d8db" stroke="none"/>
+                <circle r="18" fill="#c3c6c1" stroke="#465157" stroke-width="2"/>
+                <g class="depart-wheel" stroke="#667276" stroke-width="2">
+                  <circle r="11" fill="#d7d5cf"/><path d="M0 -10 V10 M-10 0 H10 M-7 -7 L7 7"/>
+                  <circle r="3" fill="#667276" stroke="none"/>
                 </g>
               </g>
             </g>

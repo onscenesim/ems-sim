@@ -7,6 +7,7 @@ const express = require('express');
 const path    = require('path');
 
 const { apiLimiter }   = require('./middleware/rateLimiter');
+const { analyticsConfig } = require('./analytics');
 const scenarioRouter   = require('./routes/scenario');
 const adminRouter      = require('./routes/admin');
 const { router: authRouter } = require('./routes/auth');
@@ -17,6 +18,11 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(express.json());
+
+// The measurement ID is deployment configuration, not a source-code constant.
+// This response is intentionally uncached so a disabled/rotated ID takes effect
+// without a frontend rebuild.
+app.get('/analytics-config.js', analyticsConfig);
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '../../public')));
