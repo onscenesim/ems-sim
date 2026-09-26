@@ -4,7 +4,7 @@
 // case-specific debrief, not in prompts assembled from procedure names or dice.
 function visibleVitals(vitals) {
   const result = {};
-  for (const key of ['HR', 'BP', 'SpO2', 'EtCO2', 'ETCO2', 'RR', 'Temp', 'Glucose', 'BGL', 'GCS', 'Rhythm']) {
+  for (const key of ['HR', 'BP', 'SpO2', 'EtCO2', 'ETCO2', 'RR', 'Temp', 'Glucose', 'BGL', 'GCS', 'Pain', 'CapRefill', 'Rhythm']) {
     if (vitals?.[key] !== undefined) result[key] = vitals[key];
   }
   if (vitals?.PulseOx) result.Pleth = vitals.PulseOx.quality;
@@ -16,7 +16,7 @@ function patientId(value) {
   return ({ primary: 'patient_1', secondary: 'patient_2' })[id] || id;
 }
 
-const OBSERVATION_PROCEDURES = new Set(['vitals_manual', 'vitals_monitor', 'cardiac_monitor', 'twelve_lead', 'glucometry', 'physical_exam', 'scene_safety', 'reassessment', 'pulse_check', 'rhythm_check', 'handoff_report', 'radio_contact', 'tourniquet_time', 'capnography_confirmation', 'fetal_assessment']);
+const OBSERVATION_PROCEDURES = new Set(['capillary_refill', 'vitals_manual', 'vitals_monitor', 'cardiac_monitor', 'twelve_lead', 'glucometry', 'physical_exam', 'scene_safety', 'reassessment', 'pulse_check', 'rhythm_check', 'handoff_report', 'radio_contact', 'tourniquet_time', 'capnography_confirmation', 'fetal_assessment']);
 function procedureRecord(roll, fallbackPatient) {
   const id = roll.procedure_id || 'unknown';
   return {
@@ -28,7 +28,7 @@ function procedureRecord(roll, fallbackPatient) {
     roll: Number.isFinite(roll.roll) ? roll.roll : null,
     dc: Array.isArray(roll.dc) ? roll.dc : (Number.isFinite(roll.dc) ? roll.dc : null),
     disadvantage: !!roll.disadvantage,
-    matchedDrug: roll.matched_drug || null,
+    matchedDrug: roll.medication_name || roll.matched_drug || null,
     administrationRoute: roll.administration_route || null,
     attempts: Array.isArray(roll.rolls) ? roll.rolls.map(attempt => ({
       roll: Number.isFinite(attempt.roll) ? attempt.roll : null,

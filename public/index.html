@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=83">
+  <link rel="stylesheet" href="style.css?v=84">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
   <link rel="stylesheet" href="practice.css?v=9">
@@ -441,6 +441,7 @@
            player has to interpret the ECG strip, like a real monitor. -->
       <div class="vital-row"><span class="vital-row-label">Temp</span><span class="vital-row-value" data-vital="Temp">&mdash;</span><span class="vital-row-stamp" data-vital-stamp="Temp"></span></div>
       <div class="vital-row"><span class="vital-row-label">Glucose</span><span class="vital-row-value" data-vital="Glucose">&mdash;</span><span class="vital-row-stamp" data-vital-stamp="Glucose"></span></div>
+      <div class="vital-row"><span class="vital-row-label">Capillary refill</span><span class="vital-row-value" data-vital="CapRefill">&mdash;</span><span class="vital-row-stamp" data-vital-stamp="CapRefill"></span></div>
       <div class="vital-row"><span class="vital-row-label">GCS</span><span class="vital-row-value" data-vital="GCS">&mdash;</span></div>
       <div class="vital-row"><span class="vital-row-label">Pain</span><span class="vital-row-value" data-vital="Pain">&mdash;</span></div>
       </div>
@@ -1374,6 +1375,68 @@
       <div id="medpush-label"></div>
     </div>
 
+    <!-- Fluids and blood products share the established IV access artwork. -->
+    <div id="infusion-overlay" class="route-med-overlay" data-fluid="fluid" aria-hidden="true">
+      <div id="infusion-header" class="route-med-header">IV FLUID</div>
+      <svg class="route-med-svg" viewBox="0 0 360 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#medpush-access"/>
+          <path d="M98 9 L98 17 M88 9 L108 9" opacity=".5"/>
+          <g id="infusion-bag">
+            <path d="M77 20 Q98 15 119 20 L126 89 Q127 100 114 104 L105 108 L91 108 L82 104 Q69 100 70 89 Z" fill="currentColor" fill-opacity=".025"/>
+            <path id="infusion-liquid" d="M75 41 Q97 44 121 41 L124 88 Q125 97 112 101 L104 104 L92 104 L84 101 Q72 98 73 88 Z" stroke="none"/>
+            <path d="M86 24 L110 24 M78 50 L84 50 M78 62 L84 62 M77 74 L84 74 M77 86 L84 86" opacity=".6" stroke-width="1"/>
+            <rect x="87" y="52" width="24" height="28" rx="2" fill="#17222c" stroke-opacity=".5"/>
+            <path d="M91 60 L107 60 M91 65 L107 65 M91 70 L102 70" stroke-width="1" opacity=".6"/>
+            <path d="M94 108 L94 116 L102 116 L102 108"/>
+          </g>
+          <rect x="91" y="117" width="14" height="20" rx="5" fill="#101820"/>
+          <path id="infusion-drop" d="M98 120 L98 123" stroke-width="3"/>
+          <path d="M98 137 C98 147 119 144 133 130 C158 109 239 102 244 129 Q247 145 212 145" stroke-width="5" opacity=".25"/>
+          <path id="infusion-flow" d="M98 137 C98 147 119 144 133 130 C158 109 239 102 244 129 Q247 145 212 145 L199 145 L165 176 Q111 168 58 179" stroke-width="2.5" stroke-dasharray="6 12"/>
+          <path id="infusion-clamp" d="M140 119 L150 130 M150 119 L140 130" stroke="#e67859" stroke-width="3"/>
+          <text x="80" y="222" fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing=".6" opacity=".6">PERIPHERAL IV</text>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="infusion-label" class="route-med-label"></div>
+    </div>
+
+    <!-- Oxygen administration: the same head as CPAP, with NRB reservoir. -->
+    <div id="oxygen-overlay" class="route-med-overlay" aria-hidden="true">
+      <div class="route-med-header">OXYGEN</div>
+      <svg class="route-med-svg" viewBox="0 0 340 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g transform="translate(-27 0)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#patient-face-profile"/>
+          <g id="oxygen-mask">
+            <path d="M243 104 L308 91 M238 151 L304 163" stroke-width="2.5" opacity=".5"/>
+            <path d="M246 91 C230 91 213 110 203 125 Q195 142 217 161 Q233 173 248 155 Z" fill="#a7e6f0" fill-opacity=".07"/>
+            <path d="M243 98 Q223 108 211 129 Q204 141 221 155 Q234 165 242 154" opacity=".45"/>
+            <path d="M238 94 L246 98" stroke-width="4"/>
+            <circle cx="220" cy="136" r="7" fill="#17222c"/>
+            <path d="M216 136 L224 136 M220 132 L220 140" stroke-width="1" opacity=".6"/>
+            <path d="M207 151 L201 163 L211 169 L218 157" fill="#17222c"/>
+            <path id="oxygen-reservoir" d="M201 164 Q174 169 173 191 C171 214 185 224 200 219 Q220 211 217 190 L211 169 Z" fill="#9bdfee" fill-opacity=".16"/>
+            <path d="M204 164 C164 146 158 185 130 179 C102 174 117 209 72 214" stroke-width="4" opacity=".35"/>
+            <path id="oxygen-flow" d="M72 214 C117 209 102 174 130 179 C158 185 164 146 204 164 L213 152" stroke="#9bdfee" stroke-width="2" stroke-dasharray="5 10"/>
+            <path id="oxygen-air" d="M212 127 Q225 124 239 120 M216 146 Q229 143 242 139" stroke="#9bdfee" stroke-dasharray="4 7"/>
+            <path id="oxygen-block" d="M121 172 L132 185 M132 172 L121 185" stroke="#e67859" stroke-width="3"/>
+          </g>
+          <text x="83" y="231" fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing=".6" opacity=".6">O₂ · RESERVOIR MASK</text>
+        </g>
+      </svg>
+      <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
+        <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+        <line class="om-x1" x1="9" y1="9" x2="35" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+        <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      </svg>
+      <div id="oxygen-label" class="route-med-label"></div>
+    </div>
+
     <!-- Route-specific medication administration: oral medication. -->
     <div id="oralmed-overlay" class="route-med-overlay" aria-hidden="true">
       <div class="route-med-header">ORAL MEDICATION</div>
@@ -1959,13 +2022,13 @@
     <footer class="cosmetics-footer"><p id="cosmetics-status" role="status"></p><button id="cosmetics-apply" type="button">APPLY</button></footer>
   </dialog>
 
-  <script src="medication-aliases.js"></script>
+  <script src="medication-aliases.js?v=2"></script>
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=1"></script>
-  <script src="practice.js?v=9"></script>
+  <script src="practice.js?v=10"></script>
   <script src="instructor.js?v=1"></script>
-  <script src="app.js?v=89"></script>
+  <script src="app.js?v=90"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>
   <script src="cosmetics.js?v=5"></script>

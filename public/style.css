@@ -4813,24 +4813,146 @@ body.light-mode {
   #report-btn svg { display: block; width: 26px; height: 26px; margin: auto; }
 }
 
-/* Instructor setup follows the menu's window and form treatment. */
-#instructor-panel { margin: 16px 0; padding: 18px; border: 1px solid var(--border, #63778b); background: var(--bg-panel, #16212c); color: var(--text, #dce5ee); }
+/* Instructor setup uses the same pixel type, chrome, and inset fields as the menu. */
+#instructor-panel {
+  margin: 5px 0;
+  padding: 14px;
+  border: 3px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  background-color: var(--reference-bg);
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  background-blend-mode: soft-light;
+  color: var(--reference-text);
+  font: 18px/1.35 var(--font-xp);
+}
 #instructor-panel[hidden] { display: none; }
-#instructor-panel h2 { font-size: 20px; margin: 0 0 12px; }
-#instructor-panel h3 { font-size: 17px; margin: 20px 0 10px; }
-#instructor-panel p { font: 14px/1.5 sans-serif; margin: 10px 0; }
-#instructor-panel label { display: flex; flex-direction: column; gap: 6px; font: 14px/1.4 sans-serif; min-width: 0; }
-#instructor-panel input, #instructor-panel textarea, #instructor-panel select { width: 100%; box-sizing: border-box; padding: 8px; font: 14px/1.45 sans-serif; color: inherit; background: var(--bg, #101821); border: 1px solid #748397; }
+#instructor-panel h2 {
+  margin: -12px -12px 14px;
+  padding: 10px 12px;
+  border: 1px solid;
+  border-color: #8bafbd #233e4f #233e4f #8bafbd;
+  background: linear-gradient(90deg, #25485f, #547d8e);
+  color: #fffbed;
+  font: 12px/1.4 var(--font-block);
+  letter-spacing: .05em;
+}
+#instructor-panel h3 {
+  margin: 20px 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--reference-border);
+  color: var(--reference-accent);
+  font: bold 16px/1.3 var(--font-xp);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+#instructor-panel p { margin: 10px 0; font: 17px/1.35 var(--font-xp); color: var(--reference-dim); }
+#instructor-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font: 16px/1.3 var(--font-xp);
+  color: var(--reference-dim);
+}
+#instructor-panel :is(input, textarea, select) {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 2px solid;
+  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
+  border-radius: 0;
+  color: var(--reference-text);
+  background: var(--reference-card);
+  font: 18px/1.3 var(--font-xp);
+  color-scheme: dark;
+}
+#instructor-panel select { min-height: 38px; cursor: pointer; }
 #instructor-panel textarea { resize: vertical; }
-#instructor-panel button { padding: 8px 12px; margin: 8px 0; cursor: pointer; }
-.instructor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 12px 0; }
-.instructor-details { font: 14px/1.6 sans-serif; overflow-wrap: anywhere; }
-.instructor-details dt { font-weight: bold; margin-top: 12px; }
-.instructor-details dd { margin: 2px 0 0; white-space: pre-wrap; }
-#instructor-panel summary { padding: 10px 0; cursor: pointer; }
-#instructor-panel .instructor-check { flex-direction: row; align-items: flex-start; margin: 16px 0; }
-#instructor-panel .instructor-check input { width: auto; margin-top: 3px; }
-.instructor-tag { display: inline-block; padding: 3px 7px; border: 1px solid currentColor; font-size: 12px; }
-body.light-mode #instructor-panel { background: #f3f1e8; color: #172a35; }
-body.light-mode #instructor-panel input, body.light-mode #instructor-panel textarea, body.light-mode #instructor-panel select { background: white; }
-@media (max-width: 650px) { .instructor-grid { grid-template-columns: 1fr; } }
+#instructor-panel :is(input, textarea)::placeholder { color: var(--reference-dim); opacity: .8; }
+#instructor-panel button {
+  min-height: 36px;
+  padding: 6px 12px;
+  margin: 8px 0;
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  border-radius: 0;
+  background: var(--chrome-bg);
+  color: #26343b;
+  font: 18px/1.2 var(--font-xp);
+  cursor: pointer;
+}
+#instructor-panel button:hover { background: #dedad4; }
+#instructor-panel button:active,
+#instructor-panel button[aria-expanded="true"] {
+  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
+  background: var(--chrome-mid);
+}
+#instructor-panel :is(input, textarea, select, button, summary):focus-visible {
+  outline: 2px solid var(--reference-accent);
+  outline-offset: 2px;
+}
+.instructor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+#instructor-panel details {
+  margin: 14px 0 6px;
+  border: 2px solid;
+  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
+  background: var(--reference-card);
+}
+#instructor-panel summary { padding: 9px 12px; color: var(--reference-accent); font: 17px/1.3 var(--font-xp); cursor: pointer; }
+#instructor-panel details[open] summary { border-bottom: 1px solid var(--reference-border); }
+.instructor-details { padding: 0 12px 14px; font: 18px/1.35 var(--font-xp); overflow-wrap: anywhere; }
+.instructor-details dt { margin-top: 14px; color: var(--reference-dim); font-size: 14px; font-weight: bold; letter-spacing: .06em; text-transform: uppercase; }
+.instructor-details dd { margin: 4px 0 0; white-space: pre-wrap; }
+#instructor-panel .instructor-count { font-size: 15px; color: var(--reference-accent); }
+.instructor-advanced { margin-top: 8px; border-top: 1px solid var(--reference-border); }
+#instructor-panel .instructor-check { flex-direction: row; align-items: flex-start; gap: 10px; margin: 16px 0; color: var(--reference-text); font-size: 18px; cursor: pointer; }
+#instructor-panel .instructor-check input { flex: 0 0 18px; width: 18px; height: 18px; margin-top: 3px; accent-color: #738b87; }
+.instructor-tag { display: inline-block; padding: 3px 7px; border: 1px solid currentColor; font: 16px/1.2 var(--font-xp); }
+body.light-mode #instructor-panel { background-image: none; }
+body.light-mode #instructor-panel :is(input, textarea, select) { color-scheme: light; }
+@media (max-width: 650px) {
+  .instructor-grid { grid-template-columns: 1fr; }
+  #instructor-panel :is(button, select, input:not([type="checkbox"])) { min-height: 44px; }
+}
+
+/* Hanging infusion bag and NRB oxygen delivery, using the existing line art. */
+#infusion-overlay { --infusion-color: #a5deee; }
+#infusion-overlay[data-fluid="blood"] { --infusion-color: #dc4956; }
+#infusion-header { max-width: 90vw; text-align: center; line-height: 1.7; }
+#infusion-liquid { fill: var(--infusion-color); opacity: .7; transform-origin: 98px 104px; }
+#infusion-flow, #infusion-drop { stroke: var(--infusion-color); opacity: 0; }
+#infusion-clamp, #oxygen-block { opacity: 0; }
+#infusion-overlay.visible #infusion-bag { animation: infusionHang .55s ease-out both; }
+#infusion-overlay.visible #infusion-liquid { animation: infusionDrain 2s linear .7s both; }
+#infusion-overlay.visible #infusion-flow { animation: treatmentFlow .65s linear .65s infinite; }
+#infusion-overlay.visible #infusion-drop { animation: infusionDrip .65s linear .65s infinite; }
+#infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) #infusion-liquid { animation: none; }
+#infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) :is(#infusion-flow, #infusion-drop) { animation: none; }
+#infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) #infusion-clamp { animation: accessReveal .2s ease .8s both; }
+#oxygen-reservoir { transform-origin: 206px 166px; }
+#oxygen-flow, #oxygen-air { opacity: 0; }
+#oxygen-overlay.visible #oxygen-mask { animation: oxygenFit .6s ease-out both; }
+#oxygen-overlay.visible #oxygen-reservoir { animation: oxygenBreath 2.5s ease-in-out .5s both; }
+#oxygen-overlay.visible :is(#oxygen-flow, #oxygen-air) { animation: treatmentFlow .8s linear .6s infinite; }
+#oxygen-overlay.visible.outcome-COMPLICATION #oxygen-reservoir { animation: oxygenEmpty .8s ease .5s both; }
+#oxygen-overlay.visible.outcome-COMPLICATION :is(#oxygen-flow, #oxygen-air) { animation: none; }
+#oxygen-overlay.visible.outcome-COMPLICATION #oxygen-block { animation: accessReveal .2s ease .8s both; }
+@keyframes infusionHang { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes infusionDrain { from { transform: scaleY(1); } to { transform: scaleY(.72); } }
+@keyframes infusionDrip { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 90%, 100% { opacity: 0; transform: translateY(10px); } }
+@keyframes treatmentFlow { from { opacity: .85; stroke-dashoffset: 30; } to { opacity: .85; stroke-dashoffset: 0; } }
+@keyframes oxygenFit { from { opacity: .2; transform: translate(-24px, 3px); } to { opacity: 1; transform: translate(0, 0); } }
+@keyframes oxygenBreath { 0% { transform: scale(.45, .9); } 25%, 65%, 100% { transform: scale(1); } 45%, 85% { transform: scale(.78, .97); } }
+@keyframes oxygenEmpty { from { transform: scale(.5, .9); } to { transform: scale(.3, .95); } }
+@media (prefers-reduced-motion: reduce) {
+  #infusion-overlay.visible :is(#infusion-bag, #infusion-liquid, #infusion-flow, #infusion-drop, #infusion-clamp),
+  #oxygen-overlay.visible :is(#oxygen-mask, #oxygen-reservoir, #oxygen-flow, #oxygen-air, #oxygen-block) { animation: none; }
+  #infusion-overlay.visible #infusion-flow, #oxygen-overlay.visible :is(#oxygen-flow, #oxygen-air) { opacity: .85; }
+  #infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) #infusion-flow,
+  #oxygen-overlay.visible.outcome-COMPLICATION :is(#oxygen-flow, #oxygen-air) { opacity: 0; }
+  #infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) #infusion-clamp,
+  #oxygen-overlay.visible.outcome-COMPLICATION #oxygen-block { opacity: 1; }
+  #oxygen-overlay.visible.outcome-COMPLICATION #oxygen-reservoir { transform: scale(.3, .95); }
+}

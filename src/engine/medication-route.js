@@ -1,4 +1,5 @@
 'use strict';
+const { FLUID_MEDICATIONS, BLOOD_PRODUCT_MEDICATIONS } = require('../../public/medication-aliases');
 
 // Explicit administration and animation defaults are separate metadata.
 // Selecting artwork must not prescribe a route or change the administration roll.
@@ -67,6 +68,8 @@ function medicationPresentationAt(text, start, length, medication, matchedKey) {
   const { route, explicit } = medicationRouteInfoAt(text, start, length);
   const formulationDefault = /^(?:racemic epi|racemic epinephrine)$/i.test(matchedKey || '') ? 'NEB' : null;
   return {
+    medication_name: medication || null,
+    medication_kind: BLOOD_PRODUCT_MEDICATIONS.has(medication) ? 'blood' : FLUID_MEDICATIONS.has(medication) ? 'fluid' : null,
     administration_route: route,
     medication_animation_route: explicit ? route
       : formulationDefault || MEDICATION_ANIMATION_DEFAULTS.get(medication) || null,

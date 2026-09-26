@@ -3,6 +3,24 @@
 // Shared exact medication aliases for engine detection and reference cards.
 // Keep formulations separate; these keys select references, never doses.
 const MEDICATION_ALIASES = {
+  "Normal Saline (0.9%)": ["normal saline", "normal salin", "normal salene", "NS bolus", "saline bolus", "0.9% saline", "0.9 saline", "0.9% sodium chloride", "sodium chloride 0.9%", "0.9% NaCl", "isotonic saline", "saline", "NS"],
+  "Hypertonic Saline (3%)": ["3% hypertonic saline", "3% saline", "3 percent saline", "three percent saline", "hypertonic saline", "hypertonic salin", "hypertonic", "HTS", "3% sodium chloride", "sodium chloride 3%", "3% NaCl"],
+  "Dextrose 5% in Water (D5W)": ["D5W", "D5 W", "D5 water", "dextrose 5% in water", "5% dextrose in water", "5 percent dextrose in water", "5% dextrose", "dextrose 5%", "D5"],
+  "Plasma-Lyte": ["plasmalyte", "plasma-lyte", "plasma lyte", "plasmalyte A", "plasma-lyte A", "plasma lyte 148", "plasmalyte 148", "plasmalyght", "plasmalyte bolus"],
+  "Lactated Ringer’s / Hartmann’s": ["lactated ringers", "lactated ringer's", "lactated ringer’s", "lactated ringer", "lactated ringers solution", "lactated ringers/hartmans solution", "lactated ringers hartmans solution", "lactated ringer's solution", "lactated ringer solution", "lactated ringers bolus", "ringer lactate", "ringers lactate", "ringer's lactate", "ringer’s lactate", "LR", "LR bolus", "hartmanns", "hartmann's", "hartmann’s", "hartmans", "hartman's", "hartman’s", "hartmann solution", "hartmans solution", "lactated ringors"],
+  "IV Fluids (specify solution)": ["IV fluids", "intravenous fluids", "IV fluid", "fluid bolus", "fluids bolus", "crystalloid bolus", "crystalloid", "crystalloids", "run fluids", "give fluids", "administer fluids", "infuse fluids", "bolus fluids", "start fluids", "hang fluids", "hang a bag", "hang a fluid bag", "run in a liter", "run in a litre", "500ml bolus", "250ml bolus"],
+  "Whole Blood": ["whole blood", "wholeblood", "whole blud", "low titer O whole blood", "low titre O whole blood", "low titer group O whole blood", "low-titer group O whole blood", "low-titre group O whole blood", "LTOWB", "fresh whole blood", "O negative whole blood", "O positive whole blood", "O neg whole blood", "O pos whole blood"],
+  "Packed Red Blood Cells": ["packed red blood cells", "packed red cells", "packed RBCs", "packed RBC", "pack red blood cells", "packed red blood cell", "red blood cells", "red cells", "red cell concentrate", "red blood cell concentrate", "PRBC", "PRBCs", "pRBC", "pRBCs", "RBCs", "RBC transfusion", "PRBC transfusion", "O negative packed cells", "O neg packed cells", "O negative blood", "O neg blood", "O positive blood", "O pos blood", "leukoreduced red cells", "leucoreduced red cells"],
+  "Fresh Frozen Plasma": ["fresh frozen plasma", "fresh-frozen plasma", "fresh frozen plazma", "FFP", "thawed plasma", "frozen plasma", "fresh plasma", "thawed FFP"],
+  "Plasma (specify product)": ["plasma transfusion", "liquid plasma", "freeze dried plasma", "freeze-dried plasma", "lyophilized plasma", "plasma", "plazma"],
+  "Platelets": ["platelets", "platelet", "platlets", "plateletes", "platelet concentrate", "pooled platelets", "apheresis platelets", "single donor platelets", "platelet transfusion", "PLTs", "PLT"],
+  "Cryoprecipitate": ["cryoprecipitate", "cryoprecip", "cryoprecipitat", "cryo precipitate", "cryo", "pooled cryo", "cryoprecipitated antihemophilic factor"],
+  "Albumin": ["albumin", "human albumin", "albumen", "5% albumin", "25% albumin", "albumin 5%", "albumin 25%", "albuminar", "albutein"],
+  "Prothrombin Complex Concentrate": ["prothrombin complex concentrate", "prothrombin complex", "4 factor PCC", "four factor PCC", "4-factor PCC", "4F-PCC", "4FPCC", "PCC", "Kcentra", "Beriplex", "Octaplex"],
+  "Fibrinogen Concentrate": ["fibrinogen concentrate", "fibrinogen", "RiaSTAP", "Fibryga", "Haemocomplettan"],
+  "Granulocytes": ["granulocyte transfusion", "granulocytes", "granulocyte concentrate", "white blood cell transfusion", "white cell transfusion"],
+  "Blood Products (specify component)": ["blood", "unit of blood", "units of blood", "blood transfusion", "blood products", "blood product", "transfuse blood", "give blood", "administer blood", "hang blood", "infuse blood", "blood components", "blood component"],
+
   "Epinephrine": [
     "push the epi",
     "give epi",
@@ -154,7 +172,6 @@ const MEDICATION_ALIASES = {
     "D50",
     "D10",
     "D25",
-    "D5W",
     "dextrose 50",
     "dextrose 25",
     "dextrose 10"
@@ -432,4 +449,7 @@ const MEDICATION_ALIASES = {
   ]
 };
 
-if (typeof module !== 'undefined') module.exports = { MEDICATION_ALIASES };
+const FLUID_MEDICATIONS = new Set(["Normal Saline (0.9%)", "Hypertonic Saline (3%)", "Dextrose 5% in Water (D5W)", "Plasma-Lyte", "Lactated Ringer’s / Hartmann’s", "IV Fluids (specify solution)", "Whole Blood", "Packed Red Blood Cells", "Fresh Frozen Plasma", "Plasma (specify product)", "Platelets", "Cryoprecipitate", "Albumin", "Prothrombin Complex Concentrate", "Fibrinogen Concentrate", "Granulocytes", "Blood Products (specify component)"]);
+const BLOOD_PRODUCT_MEDICATIONS = new Set(["Whole Blood", "Packed Red Blood Cells", "Fresh Frozen Plasma", "Plasma (specify product)", "Platelets", "Cryoprecipitate", "Albumin", "Prothrombin Complex Concentrate", "Fibrinogen Concentrate", "Granulocytes", "Blood Products (specify component)"]);
+
+if (typeof module !== 'undefined') module.exports = { MEDICATION_ALIASES, FLUID_MEDICATIONS, BLOOD_PRODUCT_MEDICATIONS };

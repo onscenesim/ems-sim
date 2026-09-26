@@ -182,7 +182,7 @@ function normalizeForDetection(text) {
 // ---------------------------------------------------------------------------
 // Past-tense forms (gave, pushed, administered …) are intentionally excluded —
 // they indicate reporting ('we gave epi') rather than ordering ('give epi').
-const ADMIN_VERB_RE = /\b(give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?(?:\s+the\s+\w+)?|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|retry(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|go(?:ing)?\s+for\s+(?:(?:a|an|the)\s+)?|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving|followed\s+by|in\s+addition\s+to|as\s+well\s+as|and\s+then|then\s+give|also\s+give|also\s+push|also\s+administer|along\s+with|begin(ning)?|titrat(e|ing)|connect(ing)?|run(ning)?|infus(e|ing)|drip(ping)?|bolus(ing)?|sedat(?:e|ing)|paralyz(?:e|ing)|premedicat(?:e|ing)|treat(?:ing)?\s+with|medicat(?:e|ing))\b/i;
+const ADMIN_VERB_RE = /\b(transfus(?:e|ing)|appl(?:y|ying)|give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?(?:\s+the\s+\w+)?|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|retry(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|go(?:ing)?\s+for\s+(?:(?:a|an|the)\s+)?|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving|followed\s+by|in\s+addition\s+to|as\s+well\s+as|and\s+then|then\s+give|also\s+give|also\s+push|also\s+administer|along\s+with|begin(ning)?|titrat(e|ing)|connect(ing)?|run(ning)?|infus(e|ing)|drip(ping)?|bolus(ing)?|sedat(?:e|ing)|paralyz(?:e|ing)|premedicat(?:e|ing)|treat(?:ing)?\s+with|medicat(?:e|ing))\b/i;
 
 /**
  * Detect a procedure from user text.
@@ -516,11 +516,11 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
   let dc = selectDC(proc, contextFlags);
   if (!dc) dc = proc.dc[0];
 
-  const penalty = difficulty === 'BLACK_CLOUD' ? BLACK_CLOUD_DC_PENALTY
+  const penalty = proc.nat_one_only ? 0 : difficulty === 'BLACK_CLOUD' ? BLACK_CLOUD_DC_PENALTY
                 : difficulty === 'HARD'        ? HARD_MODE_DC_PENALTY
                 : 0;
   // BLACK_CLOUD: every roll is at DISADVANTAGE — roll twice, take the lower.
-  const useDis = difficulty === 'BLACK_CLOUD';
+  const useDis = !proc.nat_one_only && difficulty === 'BLACK_CLOUD';
 
   // Multi-DC procedures (cardioversion, defibrillation, pacing)
   if (Array.isArray(dc)) {
@@ -555,7 +555,7 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
   let roll, bothRolls;
   if (useDis) { const d2 = rollD20Disadvantage(); roll = d2.result; bothRolls = d2.both; }
   else        { roll = rollD20(); }
-  const outcome = calcOutcome(roll, adjustedDC, difficulty);
+  const outcome = proc.nat_one_only ? (roll === 1 ? 'COMPLICATION' : 'SUCCESS') : calcOutcome(roll, adjustedDC, difficulty);
 
   return {
     procedure_id: proc.id,
@@ -605,11 +605,23 @@ function detectAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
  * A procedure can only roll once per message even if mentioned multiple times.
  * Returns an array (may be empty).
  */
+function isTreatmentAssessment(text, start, length, proc, key) {
+  const oxygen = proc.id === 'oxygen';
+  const ambiguousFluid = proc.id === 'medication_push' && /^(?:plasma|plazma|platelets?|platlets|plt|plts|albumin|albumen|fibrinogen|pcc|ns|lr|crystalloid|saline|blood|units? of blood|blood products?|blood components?)$/i.test(key);
+  if (!oxygen && !ambiguousFluid) return false;
+  const before = text.slice(0, start).split(/[;.!?\n]|\b(?:and|then|but|also)\b/i).at(-1);
+  const after = text.slice(start + length);
+  if (oxygen && /^\s*(?:levels?|sats?|saturations?|readings?|concentrations?|requirements?|tanks?|cylinders?|supply|situation|flow|flowing)\b/i.test(after)) return true;
+  if (!oxygen && /^\s*(?:levels?|counts?|results?|tests?|studies|samples?)\b/i.test(after)) return true;
+  return /\b(?:check(?:ing)?|recheck|assess(?:ing)?|measure|monitor|read|inspect|look at|what(?:\s+is|'s|\s+are)?|how(?:\s+is|'s|\s+are)?|draw|collect|order|send|request)\b[^;.!?]*$/i.test(before)
+    && !/\b(?:giv(?:e|ing)|administer(?:ing)?|apply(?:ing)?|start(?:ing)?|infus(?:e|ing)|transfus(?:e|ing)|hang(?:ing)?|put|plac(?:e|ing))\b[^;.!?]*$/i.test(before);
+}
+
 function detectAllProcedures(userText) {
   const normalized = normalizeForDetection(userText);
   const context = normalized.toLowerCase();
   let remaining = context;
-  const found = [];
+  let found = [];
   const usedProcIds = new Set();
   const usedMedications = new Set();
 
@@ -680,7 +692,7 @@ function detectAllProcedures(userText) {
     remaining = remaining.slice(0, bestMatchIndex) + ' '.repeat(bestMatch.matchLen)
       + remaining.slice(bestMatchIndex + bestMatch.matchLen);
 
-    if (!negated && !conditional && !routeQual && !stagingPost && !isPastContext(context, bestMatchIndex)) {
+    if (!negated && !conditional && !routeQual && !stagingPost && !isTreatmentAssessment(context, bestMatchIndex, bestMatch.matchLen, bestMatch.proc, bestMatch.key) && !isPastContext(context, bestMatchIndex)) {
       const medication = bestMatch.proc.id === 'medication_push' ? MEDICATION_NAMES.get(bestMatch.key) : null;
       if (medication && usedMedications.has(medication)) continue;
       if (medication) usedMedications.add(medication);
@@ -705,6 +717,13 @@ function detectAllProcedures(userText) {
     // same message should still fire ("no IV yet, give morphine 4mg, then try IV").
   }
 
+  // A generic bag/bolus description beside a named solution is the same order.
+  const genericFluids = new Set(['IV Fluids (specify solution)', 'Blood Products (specify component)']);
+  found = found.filter(entry => !genericFluids.has(entry.medication_name) || !found.some(other =>
+    other !== entry && other.sentence === entry.sentence && other.medication_kind
+    && !genericFluids.has(other.medication_name)
+    && (entry.medication_kind === 'fluid' || other.medication_kind === 'blood')));
+
   // ONE SHOCK ORDER = ONE ROLL. "Synchronized cardioversion at 200 joules"
   // matched BOTH cardioversion ("cardiovert") and defibrillation ("200 joules"),
   // rolling two shocks for a single order. When both fire in the same message
@@ -720,10 +739,12 @@ function detectAllProcedures(userText) {
 function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
   const entries = detectAllProcedures(userText);
   const suction_assisted = entries.some(e => e.proc.id === 'suction' && !e.precharge);
-  return entries.map(({ proc, matchedKey, administration_route, medication_animation_route }) => {
+  return entries.map(({ proc, matchedKey, administration_route, medication_animation_route, medication_name, medication_kind }) => {
     const result = rollProcedure(proc, { ...contextFlags, suction_assisted }, difficulty);
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
+      if (medication_name) result.medication_name = medication_name;
+      if (medication_kind) result.medication_kind = medication_kind;
       if (administration_route) result.administration_route = administration_route;
       if (medication_animation_route) result.medication_animation_route = medication_animation_route;
     }
@@ -773,6 +794,8 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
     const result = rollProcedure(proc, { ...contextFlags, suction_assisted }, difficulty);
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
+      if (entry.medication_name) result.medication_name = entry.medication_name;
+      if (entry.medication_kind) result.medication_kind = entry.medication_kind;
       if (entry.administration_route) result.administration_route = entry.administration_route;
       if (entry.medication_animation_route) result.medication_animation_route = entry.medication_animation_route;
     }

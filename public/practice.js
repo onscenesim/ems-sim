@@ -26,8 +26,9 @@ const PracticeUI = (() => {
     if (typeof value === 'object') return value.value !== undefined ? String(value.value) : JSON.stringify(value);
     return String(value);
   }
+  function vitalLabel(key) { return key === 'CapRefill' ? 'Capillary refill (s)' : key; }
   function vitalsLine(vitals) {
-    return Object.entries(vitals || {}).map(([key, value]) => `${key}: ${valueText(value)}`).join(' · ');
+    return Object.entries(vitals || {}).map(([key, value]) => `${vitalLabel(key)}: ${valueText(value)}`).join(' · ');
   }
   function debriefContent(value) {
     const container = el('div', undefined, 'review-debrief-text');
@@ -282,7 +283,7 @@ const PracticeUI = (() => {
         const table = el('table', undefined, 'review-vitals-table');
         table.append(el('caption', `${patientName(patient)} · ${entries.length} observation${entries.length === 1 ? '' : 's'}`));
         const head = el('thead'), headRow = el('tr');
-        ['Moment', ...fields].forEach(field => { const th = el('th', field); th.scope = 'col'; headRow.append(th); });
+        ['Moment', ...fields].forEach(field => { const th = el('th', vitalLabel(field)); th.scope = 'col'; headRow.append(th); });
         head.append(headRow); table.append(head);
         const tbody = el('tbody');
         entries.forEach(t => {
@@ -356,7 +357,7 @@ const PracticeUI = (() => {
       const fields = [...new Set(entries.flatMap(turn => Object.keys(turn.vitals)))];
       lines.push('', `${patientName(patient)} · ${entries.length} observation${entries.length === 1 ? '' : 's'}`);
       for (const turn of entries) {
-        lines.push(`${time(turn.minute)} · #${turn.turn} · ${fields.map(field => `${field}: ${valueText(turn.vitals[field])}`).join(' · ')}`);
+        lines.push(`${time(turn.minute)} · #${turn.turn} · ${fields.map(field => `${vitalLabel(field)}: ${valueText(turn.vitals[field])}`).join(' · ')}`);
       }
     }
     lines.push('', 'UNSCORED RECORD · Procedure outcomes are simulation results, not a grade.',

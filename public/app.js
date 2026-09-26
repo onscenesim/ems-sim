@@ -1161,6 +1161,7 @@ async function sendTurn(msg, opts = {}) {
       if (['bleeding_control', 'tourniquet', 'chest_seal', 'pacing'].includes(r.procedure_id)) await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
       if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
       if (r.procedure_id === 'cpap') await animateNIV(r);
+      if (r.procedure_id === 'oxygen') await animateRouteMedication('oxygen', r.outcome, 3200);
       if (r.procedure_id === 'lucas') await animateLUCAS(r.outcome);
       if (r.procedure_id === 'suction') await animateSuction(r.outcome);
       if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
@@ -2506,7 +2507,13 @@ async function animateMedicationAdministration(roll) {
   const routes = { PO: ['oralmed', 2600], SL: ['oralmed', 2600], IN: ['inmed', 2300], IM: ['immed', 2600], NEB: ['nebmed', 2800] };
   const route = roll.administration_route || roll.medication_animation_route;
   const scene = Object.hasOwn(routes, route) ? routes[route] : null;
-  if (scene) await animateRouteMedication(scene[0], outcome, scene[1]);
+  if (roll.medication_kind === 'fluid' || roll.medication_kind === 'blood') {
+    const overlay = document.getElementById('infusion-overlay');
+    if (overlay) overlay.dataset.fluid = roll.medication_kind;
+    const header = document.getElementById('infusion-header');
+    if (header) header.textContent = roll.medication_name || 'IV FLUID';
+    await animateRouteMedication('infusion', outcome, 3200);
+  } else if (scene) await animateRouteMedication(scene[0], outcome, scene[1]);
   else await animateMedPush(outcome);
   if (roll.matched_drug) showDrugPanel(roll.matched_drug);
 }
@@ -2997,10 +3004,10 @@ const vitalsPanel     = document.getElementById('vitals-panel');
 const vitalsExpand    = document.getElementById('vitals-expand');
 
 // All possible field names we render from the [VITALS:] tag
-const VITAL_FIELDS = ['HR', 'BP', 'SpO2', 'ETCO2', 'RR', 'Rhythm', 'Temp', 'Glucose', 'GCS', 'Pain'];
+const VITAL_FIELDS = ['HR', 'BP', 'SpO2', 'ETCO2', 'RR', 'Rhythm', 'Temp', 'Glucose', 'GCS', 'Pain', 'CapRefill'];
 
 // Episodic fields carry a measurement timestamp and get staleness coloring
-const VITAL_EPISODIC = new Set(['BP', 'Temp', 'Glucose']);
+const VITAL_EPISODIC = new Set(['BP', 'Temp', 'Glucose', 'CapRefill']);
 
 let currentVitals      = null;   // last parsed vitals object from server
 let currentSceneMinute = 0;      // most recent server scene_minute
@@ -3384,7 +3391,7 @@ function formatVitalDisplay(name, raw) {
   // raw is either a primitive (HR/SpO2/etc.) or { value, t, tMin } for episodic
   const value = (raw && typeof raw === 'object' && 'value' in raw) ? raw.value : raw;
   if (value === undefined || value === null || value === '') return null;
-  return String(value);
+  return name === 'CapRefill' ? `${value} s` : String(value);
 }
 
 function formatStamp(raw) {

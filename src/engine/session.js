@@ -9,6 +9,7 @@ const { evaluateObjectives } = require('./learning');
 const { sendTurn, sendDebrief } = require('./api');
 const { parseDebriefResponse } = require('./prompts/debrief');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
+const { applyCapillaryRefill } = require('./capillary-refill');
 const { applyPulseOx } = require('./pulse-ox');
 const { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords } = require('./patient-records');
 
@@ -154,7 +155,7 @@ function isDebriefTrigger(text) {
 }
 
 // Numeric fields in the VITALS tag (everything else is treated as a string token)
-const VITALS_NUMERIC = new Set(['HR', 'SpO2', 'TrueSpO2', 'PulseRate', 'ETCO2', 'RR', 'GCS', 'Pain', 'Glucose']);
+const VITALS_NUMERIC = new Set(['HR', 'SpO2', 'TrueSpO2', 'PulseRate', 'ETCO2', 'RR', 'GCS', 'Pain', 'Glucose', 'CapRefill']);
 
 // Placeholder tokens the model emits despite the prompt ban ("ETCO2=not_yet",
 // "RR=call_manually"). A field only appears when actually measured — drop these
@@ -849,7 +850,10 @@ class Session {
     const switchedPatient = patientId !== previousId;
     if (switchedPatient) this.lastVitals = null;
     const { cleanedReply: vitalsClean, vitals: rawVitals } = parseVitalsTag(focusClean);
-    const vitals = applyPulseOx(rawVitals, this.patientVitals[patientId] || null,
+    const assessedVitals = applyCapillaryRefill(rawVitals, this.patientVitals[patientId],
+      reconcileRolls(rolls, focusClean).some(r => r.procedure_id === 'capillary_refill'),
+      parseTimeTag(rawReply).timeMinutes ?? this.sceneMinute);
+    const vitals = applyPulseOx(assessedVitals, this.patientVitals[patientId] || null,
       patientId === 'patient_1' ? this.seed : { complication_type: this.seed.complication_type });
     if (vitals) this.lastVitals = vitals;
     if (vitals) this.patientVitals[patientId] = vitals;
