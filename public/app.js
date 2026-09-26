@@ -4,6 +4,10 @@
 // ── Audio ──────────────────────────────────────────────────────────────
 // ── Sound effects ─────────────────────────────────────────────────────────────────────────
 const SOUNDS = {
+  suction: new Audio('/sounds/Suction.wav'),
+  oxygen_flow: new Audio('/sounds/OxygenFlow.wav'),
+  intubation: new Audio('/sounds/Intubation.mp3'),
+  squelch: new Audio('/sounds/WoundCompression.wav'),
   glovebox: new Audio('/sounds/Glovebox.mp3'),
   rummage: new Audio('/sounds/GloveboxRummage.wav'),
   pocket: new Audio('/sounds/PocketRustle.wav'),
@@ -45,7 +49,7 @@ const SOUNDS = {
   sfx_depart:       new Audio('/sounds/AmbulanceDeparting.m4a'),
 };
 // Match these close-up interface recordings to the established effect bed.
-const SOUND_LEVELS = { glovebox: .65, paper: .8 };
+const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: .55, intubation: .65, squelch: .65 };
 // A single HTMLAudioElement cannot play over itself: calling play() again
 // rewinds the effect already in progress. Keep a small, warmed voice pool per
 // sound so two animation/action cues can overlap without cancelling either.
@@ -126,6 +130,7 @@ function playSound(name) {
   voice.volume = SOUND_LEVELS[name] ?? 1;
   voice.currentTime = 0;
   voice.play().catch(err => console.warn('[sound] play error:', name, err.message));
+  return voice;
 }
 const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression',
   'finger_thoracostomy', 'resuscitative_thoracotomy', 'perimortem_csection']);
@@ -1145,12 +1150,13 @@ async function sendTurn(msg, opts = {}) {
         continue;
       }
       // These scenes own their sound cues after the dice, at the action beat.
-      if (!hasProcedureAnimationSound(r.procedure_id)) playSound(procSound);
+      // Legacy action cues start with their scene, after the dice have cleared.
       // Shocks resolve as a single roll now (no multi_roll branch) — keep the
       // defib heart animation rather than the generic dice overlay.
       if (DEFIB_PROCS.has(r.procedure_id)) { await animateDefib(r.procedure_id, r.outcome); continue; }
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+      if (!hasProcedureAnimationSound(r.procedure_id)) playSound(procSound);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id, r.outcome);
       if (r.procedure_id === 'nasopharyngeal_airway') await animateProcedureScene('npa', r.procedure_id, r.outcome);
       if (OBSTRUCTION_PROCS.has(r.procedure_id)) await animateProcedureScene('obstruction', r.procedure_id, r.outcome);
@@ -2312,13 +2318,16 @@ function animateDrill(outcome) {
     const FADE_MS = 180;
     const overlay = document.getElementById('io-overlay');
     const label   = document.getElementById('io-label');
-    if (!overlay) { resolve(); return; }
+    if (!overlay) { playSound(getProcedureSound('io_access', outcome)); resolve(); return; }
     label.textContent = outcome;
     overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('io_access', outcome), resultAt: 0,
+      reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
+      cancelAudio();
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
     }, HOLD_MS);
@@ -2333,21 +2342,57 @@ const PROCEDURE_TIMING = Object.freeze({
   chest_seal: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3000, sound: 3000 }),
   pacing: Object.freeze({ hold: 5200, start: 0, cycle: 5200, result: 2800, sound: 2800 }),
   defib: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 2600, sound: 1400 }),
-  bleeding_control: Object.freeze({ hold: 4200, start: 0, cycle: 4200, result: 3100, sound: 3100 }),
-  tourniquet: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3100, sound: 3100 }),
+  bleeding_control: Object.freeze({ hold: 4200, start: 0, cycle: 4200, result: 3100, sound: 3100, action: 'squelch' }),
+  tourniquet: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3100, sound: 3100, action: 'squelch' }),
   bvm: Object.freeze({ hold: 2500, start: 350, cycle: 1500, result: 1900, sound: 350 }),
   lucas: Object.freeze({ hold: 1900, start: 100, cycle: 600, result: 1450, sound: 100 }),
-  laryngoscope: Object.freeze({ hold: 5600, start: 0, cycle: 5600, result: 5040, sound: 5040 }),
+  laryngoscope: Object.freeze({ hold: 7200, start: 0, cycle: 7200, result: 6480, sound: 6480, action: 'intubation' }),
   sga: Object.freeze({ hold: 3400, start: 0, cycle: 3400, result: 2652, sound: 2652 }),
   ncd: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2280, sound: 2160 }),
-  suction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2880, sound: 2880 }),
+  suction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2880, sound: 2880, action: 'suction' }),
   opa: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2808, sound: 2808 }),
   scalpel: Object.freeze({ hold: 1150, start: 0, cycle: 1150, result: 650, sound: 345 }),
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return OBSTRUCTION_PROCS.has(id) || id === 'nasopharyngeal_airway' || DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
+  return ['medication_push', 'oxygen', 'cpap', 'peripheral_iv', 'twelve_lead', 'needle_cricothyrotomy', 'io_access', 'cpr'].includes(id) || OBSTRUCTION_PROCS.has(id) || id === 'nasopharyngeal_airway' || DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
+// Every scene owns its cue timers. A hidden page cancels pending cues instead
+// of replaying them later, and only this scene's action voice is stopped.
+function scheduleSceneAudio({ action, resultSound, resultAt, reduced = false }) {
+  const timers = [];
+  let actionVoice, resultVoice;
+  let cancelled = false;
+  const stopAction = () => { actionVoice?.pause?.(); };
+  const cancel = (fadeResult = false) => {
+    cancelled = true;
+    timers.forEach(clearTimeout);
+    stopAction();
+    document.removeEventListener?.('visibilitychange', onVisibility);
+    if (!resultVoice?.pause) return;
+    if (fadeResult && !resultVoice.paused && !resultVoice.ended) {
+      // Fade the result with the outgoing overlay; never carry it into the
+      // next procedure or abruptly chop the tail of the recording.
+      const voice = resultVoice, volume = voice.volume;
+      for (let step = 1; step <= 4; step++) setTimeout(() => {
+        voice.volume = volume * (1 - step / 4);
+        if (step === 4) voice.pause();
+      }, step * 50);
+    } else resultVoice.pause();
+  };
+  const onVisibility = () => { if (document.hidden) cancel(); };
+  const later = (fn, delay) => timers.push(setTimeout(() => {
+    if (!cancelled && !document.hidden) fn();
+  }, delay));
+  document.addEventListener?.('visibilitychange', onVisibility);
+  if (reduced) resultVoice = playSound(resultSound);
+  else {
+    if (action) later(() => { actionVoice = playSound(action); }, 100);
+    later(() => { stopAction(); resultVoice = playSound(resultSound); }, resultAt);
+  }
+  return () => cancel(true);
+}
+
 function animateProcedureScene(id, procedureId, outcome) {
   const timing = PROCEDURE_TIMING[id];
   const overlay = document.getElementById(`${id}-overlay`);
@@ -2387,9 +2432,9 @@ function animateProcedureScene(id, procedureId, outcome) {
   overlay.classList.add('visible');
   return new Promise(resolve => {
     // Reduced motion shows a still result, keeping the same bounded turn lifecycle.
-    if (reduced) playSound(sound);
-    else setTimeout(() => playSound(sound), timing.sound);
+    const cancelAudio = scheduleSceneAudio({ action: timing.action, resultSound: sound, resultAt: timing.sound, reduced });
     setTimeout(() => {
+      cancelAudio();
       // Keep the finished CSS pose during the fade. Removing `visible` here
       // restarted the artwork before the overlay had become transparent.
       overlay.classList.add('is-fading');
@@ -2433,13 +2478,16 @@ function animateCPR(outcome) {
     const FADE_MS = 220;
     const overlay = document.getElementById('cpr-overlay');
     const label   = document.getElementById('cpr-label');
-    if (!overlay) { resolve(); return; }
+    if (!overlay) { playSound(getProcedureSound('cpr', outcome)); resolve(); return; }
     label.textContent = outcome || '';
     overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('cpr', outcome), resultAt: 0,
+      reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
+      cancelAudio();
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
     }, HOLD_MS);
@@ -2468,13 +2516,16 @@ function animateIV(outcome) {
     const FADE_MS = 220;
     const overlay = document.getElementById('iv-overlay');
     const label   = document.getElementById('iv-label');
-    if (!overlay) { resolve(); return; }
+    if (!overlay) { playSound(getProcedureSound('peripheral_iv', outcome)); resolve(); return; }
     label.textContent = outcome || '';
     overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('peripheral_iv', outcome), resultAt: 1800,
+      reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
+      cancelAudio();
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
     }, HOLD_MS);
@@ -2487,13 +2538,16 @@ function animateMedPush(outcome) {
     const FADE_MS = 220;
     const overlay = document.getElementById('medpush-overlay');
     const label   = document.getElementById('medpush-label');
-    if (!overlay) { resolve(); return; }
+    if (!overlay) { playSound(getProcedureSound('medication_push', outcome)); resolve(); return; }
     label.textContent = outcome || '';
     overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('medication_push', outcome), resultAt: 1800,
+      reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
+      cancelAudio();
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
     }, HOLD_MS);
@@ -2522,13 +2576,20 @@ function animateRouteMedication(id, outcome, holdMs) {
   return new Promise(resolve => {
     const overlay = document.getElementById(`${id}-overlay`);
     const label = document.getElementById(`${id}-label`);
-    if (!overlay || !label) { resolve(); return; }
+    const resultSound = getProcedureSound(id === 'oxygen' ? 'oxygen' : 'medication_push', outcome);
+    if (!overlay || !label) { playSound(resultSound); resolve(); return; }
+    const resultAt = ({ inmed: 1550, nebmed: 2100, niv: 2550 })[id] || 1900;
+    overlay.style.setProperty('--route-result-delay', `${resultAt}ms`);
     label.textContent = outcome || '';
     overlay.className = 'route-med-overlay';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    const usesOxygenFlow = id === 'oxygen' || id === 'nebmed' || id === 'niv';
+    const cancelAudio = scheduleSceneAudio({ action: usesOxygenFlow ? 'oxygen_flow' : null, resultSound, resultAt,
+      reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
+      cancelAudio();
       overlay.classList.remove('visible');
       setTimeout(resolve, 220);
     }, holdMs);
@@ -2547,14 +2608,17 @@ function animateNCD(outcome, procedureId = 'needle_decompression') {
     const overlay = document.getElementById('ncric-overlay');
     const label   = document.getElementById('ncric-label');
     const header  = document.getElementById('ncric-header');
-    if (!overlay) { resolve(); return; }
+    if (!overlay) { playSound(getProcedureSound('needle_cricothyrotomy', outcome)); resolve(); return; }
     if (header) header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
     label.textContent = outcome || '';
     overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('needle_cricothyrotomy', outcome), resultAt: 1100,
+      reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
+      cancelAudio();
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
     }, HOLD_MS);
@@ -2571,13 +2635,16 @@ function animateTwelveLead(outcome) {
     const FADE_MS = 220;
     const overlay = document.getElementById('ekg-overlay');
     const label   = document.getElementById('ekg-label');
-    if (!overlay) { resolve(); return; }
+    if (!overlay) { playSound(getProcedureSound('twelve_lead', outcome)); resolve(); return; }
     label.textContent = outcome || '';
     overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
+    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('twelve_lead', outcome), resultAt: 1500,
+      reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
+      cancelAudio();
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
     }, HOLD_MS);

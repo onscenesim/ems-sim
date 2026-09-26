@@ -25,7 +25,8 @@ function fixture({ reduced = false, missing = false } = {}) {
     window: { matchMedia: () => ({ matches: reduced }) }, localTranscript: null,
     document: { getElementById: id => missing ? null : elements.get(id) },
     playSound: sound => played.push({ sound, time: now }),
-    setTimeout: (fn, ms) => { timers.push({ fn, at: now + ms }); },
+    setTimeout: (fn, ms) => { const timer = { fn, at: now + ms }; timers.push(timer); return timer; },
+    clearTimeout: timer => { const i = timers.indexOf(timer); if (i >= 0) timers.splice(i, 1); },
   });
   vm.runInContext(sounds + scenes + '\nthis.timing = PROCEDURE_TIMING;', context);
   function advance(ms) {
@@ -60,8 +61,10 @@ for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction
     assert.equal(overlay.properties['--procedure-cycle'], `${t.cycle}ms`);
     assert.equal(overlay.properties['--procedure-result'], `${t.result}ms`);
     assert.ok(t.result + 180 <= t.hold, 'result is readable before fade');
-    f.advance(t.sound - 1); assert.equal(f.played.length, 0);
-    f.advance(1); assert.deepEqual(f.played, [{ sound: id === 'bvm' ? 'bvm_success' : id === 'lucas' ? 'lucas' : id === 'ncd' ? 'hiss' : ['laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib'].includes(id) ? 'success' : 'sword', time: t.sound }]);
+    f.advance(99); assert.equal(f.played.length, 0);
+    f.advance(t.sound - 100);
+    assert.deepEqual(f.played, t.action ? [{ sound: t.action, time: 100 }] : []);
+    f.advance(1); assert.deepEqual(f.played.slice(t.action ? 1 : 0), [{ sound: id === 'bvm' ? 'bvm_success' : id === 'lucas' ? 'lucas' : id === 'ncd' ? 'hiss' : ['laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib'].includes(id) ? 'success' : 'sword', time: t.sound }]);
     f.advance(t.hold - t.sound);
     assert.equal(overlay.classList.contains('visible'), true, 'keep final CSS pose throughout the fade');
     assert.equal(overlay.classList.contains('is-fading'), true);
@@ -87,7 +90,7 @@ test('replaying scenes clears previous outcomes and preserves all sound mappings
       const good = outcome === 'SUCCESS' || outcome === 'MARGINAL';
       assert.equal(f.played.at(-1).sound, id === 'scalpel' ? 'sword' : id === 'ncd' ? good ? 'hiss' : 'fail' : ['laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib'].includes(id) ? good ? 'success' : 'fail' : id === 'bvm' ? good ? 'bvm_success' : 'bvm_fail' : good ? 'lucas' : 'fail');
     }
-    assert.equal(f.played.length, 5);
+    assert.equal(f.played.length, f.context.timing[id].action ? 10 : 5);
   }
 });
 
@@ -132,7 +135,7 @@ test('the real roll loop defers only scene-owned sounds and waits for animations
   await started;
   assert.deepEqual(events, ['dice:bvm', 'bvm']);
   release(); await p;
-  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'hiss', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'cpr_outside', 'dice:cpr', 'cpr', 'defib']);
+  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'dice:cpr', 'cpr', 'defib']);
   events.length = 0;
   await c.rolls({ rolls: [{ procedure_id: 'lucas', outcome: 'FAILURE', multi_roll: true }, { procedure_id: 'bvm', no_roll: true }] });
   assert.deepEqual(events, ['fail'], 'legacy multi/no-roll routing remains unchanged');
@@ -154,7 +157,7 @@ test('intubation and RSI use the same anatomical scene with distinct outcome cap
       assert.equal(f.elements.get('laryngoscope-overlay').classList.contains('visible'), false);
     }
   }
-  assert.equal(f.played.length, 8);
+  assert.equal(f.played.length, 16);
 });
 
 
@@ -174,7 +177,7 @@ test('SGA, OPA and suction wrappers preserve outcomes and use the shared sound/r
       assert.equal(f.elements.get(`${id}-overlay`).classList.contains('visible'), false);
     }
   }
-  assert.equal(f.played.length, 12);
+  assert.equal(f.played.length, 16);
 });
 
 function transportFixture(options) {
@@ -247,7 +250,7 @@ test('server transport flags still gate one-time loading/departure sounds, desti
 });
 
 
-test('NCD routes to the chest scene while needle cric retains its existing scene and sound ownership', async () => {
+test('NCD routes to the chest scene while needle cric synchronizes its existing scene and sound', async () => {
   const f = fixture();
   vm.runInContext(source.slice(source.indexOf('function animateNCD('), source.indexOf('function animateOPA(')), f.context);
   const p = f.context.animateNCD('SUCCESS');
@@ -258,9 +261,10 @@ test('NCD routes to the chest scene while needle cric retains its existing scene
   for (const suffix of ['overlay', 'header', 'label']) f.elements.set(`ncric-${suffix}`, f.elements.get(`bvm-${suffix}`));
   const legacy = f.context.animateNCD('MARGINAL', 'needle_cricothyrotomy');
   assert.equal(f.elements.get('ncric-header').textContent, 'NEEDLE CRICOTHYROTOMY');
-  assert.equal(f.context.hasProcedureAnimationSound('needle_cricothyrotomy'), false);
-  f.advance(2820); await legacy;
-  assert.equal(f.played.length, 1, 'needle cric sound is still owned by the roll loop');
+  assert.equal(f.context.hasProcedureAnimationSound('needle_cricothyrotomy'), true);
+  f.advance(1099);assert.equal(f.played.length,1);f.advance(1);assert.equal(f.played.at(-1).sound,'hiss');
+  f.advance(1720); await legacy;
+  assert.equal(f.played.length, 2, 'needle cric owns its action cue');
 });
 
 // Shock modes share the lifecycle and own their sound at the shock, including legacy multi-rolls.
@@ -278,6 +282,60 @@ test('electrical shock modes preserve headers, sync state, and one timed sound',
       f.advance(1); assert.equal(f.played.at(-1).sound, 'defib_outside');
       f.advance(3220); await p;
       assert.equal(f.played.length, before + 1);
+    }
+  }
+});
+
+test('real fluid, blood and oxygen detection reaches the correct scene through the production roll loop', async () => {
+  const { detectWithConfirmation } = require('../src/engine/dice');
+  const f=fixture(),events=[];
+  f.elements.set('infusion-overlay',{dataset:{}});
+  f.elements.set('infusion-header',{textContent:''});
+  Object.assign(f.context,{
+    console:{log(){}},
+    animateDiceRoll:async id=>events.push(['dice',id]),
+    animateRouteMedication:async(id,outcome)=>events.push(['scene',id,outcome]),
+    animateMedPush:async()=>events.push(['wrong-scene']),
+    showDrugPanel:()=>{},
+  });
+  vm.runInContext(source.slice(source.indexOf('async function animateMedicationAdministration('),source.indexOf('function animateRouteMedication(')),f.context);
+  const start=source.indexOf('    for (const r of (data.rolls || [])) {');
+  const end=source.indexOf('    for (const r of (data.rolls || [])) printRoll',start);
+  vm.runInContext('async function runOrders(data) {\n'+source.slice(start,end)+'\n}',f.context);
+  for(const [order,scene,kind] of [['Give LR IV','infusion','fluid'],['Transfuse FFP','infusion','blood'],['Give oxygen via NRB','oxygen',null]]){
+    events.length=0;
+    const detected=detectWithConfirmation(order);
+    await f.context.runOrders(detected);
+    assert.equal(events[0][0],'dice',order);
+    assert.deepEqual(events[1],['scene',scene,detected.rolls[0].outcome],order);
+    assert.equal(f.played.length,0,'scene owns sound; no premature cue before dice');
+    if(kind)assert.equal(f.elements.get('infusion-overlay').dataset.fluid,kind);
+  }
+});
+
+test('legacy and route scenes align their sound to the action or result instead of the dice', async () => {
+  for(const [fn,id,delay,proc] of [['animateIV','iv',1800,'peripheral_iv'],['animateTwelveLead','ekg',1500,'twelve_lead'],['animateDrill','io',0,'io_access'],['animateCPR','cpr',0,'cpr']]){
+    const f=fixture();
+    for(const suffix of ['overlay','label']) f.elements.set(`${id}-${suffix}`,f.elements.get(`sga-${suffix}`));
+    vm.runInContext(source.match(new RegExp('function '+fn+'\\(outcome\\) \\{[\\s\\S]*?\\n\\}'))[0],f.context);
+    const done=f.context[fn]('SUCCESS');
+    assert.equal(f.played.length,0);
+    if(delay) {f.advance(delay-1);assert.equal(f.played.length,0);f.advance(1);}else f.advance(0);
+    assert.equal(f.played.length,1);assert.equal(f.played[0].time,delay);
+    assert.equal(f.played[0].sound,f.context.getProcedureSound(proc,'SUCCESS'));
+    f.advance(4000);await done;assert.equal(f.timers.length,0);
+  }
+  for(const [id,delay] of [['oralmed',1900],['inmed',1550],['nebmed',2100],['niv',2550],['infusion',1900],['oxygen',1900]]){
+    for (const outcome of ['SUCCESS', 'FAILURE']) {
+      const f=fixture();
+      for(const suffix of ['overlay','label']) f.elements.set(`${id}-${suffix}`,f.elements.get(`sga-${suffix}`));
+      vm.runInContext(source.slice(source.indexOf('function animateRouteMedication('),source.indexOf('function animateNIV(')),f.context);
+      const done=f.context.animateRouteMedication(id,outcome,3200);
+      f.advance(delay-1);
+      assert.deepEqual(['oxygen', 'nebmed', 'niv'].includes(id) ? [{sound:'oxygen_flow',time:100}] : [], f.played);
+      f.advance(1);assert.deepEqual(f.played.at(-1),{sound:outcome === 'SUCCESS' ? 'success' : 'fail',time:delay});
+      assert.equal(f.elements.get(`${id}-overlay`).properties['--route-result-delay'],`${delay}ms`);
+      f.advance(4000);await done;assert.equal(f.timers.length,0);
     }
   }
 });

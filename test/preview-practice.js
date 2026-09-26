@@ -47,6 +47,11 @@ async function main() {
     res.setHeader('Set-Cookie', `ems_player=${token}; Path=/; HttpOnly; SameSite=Strict`);
     res.redirect('/');
   });
+  wrapper.get('/__preview/audio', (_req, res) => {
+    const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+    res.type('html').send(html.replace('<head>', '<head><base href="/">').replace('</body>', '<script src="/__preview/audio-controls.js"></script></body>'));
+  });
+  wrapper.get('/__preview/audio-controls.js', (_req, res) => res.sendFile(path.join(__dirname, 'preview-audio-controls.js')));
   wrapper.use(app);
   const port = Number(process.env.PREVIEW_PORT || 3010);
   const server = wrapper.listen(port, '127.0.0.1', () => console.log(`Synthetic UI preview: http://127.0.0.1:${port} — fixture player: /__preview/player`));

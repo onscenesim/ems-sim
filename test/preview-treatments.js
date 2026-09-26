@@ -14,10 +14,15 @@ app.get('/', (_req, res) => {
   const access = html.match(/<g id="medpush-access">[\s\S]*?<\/g>/)[0];
   const face = html.match(/<g id="patient-face-profile"[\s\S]*?<\/g>/)[0];
   const scenes = html.slice(html.indexOf('    <!-- Fluids and blood products'), html.indexOf('    <!-- Route-specific medication administration: oral medication.'));
+  const audio = source.slice(0, source.indexOf('// ── Mobile audio unlock'));
+  const scheduler = source.slice(source.indexOf('function scheduleSceneAudio('), source.indexOf('function animateProcedureScene('));
   const helpers = source.slice(source.indexOf('async function animateMedicationAdministration('), source.indexOf('function animateNCD('));
   res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Treatment animation preview</title><link rel="stylesheet" href="/style.css"><style>
   body{margin:0;padding:24px;background:#101820;color:#c5d6e6;font-family:var(--font-xp);font-size:20px;height:100vh;box-sizing:border-box} .qa{position:relative;z-index:10000;max-width:850px;margin:auto} .controls{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0} button,select,input{font:inherit;padding:8px} input{min-width:300px} h1{font-size:26px;margin:0} #status{position:fixed;bottom:16px;left:24px;right:24px;z-index:10000;font-size:18px} .cap{position:fixed;bottom:90px;z-index:10000;background:#17222c;padding:10px} .route-med-overlay{padding-top:80px} a{color:#a5deee}
   </style></head><body><div class="qa"><h1>Treatment animation preview</h1><div class="controls"><label>Scene <select id="scene"><option value="fluid">IV fluid</option><option value="blood">Blood product</option><option value="oxygen">Oxygen</option></select></label><label>Outcome <select id="outcome"><option>SUCCESS</option><option>COMPLICATION</option><option>MARGINAL</option><option>FAILURE</option></select></label><button id="play">Play animation</button><button data-frame="250">Start frame</button><button data-frame="1200">Flow frame</button><button data-frame="2800">End frame</button></div><div class="controls"><input id="order" aria-label="Order" value="Transfuse PRBCs"><button id="detect">Test order</button><a href="http://127.0.0.1:3011/">Return to simulator</a></div></div><svg width="0" height="0" style="position:absolute"><defs>${access}${face}</defs></svg>${scenes}<div class="cap">Capillary refill: <span id="cap-value">—</span><div class="controls"><button id="generic">Get vitals</button><button id="assess">Check cap refill</button><button id="next">Next turn</button><button id="patient">Switch patient</button></div></div><output id="status">Production scenes and detection. Synthetic measurements; no model calls.</output><script>
+  const soundEnabled=true,localTranscript=null;
+  ${audio}
+  ${scheduler}
   ${helpers}
   function showDrugPanel(drug) { document.querySelector('#status').textContent += ' · Reference: ' + drug; }
   function animateMedPush() { return Promise.resolve(); }
