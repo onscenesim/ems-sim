@@ -65,3 +65,68 @@ switching, serial acquisition and saved-recording restoration controls.
 The top readout follows the supplied monitor-printout reference with three
 header columns. The original 3 × 4 waveform layout and long lead II strip remain. The header uses only revealed
 patient demographics; interval and axis values are synthetic estimates.
+
+## Adding ECGs without changing the renderer
+
+`public/ecg-catalog.js` is the shared browser/server catalog. For a new pathology,
+add one entry to `patterns`, then set `ecg_pattern: 'your_key'` on its scenario.
+An optional `match` regex also recognizes case names; matching is ordered and
+uses affirmative case identity, never differential hints. Example definition:
+
+```js
+teaching_variant: {
+  extends: ['lvh'],                 // optional; parent overlays run first
+  overlays: [['II III aVF', {q: .25, qWidth: .008}]],
+}
+```
+
+Lead properties use mV (`r`, `s`, `q`, `p`, `t`, `st`, `j`, `pr`, `u`) and seconds
+(`qWidth`, `tWidth`). `biphasic`, `upsloping`, `coved`, and `lbbb` select existing
+shape features. `st('II III aVF', .15)` applies stable per-case ST scaling;
+ordinary overlays use exact values. Pattern options include `qrs`, `pr`,
+`qtScale`, `delta`, `afterBroad`, and `mimic` (the intentionally false MI headline).
+`choose(variant)` can select among catalog keys using stable patient variation.
+Inherited overlays are additive; child values win on overlapping lead fields.
+
+For a new rhythm preset, add a `rhythms` entry using an existing waveform family:
+
+```js
+teaching_escape: {waveform: 'idioventricular', rate: 32, aliases: /teaching_escape/},
+```
+
+It inherits broad complexes, rhythm priority, and other family behavior. Both
+3-lead and 12-lead share the catalog's aliases, default rates and waveform family.
+Exact rhythm tokens always win; put specific aliases before broad aliases. Use
+`pattern` for a fixed morphology, `priority` to suppress primary injury, or
+`priorityAt` for a rate threshold. The 3-lead uses the family waveform; the
+12-lead additionally renders the regional pathology. The allowed model rhythm tokens update automatically from the catalog. Add an
+optional `prompt` string on a rhythm to explain when the model should emit it.
+An entirely new electrical timing/shape family still needs a focused handler in
+`twelve-lead.js` and the monitor's scheduling/signal functions in `app.js`; it
+does not require changes to acquisition, storage, quality, or paper layout.
+
+**Low quality is automatic for every entry.** `sample()` always adds the shared
+acquisition artifact after generating the electrical signal. SUCCESS, MARGINAL,
+FAILURE and COMPLICATION have progressively stronger artifact; entries cannot
+opt out. The catalog-wide contract test checks every pattern at slow/normal/fast
+rates and every rhythm/variant across all four qualities, including persistence.
+No separately drawn low-quality assets or extra model calls are needed. Run
+`node --test test/test-twelve-lead.js test/test-client-operations.js`, then use the
+side preview; its catalog selectors automatically include new entries.
+
+Asystole selects `flat` or `wander` deterministically per acquisition. Both have
+zero heart rate and no P/QRS/T complexes. Clean flat is exactly flat; clean wander
+is slow, at most 0.025 mV (0.25 mm at standard gain). Poor-quality recordings of
+both get the same shared artifact as every other ECG. A scenario may pin
+`ecg_rhythm_variant: 'flat'` or `'wander'`; the focused preview exposes both.
+Variant, signal family and P-wave behavior are stored with version 2 recordings,
+so viewing/restoring cannot reroll them. Version 1 snapshots remain supported.
+
+The header background is now the paper border's off-white (`#fff9f2`); the grid
+begins below the readout. Header text, columns and waveform layout are retained.
+
+New live acquisitions automatically open the latest paper in fit view after the
+procedure animations finish. Closing leaves it filed in More Vitals. Restoring a
+session, switching patients and receiving the same response again do not reopen
+old papers. The popup shows the acquired patient even when the notebook is
+viewing another patient.

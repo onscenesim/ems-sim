@@ -135,3 +135,103 @@ test('narration removes printed ECG findings while preserving patient and proced
   assert.equal(strip('The patient states they had an infarct in 2014.'),'The patient states they had an infarct in 2014.');
   assert.equal(strip('12-lead deferred while you ventilate the patient.'),'12-lead deferred while you ventilate the patient.');
 });
+
+test('every catalog pattern and rhythm automatically gets increasingly noisy quality variants',()=>{
+  const catalog=ECG.catalog;
+  for(const [key,definition] of Object.entries(catalog.patterns)){
+    const resolved=catalog.resolvePattern(key);
+    for(const [list,properties] of resolved.overlays){
+      for(const lead of list.split(' '))assert.ok(ECG.names.includes(lead),`${key}: invalid lead ${lead}`);
+      for(const v of Object.values(properties))assert.ok(typeof v==='boolean'||Number.isFinite(v),key);
+    }
+    if(definition.choose)for(const v of [0,.49,.51,.99])assert.ok(catalog.patterns[definition.choose(v)]);
+  }
+  const scenarios=[...Object.keys(catalog.patterns).flatMap(key=>[40,80,140].map(HR=>({seed:{ecg_pattern:key},vitals:{Rhythm:'sinus',HR}}))),
+    ...Object.entries(catalog.rhythms).flatMap(([Rhythm,r])=>(r.variants||[undefined]).map(rhythmVariant=>({vitals:{Rhythm,HR:r.rate},rhythmVariant})))];
+  for(const scenario of scenarios){
+    let previous=-1;
+    for(const outcome of Object.keys(catalog.qualities)){
+      const record=ECG.create({...scenario,id:'quality-contract',outcome});
+      let error=0;
+      for(const lead of ECG.names)for(let t=0;t<10;t+=.071){
+        const actual=ECG.sample(record,lead,t),clean=ECG.sample({...record,noise:0},lead,t);
+        assert.ok(Number.isFinite(actual));error+=(actual-clean)**2;
+      }
+      assert.ok(error>previous,`${JSON.stringify(scenario)} ${outcome}: artifact must increase`);previous=error;
+      assert.equal(ECG.sample(JSON.parse(JSON.stringify(record)),'II',2.123),ECG.sample(record,'II',2.123));
+    }
+  }
+});
+
+test('asystole has flat and gently wandering baselines, no complexes, and shared poor-quality variants',()=>{
+  const variants=new Set();
+  for(let i=0;i<40;i++)variants.add(ECG.create({id:String(i),vitals:{Rhythm:'asystole'}}).rhythmVariant);
+  assert.deepEqual([...variants].sort(),['flat','wander']);
+  for(const rhythmVariant of variants){
+    const options={vitals:{Rhythm:'asystole',HR:80},rhythmVariant,id:'asystole'};
+    const clean=ECG.create(options),poor=ECG.create({...options,outcome:'FAILURE'});
+    assert.equal(clean.rate,0);assert.deepEqual(clean.beats,[]);assert.equal(ECG.measurements(clean).qrs,'—');
+    let max=0;
+    for(const lead of ECG.names)for(let t=0;t<10;t+=.01){const y=ECG.sample(clean,lead,t);max=Math.max(max,Math.abs(y));if(rhythmVariant==='flat')assert.equal(y,0);}
+    if(rhythmVariant==='wander')assert.ok(max>.01&&max<=.025,'submillimetre baseline wander');
+    assert.ok(poor.noise>=.14);assert.notEqual(ECG.sample(clean,'II',2),ECG.sample(poor,'II',2));
+    assert.equal(ECG.svg(clean),ECG.svg(JSON.parse(JSON.stringify(clean))));
+  }
+  assert.throws(()=>ECG.create({vitals:{Rhythm:'asystole'},rhythmVariant:'typo'}),/Unknown ECG rhythm variant/);
+  const old=ECG.create({vitals:{Rhythm:'asystole'},rhythmVariant:'flat'});
+  delete old.rhythmVariant;delete old.waveform;delete old.pWaves;old.version=1;old.noise=.008;
+  assert.ok(Number.isFinite(ECG.sample(old,'II',1)),'existing saved recordings remain readable');
+});
+
+test('catalog and generator load in the browser and new presets inherit their family physiology',()=>{
+  const fs=require('node:fs'),vm=require('node:vm');
+  const context=vm.createContext({});
+  let catalog=fs.readFileSync(require.resolve('../public/ecg-catalog'),'utf8');
+  catalog=catalog.replace('const rhythms={',"const rhythms={ teaching_escape:{waveform:'idioventricular',rate:32},");
+  catalog=catalog.replace('const patterns={',"const patterns={ teaching_pattern:{extends:['lvh'],overlays:[['II',{q:.4}]]},");
+  vm.runInContext(catalog,context);vm.runInContext(fs.readFileSync(require.resolve('../public/twelve-lead'),'utf8'),context);
+  const runtime=context.TwelveLead;
+  const record=runtime.create({vitals:{Rhythm:'teaching_escape'},seed:{ecg_pattern:'teaching_pattern'},outcome:'FAILURE'});
+  assert.equal(record.rhythm,'teaching_escape');assert.equal(record.waveform,'idioventricular');assert.equal(record.rate,32);
+  assert.ok(record.beats.every(b=>b.width===.16));assert.equal(record.leads.II.q,.4);assert.equal(record.leads.V5.r,2);
+  assert.ok(record.noise>=.14);assert.ok(Number.isFinite(runtime.sample(record,'II',2)));
+});
+
+test('new acquisitions pop up once; restore stays quiet and notebook patient does not hide another patient’s new paper',()=>{
+  const vm=require('node:vm'),fs=require('node:fs');
+  const nodes=new Map();
+  function element(){
+    const handlers={};return {value:'',open:false,innerHTML:'',textContent:'',hidden:false,children:[],
+      classList:{remove(){},toggle(){return true;}},setAttribute(){},
+      addEventListener(name,callback){handlers[name]=callback;},fire(name){handlers[name]?.();},
+      replaceChildren(){this.children=[];this.value='';},appendChild(o){this.children.push(o);},
+      showModal(){this.open=true;this.opens=(this.opens||0)+1;},close(){this.open=false;this.fire('close');}};
+  }
+  const doc={getElementById(id){if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);},createElement:element};
+  const context=vm.createContext({TwelveLead:{svg:e=>e.id}});
+  vm.runInContext(fs.readFileSync(require.resolve('../public/twelve-lead-viewer'),'utf8'),context);
+  const viewer=context.TwelveLeadViewer.mount(doc),dialog=doc.getElementById('ecg-dialog'),paper=doc.getElementById('ecg-paper');
+  const first={id:'first',patientId:'patient_1',minute:2,quality:'Standard'};
+  viewer.update([first]);assert.equal(dialog.open,false,'restore must not open');
+  const next={...first,id:'second'};
+  viewer.update([first,next],{openNew:true});assert.equal(dialog.open,true);assert.equal(paper.innerHTML,'second');
+  viewer.close();viewer.update([first,next],{openNew:true});assert.equal(dialog.open,false,'duplicate response must not reopen');
+  const other={...first,id:'other-patient',patientId:'patient_2'};
+  viewer.update([first,next,other],{openNew:true});assert.equal(paper.innerHTML,'other-patient');
+  viewer.setPatient('patient_1');viewer.setAutoInterpret(false);assert.equal(paper.innerHTML,'other-patient','notebook updates preserve acquired paper');
+  viewer.close();doc.getElementById('ecg-open').fire('click');assert.equal(paper.innerHTML,'second','notebook can reopen latest selected patient paper');
+  assert.equal(dialog.opens,3);
+});
+
+test('scenario catalog ECG pins survive rolling and reach the acquired recording',()=>{
+  const {catalog,prepareInstructor}=require('../src/engine/instructor');
+  const {rollScenario}=require('../src/engine/roller');
+  const instructor=prepareInstructor({case_id:catalog().find(e=>e.category==='cardiac').case_id});
+  instructor.entry={...instructor.entry,ecg_pattern:'brugada',ecg_rhythm_variant:'wander'};
+  const seed=rollScenario({instructor});
+  assert.equal(seed.ecg_pattern,'brugada');assert.equal(seed.ecg_rhythm_variant,'wander');
+  const record=acquireTwelveLeads({seed,vitals:{Rhythm:'asystole',HR:0},rolls:[{procedure_id:'twelve_lead',outcome:'MARGINAL'}]})[0];
+  assert.equal(record.rhythmVariant,'wander');assert.ok(record.noise>.012);
+  const sinus=ECG.create({seed,vitals:{Rhythm:'sinus',HR:80}});
+  assert.ok(sinus.leads.V1.coved);
+});

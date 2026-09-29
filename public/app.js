@@ -1269,7 +1269,7 @@ async function sendTurn(msg, opts = {}) {
     }
     applyPatientFocus(data.patient_focus, data.second_patient);
     applyVitals(data.vitals || null);
-    ecgViewer.update(data.twelve_leads || []);
+    ecgViewer.update(data.twelve_leads || [], {openNew:true});
     // Fire startup sound the first time the player asks for vitals,
     // or when CPR begins.
     if (!firstVitalsPlayed) {
@@ -3123,12 +3123,7 @@ let stalenessInterval  = null;
 // ahead of it (like a real LIFEPAK), wrapping at the right edge. Each rhythm
 // token the engine can emit gets its own waveform generator.
 
-const RHYTHM_RATE_DEFAULT = {
-  sinus: 80, sinus_tach: 125, sinus_brad: 45, afib: 95, aflutter: 140,
-  svt: 180, vt: 185, torsades: 220, vf: 0, asystole: 0, pea: 45, paced: 70,
-  junctional: 45, idioventricular: 35, hyperk: 70,
-  av_block_1: 70, av_block_2_i: 55, av_block_2_ii: 45, av_block_3: 35,
-};
+const RHYTHM_RATE_DEFAULT = TwelveLead.rates;
 
 const STRIP_SPEED = 46;   // CSS px per second of sweep
 const STRIP_GAP   = 12;   // erase gap ahead of the pen
@@ -3380,8 +3375,10 @@ function stripIdle() {
 function setRhythmStrip(rhythmRaw, hr) {
   const s = rhythmStrip;
   if (!s.canvas) return;
-  const type = normalizeRhythm(rhythmRaw);
-  const rate = (hr && hr > 0) ? hr : (RHYTHM_RATE_DEFAULT[type] ?? 75);
+  const rhythm = normalizeRhythm(rhythmRaw);
+  const definition = TwelveLead.catalog.rhythms[rhythm];
+  const type = definition.waveform;
+  const rate = definition.noRate ? 0 : (hr && hr > 0) ? hr : RHYTHM_RATE_DEFAULT[rhythm];
   if (s.active && type === s.type && Math.abs(rate - s.rate) < 1) return;  // unchanged
   const wasActive = s.active;
   const previousType = s.type;

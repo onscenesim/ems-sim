@@ -1,5 +1,7 @@
 'use strict';
 
+const { rhythms: ECG_RHYTHMS } = require('../../public/ecg-catalog');
+
 const { CREW }    = require('../data/crew');
 const { REGIONS } = require('../data/regions');
 const { COMORBIDITIES } = require('../data/comorbidities');
@@ -250,7 +252,10 @@ function assembleSeedBlock(seed) {
   lines.push('  Episodic vitals (BP, Temp, Glucose, CapRefill) carry @T+M:SS timestamp of when measured; timestamp persists until a new measurement.');
   lines.push('  BP cycling: "cycle BP"/"recheck" → new measurement + fresh timestamp. "q5 min"/"auto-cycle qN" → update every N scene-minutes.');
   lines.push('  "Get vitals" shorthand → simultaneously places SpO2 + HR + Rhythm + RR. BP still needs explicit cuff + cycle.');
-  lines.push('  Rhythm values: sinus sinus_tach sinus_brad AFib AFlutter SVT VT torsades VF asystole PEA paced junctional idioventricular hyperK AV_block_1 AV_block_2_I AV_block_2_II AV_block_3');
+  lines.push('  Rhythm values: ' + Object.keys(ECG_RHYTHMS).join(' '));
+  for (const [key, rhythm] of Object.entries(ECG_RHYTHMS)) {
+    if (rhythm.prompt) lines.push(`  Rhythm=${key}: ${rhythm.prompt}`);
+  }
   lines.push('  WIDE-COMPLEX TACHYCARDIA — USE Rhythm=VT: Any monomorphic or otherwise non-torsades wide-complex tachycardia — true VT, SVT with aberrancy, a paced tachycardia, or the QRS widening of sodium-channel toxicity (cocaine, TCA) — is emitted as Rhythm=VT so the monitor draws WIDE complexes. Torsades is the explicit exception described below. There is NO generic wide-complex token: NEVER invent one (e.g. wide_complex_tach, WCT, VTach) — an unrecognized token falls back to a NARROW sinus trace, which will contradict your narration. If the QRS is wide, the token is VT (torsades for torsades, or paced if pacer-driven). Emit the token from the FIRST reading so the drawn waveform matches what you describe; do not narrate "wide" while the monitor shows narrow.');
   lines.push('  TORSADES DE POINTES — USE Rhythm=torsades (not VT or VF) for polymorphic VT with waxing and waning complexes that twist around the baseline. It has an organized ventricular rate, usually 150-250; emit the countable HR even when the patient is pulseless.');
   lines.push('  Use Rhythm=hyperK when hyperkalemia is affecting the ECG (renal failure, dialysis miss, crush injury): the monitor waveform will show flattened P waves, a widening QRS, and tall tented T waves. The Rhythm token is MACHINE-FACING ONLY — the player is never shown the rhythm name, only the drawn waveform, so never name the rhythm in narration either (Rule 4: describe the waveform, let them interpret).');
