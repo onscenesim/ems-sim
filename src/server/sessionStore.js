@@ -115,7 +115,7 @@ function updateHistory(userId, seed) {
  * Roll a new scenario, wrap it in a Session, and persist it.
  * Returns { id, seed }.
  */
-function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', partner_name = null, captain_name = null, category = null, instructor = null, replay_seed = null } = {}, userId = 'anon', tier = 'free') {
+function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', partner_name = null, captain_name = null, category = null, instructor = null, custom_partner = null, custom_captain = null, replay_seed = null } = {}, userId = 'anon', tier = 'free') {
   const history = getOrInitHistory(userId);
 
   const seed = replay_seed ? { ...structuredClone(replay_seed), scenario_id: uuidv4(), user_id: userId, timestamp_start: new Date().toISOString(), events: [] } : rollScenario({
@@ -130,6 +130,20 @@ function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_i
     category,
     instructor,
   });
+
+  if (!replay_seed && custom_partner && !instructor?.custom_partner) {
+    const previousPartner = seed.crew_partner;
+    seed.custom_partner = { name: custom_partner.name, personality_notes: custom_partner.description,
+      role: provider_level === 'BLS' ? 'partner_BLS' : 'partner', custom: true };
+    seed.crew_partner = custom_partner.name;
+    if (seed.crew_transport_driver === previousPartner) seed.crew_transport_driver = custom_partner.name;
+  }
+
+  if (!replay_seed && custom_captain && !instructor?.custom_captain) {
+    seed.custom_captain = { name: custom_captain.name, personality_notes: custom_captain.description,
+      role: provider_level === 'BLS' ? 'captain_BLS' : 'captain', custom: true };
+    seed.crew_captain = custom_captain.name;
+  }
 
   // Record this scenario in the user's history so future rolls avoid repeats
   updateHistory(userId, seed);

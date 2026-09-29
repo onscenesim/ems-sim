@@ -759,15 +759,21 @@ function rebuildPartnerOptions(providerLevel) {
     opt.textContent = name;
     partnerSelect.appendChild(opt);
   });
-  // Restore saved if still valid for this provider level
-  if (list.includes(saved)) partnerSelect.value = saved;
+  for (const partner of InstructorUI.roster()) {
+    partnerSelect.appendChild(new Option(`${partner.name} (custom)`, `custom:${partner.id}`));
+  }
+  // Restore catalog or saved custom selection.
+  if ([...partnerSelect.options].some(option => option.value === saved)) partnerSelect.value = saved;
   else partnerSelect.value = '';
 }
 
-const savedPartner = localStorage.getItem('ems_partner');
-if (savedPartner) partnerSelect.value = savedPartner;
-
 rebuildPartnerOptions(providerSelect.value);
+const savedPartner = localStorage.getItem('ems_partner');
+if (savedPartner && [...partnerSelect.options].some(o => o.value === savedPartner)) partnerSelect.value = savedPartner;
+window.addEventListener('partner-roster-change', () => {
+  rebuildPartnerOptions(providerSelect.value);
+  partnerSelect.dispatchEvent(new Event('change'));
+});
 
 providerSelect.addEventListener('change', () => {
   rebuildPartnerOptions(providerSelect.value);
@@ -801,14 +807,20 @@ function rebuildCaptainOptions(providerLevel) {
     opt.textContent = name;
     captainSelect.appendChild(opt);
   });
-  if (list.includes(saved)) captainSelect.value = saved;
+  for (const captain of InstructorUI.captainRoster()) {
+    captainSelect.appendChild(new Option(`${captain.name} (custom)`, `custom:${captain.id}`));
+  }
+  if ([...captainSelect.options].some(o => o.value === saved)) captainSelect.value = saved;
   else captainSelect.value = '';
 }
 
-const savedCaptain = localStorage.getItem('ems_captain');
-if (savedCaptain) captainSelect.value = savedCaptain;
-
 rebuildCaptainOptions(providerSelect.value);
+const savedCaptain = localStorage.getItem('ems_captain');
+if (savedCaptain && [...captainSelect.options].some(o => o.value === savedCaptain)) captainSelect.value = savedCaptain;
+window.addEventListener('captain-roster-change', () => {
+  rebuildCaptainOptions(providerSelect.value);
+  captainSelect.dispatchEvent(new Event('change'));
+});
 
 captainSelect.addEventListener('change', () => {
   const v = captainSelect.value;
@@ -871,6 +883,14 @@ const TILE_DESCS = {
 function updateTileDesc(id, value) {
   const el = document.getElementById('desc-' + id);
   if (!el) return;
+  if (id === 'partner') {
+    const custom = InstructorUI.rosterPartner(value);
+    if (custom) { el.textContent = custom.description; return; }
+  }
+  if (id === 'captain') {
+    const custom = InstructorUI.rosterCaptain(value);
+    if (custom) { el.textContent = custom.description; return; }
+  }
   const map = TILE_DESCS[id];
   el.textContent = map ? (map[value] ?? '') : '';
 }
@@ -990,10 +1010,12 @@ async function startScenario(replayOf = null) {
   startBtn.textContent = 'CONNECTING...';
 
   try {
-    const partner_name = partnerSelect ? (partnerSelect.value || null) : null;
-    const captain_name = captainSelect ? (captainSelect.value || null) : null;
+    const rosterPartner = replayOf ? null : InstructorUI.rosterPartner(partnerSelect.value);
+    const partner_name = partnerSelect.value.startsWith('custom:') ? null : (partnerSelect.value || null);
+    const rosterCaptain = replayOf ? null : InstructorUI.rosterCaptain(captainSelect.value);
+    const captain_name = captainSelect.value.startsWith('custom:') ? null : (captainSelect.value || null);
     const instructorRequest = replayOf ? {} : InstructorUI.request();
-    const data = await apiPost('/api/scenario/new', { ...instructorRequest, difficulty, provider_level, region_id, unit_name, partner_name, captain_name, category, ...(replayOf ? { replay_of: replayOf } : {}) });
+    const data = await apiPost('/api/scenario/new', { ...instructorRequest, ...(rosterPartner ? { custom_partner: rosterPartner } : {}), ...(rosterCaptain ? { custom_captain: rosterCaptain } : {}), difficulty, provider_level, region_id, unit_name, partner_name, captain_name, category, ...(replayOf ? { replay_of: replayOf } : {}) });
 
     if (!replayOf) InstructorUI.started();
     if (currentPlayer?.stats) currentPlayer.stats.scenariosStarted += 1;
@@ -2055,12 +2077,12 @@ function buildCrewMemberCard(member) {
     v.textContent = value;
     grid.appendChild(v);
   }
-  wrap.appendChild(grid);
+  if (!member.custom) wrap.appendChild(grid);
 
   if (member.personality_notes) {
     const lbl = document.createElement('div');
     lbl.className = 'crew-section-label';
-    lbl.textContent = 'Personality';
+    lbl.textContent = member.custom ? 'Behavior description' : 'Personality';
     wrap.appendChild(lbl);
     const txt = document.createElement('div');
     txt.className = 'crew-notes';
@@ -2068,7 +2090,7 @@ function buildCrewMemberCard(member) {
     wrap.appendChild(txt);
   }
 
-  if (CREW_TENDENCIES[member.name]) {
+  if (!member.custom && CREW_TENDENCIES[member.name]) {
     const lbl = document.createElement('div');
     lbl.className = 'crew-section-label';
     lbl.textContent = 'On-scene tendencies';
@@ -3489,7 +3511,7 @@ function applyVitals(vitals) {
     const display = formatVitalDisplay(name, raw);
     const els = document.querySelectorAll(`[data-vital="${name}"]`);
     for (const el of els) {
-      el.textContent = display !== null ? display : '\u2014\u2014';
+      el.textContent = display !== null ? display : name === 'CapRefill' ? 'Not checked' : '\u2014\u2014';
       // Strip prior staleness classes then re-apply if episodic
       el.classList.remove('vital-stale-warn', 'vital-stale-bad');
       if (display !== null && VITAL_EPISODIC.has(name)) {

@@ -104,9 +104,15 @@ test('session gates unsolicited capillary refill and stores each patient’s las
   const reply=(patient,value,minute)=>`Observation recorded. [PATIENT_FOCUS: patient_${patient} | Patient ${patient}] [VITALS: GCS=15 CapRefill=${value}@T+0:00] [TIME: ${minute}:00]`;
   response=reply(1,3,1); await s.send('Get vitals'); assert.equal(s.lastVitals.CapRefill,undefined);
   response=reply(1,3,2); await s.send('Check capillary refill'); assert.equal(s.lastVitals.CapRefill.value,3);assert.equal(s.lastVitals.CapRefill.t,'T+2:00');
-  response=reply(1,1,3); await s.send('Talk to the patient');assert.equal(s.lastVitals.CapRefill.value,3);assert.equal(s.lastVitals.CapRefill.t,'T+2:00');
-  response='The patient answers your question. [TIME: 3:30]';await s.send('Ask their name');assert.equal(s.lastVitals.CapRefill.value,3);assert.equal(s.lastVitals.CapRefill.t,'T+2:00');
+  response='Capillary refill is 2.5 seconds. [TIME: 2:30]'; await s.send('Check capillary refill');
+  assert.equal(s.lastVitals.CapRefill.value,2.5);
+  assert.equal(s.lastVitals.CapRefill.t,'T+2:30');
+  response='Measured. [VITALS: GCS=15 CRT=3s] [TIME: 2:45]'; await s.send('Check CRT');
+  assert.equal(s.lastVitals.CapRefill.value,3);
+  assert.equal(s.lastVitals.CapRefill.t,'T+2:45');
+  response=reply(1,1,3); await s.send('Talk to the patient');assert.equal(s.lastVitals.CapRefill.value,3);assert.equal(s.lastVitals.CapRefill.t,'T+2:45');
+  response='The patient answers your question. [TIME: 3:30]';await s.send('Ask their name');assert.equal(s.lastVitals.CapRefill.value,3);assert.equal(s.lastVitals.CapRefill.t,'T+2:45');
   response=reply(2,2,4); await s.send('Focus on the second patient');assert.equal(s.lastVitals.CapRefill,undefined);
   response=reply(2,2,5); await s.send('Check cap refill');assert.equal(s.lastVitals.CapRefill.value,2);
-  response=reply(1,1,6); await s.send('Focus on the first patient');assert.equal(s.lastVitals.CapRefill.value,3);assert.equal(s.lastVitals.CapRefill.t,'T+2:00');
+  response=reply(1,1,6); await s.send('Focus on the first patient');assert.equal(s.lastVitals.CapRefill.value,3);assert.equal(s.lastVitals.CapRefill.t,'T+2:45');
 });

@@ -213,7 +213,8 @@ function parseVitalsTag(reply) {
   for (const tok of inner.split(/\s+/)) {
     const eqIdx = tok.indexOf('=');
     if (eqIdx < 1) continue;
-    const key = tok.slice(0, eqIdx);
+    const rawKey = tok.slice(0, eqIdx);
+    const key = /^(?:cap_?refill|capillary_?refill|crt)$/i.test(rawKey) ? 'CapRefill' : rawKey;
     let rawValue = tok.slice(eqIdx + 1);
 
     // Optional "@T+M:SS" or "@T=M:SS" timestamp suffix on episodic vitals (BP, Temp, Glucose)
@@ -229,7 +230,7 @@ function parseVitalsTag(reply) {
 
     let parsedValue = rawValue;
     if (VITALS_NUMERIC.has(key)) {
-      const n = Number(rawValue);
+      const n = Number(key === 'CapRefill' ? rawValue.replace(/(?:s|sec|seconds)$/i, '') : rawValue);
       if (!Number.isFinite(n)) continue;   // garbage in a numeric field — omit
       parsedValue = n;
     } else if (key === 'Temp') {
@@ -632,6 +633,9 @@ class Session {
     // Inject all real roll results into the user message so Claude knows every outcome.
     // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
     let messageText = userText;
+    if (rolls.some(r => r.procedure_id === 'capillary_refill')) {
+      messageText += '\n\n[SYSTEM NOTE: Explicit capillary refill assessment requested. Perform it for the patient being assessed and state the measured duration numerically in seconds. Include CapRefill=<seconds>@T+M:SS in the VITALS tag, using this assessment time. Do not report only "brisk", "normal", or "delayed". If the assessment cannot be performed, state that and omit the reading.]';
+    }
 
     // During an active arrest cycle, a standalone request to check the pulse or
     // rhythm is intent to check at the next scheduled two-minute pause — not an
@@ -852,7 +856,7 @@ class Session {
     const { cleanedReply: vitalsClean, vitals: rawVitals } = parseVitalsTag(focusClean);
     const assessedVitals = applyCapillaryRefill(rawVitals, this.patientVitals[patientId],
       reconcileRolls(rolls, focusClean).some(r => r.procedure_id === 'capillary_refill'),
-      parseTimeTag(rawReply).timeMinutes ?? this.sceneMinute);
+      parseTimeTag(rawReply).timeMinutes ?? this.sceneMinute, vitalsClean);
     const vitals = applyPulseOx(assessedVitals, this.patientVitals[patientId] || null,
       patientId === 'patient_1' ? this.seed : { complication_type: this.seed.complication_type });
     if (vitals) this.lastVitals = vitals;

@@ -39,11 +39,43 @@ function validateFields(input = {}, fields) {
   if (Object.hasOwn(result, 'random_seed') && (typeof result.random_seed !== 'string' || !result.random_seed.trim() || result.random_seed.length > 128)) throw new Error('Random seed must contain 1–128 characters.');
   return result;
 }
+function prepareCustomPartner(value) {
+  let custom_partner = null;
+  if (value != null) {
+    const partner = value;
+    if (!partner || typeof partner !== 'object' || Array.isArray(partner)
+      || Object.keys(partner).some(key => !['name', 'description'].includes(key))
+      || typeof partner.name !== 'string' || !partner.name.trim() || partner.name.length > 80
+      || /[\r\n]/.test(partner.name)
+      || typeof partner.description !== 'string' || !partner.description.trim() || partner.description.length > 4000) {
+      throw new Error('Custom partner needs a name (1–80 characters) and behavior description (1–4000 characters).');
+    }
+    custom_partner = { name: partner.name.trim(), description: partner.description.trim() };
+  }
+  return custom_partner;
+}
+function prepareCustomCaptain(value) {
+  let custom_captain = null;
+  if (value != null) {
+    const captain = value;
+    if (!captain || typeof captain !== 'object' || Array.isArray(captain)
+      || Object.keys(captain).some(key => !['name', 'description'].includes(key))
+      || typeof captain.name !== 'string' || !captain.name.trim() || captain.name.length > 80
+      || /[\r\n]/.test(captain.name)
+      || typeof captain.description !== 'string' || !captain.description.trim() || captain.description.length > 4000) {
+      throw new Error('Custom captain needs a name (1–80 characters) and behavior description (1–4000 characters).');
+    }
+    custom_captain = { name: captain.name.trim(), description: captain.description.trim() };
+  }
+  return custom_captain;
+}
 function prepareInstructor(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Choose an instructor scenario.');
   const entry = catalog().find(e => e.case_id === input.case_id);
   if (!entry) throw new Error('Choose an instructor scenario from the catalog.');
   if (input.hide_debrief !== undefined && typeof input.hide_debrief !== 'boolean') throw new Error('Invalid review setting.');
+  const custom_partner = prepareCustomPartner(input.custom_partner);
+  const custom_captain = prepareCustomCaptain(input.custom_captain);
   const overrides = validateFields(input.scenario, scenarioFields);
   const seed = validateFields(input.seed, seedFields);
   for (const key of Object.keys(seed)) {
@@ -54,13 +86,33 @@ function prepareInstructor(input) {
     entry.compatibility[key.split('.')[1]] = overrides[key];
     delete overrides[key];
   }
-  return { entry: { ...entry, ...overrides }, seed, hide_debrief: input.hide_debrief === true };
+  return { entry: { ...entry, ...overrides }, seed, custom_partner, custom_captain, hide_debrief: input.hide_debrief === true };
 }
 function applyInstructor(seed, instructor) {
   Object.assign(seed, instructor.seed);
   if (Object.hasOwn(instructor.seed, 'patient_age')) seed.patient_age_display = `${seed.patient_age} years old`;
   if (Object.hasOwn(instructor.seed, 'complication_type')) seed.complication_roll = seed.complication_type === 'none' ? null : 1;
   if (Object.hasOwn(instructor.seed, 'weather_id')) seed.weather = WEATHER.find(w => w.id === seed.weather_id)?.text || null;
+  if (instructor.custom_partner) {
+    const previousPartner = seed.crew_partner;
+    seed.custom_partner = {
+      name: instructor.custom_partner.name,
+      role: seed.provider_level === 'BLS' ? 'partner_BLS' : 'partner',
+      custom: true,
+      personality_notes: instructor.custom_partner.description,
+    };
+    seed.crew_partner = seed.custom_partner.name;
+    if (seed.crew_transport_driver === previousPartner) seed.crew_transport_driver = seed.crew_partner;
+  }
+  if (instructor.custom_captain) {
+    seed.custom_captain = {
+      name: instructor.custom_captain.name,
+      role: seed.provider_level === 'BLS' ? 'captain_BLS' : 'captain',
+      custom: true,
+      personality_notes: instructor.custom_captain.description,
+    };
+    seed.crew_captain = seed.custom_captain.name;
+  }
   seed.instructor_mode = true;
   seed.hide_debrief = instructor.hide_debrief;
   seed.instructor_scenario = structuredClone(instructor.entry);
@@ -69,4 +121,4 @@ function applyInstructor(seed, instructor) {
 function reviewText(run) {
   return run.seed?.hide_debrief ? REVIEW_NOTICE : run.debriefText || null;
 }
-module.exports = { catalog, scenarioFields, seedFields, prepareInstructor, applyInstructor, reviewText, REVIEW_NOTICE };
+module.exports = { prepareCustomCaptain, prepareCustomPartner, catalog, scenarioFields, seedFields, prepareInstructor, applyInstructor, reviewText, REVIEW_NOTICE };

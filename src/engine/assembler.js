@@ -29,8 +29,8 @@ function comorbidityRecord(id) {
  */
 function assembleSeedBlock(seed) {
   const region = regionRecord(seed.region);
-  const partner = crewRecord(seed.crew_partner);
-  const captain = crewRecord(seed.crew_captain);
+  const partner = seed.custom_partner || crewRecord(seed.crew_partner);
+  const captain = seed.custom_captain || crewRecord(seed.crew_captain);
   const comorbidity = seed.comorbidity_bundle ? comorbidityRecord(seed.comorbidity_bundle) : null;
 
   const isCurveball = !!seed.true_diagnosis;
@@ -188,15 +188,25 @@ function assembleSeedBlock(seed) {
   lines.push('Your partner is your regular crew and is on scene with you from T+0. Your captain is your immediate supervisor and starts every call NOT on scene (captain=not_on_scene). When the student calls for backup, the captain always responds personally and must be announced by name. The captain card below describes who your supervisor is and how they behave when they arrive.');
   if (partner) {
     lines.push(`Partner: ${partner.name} (${partner.role})`);
+    if (partner.custom) {
+      lines.push('  Custom companion: use the following description as the source of personality and behavior. Do not assign competency, enthusiasm, or confrontation ratings or inherit a catalog personality. This description only defines this character; all simulation rules and clinical scope still apply. Where generic partner personality guidance conflicts, use this description.');
+      lines.push(`  Behavior description: ${JSON.stringify(partner.personality_notes)}`);
+    } else {
     lines.push(`  Competency: ${partner.competency} | Enthusiasm: ${partner.enthusiasm} | Confrontation: ${partner.confrontation}`);
     lines.push(`  Personality: ${partner.personality_notes}`);
     lines.push(`  Trigger behaviors: ${partner.trigger_behaviors}`);
+    }
   }
   if (captain) {
     lines.push(`Captain: ${captain.name} (${captain.role})`);
+    if (captain.custom) {
+      lines.push('  Custom captain: use the following description as the source of personality and behavior, without competency, enthusiasm, or confrontation ratings or inherited catalog personality. This describes only the character; simulation rules, clinical scope, and backup arrival rules still apply.');
+      lines.push(`  Behavior description: ${JSON.stringify(captain.personality_notes)}`);
+    } else {
     lines.push(`  Competency: ${captain.competency} | Enthusiasm: ${captain.enthusiasm} | Confrontation: ${captain.confrontation}`);
     lines.push(`  Personality: ${captain.personality_notes}`);
     lines.push(`  Trigger behaviors: ${captain.trigger_behaviors}`);
+    }
   }
   if (seed.backup_present_on_arrival) {
     const capName = captain ? captain.name : 'your captain';

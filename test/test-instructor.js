@@ -126,3 +126,83 @@ test('default exports contain review, timeline, vitals, and outcome, while backe
   assert.match(debug, /PRIVATE DEBRIEF/);
   assert.match(debug, /d20/);
 });
+
+test('custom partners replace catalog behavior, survive route snapshots, and retain transport identity', async () => {
+  const custom_partner = { name: 'Marcus Webb', description: 'A classmate who asks careful questions and jokes when nervous.' };
+  const instructor = { case_id: catalog()[0].case_id, custom_partner };
+  const seed = rollScenario({ provider_level: 'BLS', instructor: prepareInstructor(instructor) });
+  assert.equal(seed.crew_partner, custom_partner.name);
+  assert.equal(seed.crew_transport_driver, custom_partner.name);
+  assert.equal(seed.custom_partner.role, 'partner_BLS');
+  assert.equal(seed.custom_partner.competency, undefined);
+  const partnerBlock = assembleSeedBlock(seed).split('Partner: ')[1].split('Captain:')[0];
+  assert.match(partnerBlock, /A classmate who asks careful questions/);
+  assert.doesNotMatch(partnerBlock, /Competency:|Trigger behaviors:|undefined/);
+  const result = await route('/new', { method: 'post', body: { instructor } });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.crew.partner.custom, true);
+  assert.equal(result.body.crew.partner.personality_notes, custom_partner.description);
+  assert.equal(result.body.crew.partner.enthusiasm, undefined);
+  const snapshot = persistence.load(result.body.session_id);
+  assert.deepEqual(snapshot.crew.partner, snapshot.seed.custom_partner);
+  deleteSession(result.body.session_id);
+  assert.equal(rollScenario().custom_partner, undefined);
+});
+
+test('custom partner rejects blank, oversized, and trait-based input', () => {
+  for (const custom_partner of [{}, { name: 'Alex', description: ' ' }, { name: 'x'.repeat(81), description: 'Calm' },
+    { name: 'Alex', description: 'x'.repeat(4001) }, { name: 'Alex', description: 'Calm', competency: 'high' }]) {
+    assert.throws(() => prepareInstructor({ case_id: catalog()[0].case_id, custom_partner }), /Custom partner/);
+  }
+});
+
+test('custom captain works independently and with a custom partner', async () => {
+  for (const withPartner of [false, true]) {
+    const instructor = { case_id: catalog()[0].case_id, custom_captain: { name: 'Captain Sam', description: 'Quiet, patient supervisor who asks for a plan.' },
+      ...(withPartner ? { custom_partner: { name: 'Alex', description: 'Asks careful questions.' } } : {}) };
+    const result = await route('/new', { method: 'post', body: { instructor, provider_level: 'BLS' } });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.crew.captain.name, 'Captain Sam');
+    assert.equal(result.body.crew.captain.role, 'captain_BLS');
+    assert.equal(result.body.crew.captain.competency, undefined);
+    assert.equal(!!result.body.crew.partner.custom, withPartner);
+    const snapshot = persistence.load(result.body.session_id);
+    assert.deepEqual(snapshot.crew.captain, snapshot.seed.custom_captain);
+    const prompt = assembleSeedBlock(snapshot.seed);
+    assert.match(prompt, /Quiet, patient supervisor/);
+    assert.doesNotMatch(prompt.split('Captain: Captain Sam')[1].split('BACKUP')[0], /Competency: undefined/);
+    assert.notEqual(snapshot.seed.crew_transport_driver, 'Captain Sam');
+    deleteSession(result.body.session_id);
+  }
+  assert.throws(() => prepareInstructor({ case_id: catalog()[0].case_id, custom_captain: { name: 'Sam', description: '' } }), /Custom captain/);
+});
+
+test('saved roster partners work on ordinary calls and reject malformed descriptions', async () => {
+  const custom_partner = { name: 'Roster Alex', description: 'Careful and quiet.' };
+  const result = await route('/new', { method: 'post', body: { custom_partner } });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.crew.partner.name, 'Roster Alex');
+  assert.equal(result.body.crew.partner.custom, true);
+  const snapshot = persistence.load(result.body.session_id);
+  assert.equal(snapshot.seed.instructor_mode, undefined);
+  assert.equal(snapshot.seed.crew_transport_driver, 'Roster Alex');
+  assert.match(assembleSeedBlock(snapshot.seed), /Careful and quiet/);
+  deleteSession(result.body.session_id);
+  const invalid = await route('/new', { method: 'post', body: { custom_partner: { name: 'Alex', description: '' } } });
+  assert.equal(invalid.status, 400);
+});
+
+test('saved roster captains work on ordinary calls and reject malformed descriptions', async () => {
+  const custom_captain = { name: 'Captain Alex', description: 'Careful and quiet.' };
+  const result = await route('/new', { method: 'post', body: { custom_captain } });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.crew.captain.name, 'Captain Alex');
+  assert.equal(result.body.crew.captain.custom, true);
+  const snapshot = persistence.load(result.body.session_id);
+  assert.equal(snapshot.seed.instructor_mode, undefined);
+  assert.notEqual(snapshot.seed.crew_transport_driver, 'Captain Alex');
+  assert.match(assembleSeedBlock(snapshot.seed), /Careful and quiet/);
+  deleteSession(result.body.session_id);
+  const invalid = await route('/new', { method: 'post', body: { custom_captain: { name: 'Alex', description: '' } } });
+  assert.equal(invalid.status, 400);
+});

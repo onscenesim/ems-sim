@@ -3,13 +3,40 @@ const InstructorUI = (() => {
   const panel = document.getElementById('instructor-panel');
   const toggle = document.getElementById('instructor-toggle');
   const storageKey = 'ems_instructor_settings';
+  const rosterKey = 'ems_custom_partner_roster';
+  let roster = [], rosterNotice = '';
+  try {
+    const stored = JSON.parse(localStorage.getItem(rosterKey) || '[]');
+    if (Array.isArray(stored)) roster = stored.filter(p => typeof p.id === 'string' && typeof p.name === 'string' && typeof p.description === 'string');
+  } catch (_) { /* Keep setup usable if storage is unavailable. */ }
+  function writeRoster(next) {
+    try { localStorage.setItem(rosterKey, JSON.stringify(next)); }
+    catch (_) { rosterNotice = 'Could not save the roster on this device. Check browser storage and try again.'; render(); return false; }
+    roster = next;
+    window.dispatchEvent(new Event('partner-roster-change'));
+    return true;
+  }
+  const captainRosterKey = 'ems_custom_captain_roster';
+  let captainRoster = [], captainRosterNotice = '';
+  try {
+    const stored = JSON.parse(localStorage.getItem(captainRosterKey) || '[]');
+    if (Array.isArray(stored)) captainRoster = stored.filter(p => typeof p.id === 'string' && typeof p.name === 'string' && typeof p.description === 'string');
+  } catch (_) { /* Keep setup usable if storage is unavailable. */ }
+  function writeCaptainRoster(next) {
+    try { localStorage.setItem(captainRosterKey, JSON.stringify(next)); }
+    catch (_) { captainRosterNotice = 'Could not save the roster on this device. Check browser storage and try again.'; render(); return false; }
+    captainRoster = next;
+    window.dispatchEvent(new Event('captain-roster-change'));
+    return true;
+  }
   const configIds = ['cfg-difficulty', 'cfg-provider', 'cfg-region', 'cfg-partner', 'cfg-captain'];
   let catalog = null, selected = '', scenario = {}, seed = {}, hideDebrief = false, save = false;
+  let customPartner = null, customCaptain = null;
   let category = '', search = '', advanced = false, restoredConfig = null;
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
     if (saved?.save) {
-      ({ selected = '', seed = {}, hideDebrief = false, category = '' } = saved);
+      ({ selected = '', seed = {}, hideDebrief = false, category = '', customPartner = null, customCaptain = null } = saved);
       save = true; toggle.checked = !!saved.enabled; restoredConfig = saved.config;
     }
   } catch (_) { /* Unavailable or outdated local preferences. */ }
@@ -20,7 +47,7 @@ const InstructorUI = (() => {
     difficulty: 'Catalog difficulty tag' }[key] || key.replaceAll('.', ' · ').replaceAll('_', ' ').replace(/^./, c => c.toUpperCase()));
   function persist() {
     try {
-      if (save) localStorage.setItem(storageKey, JSON.stringify({ save, enabled: toggle.checked, selected, seed, hideDebrief, category,
+      if (save) localStorage.setItem(storageKey, JSON.stringify({ save, enabled: toggle.checked, selected, seed, hideDebrief, category, customPartner, customCaptain,
         config: Object.fromEntries(configIds.map(id => [id, document.getElementById(id)?.value])) }));
       else localStorage.removeItem(storageKey);
     } catch (_) { /* Settings still work for this run. */ }
@@ -65,6 +92,8 @@ const InstructorUI = (() => {
   function render() {
     panel.hidden = !toggle.checked;
     document.getElementById('cfg-category').disabled = toggle.checked;
+    document.getElementById('cfg-partner').disabled = toggle.checked && !!customPartner;
+    document.getElementById('cfg-captain').disabled = toggle.checked && !!customCaptain;
     if (!toggle.checked || !catalog) return;
     panel.replaceChildren(el('h2', 'INSTRUCTOR MODE'));
     panel.firstChild.id = 'instructor-title';
@@ -115,6 +144,84 @@ const InstructorUI = (() => {
       const fields = el('div', undefined, 'instructor-grid');
       for (const [key, type] of Object.entries(catalog.seedFields)) fields.append(field(key, type, seed[key], v => { if (v === undefined) delete seed[key]; else seed[key] = v; }, true));
       editor.append(fields);
+      editor.append(el('h3', 'Custom partner'), el('p', 'Bring a classmate along as your simulated partner. Custom companions use your behavior description instead of enthusiasm, competency, and confrontation ratings. Their clinical scope follows the provider level above.'));
+      editor.append(checkbox('Use a custom partner', !!customPartner, enabled => {
+        customPartner = enabled ? { name: '', description: '' } : null;
+        render();
+      }));
+      if (customPartner) {
+        const partnerFields = el('div', undefined, 'instructor-grid');
+        const name = field('partner_name', 'string', customPartner.name, v => { customPartner.name = v; });
+        name.querySelector('input').maxLength = 80;
+        const description = field('behavior_description', 'text', customPartner.description, v => { customPartner.description = v; });
+        const text = description.querySelector('textarea');
+        text.maxLength = 4000; text.rows = 4;
+        text.placeholder = 'How should your partner act? Example: Alex is thoughtful, double-checks instructions, jokes when nervous, and asks for help with unfamiliar skills.';
+        partnerFields.append(name, description); editor.append(partnerFields);
+        const add = el('button', 'Save partner to roster'); add.type = 'button';
+        add.addEventListener('click', () => {
+          const name = customPartner.name.trim(), description = customPartner.description.trim();
+          if (!name || !description) { rosterNotice = 'Enter a partner name and behavior description before saving.'; render(); return; }
+          const existing = roster.find(p => p.name.toLowerCase() === name.toLowerCase());
+          const record = { id: existing?.id || crypto.randomUUID(), name, description };
+          if (!writeRoster([...roster.filter(p => p.id !== record.id), record])) return;
+          customPartner = null;
+          const select = document.getElementById('cfg-partner');
+          select.value = `custom:${record.id}`; select.dispatchEvent(new Event('change'));
+          rosterNotice = `${name} saved to your roster.`; persist(); render();
+        });
+        editor.append(add);
+      }
+      editor.append(el('h3', 'Saved partner roster'), el('p', 'Saved on this device until you remove them, independently of Save settings between runs. Select these partners from the main partner menu for any call. Saving the same custom name updates its description.'));
+      const notice = el('p', rosterNotice || (roster.length ? '' : 'No saved custom partners yet.')); notice.setAttribute('role', 'status'); editor.append(notice);
+      for (const partner of roster) {
+        const row = el('div', undefined, 'instructor-grid');
+        row.append(el('p', `${partner.name} (custom)`));
+        const remove = el('button', `Remove ${partner.name}`); remove.type = 'button';
+        remove.addEventListener('click', () => {
+          if (writeRoster(roster.filter(p => p.id !== partner.id))) { rosterNotice = `${partner.name} removed from the roster.`; persist(); render(); }
+        });
+        row.append(remove); editor.append(row);
+      }
+      editor.append(el('h3', 'Custom captain'), el('p', 'Choose a classmate as your simulated captain. The captain joins when backup arrives. Custom companions use your behavior description instead of enthusiasm, competency, and confrontation ratings. Their clinical scope follows the provider level above.'));
+      editor.append(checkbox('Use a custom captain', !!customCaptain, enabled => {
+        customCaptain = enabled ? { name: '', description: '' } : null;
+        render();
+      }));
+      if (customCaptain) {
+        const captainFields = el('div', undefined, 'instructor-grid');
+        const name = field('captain_name', 'string', customCaptain.name, v => { customCaptain.name = v; });
+        name.querySelector('input').maxLength = 80;
+        const description = field('behavior_description', 'text', customCaptain.description, v => { customCaptain.description = v; });
+        const text = description.querySelector('textarea');
+        text.maxLength = 4000; text.rows = 4;
+        text.placeholder = 'How should your captain act? Example: Alex is thoughtful, double-checks instructions, jokes when nervous, and asks for help with unfamiliar skills.';
+        captainFields.append(name, description); editor.append(captainFields);
+        const add = el('button', 'Save captain to roster'); add.type = 'button';
+        add.addEventListener('click', () => {
+          const name = customCaptain.name.trim(), description = customCaptain.description.trim();
+          if (!name || !description) { captainRosterNotice = 'Enter a captain name and behavior description before saving.'; render(); return; }
+          const existing = captainRoster.find(p => p.name.toLowerCase() === name.toLowerCase());
+          const record = { id: existing?.id || crypto.randomUUID(), name, description };
+          if (!writeCaptainRoster([...captainRoster.filter(p => p.id !== record.id), record])) return;
+          customCaptain = null;
+          const select = document.getElementById('cfg-captain');
+          select.value = `custom:${record.id}`; select.dispatchEvent(new Event('change'));
+          captainRosterNotice = `${name} saved to your captain roster.`; persist(); render();
+        });
+        editor.append(add);
+      }
+      editor.append(el('h3', 'Saved captain roster'), el('p', 'Saved on this device until you remove them, independently of Save settings between runs. Select these captains from the main captain menu for any call. Saving the same custom name updates its description.'));
+      const captainNotice = el('p', captainRosterNotice || (captainRoster.length ? '' : 'No saved custom captains yet.')); captainNotice.setAttribute('role', 'status'); editor.append(captainNotice);
+      for (const captain of captainRoster) {
+        const row = el('div', undefined, 'instructor-grid');
+        row.append(el('p', `${captain.name} (custom)`));
+        const remove = el('button', `Remove ${captain.name}`); remove.type = 'button';
+        remove.addEventListener('click', () => {
+          if (writeCaptainRoster(captainRoster.filter(p => p.id !== captain.id))) { captainRosterNotice = `${captain.name} removed from the captain roster.`; persist(); render(); }
+        });
+        row.append(remove); editor.append(row);
+      }
       if (entry) {
         editor.append(el('h3', 'Customize this scenario for this run'), el('p', 'Edits to the narrative, hint, and tags apply only to the next run. They always clear after starting a call, even when settings are saved. The catalog is never changed.'));
         const custom = el('div', undefined, 'instructor-grid');
@@ -128,7 +235,7 @@ const InstructorUI = (() => {
       }
       editor.append(checkbox('Hide debrief · ask the student to turn in the call to the instructor for review', hideDebrief, v => { hideDebrief = v; }),
         checkbox('Save settings between runs', save, v => { save = v; }),
-        el('p', 'Saved on this device: scenario selection, run setup, and review preference. Scenario edits are never saved as preferences.'));
+        el('p', 'Saved on this device: scenario selection, run setup, custom partner and captain, and review preference. Scenario edits are never saved as preferences.'));
       panel.append(editor);
     }
   }
@@ -158,14 +265,26 @@ const InstructorUI = (() => {
     load();
   });
   return {
+    captainRoster() { return structuredClone(captainRoster); },
+    rosterCaptain(value) {
+      const captain = captainRoster.find(p => `custom:${p.id}` === value);
+      return captain ? { name: captain.name, description: captain.description } : null;
+    },
+    roster() { return structuredClone(roster); },
+    rosterPartner(value) {
+      const partner = roster.find(p => `custom:${p.id}` === value);
+      return partner ? { name: partner.name, description: partner.description } : null;
+    },
     request() {
       if (!toggle.checked) return {};
       if (!catalog || !catalog.scenarios.some(e => e.case_id === selected)) throw new Error('Choose a scenario in Instructor mode before beginning.');
-      return { instructor: { case_id: selected, scenario: structuredClone(scenario), seed: structuredClone(seed), hide_debrief: hideDebrief } };
+      if (customPartner && (!customPartner.name.trim() || !customPartner.description.trim())) throw new Error('Enter a name and behavior description for your custom partner.');
+      if (customCaptain && (!customCaptain.name.trim() || !customCaptain.description.trim())) throw new Error('Enter a name and behavior description for your custom captain.');
+      return { instructor: { case_id: selected, scenario: structuredClone(scenario), seed: structuredClone(seed), hide_debrief: hideDebrief, custom_partner: structuredClone(customPartner), custom_captain: structuredClone(customCaptain) } };
     },
     started() {
       scenario = {};
-      if (!save) { selected = ''; seed = {}; hideDebrief = false; category = ''; search = ''; }
+      if (!save) { selected = ''; seed = {}; customPartner = null; customCaptain = null; hideDebrief = false; category = ''; search = ''; }
       persist(); render();
     },
   };
