@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=84">
+  <link rel="stylesheet" href="style.css?v=85">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
   <link rel="stylesheet" href="practice.css?v=9">
@@ -276,6 +276,7 @@
         <label class="option-row"><input id="briefing-toggle" type="checkbox" checked> Show field briefing before each call</label>
         <span id="briefing-save-status" role="status">Saved on this device for guests.</span>
         <label class="option-row"><input id="instructor-toggle" type="checkbox"> Instructor mode</label>
+        <label class="option-row"><input id="monitor-interpret-toggle" type="checkbox" checked> Monitor Auto Interprets 12 leads</label>
         <label class="option-row"><input id="sound-toggle" type="checkbox" checked> Sound effects</label>
         <label class="option-row"><input id="theme-toggle-start" type="checkbox"> Light mode</label>
       </div>
@@ -416,7 +417,7 @@
       </div>
       <button id="vitals-expand" type="button" aria-expanded="false" aria-controls="vitals-panel">
         <svg class="notepad-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 3h20v26H4z" fill="#d8d4b7" stroke="#293746" stroke-width="2"/><path d="M8 1v5m5-5v5m5-5v5M8 11h12M8 16h10M8 21h8" fill="none" stroke="#637887" stroke-width="2"/><path d="m17 23 3-7L28 5l3 3-8 11z" fill="#b59b52" stroke="#293746" stroke-width="1.5"/></svg>
-        <span><b>MORE VITALS</b><small>RR · TEMP · GLUCOSE · GCS</small></span>
+        <span><b>MORE VITALS</b><small>RR · TEMP · GLUCOSE · ECG</small></span>
         <span class="notepad-chevron" aria-hidden="true">▼</span>
       </button>
     </div>
@@ -435,6 +436,15 @@
       <div class="notepad-readings" id="notepad-personalization">
       <div class="notepad-readings-heading"><div id="notepad-focus">Readings for: Current patient</div><button id="notepad-stickers-edit" type="button" aria-haspopup="dialog" aria-controls="cosmetics-dialog" title="Choose up to two notebook stickers">STICKERS ＋</button></div>
       <div class="vital-row"><span class="vital-row-label">Pulse ox</span><span class="vital-row-value" id="pulse-ox-status">Probe not placed</span></div>
+      <section class="ecg-notebook" aria-label="12-lead recordings">
+        <div class="ecg-notebook-heading"><strong>12-LEAD PRINTOUTS</strong><span id="ecg-count">0 recordings</span></div>
+        <p id="ecg-empty">Obtain a 12-lead ECG to file a printout here.</p>
+        <div id="ecg-recordings" hidden>
+          <label for="ecg-select">Acquisition</label> <select id="ecg-select"></select>
+          <button id="ecg-open" type="button" aria-haspopup="dialog">Open paper ↗</button>
+          <div id="ecg-thumbnail" aria-hidden="true"></div>
+        </div>
+      </section>
       <div class="notepad-measurements">
       <div class="vital-row"><span class="vital-row-label">RR</span><span class="vital-row-value" data-vital="RR">&mdash;</span></div>
       <!-- No Rhythm row: the rhythm is deliberately never named in the UI — the
@@ -2028,7 +2038,14 @@
   <script src="pleth.js?v=1"></script>
   <script src="practice.js?v=10"></script>
   <script src="instructor.js?v=1"></script>
-  <script src="app.js?v=92"></script>
+  <dialog id="ecg-dialog" aria-labelledby="ecg-dialog-title">
+    <div class="ecg-dialog-bar"><strong id="ecg-dialog-title">12-lead printout</strong><div><button id="ecg-zoom" type="button" aria-pressed="false">Actual size</button><button id="ecg-close" type="button">Close</button></div></div>
+    <p>Captured at acquisition. Select an earlier recording in More Vitals to compare.</p>
+    <div id="ecg-paper" tabindex="0" aria-label="ECG paper; scroll horizontally at actual size"></div>
+  </dialog>
+  <script src="twelve-lead.js?v=2"></script>
+  <script src="twelve-lead-viewer.js?v=2"></script>
+  <script src="app.js?v=93"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>
   <script src="cosmetics.js?v=5"></script>

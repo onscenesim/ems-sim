@@ -516,6 +516,15 @@ const optionsDialog = document.getElementById('options-dialog');
 document.getElementById('options-open').addEventListener('click', () => optionsDialog.showModal());
 document.getElementById('options-close').addEventListener('click', () => optionsDialog.close());
 
+let monitorAutoInterpret = localStorage.getItem('ems_monitor_auto_interpret') !== 'off';
+const monitorInterpretToggle = document.getElementById('monitor-interpret-toggle');
+monitorInterpretToggle.checked = monitorAutoInterpret;
+monitorInterpretToggle.addEventListener('change', () => {
+  monitorAutoInterpret = monitorInterpretToggle.checked;
+  localStorage.setItem('ems_monitor_auto_interpret', monitorAutoInterpret ? 'on' : 'off');
+  ecgViewer.setAutoInterpret(monitorAutoInterpret);
+});
+
 const briefingToggle = document.getElementById('briefing-toggle');
 const briefingSaveStatus = document.getElementById('briefing-save-status');
 
@@ -1096,6 +1105,7 @@ async function startScenario(replayOf = null) {
     }
     applyPatientFocus(data.patient_focus, data.multi_patient);
     applyVitals(data.vitals || null);
+    ecgViewer.update(data.twelve_leads || []);
     applyBackupStatus(data.backup || { status: 'not_called', eta: null });
     if (data.crewStatus) applyCrewStatus(data.crewStatus);
     patientDemoSource = data.demo_source || patientDemoSource;
@@ -1259,6 +1269,7 @@ async function sendTurn(msg, opts = {}) {
     }
     applyPatientFocus(data.patient_focus, data.second_patient);
     applyVitals(data.vitals || null);
+    ecgViewer.update(data.twelve_leads || []);
     // Fire startup sound the first time the player asks for vitals,
     // or when CPR begins.
     if (!firstVitalsPlayed) {
@@ -2269,6 +2280,7 @@ function renderPatientRecords(scenarioId = localTranscript?.meta?.scenario_id) {
   selector.disabled = notebookPatients.length < 2;
   document.getElementById('notepad-patient-picker').hidden = notebookPatients.length < 2;
   const patient = notebookPatients.find(patient => patient.id === notebookPatientId);
+  ecgViewer.setPatient(notebookPatientId || focusedPatientId || 'patient_1');
   notepadPatientBody.replaceChildren();
   if (patient) notepadPatientBody.appendChild(buildPatientCard(patient, scenarioId, patient.source || null));
 }
@@ -3059,6 +3071,7 @@ async function resumeFromSnapshot(snap) {
 
   applyPatientFocus(snap.patient_focus, snap.multi_patient || snap.second_patient);
   applyVitals(snap.lastVitals || null);
+  ecgViewer.update((snap.turns || []).flatMap(t => t.twelveLeads || []));
 
   if (snap.crew) populateCrewPanel(snap.crew);
 
@@ -3088,6 +3101,8 @@ async function resumeFromSnapshot(snap) {
 }
 
 // ── Vitals monitor strip ─────────────────────────────────────────────────────
+
+const ecgViewer = TwelveLeadViewer.mount(document, {autoInterpret: monitorAutoInterpret});
 
 const vitalsPanel     = document.getElementById('vitals-panel');
 const vitalsExpand    = document.getElementById('vitals-expand');
@@ -3131,35 +3146,7 @@ if (rhythmStrip.canvas) rhythmStrip.ctx = rhythmStrip.canvas.getContext('2d');
 // Map whatever the model wrote into one of the generator keys. The prompt
 // specifies exact tokens (sinus_tach, AV_block_3, VF, ...) but be liberal.
 function normalizeRhythm(raw) {
-  const k = String(raw).toLowerCase().replace(/[^a-z0-9]+/g, '_');
-  if (k in RHYTHM_RATE_DEFAULT) return k;
-  // Torsades is polymorphic VT, but needs its own twisting morphology. Match it
-  // before the generic ventricular-tachycardia aliases below.
-  if (/torsad|(?:^|_)tdp(?:_|$)|polymorphic_(?:v_?t|ventricular_tach)/.test(k)) return 'torsades';
-  if (/^v_?fib|ventricular_fib/.test(k))            return 'vf';
-  if (/^v_?tach|ventricular_tach/.test(k))          return 'vt';
-  if (/monomorphic_(?:v_?t|ventricular_tach)/.test(k)) return 'vt';
-  // Any wide/broad-complex tachycardia (VT, SVT w/ aberrancy, Na-channel tox)
-  // draws as VT morphology — WIDE QRS. Catches invented tokens the prompt
-  // vocabulary lacks (wide_complex_tach, WCT) before the /tach/ narrow fallback.
-  if (/wide|broad|wct/.test(k))                     return 'vt';
-  if (/fine_vf|coarse_vf/.test(k))                  return 'vf';
-  if (/a_?fib|atrial_fib/.test(k))                  return 'afib';
-  if (/flutter/.test(k))                            return 'aflutter';
-  if (/asystole|flat/.test(k))                      return 'asystole';
-  if (/pea|pulseless_electrical/.test(k))           return 'pea';
-  if (/pace/.test(k))                               return 'paced';
-  if (/hyperk|peaked_t|tented_t/.test(k))           return 'hyperk';
-  if (/junctional/.test(k))                         return 'junctional';
-  if (/idio|agonal/.test(k))                        return 'idioventricular';
-  if (/block_3|third_degree|complete_heart/.test(k)) return 'av_block_3';
-  if (/block_2_ii|mobitz_ii|type_ii/.test(k))       return 'av_block_2_ii';
-  if (/block_2|wenckebach|mobitz/.test(k))          return 'av_block_2_i';
-  if (/block_1|first_degree/.test(k))               return 'av_block_1';
-  if (/^svt|supraventricular/.test(k))              return 'svt';
-  if (/tach/.test(k))                               return 'sinus_tach';
-  if (/brad/.test(k))                               return 'sinus_brad';
-  return 'sinus';
+  return TwelveLead.normalizeRhythm(raw);
 }
 
 function stripSizeCanvas() {
@@ -3650,6 +3637,8 @@ function resetCrewStatus() {
 }
 
 function resetVitals() {
+  ecgViewer.update([]);
+  ecgViewer.close();
   focusedPatientId = null;
   multiPatientIncident = false;
   applyPatientFocus(null, false);

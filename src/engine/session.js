@@ -11,6 +11,7 @@ const { parseDebriefResponse } = require('./prompts/debrief');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 const { applyCapillaryRefill } = require('./capillary-refill');
 const { applyPulseOx } = require('./pulse-ox');
+const { acquireTwelveLeads, stripTwelveLeadNarration } = require('./twelve-lead');
 const { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords } = require('./patient-records');
 
 // Phrases that close the scenario and trigger debrief offer
@@ -876,7 +877,7 @@ class Session {
     // the model's message; the model sometimes echoes it (or invents its own
     // site-specific version) in prose. Strip any such tag so it never reaches the
     // player as visible text.
-    const reply = stripProviderSpeech(baseClean)
+    let reply = stripProviderSpeech(baseClean)
       .replace(/\s*\[ACCESS[^\]]*\]\s*/gi, ' ')
       .replace(/[^\S\n]{2,}/g, ' ')
       .replace(/[^\S\n]+\n/g, '\n')
@@ -890,6 +891,7 @@ class Session {
     // Reconcile dice against the narration: drop any roll the model declined or
     // showed didn't happen, so the debrief/log and client only see real events.
     const reconciledRolls = reconcileRolls(rolls, reply);
+    reply = stripTwelveLeadNarration(reply, reconciledRolls.some(r => r.procedure_id === 'twelve_lead'));
     this._updateAccess(reconciledRolls, reply);
     for (const roll of reconciledRolls) {
       logEvent(this.seed, roll.no_roll
@@ -1053,6 +1055,8 @@ class Session {
       user: userText,
       assistant: reply,
       rolls: reconciledRolls,
+      twelveLeads: acquireTwelveLeads({ seed: this.seed, vitals: this.lastVitals, rolls: reconciledRolls,
+        patientId, patientRecords: this.patientRecords, minute: this.sceneMinute, turn: this.turns.length, sessionId: this.sessionId || this.seed.scenario_id }),
       sceneMinute: this.sceneMinute,
       vitals: vitals || null,
       patientFocus: this.patientFocus,

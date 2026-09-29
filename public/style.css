@@ -4956,3 +4956,21 @@ body.light-mode #instructor-panel :is(input, textarea, select) { color-scheme: l
   #oxygen-overlay.visible.outcome-COMPLICATION #oxygen-block { opacity: 1; }
   #oxygen-overlay.visible.outcome-COMPLICATION #oxygen-reservoir { transform: scale(.3, .95); }
 }
+
+/* Filed ECG thermal paper, accessible from the More Vitals notebook. */
+.ecg-notebook { margin: 14px 0; padding: 12px 0; border-top: 1px solid #92979a; border-bottom: 1px solid #92979a; color: #263747; }
+.ecg-notebook-heading { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; }
+.ecg-notebook p { margin: 8px 0; font-size: 15px; }
+.ecg-notebook select { max-width: 100%; margin: 8px 0; font: inherit; }
+.ecg-notebook button, #ecg-dialog button { padding: 5px 10px; font: inherit; cursor: pointer; }
+#ecg-thumbnail { margin-top: 8px; box-shadow: 0 3px 8px #0003; background: #fff9f2; }
+#ecg-thumbnail svg { width: 100%; display: block; }
+#ecg-dialog { width: min(1220px, 96vw); max-width: 96vw; max-height: 92dvh; padding: 0; border: 2px solid #657787; background: #e8e8de; color: #263747; box-shadow: 0 16px 80px #0009; }
+#ecg-dialog::backdrop { background: #07131cbb; }
+.ecg-dialog-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #183a55; color: white; }
+.ecg-dialog-bar > div { display: flex; gap: 6px; }
+#ecg-dialog > p { padding: 0 14px; font-size: 15px; }
+#ecg-paper { margin: 12px; overflow: auto; background: #fff9f2; }
+#ecg-paper svg { display: block; width: 100%; }
+#ecg-paper.ecg-actual svg { width: 1140px; max-width: none; }
+@media (max-width: 600px) { .ecg-dialog-bar { flex-wrap: wrap; } #ecg-dialog { width: 96vw; } }

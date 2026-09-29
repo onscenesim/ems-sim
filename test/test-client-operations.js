@@ -76,6 +76,7 @@ function ecgHelpers() {
   const context=vm.createContext({
     document:{getElementById(){return null;}},
     Math,
+    TwelveLead: require('../public/twelve-lead'),
   });
   vm.runInContext(source.slice(start,end)+'\nthis.ecg={normalizeRhythm,stripY,stripSchedule,rhythmStrip};',context);
   return context.ecg;
