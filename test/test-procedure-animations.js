@@ -302,7 +302,7 @@ test('real fluid, blood and oxygen detection reaches the correct scene through t
   const start=source.indexOf('    for (const r of (data.rolls || [])) {');
   const end=source.indexOf('    for (const r of (data.rolls || [])) printRoll',start);
   vm.runInContext('async function runOrders(data) {\n'+source.slice(start,end)+'\n}',f.context);
-  for(const [order,scene,kind] of [['Give LR IV','infusion','fluid'],['Transfuse FFP','infusion','blood'],['Give oxygen via NRB','oxygen',null]]){
+  for(const [order,scene,kind] of [['Give LR IV','infusion','fluid'],['Transfuse FFP','infusion','blood'],['Give oxygen via NRB','oxygen',null],['Once nebulizer is finished, switch to nonrebreather at 10','oxygen',null]]){
     events.length=0;
     const detected=detectWithConfirmation(order);
     await f.context.runOrders(detected);
@@ -311,6 +311,9 @@ test('real fluid, blood and oxygen detection reaches the correct scene through t
     assert.equal(f.played.length,0,'scene owns sound; no premature cue before dice');
     if(kind)assert.equal(f.elements.get('infusion-overlay').dataset.fluid,kind);
   }
+  events.length=0;
+  await f.context.runOrders(detectWithConfirmation('ETCO2 NC'));
+  assert.deepEqual(events,[],'sampling cannula does not play an oxygen scene or roll dice');
 });
 
 test('legacy and route scenes align their sound to the action or result instead of the dice', async () => {

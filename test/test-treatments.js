@@ -44,6 +44,28 @@ test('oxygen administration recognizes devices and spelling variants but exclude
   assert.equal(detectWithConfirmation('Check oxygen then give oxygen').rolls.filter(r => r.procedure_id === 'oxygen').length, 1);
 });
 
+test('oxygen device switches are orders, while sampling cannulas only place capnography', () => {
+  const oxygen=text=>detectWithConfirmation(text).rolls.filter(r=>r.procedure_id==='oxygen');
+  for(const text of ['Once nebulizer is finished, switch to nonrebreather at 10',
+    'Switch to nonrebreather at 10', 'Change to nonrebreather at 15 lpm',
+    'Transition to nonrebreather at 10', 'Put him on nonrebreather at 10',
+    'Switch from NRB to NC at 2 lpm', 'Switch to a venturi mask',
+    'Switch to a simple face mask', 'Switch to HFNC'])assert.equal(oxygen(text).length,1,text);
+  for(const text of ['ETCO2 NC','Apply ETCO2 nasal cannula','Place ETCO2 nasal canula',
+    'ETCO₂ NC','Apply nasal cannula for capnography','Connect capnography NC',
+    'ETCO2 NC on room air','ETCO2 NC at 0 lpm']){
+    const rolls=detectWithConfirmation(text).rolls;
+    assert.equal(rolls.filter(r=>r.procedure_id==='oxygen').length,0,text);
+    assert.ok(rolls.some(r=>r.procedure_id==='vitals_monitor'&&r.no_roll),text);
+  }
+  for(const text of ['ETCO2 NC at 2 lpm','Apply ETCO2 NC at 0.5 L/min',
+    'Apply ETCO2 NC and give oxygen at 2 lpm','Apply oxygen through the ETCO2 NC',
+    'ETCO2 NC, then switch to nonrebreather at 10'])assert.equal(oxygen(text).length,1,text);
+  for(const text of ['Do not switch to nonrebreather','Check the nonrebreather mask',
+    'If needed, switch to nonrebreather','We were on nonrebreather at 10',
+    'Discuss switching to nonrebreather later'])assert.equal(oxygen(text).length,0,text);
+});
+
 test('oxygen has a single natural-one-only delivery check at every difficulty', () => {
   const original = Math.random;
   try {

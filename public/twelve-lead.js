@@ -181,7 +181,11 @@
       qt:qt.toFixed(3)+' / '+(qt/Math.sqrt(rr)).toFixed(3)+' s',
       axes:(sinus?angle(i.p,ii.p)+'°':'—')+' / '+angle(i.r-i.s,ii.r-ii.s)+'° / '+angle(i.t,ii.t)+'°'};
   }
-  function svg(ecg, {autoInterpret:showInterpretation=true}={}) {
+  function svg(ecg, {autoInterpret:showInterpretation=true,idPrefix='ecg'}={}) {
+    // SVG fragment IDs are document-wide, including SVGs in hidden notebooks.
+    // Each mounted surface owns its definitions so a hidden thumbnail cannot
+    // make the popup's paper grid disappear.
+    const gridId=String(idPrefix).replace(/[^a-zA-Z0-9_-]/g,'_');
     const rawMachine=showInterpretation?ecg.machine:null;
     // Also update wording on already-filed snapshots from the first version.
     const machine=rawMachine?{...rawMachine,headline:rawMachine.headline.replace(/STEMI/g,'ACUTE MI SUSPECTED')}:null;
@@ -218,7 +222,7 @@
     body+=field(x0+6,baseline+3*row-55,'II · 10 s',14)+trace('II',0,x0,baseline+3*row,10);
     for(let r=0;r<4;r++){const y=baseline+r*row;body+=`<path d="M22 ${y}h8v-40h20v40h12" fill="none" stroke="#272524" stroke-width="1.2"/>`;}
     const accessible=`Captured twelve lead ECG, ${ecg.rate||'no organized'} beats per minute. ${ecg.quality}. Leads I, II, III, aVR, aVL, aVF, V1 through V6 in three rows of four and a ten second lead II strip.${machine?' Unconfirmed automated interpretation: '+[machine.headline,...machine.lines].filter(Boolean).join('. '):''}`;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(accessible)}"><defs><pattern id="ecg-small" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M4 0H0V4" fill="none" stroke="#e9a9ab" stroke-width=".4"/></pattern><pattern id="ecg-grid" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="url(#ecg-small)"/><path d="M20 0H0V20" fill="none" stroke="#d47d83" stroke-width=".7"/></pattern></defs><rect width="${width}" height="${height}" fill="#fff9f2"/><rect x="16" y="155" width="1108" height="516" fill="url(#ecg-grid)"/><g fill="#292526" font-family="Arial Narrow, Liberation Sans Narrow, Arial, sans-serif" font-size="16">${header}${body}${field(16,700,'×1.0   10 mm/mV   25 mm/s',15,true)}${field(360,700,ecg.quality,13)}${field(735,700,'SIMULATED · 3 × 4 · 10 s sequential',12)}</g></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(accessible)}"><defs><pattern id="${gridId}-small" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M4 0H0V4" fill="none" stroke="#e9a9ab" stroke-width=".4"/></pattern><pattern id="${gridId}-grid" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="url(#${gridId}-small)"/><path d="M20 0H0V20" fill="none" stroke="#d47d83" stroke-width=".7"/></pattern></defs><rect width="${width}" height="${height}" fill="#fff9f2"/><rect x="16" y="155" width="1108" height="516" fill="url(#${gridId}-grid)"/><g fill="#292526" font-family="Arial Narrow, Liberation Sans Narrow, Arial, sans-serif" font-size="16">${header}${body}${field(16,700,'×1.0   10 mm/mV   25 mm/s',15,true)}${field(360,700,ecg.quality,13)}${field(735,700,'SIMULATED · 3 × 4 · 10 s sequential',12)}</g></svg>`;
   }
   return {catalog,rates,names,normalizeRhythm,selectPattern,autoInterpret,create,sample,measurements,svg};
 });

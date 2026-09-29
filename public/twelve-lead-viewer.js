@@ -6,8 +6,8 @@
     let all=[], patient='patient_1', current=null, displayed=null;
     function draw(){
       current=all.find(e=>e.patientId===patient&&e.id===selector.value)||null;
-      el('ecg-thumbnail').innerHTML=current?TwelveLead.svg(current,{autoInterpret}):'';
-      if(dialog.open)el('ecg-paper').innerHTML=displayed?TwelveLead.svg(displayed,{autoInterpret}):'';
+      el('ecg-thumbnail').innerHTML=current?TwelveLead.svg(current,{autoInterpret,idPrefix:'ecg-thumbnail'}):'';
+      if(dialog.open)el('ecg-paper').innerHTML=displayed?TwelveLead.svg(displayed,{autoInterpret,idPrefix:'ecg-paper'}):'';
     }
     function render(){
       const previous=selector.value;
@@ -28,7 +28,7 @@
       displayed=record;
       el('ecg-paper').classList.remove('ecg-actual');
       el('ecg-zoom').setAttribute('aria-pressed','false');el('ecg-zoom').textContent='Actual size';
-      el('ecg-paper').innerHTML=TwelveLead.svg(record,{autoInterpret});
+      el('ecg-paper').innerHTML=TwelveLead.svg(record,{autoInterpret,idPrefix:'ecg-paper'});
       if(!dialog.open)dialog.showModal();
     }
     selector.addEventListener('change',()=>{draw();if(dialog.open)open(current);});

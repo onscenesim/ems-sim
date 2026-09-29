@@ -184,6 +184,24 @@ function normalizeForDetection(text) {
 // they indicate reporting ('we gave epi') rather than ordering ('give epi').
 const ADMIN_VERB_RE = /\b(transfus(?:e|ing)|appl(?:y|ying)|give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?(?:\s+the\s+\w+)?|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|retry(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|go(?:ing)?\s+for\s+(?:(?:a|an|the)\s+)?|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving|followed\s+by|in\s+addition\s+to|as\s+well\s+as|and\s+then|then\s+give|also\s+give|also\s+push|also\s+administer|along\s+with|begin(ning)?|titrat(e|ing)|connect(ing)?|run(ning)?|infus(e|ing)|drip(ping)?|bolus(ing)?|sedat(?:e|ing)|paralyz(?:e|ing)|premedicat(?:e|ing)|treat(?:ing)?\s+with|medicat(?:e|ing))\b/i;
 
+// Oxygen device changes are administration orders without a generic "give" verb.
+// Keep this gate local to oxygen so "switch" cannot authorize unrelated drugs.
+const OXYGEN_ORDER_RE = /\b(?:switch(?:ing)?|chang(?:e|ing)|transition(?:ing)?|wean(?:ing)?|increas(?:e|ing)|decreas(?:e|ing)|turn(?:ing)?|put(?:ting)?)\b/i;
+
+function isSamplingCannula(text,start,length,key) {
+  if(!/^(?:nc|nasal can(?:nula|ula|nulla))$/i.test(key))return false;
+  // Bound the context to this device's clause, not a separate oxygen order.
+  const before=text.slice(0,start).split(/[,;.!?\n]|\b(?:and|then|but|also)\b/i).at(-1);
+  const after=text.slice(start+length).split(/[,;!?\n]|\.(?!\d)|\b(?:and|then|but|also)\b/i)[0];
+  const clause=(before+' '+key+after).replace(/₂/g,'2');
+  const sampling=/\b(?:etco[2₂]|end[ -]?tidal(?: co[2₂])?|capnograph\w*|capnometry|sidestream|sampling)\b/i.test(clause);
+  // A specified delivery flow makes a combined sampling/O2 cannula an oxygen
+  // order too. Bare ETCO2 NC, including "apply", only places the monitor.
+  const flowMatch=/\b(\d+(?:\.\d+)?)\s*(?:lpm|l\s*\/\s*min|lit(?:er|re)s?(?:\s*(?:per|\/)\s*min(?:ute)?)?|l)\b/i.exec(clause)
+    || /^\s*(?:at|to|@)\s*(\d+(?:\.\d+)?)\b/i.exec(after);
+  return sampling&&!(flowMatch&&Number(flowMatch[1])>0);
+}
+
 /**
  * Detect a procedure from user text.
  * Uses word-boundary patterns; single-word medication synonyms require
@@ -611,6 +629,7 @@ function isTreatmentAssessment(text, start, length, proc, key) {
   if (!oxygen && !ambiguousFluid) return false;
   const before = text.slice(0, start).split(/[;.!?\n]|\b(?:and|then|but|also)\b/i).at(-1);
   const after = text.slice(start + length);
+  if (oxygen && isSamplingCannula(text,start,length,key)) return true;
   if (oxygen && /^\s*(?:levels?|sats?|saturations?|readings?|concentrations?|requirements?|tanks?|cylinders?|supply|situation|flow|flowing)\b/i.test(after)) return true;
   if (!oxygen && /^\s*(?:levels?|counts?|results?|tests?|studies|samples?)\b/i.test(after)) return true;
   return /\b(?:check(?:ing)?|recheck|assess(?:ing)?|measure|monitor|read|inspect|look at|what(?:\s+is|'s|\s+are)?|how(?:\s+is|'s|\s+are)?|draw|collect|order|send|request)\b[^;.!?]*$/i.test(before)
@@ -651,7 +670,8 @@ function detectAllProcedures(userText) {
       // planning to intubate.
       if (!specific && !commandStyle) {
         const [s, e] = sentenceBounds(context, exec.index);
-        if (!ADMIN_VERB_RE.test(context.slice(s, e))) continue;
+        const sentence=context.slice(s,e);
+        if (!ADMIN_VERB_RE.test(sentence) && !(proc.id==='oxygen'&&OXYGEN_ORDER_RE.test(sentence))) continue;
       }
       bestMatch = { key, pattern, proc, matchLen: exec[0].length };
       bestMatchIndex = exec.index;

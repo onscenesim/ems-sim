@@ -235,3 +235,13 @@ test('scenario catalog ECG pins survive rolling and reach the acquired recording
   const sinus=ECG.create({seed,vitals:{Rhythm:'sinus',HR:80}});
   assert.ok(sinus.leads.V1.coved);
 });
+
+
+test('popup and thumbnail SVGs own separate grid definitions with identical paper content',()=>{
+  const record=ECG.create({seed:{presentation:'LBBB'},id:'same-record'});
+  const thumb=ECG.svg(record,{idPrefix:'ecg-thumbnail'}),paper=ECG.svg(record,{idPrefix:'ecg-paper'});
+  const ids=markup=>[...markup.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
+  assert.ok(ids(thumb).every(id=>!ids(paper).includes(id)),'hidden thumbnail cannot own popup paint servers');
+  for(const markup of [thumb,paper])for(const [,ref] of markup.matchAll(/url\(#([^)]+)\)/g))assert.ok(ids(markup).includes(ref));
+  assert.equal(thumb.replaceAll('ecg-thumbnail','surface'),paper.replaceAll('ecg-paper','surface'));
+});
