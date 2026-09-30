@@ -6,7 +6,7 @@
   else root.TwelveLead = factory(root.ECGCatalog);
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (catalog) {
   'use strict';
-  const {names,rhythms,patterns,qualities,resolvePattern}=catalog;
+  const {names,views,procedureViews,rhythms,patterns,qualities,resolvePattern}=catalog;
   const rates=Object.fromEntries(Object.entries(rhythms).map(([key,r])=>[key,r.rate]));
   function normalizeRhythm(raw) {
     const k=String(raw).toLowerCase().replace(/[^a-z0-9]+/g,'_');
@@ -66,7 +66,26 @@
       mimic?'Acute injury pattern suspected':pick(['Consider left atrial enlargement','Nonspecific intraventricular conduction delay','Consider anterolateral ischemia']),
     ]};
   }
-  function create({seed={}, vitals={}, outcome='SUCCESS', patientId='patient_1', minute=0, id='ecg', entropy, patient={}, rhythmVariant}={}) {
+  function supplementalLeads(leads,morphology,variant,scale) {
+    // Low-voltage posterior projection and rightward precordial progression.
+    // Every future pattern inherits these before optional regional overrides.
+    const extra={V1R:{...leads.V2},V2R:{...leads.V1}};
+    for(let i=0;i<3;i++)extra['V'+(7+i)]={...leads.V6,r:leads.V6.r*(.55-i*.09),s:leads.V6.s*.5,
+      p:leads.V6.p*.65,t:leads.V6.t*.55,st:leads.V6.st*.25,q:leads.V6.q*.7};
+    for(let i=3;i<=6;i++)extra['V'+i+'R']={...leads.V1,r:.20-(i-3)*.035,s:.60-(i-3)*.11,p:.06,
+      q:.02,t:leads.V1.t*.5,st:leads.V1.st*.2,j:leads.V1.j*.5,coved:false,biphasic:false};
+    for(const overlays of Object.values(morphology.supplemental))for(const [list,props] of overlays){
+      for(const name of list.split(' '))Object.assign(extra[name],props);
+    }
+    // Stable case anatomy: another print or another view cannot reroll territory.
+    if(variant<(morphology.posteriorChance||0))for(const [i,name] of ['V7','V8','V9'].entries())
+      Object.assign(extra[name],{r:.42-i*.06,q:.10,st:(.16-i*.025)*scale,t:.30-i*.04});
+    if(variant<(morphology.rvChance||0))for(const [i,name] of ['V3R','V4R','V5R','V6R'].entries())
+      Object.assign(extra[name],{r:.16,s:.24,q:.045,st:[.13,.23,.17,.10][i]*scale,t:.28});
+    return extra;
+  }
+  function create({seed={}, vitals={}, outcome='SUCCESS', patientId='patient_1', minute=0, id='ecg', entropy, patient={}, rhythmVariant,view='standard',ink='#283a57'}={}) {
+    if(!Object.hasOwn(views,view))throw new Error('Unknown ECG view: '+view);
     const waveSeed = entropy ?? hash(id);
     // Stable per-case anatomy across serial recordings; acquisition noise varies.
     const rand = random(hash([seed.scenario_id,seed.presentation,seed.true_diagnosis,patientId].join('|')));
@@ -93,6 +112,12 @@
     // Ventricular depolarization produces secondary discordant repolarization.
     if(broad) names.forEach((n,i)=>{const polarity=i===3||i===6||i===7?-1:1;Object.assign(leads[n],{r:polarity*1.1,s:polarity*.25,t:-polarity*.3,st:priority?-polarity*.06:leads[n].st});});
     if(morphology.afterBroad)applyMorphology();
+    // Rhythm-only tracings reuse the original signals in every placement.
+    const rhythmOnly=priority||(pattern==='normal'&&!['sinus','sinus_tach','sinus_brad'].includes(type));
+    if(view!=='standard'&&!rhythmOnly){
+      const extra=supplementalLeads(leads,morphology,variant,scale);
+      for(const [slot,name] of Object.entries(views[view].leads))leads[slot]=extra[name];
+    }
     const qtScale=morphology.qtScale||1;
     const r=random(waveSeed), beats=[];
     const group=type==='av_block_2_i'?4:type==='av_block_2_ii'?3:1;
@@ -109,7 +134,7 @@
     const variants=definition.variants||[];
     if(rhythmVariant!=null&&!variants.includes(rhythmVariant))throw new Error('Unknown ECG rhythm variant: '+rhythmVariant);
     const selectedVariant=rhythmVariant??(variants.includes(seed.ecg_rhythm_variant)?seed.ecg_rhythm_variant:undefined)??variants[Math.floor(random(waveSeed+97)()*variants.length)];
-    const recording = {version:2,id,demographics:{name:patient.name||null,age:patient.age_display??patient.age??null,sex:patient.sex||null},patientId,minute,rate,rhythm,rateEstimated:!(Number.isFinite(measured)&&measured>0)&&rate>0,
+    const recording = {version:3,id,view,leadLabels:{...views[view].leads},ink:/^#[0-9a-f]{6}$/i.test(ink)?ink:'#283a57',demographics:{name:patient.name||null,age:patient.age_display??patient.age??null,sex:patient.sex||null},patientId,minute,rate,rhythm,rateEstimated:!(Number.isFinite(measured)&&measured>0)&&rate>0,
       seed:waveSeed,leads,beats,qtScale,delta:!!morphology.delta,preexcited,
       waveform:type,pWaves:!!definition.pWaves,rhythmVariant:selectedVariant,
       // A clean asystole has no electrical complexes; artifact still applies
@@ -196,7 +221,7 @@
     let header=field(16,29,'Name: '+(patient.name||'—').slice(0,29),18,true)
       +field(16,53,'ID: '+hash(ecg.id).toString(16).toUpperCase().padStart(8,'0'))
       +field(16,77,'Age: '+(patient.age??'—'))+field(174,77,'Sex: '+(patient.sex||'—'))
-      +field(16,102,'12-Lead ECG',18,true)+field(16,126,`T+${minutes}:${String(seconds).padStart(2,'0')} · ${ecg.patientId.replace('patient_','Patient ')}`,14)
+      +field(16,102,views[ecg.view]?.label||'12-Lead ECG',18,true)+field(16,126,`T+${minutes}:${String(seconds).padStart(2,'0')} · ${ecg.patientId.replace('patient_','Patient ')}`,14)
       +field(300,29,'HR '+(ecg.rate?Math.round(ecg.rate)+' bpm'+(ecg.rateEstimated?'*':''):'—'),19,true)
       +field(300,54,'PR '+m.pr)+field(427,54,'QRS '+m.qrs)
       +field(300,79,'QT/QTc '+m.qt)+field(300,104,'P-QRS-T axes '+m.axes,14)
@@ -216,12 +241,21 @@
     const layout=[['I','aVR','V1','V4'],['II','aVL','V2','V5'],['III','aVF','V3','V6']];
     layout.forEach((leads,r)=>leads.forEach((lead,c)=>{
       const x=x0+c*cell,y=baseline+r*row;
-      body+=field(x+6,y-55,lead,14)+trace(lead,c*2.5,x,y);
+      const label=ecg.leadLabels?.[lead],ink=/^#[0-9a-f]{6}$/i.test(ecg.ink)?ecg.ink:'#283a57';
+      body+=field(x+6,y-55,lead,14);
+      if(label){
+        const right=label.endsWith('R');
+        body+=`<g class="ecg-pen-annotation" data-lead="${escape(label)}" fill="${ink}" stroke="${ink}" stroke-linecap="round">`;
+        if(!right)body+=`<path d="M${x+3} ${y-64}l24 8 M${x+4} ${y-55}l21 -9" fill="none" stroke-width="1.3"/>`;
+        body+=`<text x="${x+(right?26:34)}" y="${y-54}" stroke="none" font-family="Bradley Hand, Comic Sans MS, cursive" font-style="italic" font-size="20" transform="rotate(-5 ${x+26} ${y-54})">${right?'R':escape(label)}</text></g>`;
+      }
+      body+=trace(lead,c*2.5,x,y);
       if(c)body+=`<path d="M${x} ${y-42}v70" stroke="#bb777777"/>`;
     }));
     body+=field(x0+6,baseline+3*row-55,'II · 10 s',14)+trace('II',0,x0,baseline+3*row,10);
     for(let r=0;r<4;r++){const y=baseline+r*row;body+=`<path d="M22 ${y}h8v-40h20v40h12" fill="none" stroke="#272524" stroke-width="1.2"/>`;}
-    const accessible=`Captured twelve lead ECG, ${ecg.rate||'no organized'} beats per minute. ${ecg.quality}. Leads I, II, III, aVR, aVL, aVF, V1 through V6 in three rows of four and a ten second lead II strip.${machine?' Unconfirmed automated interpretation: '+[machine.headline,...machine.lines].filter(Boolean).join('. '):''}`;
+    const placement=views[ecg.view]?.label||'12-lead ECG';
+    const accessible=`Captured ${placement}, ${ecg.rate||'no organized'} beats per minute. ${ecg.quality}. Leads ${names.map(n=>ecg.leadLabels?.[n]||n).join(', ')} in three rows of four and a ten second lead II strip.${machine?' Unconfirmed automated interpretation: '+[machine.headline,...machine.lines].filter(Boolean).join('. '):''}`;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(accessible)}"><defs><pattern id="${gridId}-small" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M4 0H0V4" fill="none" stroke="#e9a9ab" stroke-width=".4"/></pattern><pattern id="${gridId}-grid" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="url(#${gridId}-small)"/><path d="M20 0H0V20" fill="none" stroke="#d47d83" stroke-width=".7"/></pattern></defs><rect width="${width}" height="${height}" fill="#fff9f2"/><rect x="16" y="155" width="1108" height="516" fill="url(#${gridId}-grid)"/><g fill="#292526" font-family="Arial Narrow, Liberation Sans Narrow, Arial, sans-serif" font-size="16">${header}${body}${field(16,700,'×1.0   10 mm/mV   25 mm/s',15,true)}${field(360,700,ecg.quality,13)}${field(735,700,'SIMULATED · 3 × 4 · 10 s sequential',12)}</g></svg>`;
   }
   return {catalog,rates,names,normalizeRhythm,selectPattern,autoInterpret,create,sample,measurements,svg};

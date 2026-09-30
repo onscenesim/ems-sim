@@ -173,4 +173,10 @@ const INTERVENTIONS = [
   { id: "cath_lab_activation", synonyms: ["activate the cath lab", "cath lab activation", "STEMI alert", "call a STEMI", "STEMI notification", "activate STEMI protocol", "STEMI team activation", "call the cath lab", "notify the cath lab", "cardiac catheterization activation", "PCI activation", "activate PCI", "primary PCI notification", "STEMI alert to hospital", "notify cardiology", "page cardiology", "cardiac alert", "heart alert", "code STEMI", "activate cardiac team", "notify receiving of STEMI", "STEMI pre-alert", "12 lead transmission", "transmit the 12 lead", "send the ECG", "transmit ECG to hospital", "wireless transmission", "electronic transmission", "door to balloon notification", "D2B alert", "bypass the ED", "cath lab bypass", "direct to cath lab", "skip the ED", "straight to cath", "direct cath activation", "field activation", "prehospital STEMI activation", "field STEMI call", "paramedic STEMI activation"], dc: null, no_roll: true, dc_notes: "No dice roll — logged timestamp event. Critical for STEMI debrief — time from 12-lead acquisition to activation is measured against AHA targets. Premature activation without confirmed 12-lead is flagged. Transport to non-PCI facility with STEMI is flagged as protocol deviation.", scope: "ALS — requires confirmed STEMI on 12-lead. Not applicable to BLS providers independently though BLS can relay information to receiving hospital.", notes: null },
 ];
 
+// Additional electrode placements share acquisition difficulty and quality.
+const {views: ECG_VIEWS}=require('../../public/ecg-catalog');
+const ecg=INTERVENTIONS.find(p=>p.id==='twelve_lead');
+for(const [view,entry] of Object.entries(ECG_VIEWS))if(view!=='standard')INTERVENTIONS.push({
+  ...ecg,id:entry.procedure,synonyms:entry.synonyms,notes:entry.label+' — acquire and file this placement only.',
+});
 module.exports = { INTERVENTIONS };

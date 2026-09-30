@@ -22,8 +22,7 @@ These are original synthetic teaching traces, not copied clinical recordings.
 Case identity selects pathology; notes only supply a missing infarct location.
 Stable case variation avoids changing infarct territory on each acquisition.
 The morphology is simplified: it is not a continuous electrophysiology or
-reperfusion model, does not establish an NSTEMI diagnosis, and does not include
-supplemental V4R/V7–V9. A missing rate uses a visibly marked estimated rate.
+reperfusion model, does not establish an NSTEMI diagnosis, and supplemental leads are simplified spatial projections with regional overrides. A missing rate uses a visibly marked estimated rate.
 Secondary patients receive their own rhythm snapshot without inheriting the
 primary patient's hidden diagnosis. Narration acknowledges acquisition without explaining the ECG. A server filter
 also removes narrated waveform findings before display. Options → Monitor Auto
@@ -130,3 +129,60 @@ procedure animations finish. Closing leaves it filed in More Vitals. Restoring a
 session, switching patients and receiving the same response again do not reopen
 old papers. The popup shows the acquired patient even when the notebook is
 viewing another patient.
+
+
+## Posterior, right-sided and V4R acquisitions
+
+The shared catalog `views` defines placements and procedure names:
+
+| Order | Procedure | Replaced slots |
+| --- | --- | --- |
+| Obtain posterior ECG / posterior leads | `posterior_ecg` | V4 → V7, V5 → V8, V6 → V9 |
+| Obtain right-sided ECG | `right_sided_ecg` | V1–V6 → V1R–V6R (full mirrored placement) |
+| Obtain V4R | `v4r_ecg` | V4 → V4R only |
+
+These share the standard acquisition roll and all four quality outcomes. Each
+files its own paper and opens automatically. Limb leads, timing and all unmoved
+leads retain their morphology. V4R uses exactly the same V4R coefficients as the
+full right-sided view. Active arrhythmias/pacing reuse the standard signals;
+changing placement does not invent additional findings in those rhythms.
+
+Posterior paper has the printed V4/V5/V6 labels crossed out, with V7/V8/V9 written
+beside them. Right-sided paper adds a handwritten R beside each relocated label.
+The browser captures the selected cosmetics pen ink when the order starts and
+sends it through the operation/confirmation flow. Version 3 snapshots store the
+view, lead-label map and validated ink color alongside the waveform, so later pen
+changes and restoring sessions cannot recolor old paper. Older snapshots display
+as standard recordings. The notebook selector names each placement.
+
+All new patterns automatically inherit right-sided, V4R and posterior variants
+from `supplementalLeads()` and the mandatory artifact layer. No additional SVGs
+or per-quality assets are required. Generic projections attenuate posterior
+voltage and change right precordial progression; a normal case can yield an
+unremarkable supplemental study. Refine a cardiac pattern with optional
+`supplemental: {posterior: [...], right: [...]}` overlays using the same
+`[lead names, properties]` shape as standard overlays. Use actual supplemental
+names (V7–V9 or V1R–V6R). Parent supplemental overlays run before child overrides;
+V4R automatically selects the right-sided V4R result. The catalog's `supplements`
+table supplies these regional refinements for the existing roster.
+
+`posteriorChance` and `rvChance` configure stable case-level involvement (0–1),
+not a new random finding per acquisition. Explicit posterior and RV-infarct cases
+use 1; generic inferior/lateral cases can have involvement or a nondiagnostic
+supplemental view. Posterior infarction produces V7–V9 elevation, while diffuse
+subendocardial ischemia preserves posterior depression with aVR elevation on the
+standard leads. Dedicated subendocardial and RV-infarct cases are in the cardiac
+roster. LVH/LBBB, HCM and other existing patterns retain appropriate simplified
+supplemental morphology. These are teaching approximations, not validated
+clinical reconstructions or a diagnostic algorithm.
+
+The catalog-wide test checks every placement and quality, unchanged unmoved
+leads, V4R/full-right identity, rhythm reuse, valid samples and persistence.
+The focused preview offers placement, quality, catalog pattern and the real
+scratch-pad pen selector for visual checks.
+
+Additional references:
+
+- [LITFL lead positioning](https://litfl.com/ecg-lead-positioning/)
+- [LITFL right ventricular infarction](https://litfl.com/right-ventricular-infarction-ecg-library/)
+- [LITFL myocardial ischemia](https://litfl.com/myocardial-ischaemia-ecg-library/)

@@ -64,7 +64,7 @@ const PracticeUI = (() => {
     if (procedure.id === 'medication_push' && procedure.matchedDrug) return procedure.matchedDrug;
     const names = {
       cpr: 'CPR', peripheral_iv: 'Peripheral IV', io_access: 'IO access',
-      twelve_lead: '12-lead ECG', bvm: 'BVM', cpap: 'CPAP',
+      twelve_lead: '12-lead ECG', posterior_ecg:'Posterior ECG', right_sided_ecg:'Right-sided ECG', v4r_ecg:'V4R ECG', bvm: 'BVM', cpap: 'CPAP',
       vitals_manual: 'Manual vitals', vitals_monitor: 'Monitor vitals',
     };
     if (names[procedure.id]) return names[procedure.id];

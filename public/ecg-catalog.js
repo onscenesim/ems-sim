@@ -6,6 +6,17 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
   const names=['I','II','III','aVR','aVL','aVF','V1','V2','V3','V4','V5','V6'];
+  const views={
+    standard:{label:'12-lead ECG',procedure:'twelve_lead',leads:{}},
+    posterior:{label:'Posterior ECG',procedure:'posterior_ecg',leads:{V4:'V7',V5:'V8',V6:'V9'}},
+    right:{label:'Right-sided ECG',procedure:'right_sided_ecg',leads:{V1:'V1R',V2:'V2R',V3:'V3R',V4:'V4R',V5:'V5R',V6:'V6R'}},
+    v4r:{label:'V4R ECG',procedure:'v4r_ecg',leads:{V4:'V4R'}},
+  };
+  const procedureViews=Object.fromEntries(Object.entries(views).map(([key,v])=>[v.procedure,key]));
+  const ecgWords=['ECG','EKG','ECGs','EKGs','12 lead','12-lead','12 lead ECG','12-lead ECG','12 lead EKG','12-lead EKG','twelve lead'];
+  views.posterior.synonyms=['posterior leads','V7 V8 V9','V7-V9',...ecgWords.flatMap(w=>['posterior '+w,w+' posterior',w+' with posterior leads'])];
+  views.right.synonyms=['right sided leads','right-sided leads','right precordial leads',...ecgWords.flatMap(w=>['right sided '+w,'right-sided '+w,w+' right sided',w+' right-sided',w+' with right sided leads',w+' with right-sided leads'])];
+  views.v4r.synonyms=['V4R','V4 R','V4 right',...ecgWords.flatMap(w=>['V4R '+w,w+' with V4R',w+' V4R'])];
   // waveform names select existing signal families in BOTH monitor and paper.
   // New presets can reuse any family with a rate, aliases and optional pattern.
   const rhythms={
@@ -44,6 +55,8 @@
   const st=(leads,value)=>[leads,{st:value},true];
   const patterns={
     normal:{overlays:[]},
+    rv_infarct:{match:/right ventricular infarct|\brv infarct/,extends:['inferior'],rvChance:1,overlays:[st('V1',.08)]},
+    subendocardial:{match:/sub[ -]?endocardial|diffuse (?:myocardial )?isch[ae]+mia/,extends:['nstemi_st'],overlays:[st('I II aVL aVF V3 V4 V5 V6',-.18),st('aVR',.12),st('V1',.04)]},
     de_winter:{match:/de[ -]?winter/,overlays:[st('V2 V3 V4 V5 V6',-.18),['V2 V3 V4 V5 V6',{t:.85,upsloping:true}],st('aVR',.075)]},
     wellens_biphasic:{match:/wellens/,choose:v=>v<.5?'wellens_biphasic':'wellens_deep',overlays:[['V2 V3 V4',{t:-.65,biphasic:true}]]},
     wellens_deep:{overlays:[['V2 V3 V4',{t:-.65,biphasic:false}]]},
@@ -62,15 +75,42 @@
     wpw:{match:/wolff|wpw/,delta:true,pr:.10,overlays:[]},
     nstemi_st:{match:/nstemi|non[ -]st|subendocardial|unstable angina/,choose:v=>v<.55?'nstemi_st':'nstemi_t',overlays:[st('I aVL V4 V5 V6',-.13)]},
     nstemi_t:{overlays:[['I aVL V3 V4 V5 V6',{t:-.35}]]},
-    inferior:{overlays:[st('II',.19),st('III',.32),st('aVF',.27),st('I',-.08),st('aVL',-.17),['II III aVF',{t:.43}]]},
+    inferior:{rvChance:.4,overlays:[st('II',.19),st('III',.32),st('aVF',.27),st('I',-.08),st('aVL',-.17),['II III aVF',{t:.43}]]},
     anterior:{overlays:[st('V1',.15),st('V2 V3',.36),st('V4',.24),st('II III aVF',-.12),['V2 V3 V4',{t:.5,r:.5}]]},
-    lateral:{overlays:[st('I aVL V5 V6',.21),st('III aVF',-.15)]},
-    posterior:{overlays:[st('V1 V2 V3',-.20),['V1 V2 V3',{r:.95,s:.25,t:.36}]]},
+    lateral:{posteriorChance:.35,overlays:[st('I aVL V5 V6',.21),st('III aVF',-.15)]},
+    posterior:{posteriorChance:1,overlays:[st('V1 V2 V3',-.20),['V1 V2 V3',{r:.95,s:.25,t:.36}]]},
     inferoposterior:{extends:['inferior','posterior'],overlays:[]},
     anterolateral:{extends:['anterior','lateral'],overlays:[]},
     inferolateral:{extends:['inferior'],overlays:[st('I aVL V5 V6',.21)]},
     hyperacute:{overlays:[st('V2 V3 V4',.055),['V2 V3 V4',{t:.85,tWidth:.085}],st('III aVF',-.06)]},
   };
+  // Supplemental views inherit automatically. These overrides refine regional
+  // teaching findings; a new pattern without overrides still gets all views.
+  const posterior=['V7 V8 V9'],right=['V3R V4R V5R V6R'];
+  const regional=(p={},r={})=>({posterior:[[posterior[0],p]],right:[[right[0],r]]});
+  const supplements={
+    anterior:regional({st:-.025,t:.12},{st:.015,t:.07}),
+    lateral:regional({st:.015,t:.14}),
+    de_winter:regional({st:-.045,t:.18},{st:-.015,t:.08}),
+    wellens_biphasic:regional({st:0,t:.08},{st:0,t:.05}),
+    wellens_deep:regional({st:0,t:.08},{st:0,t:.05}),
+    hyperacute:regional({st:-.035,t:.12},{st:0,t:.06}),
+    aslanger:regional({st:-.08,t:.16},{st:-.025,t:.08}),
+    nstemi_st:regional({st:-.08,t:.12},{st:-.025,t:.07}),
+    nstemi_t:regional({st:0,t:-.18},{st:0,t:.03}),
+    subendocardial:regional({st:-.12,t:.10},{st:-.045,t:.06}),
+    lvh:regional({r:1.05,s:.08,st:-.07,t:-.23},{r:.1,s:1.0,st:.065,t:.17}),
+    hcm:regional({q:.35,qWidth:.006},{q:.03}),
+    lbbb:regional({r:.7,s:0,q:0,st:-.065,t:-.18,lbbb:true},{r:.06,s:.85,q:0,st:.085,t:.20,lbbb:true}),
+    rv_strain:regional({}, {r:.35,s:.35,st:0,t:-.23}),
+    pericarditis:regional({st:.08,pr:-.035},{st:.045,pr:-.025,t:.10}),
+    brugada:regional({st:0,t:.12},{st:0,j:0,coved:false,t:.06}),
+    cerebral:regional({t:-.45,tWidth:.08},{t:-.22,tWidth:.08}),
+    hypothermia:regional({j:.14},{j:.085}),
+    hyperk:regional({p:.01,t:.45,tWidth:.027},{p:.01,t:.35,tWidth:.027}),
+    hypok:regional({t:.02,u:.12,st:-.04},{t:.015,u:.07,st:-.025}),
+  };
+  for(const [key,supplemental] of Object.entries(supplements))patterns[key].supplemental=supplemental;
   // All rhythms/patterns pass through this acquisition-quality layer, including
   // future catalog entries. Quality variants never need separate waveforms.
   const qualities={
@@ -82,9 +122,12 @@
   function resolvePattern(key,ancestors=[]){
     const own=patterns[key];
     if(!own||ancestors.includes(key))throw new Error('Invalid ECG pattern inheritance: '+[...ancestors,key].join(' → '));
-    let result={overlays:[]};
-    for(const parent of own.extends||[]){const base=resolvePattern(parent,[...ancestors,key]);result={...result,...base,overlays:[...result.overlays,...base.overlays]};}
-    return {...result,...own,overlays:[...result.overlays,...(own.overlays||[])]};
+    let result={overlays:[],supplemental:{posterior:[],right:[]}};
+    const merge=(base,next)=>({...base,...next,overlays:[...base.overlays,...(next.overlays||[])],
+      supplemental:{posterior:[...base.supplemental.posterior,...(next.supplemental?.posterior||[])],
+        right:[...base.supplemental.right,...(next.supplemental?.right||[])]}});
+    for(const parent of own.extends||[])result=merge(result,resolvePattern(parent,[...ancestors,key]));
+    return merge(result,own);
   }
-  return {names,rhythms,patterns,qualities,resolvePattern};
+  return {names,views,procedureViews,rhythms,patterns,qualities,resolvePattern};
 });

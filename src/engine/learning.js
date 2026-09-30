@@ -16,7 +16,7 @@ function patientId(value) {
   return ({ primary: 'patient_1', secondary: 'patient_2' })[id] || id;
 }
 
-const OBSERVATION_PROCEDURES = new Set(['capillary_refill', 'vitals_manual', 'vitals_monitor', 'cardiac_monitor', 'twelve_lead', 'glucometry', 'physical_exam', 'scene_safety', 'reassessment', 'pulse_check', 'rhythm_check', 'handoff_report', 'radio_contact', 'tourniquet_time', 'capnography_confirmation', 'fetal_assessment']);
+const OBSERVATION_PROCEDURES = new Set(['capillary_refill', 'vitals_manual', 'vitals_monitor', 'cardiac_monitor', 'twelve_lead', 'posterior_ecg', 'right_sided_ecg', 'v4r_ecg', 'glucometry', 'physical_exam', 'scene_safety', 'reassessment', 'pulse_check', 'rhythm_check', 'handoff_report', 'radio_contact', 'tourniquet_time', 'capnography_confirmation', 'fetal_assessment']);
 function procedureRecord(roll, fallbackPatient) {
   const id = roll.procedure_id || 'unknown';
   return {

@@ -15,7 +15,7 @@
       selector.replaceChildren();
       for(const [i,e] of list.entries()) {
         const option=doc.createElement('option');option.value=e.id;
-        option.textContent=`${i+1} · T+${Number(e.minute).toFixed(1)} min · ${e.quality}`;
+        option.textContent=`${i+1} · ${TwelveLead.catalog?.views[e.view]?.label||'12-lead ECG'} · T+${Number(e.minute).toFixed(1)} min · ${e.quality}`;
         selector.appendChild(option);
       }
       selector.value=list.some(e=>e.id===previous)?previous:list.at(-1)?.id||'';

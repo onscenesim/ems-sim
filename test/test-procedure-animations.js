@@ -22,6 +22,7 @@ function fixture({ reduced = false, missing = false } = {}) {
     }
   }
   const context = vm.createContext({
+    TwelveLead:require('../public/twelve-lead'),
     window: { matchMedia: () => ({ matches: reduced }) }, localTranscript: null,
     document: { getElementById: id => missing ? null : elements.get(id) },
     playSound: sound => played.push({ sound, time: now }),
@@ -295,6 +296,7 @@ test('real fluid, blood and oxygen detection reaches the correct scene through t
     console:{log(){}},
     animateDiceRoll:async id=>events.push(['dice',id]),
     animateRouteMedication:async(id,outcome)=>events.push(['scene',id,outcome]),
+    animateTwelveLead:async outcome=>events.push(['scene','ecg',outcome]),
     animateMedPush:async()=>events.push(['wrong-scene']),
     showDrugPanel:()=>{},
   });
@@ -302,7 +304,7 @@ test('real fluid, blood and oxygen detection reaches the correct scene through t
   const start=source.indexOf('    for (const r of (data.rolls || [])) {');
   const end=source.indexOf('    for (const r of (data.rolls || [])) printRoll',start);
   vm.runInContext('async function runOrders(data) {\n'+source.slice(start,end)+'\n}',f.context);
-  for(const [order,scene,kind] of [['Give LR IV','infusion','fluid'],['Transfuse FFP','infusion','blood'],['Give oxygen via NRB','oxygen',null],['Once nebulizer is finished, switch to nonrebreather at 10','oxygen',null]]){
+  for(const [order,scene,kind] of [['Give LR IV','infusion','fluid'],['Transfuse FFP','infusion','blood'],['Give oxygen via NRB','oxygen',null],['Once nebulizer is finished, switch to nonrebreather at 10','oxygen',null],['Obtain posterior ECG','ecg',null],['Obtain right sided ECG','ecg',null],['Obtain V4R','ecg',null]]){
     events.length=0;
     const detected=detectWithConfirmation(order);
     await f.context.runOrders(detected);

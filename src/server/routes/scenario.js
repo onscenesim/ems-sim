@@ -515,7 +515,7 @@ router.post('/:id/turn', async (req, res) => {
   const session = ownedSession(req, res);
   if (!session) return;
 
-  const { message, report_mode, skip_mode, proc_allow, proc_deny, procs_resolved, operation_id } = req.body;
+  const { message, report_mode, skip_mode, proc_allow, proc_deny, procs_resolved, operation_id, ecg_ink } = req.body;
   if (!validOperationId(operation_id)) return res.status(400).json({ error: 'invalid_operation_id', message: 'A unique operation_id is required.' });
   if (!message || typeof message !== 'string' || !message.trim() || message.length > 8000) {
     return res.status(400).json({ error: 'invalid_input', message: '`message` must contain 1–8000 characters.' });
@@ -559,12 +559,12 @@ router.post('/:id/turn', async (req, res) => {
   try {
     const payload = await operationsFor(session).run(operation_id, JSON.stringify({
       message: message.trim(), report_mode: report_mode === true, skipMode,
-      proc_allow: proc_allow || [], proc_deny: proc_deny || [],
+      proc_allow: proc_allow || [], proc_deny: proc_deny || [], ecg_ink,
     }), async signal => {
       const result = await session.send(message.trim(), report_mode === true, skipMode, {
         allow: Array.isArray(proc_allow) ? proc_allow : [],
         deny:  Array.isArray(proc_deny)  ? proc_deny  : [],
-      }, { signal });
+      }, { signal, ecgInk:ecg_ink });
 
       return {
         operation_id,

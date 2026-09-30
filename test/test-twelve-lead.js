@@ -131,6 +131,8 @@ test('narration removes printed ECG findings while preserving patient and proced
   assert.equal(strip('Patient remains pale. The 12-lead shows ST elevation in II, III and aVF. The paper is filed. BP is 90/60.',true),'Patient remains pale. The paper is filed. BP is 90/60.');
   assert.equal(strip('The ECG suggests an inferior infarct. Reciprocal ST depression is present in aVL.',true),'12-lead printout filed in More Vitals.');
   assert.equal(strip('The 12-lead looks normal.'),'');
+  assert.equal(strip('V4R shows ST elevation. The patient remains pale.'),'The patient remains pale.');
+  assert.equal(strip('V7 shows posterior ST elevation.'),'');
   assert.equal(strip('12-lead: 2 mm elevation in the inferior leads.',true),'12-lead printout filed in More Vitals.');
   assert.equal(strip('The patient states they had an infarct in 2014.'),'The patient states they had an infarct in 2014.');
   assert.equal(strip('12-lead deferred while you ventilate the patient.'),'12-lead deferred while you ventilate the patient.');
@@ -244,4 +246,78 @@ test('popup and thumbnail SVGs own separate grid definitions with identical pape
   assert.ok(ids(thumb).every(id=>!ids(paper).includes(id)),'hidden thumbnail cannot own popup paint servers');
   for(const markup of [thumb,paper])for(const [,ref] of markup.matchAll(/url\(#([^)]+)\)/g))assert.ok(ids(markup).includes(ref));
   assert.equal(thumb.replaceAll('ecg-thumbnail','surface'),paper.replaceAll('ecg-paper','surface'));
+});
+
+test('extended ECG orders select a single placement, including separate views in the same turn',()=>{
+  const {detectWithConfirmation}=require('../src/engine/dice');
+  for(const [view,texts] of Object.entries({posterior:['Obtain a posterior ECG','Get posterior 12-lead EKG','Run ECG with posterior leads','Acquire V7-V9'],
+    right:['Get a right sided 12 lead','Obtain a right-sided EKG','Right sided ECGs'],v4r:['V4R','Obtain V4R ECG','Get ECG with V4R']})){
+    for(const text of texts){const rolls=detectWithConfirmation(text).rolls;assert.deepEqual(rolls.map(r=>r.procedure_id),[ECG.catalog.views[view].procedure],text);}
+  }
+  const rolls=detectWithConfirmation('Obtain posterior leads and right-sided ECG').rolls;
+  const recordings=acquireTwelveLeads({seed:{ecg_pattern:'posterior'},vitals:{HR:80,Rhythm:'sinus'},rolls,ink:'#71378b'});
+  assert.deepEqual(recordings.map(e=>e.view).sort(),['posterior','right']);assert.equal(new Set(recordings.map(e=>e.id)).size,2);
+  for(const text of ['Do not obtain a posterior ECG','Check right sided breath sounds','Palpate posterior ribs'])
+    assert.equal(detectWithConfirmation(text).rolls.filter(r=>Object.hasOwn(ECG.catalog.procedureViews,r.procedure_id)).length,0,text);
+});
+
+test('all catalog pathologies inherit every placement and quality without altering unrelocated leads',()=>{
+  for(const ecg_pattern of Object.keys(ECG.catalog.patterns))for(const outcome of Object.keys(ECG.catalog.qualities)){
+    const opts={seed:{ecg_pattern},vitals:{Rhythm:'sinus',HR:75},entropy:77,outcome};
+    const standard=ECG.create(opts),right=ECG.create({...opts,view:'right'});
+    for(const view of ['posterior','right','v4r']){
+      const e=view==='right'?right:ECG.create({...opts,view});
+      assert.equal(e.noise,standard.noise);assert.deepEqual(e.beats,standard.beats);
+      for(const lead of ECG.names){
+        if(!ECG.catalog.views[view].leads[lead])assert.deepEqual(e.leads[lead],standard.leads[lead],`${ecg_pattern} ${view} ${lead}`);
+        for(let t=0;t<10;t+=.237)assert.ok(Number.isFinite(ECG.sample(e,lead,t)),`${ecg_pattern} ${view} ${outcome}`);
+      }
+      if(view==='v4r')assert.deepEqual(e.leads.V4,right.leads.V4,'V4R must reuse the full right-sided V4 signal');
+      assert.deepEqual(JSON.parse(JSON.stringify(e)).leads,e.leads);
+    }
+  }
+  for(const Rhythm of ['vt','torsades','vf','asystole','paced','svt','afib','aflutter','junctional','idioventricular','av_block_3']){
+    const opts={vitals:{Rhythm,HR:ECG.rates[Rhythm]},id:'rhythm-reuse'};
+    const standard=ECG.create(opts);
+    for(const view of ['right','posterior','v4r'])assert.deepEqual(ECG.create({...opts,view}).leads,standard.leads,Rhythm);
+  }
+});
+
+test('posterior occlusion, RV infarction, diffuse subendocardial ischemia and mimics have distinct supplemental signals',()=>{
+  const makeView=(ecg_pattern,view)=>ECG.create({seed:{ecg_pattern},view,vitals:{Rhythm:'sinus',HR:75},ink:'#71378b',id:'extended'});
+  const post=makeView('posterior','posterior');
+  for(const lead of ['V4','V5','V6'])assert.ok(post.leads[lead].st>.05,'V7–V9 elevation');
+  const rv=makeView('rv_infarct','right');assert.ok(rv.leads.V4.st>.15);assert.ok(rv.leads.III.st>0);
+  const sub=makeView('subendocardial','posterior');
+  assert.ok(sub.leads.aVR.st>0);for(const lead of ['I','II','V4','V5','V6'])assert.ok(sub.leads[lead].st<0,'diffuse depression remains depression posteriorly');
+  assert.equal(ECG.selectPattern({presentation:'Sub-endocardial ischemia'},.5),'subendocardial');
+  const hcm=makeView('hcm','posterior');assert.ok(hcm.leads.V4.q>.3&&hcm.leads.V4.qWidth<.01);
+  const lbbb=makeView('lbbb','right');assert.ok(lbbb.leads.V4.lbbb&&lbbb.leads.V4.st>0);
+  assert.ok(makeView('normal','right').leads.V4.st===0);assert.ok(makeView('normal','posterior').leads.V4.st===0);
+  assert.equal(makeView('normal','right').leads.V4.st,0,'unnecessary supplemental studies do not manufacture infarcts');
+  const svg=ECG.svg(post);assert.equal((svg.match(/class="ecg-pen-annotation"/g)||[]).length,3);
+  for(const lead of ['V7','V8','V9'])assert.ok(svg.includes(`data-lead="${lead}" fill="#71378b"`));
+  const v4r=ECG.svg(makeView('rv_infarct','v4r'));assert.equal((v4r.match(/class="ecg-pen-annotation"/g)||[]).length,1);assert.ok(v4r.includes('data-lead="V4R"'));
+  assert.equal(ECG.svg(JSON.parse(JSON.stringify(post))),svg,'ink, labels, and waveform persist');
+  assert.equal(ECG.create({ink:'url(unsafe)'}).ink,'#283a57');
+});
+
+test('live sessions file extended views with captured ink and preserve them through subsequent acquisitions',async()=>{
+  let response='';
+  require.cache[require.resolve('../src/engine/api')]={exports:{sendTurn:async()=>response,sendDebrief:async()=>''}};
+  // The earlier session test loaded this module with its own stub. Reload only
+  // the session module so this test owns its API fixture.
+  delete require.cache[require.resolve('../src/engine/session')];
+  const {Session}=require('../src/engine/session');
+  const {rollScenario}=require('../src/engine/roller');
+  const seed={...rollScenario({random_seed:'additional-ecg'}),ecg_pattern:'posterior'};
+  const session=new Session(seed,'extended-integration');
+  response='The posterior ECG is filed. [VITALS: HR=75 Rhythm=sinus] [TIME: 2:00]';
+  await session.send('Obtain posterior ECG',false,null,{}, {ecgInk:'#71378b'});
+  const first=session.turns.at(-1).twelveLeads[0];assert.equal(first.view,'posterior');assert.equal(first.ink,'#71378b');
+  assert.ok(first.leads.V4.st>.05);const saved=ECG.svg(first);
+  response='The right-sided ECG is filed. [VITALS: HR=75 Rhythm=sinus] [TIME: 4:00]';
+  await session.send('Obtain right-sided ECG',false,null,{}, {ecgInk:'#a52c37'});
+  const next=session.turns.at(-1).twelveLeads[0];assert.equal(next.view,'right');assert.equal(next.ink,'#a52c37');
+  assert.equal(ECG.svg(first),saved);
 });

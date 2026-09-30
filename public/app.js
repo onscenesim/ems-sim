@@ -142,6 +142,7 @@ const OBSTRUCTION_PROCS = new Set(['foreign_body_removal', 'abdominal_thrusts'])
 const LARYNGOSCOPE_PROCS = new Set(['intubation', 'rsi']);
 // Triggers the defib/cardioversion animation
 const DEFIB_PROCS = new Set(['defibrillation', 'cardioversion']);
+const ECG_PROCS = new Set(Object.keys(TwelveLead.catalog.procedureViews));
 const THUMP_PROCS  = new Set(['precordial_thump']);
 function getProcedureSound(id, outcome) {
   if (id === 'defibrillation' || id === 'cardioversion')
@@ -1134,7 +1135,8 @@ async function sendTurn(msg, opts = {}) {
   const operationId = opts.operationId || newOperationId();
   const skipMode = opts.skipMode || null;
   const isReport = opts.isReport !== undefined ? opts.isReport : (reportMode && !skipMode);
-  const retryOpts = { ...opts, isReport, operationId, resend: true };
+  const ecgInk=opts.ecgInk||window.EMSCosmetics?.ink()||'#283a57';
+  const retryOpts = { ...opts, ecgInk, isReport, operationId, resend: true };
 
   if (!opts.resend) {
     addHistory(msg);
@@ -1149,6 +1151,7 @@ async function sendTurn(msg, opts = {}) {
     if (reportMode) { reportMode = false; updateReportBtn(); }
     const data = await apiOperation(`/api/scenario/${sessionId}/turn`, {
       message: msg,
+      ecg_ink:ecgInk,
       report_mode: isReport,
       skip_mode: skipMode,
       proc_allow: opts.procAllow || [],
@@ -1162,7 +1165,7 @@ async function sendTurn(msg, opts = {}) {
     if (data.needs_confirmation) {
       hideLoadingDots();
       setLoading(false);
-      showProcConfirm(msg, { skipMode, isReport }, data.needs_confirmation);
+      showProcConfirm(msg, { skipMode, isReport, ecgInk }, data.needs_confirmation);
       return;
     }
 
@@ -1204,7 +1207,7 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'suction') await animateSuction(r.outcome);
       if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
       if (r.procedure_id === 'peripheral_iv') await animateIV(r.outcome);
-      if (r.procedure_id === 'twelve_lead') await animateTwelveLead(r.outcome);
+      if (ECG_PROCS.has(r.procedure_id)) await animateTwelveLead(r.outcome);
       if (r.procedure_id === 'oropharyngeal_airway') await animateOPA(r.outcome);
       if (r.procedure_id === 'needle_decompression') await animateNCD(r.outcome, 'needle_decompression');
       if (r.procedure_id === 'needle_cricothyrotomy') await animateNCD(r.outcome, 'needle_cricothyrotomy');
@@ -2389,7 +2392,7 @@ const PROCEDURE_TIMING = Object.freeze({
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return ['medication_push', 'oxygen', 'cpap', 'peripheral_iv', 'twelve_lead', 'needle_cricothyrotomy', 'io_access', 'cpr'].includes(id) || OBSTRUCTION_PROCS.has(id) || id === 'nasopharyngeal_airway' || DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
+  return ECG_PROCS.has(id) || ['medication_push', 'oxygen', 'cpap', 'peripheral_iv', 'needle_cricothyrotomy', 'io_access', 'cpr'].includes(id) || OBSTRUCTION_PROCS.has(id) || id === 'nasopharyngeal_airway' || DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
 // Every scene owns its cue timers. A hidden page cancels pending cues instead
 // of replaying them later, and only this scene's action voice is stopped.
