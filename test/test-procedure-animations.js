@@ -62,9 +62,9 @@ for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction
     assert.equal(overlay.properties['--procedure-cycle'], `${t.cycle}ms`);
     assert.equal(overlay.properties['--procedure-result'], `${t.result}ms`);
     assert.ok(t.result + 180 <= t.hold, 'result is readable before fade');
-    f.advance(99); assert.equal(f.played.length, 0);
+    f.advance(99); assert.equal(f.played.length, t.action && t.actionAt === 0 ? 1 : 0);
     f.advance(t.sound - 100);
-    assert.deepEqual(f.played, t.action ? [{ sound: t.action, time: 100 }] : []);
+    assert.deepEqual(f.played, t.action ? [{ sound: t.action, time: t.actionAt ?? 100 }] : []);
     f.advance(1); assert.deepEqual(f.played.slice(t.action ? 1 : 0), [{ sound: id === 'bvm' ? 'bvm_success' : id === 'lucas' ? 'lucas' : id === 'ncd' ? 'hiss' : ['laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib'].includes(id) ? 'success' : 'sword', time: t.sound }]);
     f.advance(t.hold - t.sound);
     assert.equal(overlay.classList.contains('visible'), true, 'keep final CSS pose throughout the fade');
@@ -101,9 +101,18 @@ test('reduced motion and missing scenes retain sounds and always release the tur
     for (const options of [{ reduced: true }, { missing: true }]) {
       const f = fixture(options);
       const p = f.context.animateProcedureScene(id, procedure, 'FAILURE');
-      assert.equal(f.played.length, 1); assert.equal(f.played[0].time, 0);
+      const hasAction = Boolean(f.context.timing[id].action);
+      assert.equal(f.played.length, options.missing || !hasAction ? 1 : 0);
+      if (f.played.length) assert.equal(f.played[0].time, 0);
       f.advance(f.context.timing[id].hold + 220); await p;
-      assert.equal(f.played.length, 1); assert.equal(f.timers.length, 0);
+      assert.equal(f.played.length, options.missing || !hasAction ? 1 : 2);
+      if (options.reduced && hasAction) {
+        assert.deepEqual(f.played.map(({sound, time}) => ({sound, time})), [
+          { sound: f.context.timing[id].action, time: 0 },
+          { sound: id === 'scalpel' ? 'sword' : id === 'bvm' ? 'bvm_fail' : 'fail', time: f.context.timing[id].sound },
+        ]);
+      }
+      assert.equal(f.timers.length, 0);
     }
   }
 });
@@ -178,7 +187,7 @@ test('SGA, OPA and suction wrappers preserve outcomes and use the shared sound/r
       assert.equal(f.elements.get(`${id}-overlay`).classList.contains('visible'), false);
     }
   }
-  assert.equal(f.played.length, 16);
+  assert.equal(f.played.length, 24);
 });
 
 function transportFixture(options) {
@@ -334,13 +343,33 @@ test('legacy and route scenes align their sound to the action or result instead 
     for (const outcome of ['SUCCESS', 'FAILURE']) {
       const f=fixture();
       for(const suffix of ['overlay','label']) f.elements.set(`${id}-${suffix}`,f.elements.get(`sga-${suffix}`));
+      if (id === 'infusion') f.elements.get(`${id}-overlay`).dataset = { fluid: 'fluid' };
       vm.runInContext(source.slice(source.indexOf('function animateRouteMedication('),source.indexOf('function animateNIV(')),f.context);
       const done=f.context.animateRouteMedication(id,outcome,3200);
       f.advance(delay-1);
-      assert.deepEqual(['oxygen', 'nebmed', 'niv'].includes(id) ? [{sound:'oxygen_flow',time:100}] : [], f.played);
+      assert.deepEqual(['oxygen', 'nebmed', 'niv'].includes(id) ? [{sound:'oxygen_flow',time:100}] : ['infusion', 'inmed'].includes(id) ? [{sound:'healing',time:100}] : [], f.played);
       f.advance(1);assert.deepEqual(f.played.at(-1),{sound:outcome === 'SUCCESS' ? 'success' : 'fail',time:delay});
       assert.equal(f.elements.get(`${id}-overlay`).properties['--route-result-delay'],`${delay}ms`);
       f.advance(4000);await done;assert.equal(f.timers.length,0);
     }
   }
+});
+
+test('medication push, IV fluid, blood and intranasal medication use healing before the unchanged outcome cue', async () => {
+  const push = fixture();
+  for (const suffix of ['overlay', 'label']) push.elements.set(`medpush-${suffix}`, push.elements.get(`sga-${suffix}`));
+  vm.runInContext(source.slice(source.indexOf('function animateMedPush('), source.indexOf('// Explicit routes take precedence')), push.context);
+  const pushDone = push.context.animateMedPush('FAILURE');
+  push.advance(1800);
+  assert.deepEqual(push.played, [{ sound: 'healing', time: 100 }, { sound: 'fail', time: 1800 }]);
+  push.advance(920); await pushDone;
+
+  const blood = fixture();
+  for (const suffix of ['overlay', 'label']) blood.elements.set(`infusion-${suffix}`, blood.elements.get(`sga-${suffix}`));
+  blood.elements.get('infusion-overlay').dataset = { fluid: 'blood' };
+  vm.runInContext(source.slice(source.indexOf('function animateRouteMedication('), source.indexOf('function animateNIV(')), blood.context);
+  const bloodDone = blood.context.animateRouteMedication('infusion', 'SUCCESS', 3200);
+  blood.advance(1900);
+  assert.deepEqual(blood.played, [{ sound: 'healing', time: 100 }, { sound: 'success', time: 1900 }]);
+  blood.advance(1520); await bloodDone;
 });

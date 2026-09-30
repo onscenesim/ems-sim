@@ -95,3 +95,43 @@ test('scene cues stop the action before the result, cancel on hiding, and fade b
   advance(100);context.document.hidden=true;listeners.get('visibilitychange')();context.document.hidden=false;advance(7000);
   assert.deepEqual(events.map(e=>e.slice(0,2)),[['intubation','play'],['intubation','pause']]);assert.equal(timers.length,0);
 });
+
+test('healing cue crossfades into the unchanged outcome cue', () => {
+  let now = 0;
+  const timers = [], played = [];
+  const context = vm.createContext({
+    document: { hidden: false, addEventListener() {}, removeEventListener() {} },
+    setTimeout: (fn, ms) => { const timer = { fn, at: now + ms }; timers.push(timer); return timer; },
+    clearTimeout: timer => { const index = timers.indexOf(timer); if (index >= 0) timers.splice(index, 1); },
+    playSound: name => {
+      const voice = { name, volume: 1, paused: false, ended: false, pause() { this.paused = true; } };
+      played.push({ name, time: now, voice });
+      return voice;
+    },
+  });
+  vm.runInContext(source.slice(source.indexOf('function scheduleSceneAudio('), source.indexOf('function animateProcedureScene(')), context);
+  const advance = ms => {
+    const end = now + ms;
+    while (true) {
+      timers.sort((a, b) => a.at - b.at);
+      if (!timers.length || timers[0].at > end) break;
+      const timer = timers.shift(); now = timer.at; timer.fn();
+    }
+    now = end;
+  };
+  const cancel = context.scheduleSceneAudio({ action: 'healing', actionFadeMs: 480, resultSound: 'success', resultAt: 1800 });
+  advance(1440);
+  assert.equal(played[0].name, 'healing');
+  assert.equal(played[0].voice.volume, 1);
+  advance(360);
+  assert.equal(played[0].voice.volume, .25);
+  assert.equal(played[0].voice.paused, false);
+  assert.deepEqual(played.map(({name, time}) => ({name, time})), [
+    { name: 'healing', time: 100 }, { name: 'success', time: 1800 },
+  ]);
+  assert.equal(played[1].voice.volume, 1);
+  advance(120);
+  assert.equal(played[0].voice.paused, true);
+  assert.equal(played[1].voice.paused, false);
+  cancel();
+});
