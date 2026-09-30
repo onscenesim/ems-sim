@@ -8,6 +8,10 @@ const SOUNDS = {
   oxygen_flow: new Audio('/sounds/OxygenFlow.wav'),
   intubation: new Audio('/sounds/Intubation.mp3'),
   squelch: new Audio('/sounds/WoundCompression.wav'),
+  med_oral_action: new Audio('/sounds/MedicationBottleRattle.wav'),
+  med_in_action: new Audio('/sounds/MedicationSpritz.wav'),
+  med_fluid_action: new Audio('/sounds/MedicationFluid.wav'),
+  med_im_action: new Audio('/sounds/MedicationWetStab.wav'),
   glovebox: new Audio('/sounds/Glovebox.mp3'),
   rummage: new Audio('/sounds/GloveboxRummage.wav'),
   pocket: new Audio('/sounds/PocketRustle.wav'),
@@ -49,7 +53,7 @@ const SOUNDS = {
   sfx_depart:       new Audio('/sounds/AmbulanceDeparting.m4a'),
 };
 // Match these close-up interface recordings to the established effect bed.
-const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: .55, intubation: .65, squelch: .65 };
+const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: .55, intubation: .65, squelch: .65, med_oral_action: .5, med_in_action: .48, med_fluid_action: .5, med_im_action: .55 };
 // A single HTMLAudioElement cannot play over itself: calling play() again
 // rewinds the effect already in progress. Keep a small, warmed voice pool per
 // sound so two animation/action cues can overlap without cancelling either.
@@ -2376,7 +2380,7 @@ function animateDrill(outcome) {
 const PROCEDURE_TIMING = Object.freeze({
   npa: Object.freeze({ hold: 4000, start: 0, cycle: 4000, result: 3600, sound: 3600 }),
   obstruction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2500, sound: 2500 }),
-  chest_seal: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3000, sound: 3000 }),
+  chest_seal: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3000, sound: 3000, action: 'squelch' }),
   pacing: Object.freeze({ hold: 5200, start: 0, cycle: 5200, result: 2800, sound: 2800 }),
   defib: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 2600, sound: 1400 }),
   bleeding_control: Object.freeze({ hold: 4200, start: 0, cycle: 4200, result: 3100, sound: 3100, action: 'squelch' }),
@@ -2422,7 +2426,12 @@ function scheduleSceneAudio({ action, resultSound, resultAt, reduced = false }) 
     if (!cancelled && !document.hidden) fn();
   }, delay));
   document.addEventListener?.('visibilitychange', onVisibility);
-  if (reduced) resultVoice = playSound(resultSound);
+  if (reduced) {
+    if (action) {
+      actionVoice = playSound(action);
+      later(() => { stopAction(); resultVoice = playSound(resultSound); }, 800);
+    } else resultVoice = playSound(resultSound);
+  }
   else {
     if (action) later(() => { actionVoice = playSound(action); }, 100);
     later(() => { stopAction(); resultVoice = playSound(resultSound); }, resultAt);
@@ -2569,7 +2578,7 @@ function animateIV(outcome) {
   });
 }
 
-function animateMedPush(outcome) {
+function animateMedPush(outcome, action = 'med_fluid_action') {
   return new Promise(resolve => {
     const HOLD_MS = 2500; // connection, plunger stroke, fluid path, result
     const FADE_MS = 220;
@@ -2581,7 +2590,7 @@ function animateMedPush(outcome) {
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
-    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('medication_push', outcome), resultAt: 1800,
+    const cancelAudio = scheduleSceneAudio({ action, resultSound: getProcedureSound('medication_push', outcome), resultAt: 1800,
       reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
       cancelAudio();
@@ -2603,13 +2612,16 @@ async function animateMedicationAdministration(roll) {
     if (overlay) overlay.dataset.fluid = roll.medication_kind;
     const header = document.getElementById('infusion-header');
     if (header) header.textContent = roll.medication_name || 'IV FLUID';
-    await animateRouteMedication('infusion', outcome, 3200);
-  } else if (scene) await animateRouteMedication(scene[0], outcome, scene[1]);
-  else await animateMedPush(outcome);
+    await animateRouteMedication('infusion', outcome, 3200, 'med_fluid_action');
+  } else if (scene) {
+    const action = route === 'PO' || route === 'SL' ? 'med_oral_action'
+      : route === 'IN' ? 'med_in_action' : route === 'IM' ? 'med_im_action' : null;
+    await animateRouteMedication(scene[0], outcome, scene[1], action);
+  } else await animateMedPush(outcome, 'med_fluid_action');
   if (roll.matched_drug) showDrugPanel(roll.matched_drug);
 }
 
-function animateRouteMedication(id, outcome, holdMs) {
+function animateRouteMedication(id, outcome, holdMs, action = null) {
   return new Promise(resolve => {
     const overlay = document.getElementById(`${id}-overlay`);
     const label = document.getElementById(`${id}-label`);
@@ -2623,7 +2635,7 @@ function animateRouteMedication(id, outcome, holdMs) {
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
     const usesOxygenFlow = id === 'oxygen' || id === 'nebmed' || id === 'niv';
-    const cancelAudio = scheduleSceneAudio({ action: usesOxygenFlow ? 'oxygen_flow' : null, resultSound, resultAt,
+    const cancelAudio = scheduleSceneAudio({ action: usesOxygenFlow ? 'oxygen_flow' : action, resultSound, resultAt,
       reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
       cancelAudio();
