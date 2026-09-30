@@ -364,7 +364,7 @@ function rollScenario(opts = {}) {
   const decompensationClock = category === 'doa' ? null : rollDecompensationClock(difficulty, trajectory);
   const complication = rollComplication(difficulty);
   const callerBehavior = rollCallerBehavior(category);
-  const timeOfDay = presentation.time_of_day_override || rollTimeOfDay();
+  const timeOfDay = rollTimeOfDay();
 
   const region = REGIONS.find(r => r.id === region_id);
   const regionLabel = region ? region.id : region_id;
@@ -418,7 +418,6 @@ function rollScenario(opts = {}) {
     complication_type: complication.type,
     caller_behavior: callerBehavior,
     time_of_day: timeOfDay,
-    call_address_override: presentation.call_address_override || null,
     weather,
     weather_id: weatherEntry.id,
     season,
