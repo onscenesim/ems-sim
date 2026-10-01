@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=85">
+  <link rel="stylesheet" href="style.css?v=86">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
   <link rel="stylesheet" href="practice.css?v=9">
@@ -409,7 +409,8 @@
       <div class="vital-cell vital-spo2">
         <div class="vital-label">SpO<sub>2</sub></div>
         <div class="vital-value" data-vital="SpO2">&mdash;&mdash;</div>
-        <div id="spo2-signal-badge" aria-live="polite"></div>
+        <div id="spo2-signal-badge" aria-label="Perfusion index unavailable">PI —</div>
+        <div id="spo2-signal-status" aria-live="polite"></div>
       </div>
       <div class="vital-cell vital-etco2">
         <div class="vital-label">EtCO<sub>2</sub></div>
@@ -435,7 +436,7 @@
       </div>
       <div class="notepad-readings" id="notepad-personalization">
       <div class="notepad-readings-heading"><div id="notepad-focus">Readings for: Current patient</div><button id="notepad-stickers-edit" type="button" aria-haspopup="dialog" aria-controls="cosmetics-dialog" title="Choose up to two notebook stickers">STICKERS ＋</button></div>
-      <div class="vital-row"><span class="vital-row-label">Pulse ox</span><span class="vital-row-value" id="pulse-ox-status">Probe not placed</span></div>
+      <div class="vital-row"><span class="vital-row-label">Pulse ox</span><span class="vital-row-value" id="pulse-ox-status">PI —</span></div>
       <section class="ecg-notebook" aria-label="12-lead recordings">
         <div class="ecg-notebook-heading"><strong>12-LEAD PRINTOUTS</strong><span id="ecg-count">0 recordings</span></div>
         <p id="ecg-empty">Obtain a 12-lead ECG to file a printout here.</p>
@@ -2035,7 +2036,7 @@
   <script src="medication-aliases.js?v=2"></script>
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-  <script src="pleth.js?v=1"></script>
+  <script src="pleth.js?v=3"></script>
   <script src="practice.js?v=10"></script>
   <script src="instructor.js?v=1"></script>
   <dialog id="ecg-dialog" aria-labelledby="ecg-dialog-title">
@@ -2046,7 +2047,7 @@
   <script src="ecg-catalog.js?v=2"></script>
   <script src="twelve-lead.js?v=5"></script>
   <script src="twelve-lead-viewer.js?v=5"></script>
-  <script src="app.js?v=95"></script>
+  <script src="app.js?v=96"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>
   <script src="cosmetics.js?v=5"></script>

@@ -17,8 +17,24 @@ const PlethWaveform = (() => {
     pulse += 0.08 * Math.exp(-(((phase - 0.51) / 0.05) ** 2));
     const noise = 0.55 * Math.sin(t * 37.1) + 0.3 * Math.sin(t * 61.7 + 0.8) + 0.15 * Math.sin(t * 93.3);
     if (unreliable) {
-      const dropout = Math.floor(warped) % 4 === 2 ? 0.06 : 0.35;
-      return dropout * pulse * (0.7 + 0.3 * Math.sin(t * 1.9)) + 0.18 * noise + 0.08 * Math.sin(t * 4.7);
+      // Motion dominates completely: no trustworthy pulse cadence remains.
+      // Seeded, interpolated noise avoids both repeating ECG-like complexes
+      // and frame-rate-dependent randomness when the strip is redrawn.
+      const hash = n => {
+        const v = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+        return (v - Math.floor(v)) * 2 - 1;
+      };
+      const drift = frequency => {
+        const position = t * frequency, i = Math.floor(position), f = position - i;
+        const blend = f * f * (3 - 2 * f);
+        return hash(i) * (1 - blend) + hash(i + 1) * blend;
+      };
+      const block = Math.floor(t / 2.3), within = t / 2.3 - block;
+      const dropout = hash(block + 71) > 0.1 && within > 0.62 && within < 0.84;
+      if (dropout) return 0.02 * noise;
+      const spike = Math.max(0, drift(5.3)) ** 5;
+      return Math.max(-0.18, Math.min(1.02,
+        0.24 + 0.34 * drift(0.73) + 0.38 * drift(8.7) + 0.16 * noise + 0.55 * spike));
     }
     if (poor) return 0.23 * pulse * (0.65 + 0.35 * Math.sin(t * 1.3) ** 2) + 0.055 * noise;
     return 0.88 * pulse;
@@ -34,12 +50,47 @@ const PlethWaveform = (() => {
   }
 
   function description(signal) {
-    if (!signal || signal.reason === 'unplaced') return 'Probe not placed';
-    if (signal.reason === 'disconnected') return 'Probe disconnected';
-    if (signal.quality === 'absent') return 'No pulse ox signal';
-    if (signal.quality === 'poor') return 'Weak signal · reading unreliable';
-    if (!signal.reliable) return 'Signal artifact · reading unreliable';
-    return 'Good signal · reading reliable';
+    if (!signal || signal.reason === 'unplaced') return '';
+    if (signal.quality === 'absent') return 'check probe';
+    if (signal.quality === 'unreliable') return 'searching for pulse';
+    return '';
+  }
+
+  // Synthetic PI for the simulator's signal tiers, not a calibrated clinical
+  // measurement. Slow seeded variation stays within the waveform's PI band.
+  function perfusionIndex(signal, seconds = 0) {
+    if (!signal || signal.quality === 'absent' || signal.reason === 'unplaced') return null;
+    const seed = (signal.pulseRate || 75) * 0.137;
+    const hash = n => { const x = Math.sin(n * 127.1 + seed) * 43758.5453; return x - Math.floor(x); };
+    const position = seconds / 3, step = Math.floor(position), fraction = position - step;
+    const blend = fraction * fraction * (3 - 2 * fraction);
+    const variation = hash(step) * (1 - blend) + hash(step + 1) * blend;
+    if (signal.quality === 'unreliable' && hash(step + 91) < 0.28) return null;
+    const [min, max] = signal.quality === 'good' ? [1.1, 5.5]
+      : signal.quality === 'poor' ? [0.3, 1.0] : [0.05, 0.29];
+    return Math.round((min + (max - min) * variation) * 100) / 100;
+  }
+
+  function createReadout({ pi, status, detail }) {
+    let signal = null, timer = null;
+    function render() {
+      const value = perfusionIndex(signal, performance.now() / 1000);
+      const text = `PI ${value === null ? '—' : value.toFixed(2)}`;
+      const message = description(signal);
+      pi.textContent = text;
+      pi.dataset.low = String(value !== null ? value <= 1.0 : signal?.quality === 'unreliable');
+      pi.setAttribute('aria-label', `Perfusion index ${value === null ? 'unavailable' : value.toFixed(2)}`);
+      status.textContent = message;
+      if (detail) detail.textContent = [text, message].filter(Boolean).join(' · ');
+    }
+    function update(next) {
+      signal = next;
+      render();
+      if (signal && signal.quality !== 'absent') {
+        if (timer === null) timer = setInterval(render, 1500);
+      } else if (timer !== null) { clearInterval(timer); timer = null; }
+    }
+    return { update, dispose() { if (timer !== null) clearInterval(timer); timer = null; } };
   }
 
   function createStrip(canvas) {
@@ -106,7 +157,7 @@ const PlethWaveform = (() => {
     }
     return { update, resize: () => { if (raf === null) idle(); } };
   }
-  return { sample, selection, description, createStrip };
+  return { sample, selection, description, perfusionIndex, createReadout, createStrip };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = PlethWaveform;

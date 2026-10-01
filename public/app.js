@@ -3457,6 +3457,11 @@ window.addEventListener('resize', () => {
 
 // ── Pulse ox pleth and compact monitor selection ────────────────────────────
 const plethStrip = PlethWaveform.createStrip(document.getElementById('pleth-strip'));
+const pulseOxReadout = PlethWaveform.createReadout({
+  pi: document.getElementById('spo2-signal-badge'),
+  status: document.getElementById('spo2-signal-status'),
+  detail: document.getElementById('pulse-ox-status'),
+});
 const waveformToggle = document.getElementById('waveform-toggle');
 
 function selectMonitorWaveform(value) {
@@ -3482,13 +3487,9 @@ function updatePlethStrip(vitals) {
     quality: 'good', reliable: true, reason: 'reliable', pulseRate: Number(vitals.HR?.value ?? vitals.HR) || 75,
   } : null);
   plethStrip.update(signal);
-  const description = PlethWaveform.description(signal);
-  document.getElementById('pleth-strip').setAttribute('aria-label', `SpO₂ pleth: ${description}`);
-  document.getElementById('pulse-ox-status').textContent = description;
-  const badge = document.getElementById('spo2-signal-badge');
-  badge.textContent = !signal || signal.reason === 'unplaced' || signal.reliable ? '' : signal.quality === 'absent' ? 'NO SIG' : 'CHECK';
-  badge.setAttribute('aria-label', description);
-  badge.title = description;
+  pulseOxReadout.update(signal);
+  document.getElementById('pleth-strip').setAttribute('aria-label',
+    ['SpO₂ pleth waveform', PlethWaveform.description(signal)].filter(Boolean).join(': '));
 }
 
 function formatVitalDisplay(name, raw) {

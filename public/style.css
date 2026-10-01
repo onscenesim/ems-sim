@@ -2193,12 +2193,17 @@ body.light-mode .brief-options-note { color: #536159; }
 #waveform-toggle { display: none; }
 #spo2-signal-badge {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.2;
   margin-top: 3px;
+  color: #4ab8ff;
+  font-variant-numeric: tabular-nums;
+}
+#spo2-signal-badge[data-low="true"], #spo2-signal-status {
   color: #ffd54a;
 }
-#spo2-signal-badge:empty { display: none; }
+#spo2-signal-status { font: 8px/1.2 var(--font-mono); margin-top: 3px; max-width: 90px; }
+#spo2-signal-status:empty { display: none; }
 
 @media (max-width: 900px) {
   #waveform-toggle {

@@ -8,6 +8,47 @@ const PlethWaveform = require('../public/pleth');
 const normal = { HR: 80, SpO2: 98, BP: { value: '120/80', t: 'T+1:00' }, Rhythm: 'sinus' };
 const equipment = { complication_type: 'equipment_failure' };
 
+test('PI varies within the waveform bands, with intermittent missing garbage PI', () => {
+  const readings = quality => Array.from({ length: 240 }, (_, t) => PlethWaveform.perfusionIndex({ quality, pulseRate: 104 }, t * 1.5));
+  assert.ok(readings('good').every(pi => pi > 1));
+  assert.ok(readings('poor').every(pi => pi >= 0.3 && pi <= 1));
+  const garbage = readings('unreliable');
+  assert.ok(garbage.some(pi => pi === null));
+  assert.ok(garbage.some(pi => pi !== null));
+  assert.ok(garbage.every(pi => pi === null || (pi >= 0 && pi < 0.3)));
+  assert.ok(readings('absent').every(pi => pi === null));
+  for (const quality of ['good', 'poor', 'unreliable']) assert.ok(new Set(readings(quality)).size > 10);
+  assert.equal(PlethWaveform.description({ quality: 'good' }), '');
+  assert.equal(PlethWaveform.description({ quality: 'poor' }), '');
+  assert.equal(PlethWaveform.description({ quality: 'unreliable' }), 'searching for pulse');
+  assert.equal(PlethWaveform.description({ quality: 'absent', reason: 'disconnected' }), 'check probe');
+  assert.equal(PlethWaveform.description({ quality: 'absent', reason: 'sensor_dropout' }), 'check probe');
+  assert.equal(PlethWaveform.description(null), '');
+});
+
+test('PI readout updates color and status and clears its timer after signal loss', () => {
+  const element = () => ({ dataset: {}, setAttribute() {} });
+  const pi = element(), status = element(), detail = element();
+  let started = 0, stopped = 0;
+  const browser = vm.createContext({ performance: { now: () => 5000 },
+    setInterval() { return ++started; }, clearInterval() { stopped++; }, pi, status, detail });
+  vm.runInContext(fs.readFileSync(require.resolve('../public/pleth'), 'utf8'), browser);
+  vm.runInContext('this.readout = PlethWaveform.createReadout({pi,status,detail})', browser);
+  browser.readout.update({ quality: 'poor', pulseRate: 104 });
+  assert.match(pi.textContent, /^PI 0\.\d{2}$/); assert.equal(pi.dataset.low, 'true');
+  assert.equal(status.textContent, '');
+  browser.readout.update({ quality: 'unreliable', pulseRate: 104 });
+  assert.equal(status.textContent, 'searching for pulse'); assert.equal(pi.dataset.low, 'true');
+  browser.readout.update({ quality: 'good', pulseRate: 104 });
+  assert.equal(pi.dataset.low, 'false'); assert.equal(status.textContent, '');
+  assert.equal(started, 1, 'updates reuse one refresh timer');
+  browser.readout.update({ quality: 'absent', reason: 'disconnected' });
+  assert.equal(pi.textContent, 'PI —'); assert.equal(status.textContent, 'check probe');
+  assert.equal(stopped, 1);
+  browser.readout.update(null);
+  assert.equal(status.textContent, ''); assert.equal(detail.textContent, 'PI —');
+});
+
 test('normal, poor, and recovering perfusion change quality independently of saturation', () => {
   const good = derivePulseOx(normal);
   assert.equal(good.quality, 'good'); assert.equal(good.reliable, true);
@@ -113,6 +154,9 @@ test('pleth samples are deterministic, rounded, weakened/noisy and absent as app
   assert.ok(Math.max(...poor) < Math.max(...good) * 0.4, 'poor pulse amplitude is visibly weaker');
   assert.ok(poor.some(y => y < -0.02), 'poor signal has baseline noise');
   assert.ok(bad.some(y => y < -0.1), 'artifact has visible irregular noise');
+  assert.ok(Math.max(...bad) > Math.max(...poor) * 3, 'severe artifact is distinct from a small weak pulse');
+  assert.ok(bad.every(y => y >= -0.18 && y <= 1.02), 'garbage trace stays inside the strip');
+  assert.deepEqual(bad, Array.from({ length: 1200 }, (_, i) => PlethWaveform.sample(i / 200, { quality: 'unreliable', pulseRate: 140 })), 'garbage artifact cannot be used to infer pulse rate');
   assert.ok(Math.max(...good.map((v, i) => i ? Math.abs(v - good[i - 1]) : 0)) < 0.06, 'rounded upstroke, not a QRS spike');
   assert.ok([...good, ...poor, ...bad].every(Number.isFinite));
   assert.notDeepEqual(bad.slice(0, 150), bad.slice(150, 300), 'irregular beats do not repeat every pulse');
