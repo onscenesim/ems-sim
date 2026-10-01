@@ -40,39 +40,41 @@ function soundFixture() {
 }
 
 test('sound playback uses independent preloaded voices instead of rewinding an active cue', async () => {
-  const { context } = soundFixture();
-  const pool = context.voicesFor('lucas');
-  assert.equal(pool.length, 2);
-  assert.ok(pool.every(voice => voice.preload === 'auto'));
+  const { context, voices } = soundFixture();
+  assert.equal(voices.length, 0, 'no effects are decoded on page load');
 
   context.playSound('lucas');
   context.playSound('lucas');
+  const pool = context.voicesFor('lucas');
+  assert.equal(pool.length, 2);
+  assert.ok(pool.every(voice => voice.preload === 'auto'));
   assert.equal(pool[0].playCount, 1);
   assert.equal(pool[1].playCount, 1);
   assert.equal(pool[0].paused, false);
   assert.equal(pool[1].paused, false);
 
-  // A third simultaneous trigger must get a fresh voice, never interrupting
-  // either active LUCAS cue.
-  context.playSound('lucas');
+  // A third simultaneous trigger is dropped rather than creating an
+  // unbounded number of mobile media decoders or interrupting active cues.
+  assert.equal(context.playSound('lucas'), null);
   const expanded = context.voicesFor('lucas');
-  assert.equal(expanded.length, 3);
+  assert.equal(expanded.length, 2);
   assert.ok(expanded.every(voice => voice.playCount === 1 && !voice.paused));
 
   context.stopSound('lucas');
   assert.ok(expanded.every(voice => voice.paused && voice.currentTime === 0));
+  for (let i = 0; i < 200; i++) context.playSound('lucas');
+  assert.equal(voices.length, 2, 'repeated cues reuse the fixed pool');
 });
 
 test('sound playback stays silent when disabled or backgrounded', () => {
   const { context } = soundFixture();
-  const pool = context.voicesFor('lucas');
   context.soundEnabled = false;
   context.playSound('lucas');
-  assert.ok(pool.every(voice => voice.playCount === 0));
+  assert.equal(context.voicesFor('lucas'), undefined);
   context.soundEnabled = true;
   context.document.hidden = true;
   context.playSound('lucas');
-  assert.ok(pool.every(voice => voice.playCount === 0));
+  assert.equal(context.voicesFor('lucas'), undefined);
 });
 
 test('scene cues stop the action before the result, cancel on hiding, and fade before the next scene', () => {

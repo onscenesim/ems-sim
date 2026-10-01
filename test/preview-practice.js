@@ -9,6 +9,13 @@ const apiPath = require.resolve('../src/engine/api');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: {
   sendTurn: async (prompt, messages) => {
     const minute = messages.filter(m => m.role === 'user').length;
+    const action = String(messages.at(-1)?.content || '');
+    if (/probe falls off/i.test(action))
+      return `The pulse ox clip slips off the finger. The saturation number and pleth disappear; the other monitor readings continue. [VITALS: HR=100 BP=120/80 RR=18 PulseOxProbe=disconnected GCS=15] [TIME: ${minute}:00]`;
+    if (/reconnect probe/i.test(action))
+      return `The clip is reseated on the finger and the pulse ox signal returns. [VITALS: HR=100 BP=120/80 RR=18 TrueSpO2=97 PulseOxProbe=connected GCS=15] [TIME: ${minute}:00]`;
+    if (/recheck vitals/i.test(action))
+      return `The monitor continues to show stable readings. [VITALS: HR=100 BP=120/80 RR=18 GCS=15] [TIME: ${minute}:00]`;
     return minute === 1
       ? `DISPATCH: Local preview fixture — simulated patient awaiting your assessment. ${prompt.match(/Season: (.*)/)?.[1] || ''} [TIME: 1:00]`
       : `Local preview fixture: your action is recorded. [VITALS: HR=100 BP=120/80 RR=18 SpO2=97 GCS=15] [TIME: ${minute}:00]`;

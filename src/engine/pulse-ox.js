@@ -39,7 +39,10 @@ function derivePulseOx(vitals, previous = null, seed = {}) {
   const artifact = mayDistort
     ? choice(vitals.PulseOxArtifact, ['none', 'false_low', 'false_high', 'dropout']) || previous?.artifact || 'none'
     : 'none';
-  const hasReading = measured !== null;
+  // A connected probe keeps reporting between model turns. An omitted
+  // saturation is not a sensor failure; disconnection, dropout and absent
+  // perfusion are represented explicitly below.
+  const hasReading = trueSpO2 !== null;
   const pulseRate = Number(valueOf(vitals.PulseRate) ?? valueOf(vitals.HR));
   let quality = 'good', reason = 'reliable';
   if (probe !== 'connected') { quality = 'absent'; reason = probe; }

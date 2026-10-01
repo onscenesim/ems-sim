@@ -4,82 +4,72 @@
 // ── Audio ──────────────────────────────────────────────────────────────
 // ── Sound effects ─────────────────────────────────────────────────────────────────────────
 const SOUNDS = {
-  suction: new Audio('/sounds/Suction.wav'),
-  oxygen_flow: new Audio('/sounds/Oxygen.mp3'),
-  intubation: new Audio('/sounds/ReverseCymbal.mp3'),
-  chest_slap: new Audio('/sounds/SlapReverb.mp3'),
-  airway_gulp: new Audio('/sounds/GULP.mp3'),
-  healing: new Audio('/sounds/health-healed-01.wav'),
-  squelch: new Audio('/sounds/WoundCompression.wav'),
-  glovebox: new Audio('/sounds/Glovebox.mp3'),
-  rummage: new Audio('/sounds/GloveboxRummage.wav'),
-  pocket: new Audio('/sounds/PocketRustle.wav'),
-  trash: new Audio('/sounds/TrashCrinkle.wav'),
-  paper: new Audio('/sounds/Notebook.mp3'),
-  defib_outside: new Audio('/sounds/Defiboutsideambulance.m4a'),
-  defib_amb:     new Audio('/sounds/Defibinambulance.m4a'),
-  fail:     new Audio('/sounds/Diceroll_fail.m4a'),
-  success:  new Audio('/sounds/Diceroll_success.m4a'),
-  io:       new Audio('/sounds/IODrillSoundEffect.m4a'),
-  kitopen:  new Audio('/sounds/KitOpen.m4a'),
-  lucas:    new Audio('/sounds/LUCAS.m4a'),
-  lifepak:  new Audio('/sounds/LifepakStartup.m4a'),
-  radio:    new Audio('/sounds/RadioCrackle.m4a'),
-  surgical:         new Audio('/sounds/SurgicalIncision.m4a'),
-  sword:            new Audio('/sounds/SwordSlice.mp3'),
-  hiss:             new Audio('/sounds/SteamHiss.mp3'),
-  dispatch:         new Audio('/sounds/incident_assigned.m4a'),
-  bvm_fail:         new Audio('/sounds/BVM_fail.m4a'),
-  bvm_success:      new Audio('/sounds/BVM_success.m4a'),
-  cpr_amb:          new Audio('/sounds/CPR_ambulance.m4a'),
-  cpr_outside:      new Audio('/sounds/CPR_outside.m4a'),
-  cpr_bls_amb:      new Audio('/sounds/CPR_bls_ambulance.m4a'),
-  cpr_bls_outside:  new Audio('/sounds/CPR_bls_outside.m4a'),
-  thump:            new Audio('/sounds/PrecordialThumpSuccess.m4a'),
+  suction: '/sounds/Suction.wav',
+  oxygen_flow: '/sounds/Oxygen.mp3',
+  intubation: '/sounds/ReverseCymbal.mp3',
+  chest_slap: '/sounds/SlapReverb.mp3',
+  airway_gulp: '/sounds/GULP.mp3',
+  healing: '/sounds/health-healed-01.wav',
+  squelch: '/sounds/WoundCompression.wav',
+  glovebox: '/sounds/Glovebox.mp3',
+  rummage: '/sounds/GloveboxRummage.wav',
+  pocket: '/sounds/PocketRustle.wav',
+  trash: '/sounds/TrashCrinkle.wav',
+  paper: '/sounds/Notebook.mp3',
+  defib_outside: '/sounds/Defiboutsideambulance.m4a',
+  defib_amb:     '/sounds/Defibinambulance.m4a',
+  fail:     '/sounds/Diceroll_fail.m4a',
+  success:  '/sounds/Diceroll_success.m4a',
+  io:       '/sounds/IODrillSoundEffect.m4a',
+  kitopen:  '/sounds/KitOpen.m4a',
+  lucas:    '/sounds/LUCAS.m4a',
+  lifepak:  '/sounds/LifepakStartup.m4a',
+  radio:    '/sounds/RadioCrackle.m4a',
+  surgical:         '/sounds/SurgicalIncision.m4a',
+  sword:            '/sounds/SwordSlice.mp3',
+  hiss:             '/sounds/SteamHiss.mp3',
+  dispatch:         '/sounds/incident_assigned.m4a',
+  bvm_fail:         '/sounds/BVM_fail.m4a',
+  bvm_success:      '/sounds/BVM_success.m4a',
+  cpr_amb:          '/sounds/CPR_ambulance.m4a',
+  cpr_outside:      '/sounds/CPR_outside.m4a',
+  cpr_bls_amb:      '/sounds/CPR_bls_ambulance.m4a',
+  cpr_bls_outside:  '/sounds/CPR_bls_outside.m4a',
+  thump:            '/sounds/PrecordialThumpSuccess.m4a',
   // Regional dispatch tones
-  dispatch_dense:   new Audio('/sounds/DenseUrba.m4a'),
-  dispatch_sprawl:  new Audio('/sounds/UrbanSprawl.m4a'),
-  dispatch_sub:     new Audio('/sounds/Suburban.m4a'),
-  dispatch_rural:   new Audio('/sounds/Rural.m4a'),
-  dispatch_ca:      new Audio('/sounds/California.m4a'),
-  dispatch_intl:    new Audio('/sounds/International.m4a'),
+  dispatch_dense:   '/sounds/DenseUrba.m4a',
+  dispatch_sprawl:  '/sounds/UrbanSprawl.m4a',
+  dispatch_sub:     '/sounds/Suburban.m4a',
+  dispatch_rural:   '/sounds/Rural.m4a',
+  dispatch_ca:      '/sounds/California.m4a',
+  dispatch_intl:    '/sounds/International.m4a',
   // California base-hospital hold music
-  base_contact:     new Audio('/sounds/CaliforniaElevatorMusic.m4a'),
+  base_contact:     '/sounds/CaliforniaElevatorMusic.m4a',
   // Placeholder slots — drop in audio files to activate:
-  backup_arrive:    new Audio('/sounds/BackupFINAL.m4a'),
-  sfx_loading_als:  new Audio('/sounds/ALSStretcher.m4a'),
-  sfx_loading_bls:  new Audio('/sounds/BLSStretcher.m4a'),
-  sfx_depart:       new Audio('/sounds/AmbulanceDeparting.m4a'),
+  backup_arrive:    '/sounds/BackupFINAL.m4a',
+  sfx_loading_als:  '/sounds/ALSStretcher.m4a',
+  sfx_loading_bls:  '/sounds/BLSStretcher.m4a',
+  sfx_depart:       '/sounds/AmbulanceDeparting.m4a',
 };
 // Match these close-up interface recordings to the established effect bed.
 const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, squelch: .65 };
-// A single HTMLAudioElement cannot play over itself: calling play() again
-// rewinds the effect already in progress. Keep a small, warmed voice pool per
-// sound so two animation/action cues can overlap without cancelling either.
+// Mobile browsers have a small media-decoder budget. Create voices only for
+// effects actually heard and cap overlap so a long call cannot accumulate
+// hundreds of live audio elements.
 const SOUND_VOICES_PER_EFFECT = 2;
 const SOUND_VOICE_POOLS = new Map();
-Object.entries(SOUNDS).forEach(([name, sound]) => {
-  if (!sound) return;
-  sound.preload = 'auto';
-  const voices = [sound];
-  for (let i = 1; i < SOUND_VOICES_PER_EFFECT; i++) {
-    const voice = sound.cloneNode(true);
-    voice.preload = 'auto';
-    voices.push(voice);
+function soundVoice(name, source) {
+  let voices = SOUND_VOICE_POOLS.get(name);
+  if (!voices) {
+    voices = [];
+    SOUND_VOICE_POOLS.set(name, voices);
   }
-  SOUND_VOICE_POOLS.set(name, voices);
-});
-
-function soundVoice(name, sound) {
-  const voices = SOUND_VOICE_POOLS.get(name) || [sound];
   const idle = voices.find(voice => voice.paused || voice.ended);
   if (idle) return idle;
-  // Do not steal an in-progress cue. The browser cache has already been warmed
-  // by the pool above, so this only costs an extra decoder while cues overlap.
-  const voice = sound.cloneNode(true);
+  if (voices.length >= SOUND_VOICES_PER_EFFECT) return null;
+  const voice = new Audio(source);
   voice.preload = 'auto';
   voices.push(voice);
-  SOUND_VOICE_POOLS.set(name, voices);
   return voice;
 }
 
@@ -128,11 +118,15 @@ function playSound(name) {
   if (s === undefined) { console.warn('[sound] unknown:', name); return; }
   if (s === null) return;  // known slot — file not yet assigned
   const voice = soundVoice(name, s);
+  if (!voice) return null;
   console.log('[sound] playing:', name);
   voice.muted = false;  // ensure not silenced from unlock phase
   voice.volume = SOUND_LEVELS[name] ?? 1;
   voice.currentTime = 0;
-  voice.play().catch(err => console.warn('[sound] play error:', name, err.message));
+  voice.play().catch(err => {
+    if (err?.name === 'NotAllowedError') audioUnlocked = false;
+    console.warn('[sound] play error:', name, err.message);
+  });
   return voice;
 }
 const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression',
@@ -179,6 +173,7 @@ function getProcedureSound(id, outcome) {
 // gesture-initiated play, so we unlock with one short SILENT clip instead. Real
 // sounds then play on demand via playSound().
 let audioUnlocked = false;
+let audioUnlockPending = false;
 function makeSilentClip() {
   // ~0.05s of 8-bit mono PCM silence, built at runtime (no asset needed).
   const rate = 8000, samples = 400, bytes = 44 + samples;
@@ -195,11 +190,16 @@ function makeSilentClip() {
 }
 const _unlockClip = makeSilentClip();
 function unlockAudio() {
-  if (audioUnlocked) return;
-  audioUnlocked = true;
+  if (audioUnlocked || audioUnlockPending) return;
+  audioUnlockPending = true;
   const p = _unlockClip.play();
   if (p && typeof p.then === 'function') {
-    p.then(() => { _unlockClip.pause(); _unlockClip.currentTime = 0; }).catch(() => {});
+    p.then(() => { audioUnlocked = !document.hidden; _unlockClip.pause(); _unlockClip.currentTime = 0; })
+      .catch(err => console.warn('[sound] unlock error:', err.message))
+      .finally(() => { audioUnlockPending = false; });
+  } else {
+    audioUnlocked = true;
+    audioUnlockPending = false;
   }
 }
 // touchend (not touchstart) avoids the iOS native <select> picker false-trigger.
@@ -211,6 +211,7 @@ document.addEventListener('touchend', unlockAudio);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     stopAllSounds();
+    audioUnlocked = false; // a resumed mobile audio session needs a fresh gesture
   }
 });
 
@@ -1246,8 +1247,8 @@ async function sendTurn(msg, opts = {}) {
     // California base-hospital hold music
     // Fires on [BASE_CONTACT] tag OR if Claude narrates the words "elevator music" (tag fallback)
     if (data.baseContact || /elevator music/i.test(data.reply || '')) {
-      const _bc = SOUNDS.base_contact;
-      if (_bc && _bc.paused) {
+      const _bc = SOUND_VOICE_POOLS.get('base_contact') || [];
+      if (_bc.every(voice => voice.paused || voice.ended)) {
         playSound('base_contact');
         setTimeout(() => stopSound('base_contact'), 7000);
       }

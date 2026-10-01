@@ -67,14 +67,15 @@ test('absent perfusion suppresses SpO2 and BP but preserves electrical ECG and h
   assert.equal(derivePulseOx({ ...normal, Perfusion: 'normal' }, arrest).quality, 'good');
 });
 
-test('unplaced, missing and invalid measurements never invent a displayed number', () => {
+test('unplaced and invalid measurements never invent a displayed number; connected probes retain the prior reading', () => {
   assert.equal(derivePulseOx({}).reason, 'unplaced');
   const good = derivePulseOx(normal);
   for (const SpO2 of [undefined, null, '', NaN, Infinity, 'pending', -1, 101]) {
     const ox = derivePulseOx({ SpO2 }, good);
-    assert.equal(ox.displayedSpO2, null, String(SpO2));
-    assert.equal(ox.trueSpO2, 98); assert.equal(ox.quality, 'absent');
+    assert.equal(ox.displayedSpO2, 98, String(SpO2));
+    assert.equal(ox.trueSpO2, 98); assert.equal(ox.quality, 'good');
   }
+  assert.equal(derivePulseOx({ HR: 80 }).displayedSpO2, null, 'no previous measurement remains unknown');
   const ox = derivePulseOx({ TrueSpO2: 98, PulseOxProbe: 'unplaced' });
   assert.equal(ox.displayedSpO2, null); assert.equal(ox.trueSpO2, 98);
   assert.equal(derivePulseOx({ ...normal, PulseRate: 62 }).pulseRate, 62);
