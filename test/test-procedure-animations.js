@@ -52,7 +52,7 @@ test('12-lead EKG reuses the CPR torso model with all six precordial leads', () 
 for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
   test(`${id}: action sound fires once, result timing is shared with CSS, and cleanup resolves after fade`, async () => {
     const f = fixture();
-    const procedure = id === 'scalpel' ? 'cricothyrotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id;
+    const procedure = id === 'scalpel' ? 'cricothyrotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id === 'npa' ? 'nasopharyngeal_airway' : id === 'obstruction' ? 'foreign_body_removal' : id === 'defib' ? 'defibrillation' : id;
     const t = f.context.timing[id];
     let complete = false;
     const promise = f.context.animateProcedureScene(id, procedure, 'SUCCESS').then(() => { complete = true; });
@@ -65,7 +65,7 @@ for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction
     f.advance(99); assert.equal(f.played.length, t.action && t.actionAt === 0 ? 1 : 0);
     f.advance(t.sound - 100);
     assert.deepEqual(f.played, t.action ? [{ sound: t.action, time: t.actionAt ?? 100 }] : []);
-    f.advance(1); assert.deepEqual(f.played.slice(t.action ? 1 : 0), [{ sound: id === 'bvm' ? 'bvm_success' : id === 'lucas' ? 'lucas' : id === 'ncd' ? 'hiss' : ['laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib'].includes(id) ? 'success' : 'sword', time: t.sound }]);
+    f.advance(1); assert.deepEqual(f.played, [{ sound: t.action || f.context.getProcedureSound(procedure, 'SUCCESS'), time: t.action ? t.actionAt ?? 100 : t.sound }]);
     f.advance(t.hold - t.sound);
     assert.equal(overlay.classList.contains('visible'), true, 'keep final CSS pose throughout the fade');
     assert.equal(overlay.classList.contains('is-fading'), true);
@@ -80,7 +80,7 @@ for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction
 test('replaying scenes clears previous outcomes and preserves all sound mappings', async () => {
   for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
     const f = fixture();
-    const proc = id === 'scalpel' ? 'finger_thoracostomy' : id === 'laryngoscope' ? 'rsi' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id;
+    const proc = id === 'scalpel' ? 'finger_thoracostomy' : id === 'laryngoscope' ? 'rsi' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id === 'npa' ? 'nasopharyngeal_airway' : id === 'obstruction' ? 'foreign_body_removal' : id === 'defib' ? 'defibrillation' : id;
     for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION', 'SUCCESS']) {
       const p = f.context.animateProcedureScene(id, proc, outcome);
       const overlay = f.elements.get(`${id}-overlay`);
@@ -89,29 +89,22 @@ test('replaying scenes clears previous outcomes and preserves all sound mappings
       }
       f.advance(f.context.timing[id].hold + 220); await p;
       const good = outcome === 'SUCCESS' || outcome === 'MARGINAL';
-      assert.equal(f.played.at(-1).sound, id === 'scalpel' ? 'sword' : id === 'ncd' ? good ? 'hiss' : 'fail' : ['laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib'].includes(id) ? good ? 'success' : 'fail' : id === 'bvm' ? good ? 'bvm_success' : 'bvm_fail' : good ? 'lucas' : 'fail');
+      assert.equal(f.played.at(-1).sound, f.context.timing[id].action || f.context.getProcedureSound(proc, outcome));
     }
-    assert.equal(f.played.length, f.context.timing[id].action ? 10 : 5);
+    assert.equal(f.played.length, 5);
   }
 });
 
 test('reduced motion and missing scenes retain sounds and always release the turn', async () => {
   for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
-    const procedure = id === 'scalpel' ? 'resuscitative_thoracotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id;
+    const procedure = id === 'scalpel' ? 'resuscitative_thoracotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id === 'npa' ? 'nasopharyngeal_airway' : id === 'obstruction' ? 'foreign_body_removal' : id === 'defib' ? 'defibrillation' : id;
     for (const options of [{ reduced: true }, { missing: true }]) {
       const f = fixture(options);
       const p = f.context.animateProcedureScene(id, procedure, 'FAILURE');
       const hasAction = Boolean(f.context.timing[id].action);
-      assert.equal(f.played.length, options.missing || !hasAction ? 1 : 0);
-      if (f.played.length) assert.equal(f.played[0].time, 0);
+      assert.equal(f.played.length, options.missing ? 1 : 0);
       f.advance(f.context.timing[id].hold + 220); await p;
-      assert.equal(f.played.length, options.missing || !hasAction ? 1 : 2);
-      if (options.reduced && hasAction) {
-        assert.deepEqual(f.played.map(({sound, time}) => ({sound, time})), [
-          { sound: f.context.timing[id].action, time: 0 },
-          { sound: id === 'scalpel' ? 'sword' : id === 'bvm' ? 'bvm_fail' : 'fail', time: f.context.timing[id].sound },
-        ]);
-      }
+      assert.deepEqual(f.played, [{ sound: f.context.timing[id].action || f.context.getProcedureSound(procedure, 'FAILURE'), time: 0 }]);
       assert.equal(f.timers.length, 0);
     }
   }
@@ -145,10 +138,10 @@ test('the real roll loop defers only scene-owned sounds and waits for animations
   await started;
   assert.deepEqual(events, ['dice:bvm', 'bvm']);
   release(); await p;
-  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'dice:cpr', 'cpr', 'defib']);
+  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'dice:cpr', 'cpr', 'success', 'defib']);
   events.length = 0;
   await c.rolls({ rolls: [{ procedure_id: 'lucas', outcome: 'FAILURE', multi_roll: true }, { procedure_id: 'bvm', no_roll: true }] });
-  assert.deepEqual(events, ['fail'], 'legacy multi/no-roll routing remains unchanged');
+  assert.deepEqual(events, ['fail', 'lucas'], 'legacy multi-roll keeps feedback and action; no-roll has no dice cue');
 });
 
 
@@ -161,13 +154,13 @@ test('intubation and RSI use the same anatomical scene with distinct outcome cap
       assert.equal(f.elements.get('laryngoscope-header').textContent, procedure.toUpperCase());
       assert.equal(f.elements.get('laryngoscope-label').textContent, `${outcome} · ${caption}`);
       f.advance(f.context.timing.laryngoscope.sound);
-      assert.equal(f.played.at(-1).sound, outcome === 'SUCCESS' || outcome === 'MARGINAL' ? 'success' : 'fail');
+      assert.equal(f.played.at(-1).sound, 'intubation');
       assert.equal(f.elements.get('laryngoscope-overlay').classList.contains('visible'), true);
       f.advance(f.context.timing.laryngoscope.hold - f.context.timing.laryngoscope.sound + 220); await promise;
       assert.equal(f.elements.get('laryngoscope-overlay').classList.contains('visible'), false);
     }
   }
-  assert.equal(f.played.length, 16);
+  assert.equal(f.played.length, 8);
 });
 
 
@@ -183,11 +176,11 @@ test('SGA, OPA and suction wrappers preserve outcomes and use the shared sound/r
       const p = f.context[fn](outcome);
       assert.equal(f.elements.get(`${id}-label`).textContent, `${outcome} · ${captions[i]}`);
       f.advance(f.context.timing[id].hold + 220); await p;
-      assert.equal(f.played.at(-1).sound, i < 2 ? 'success' : 'fail');
+      assert.equal(f.played.at(-1).sound, id === 'suction' ? 'suction' : 'airway_gulp');
       assert.equal(f.elements.get(`${id}-overlay`).classList.contains('visible'), false);
     }
   }
-  assert.equal(f.played.length, 24);
+  assert.equal(f.played.length, 12);
 });
 
 function transportFixture(options) {
@@ -328,7 +321,7 @@ test('real fluid, blood and oxygen detection reaches the correct scene through t
 });
 
 test('legacy and route scenes align their sound to the action or result instead of the dice', async () => {
-  for(const [fn,id,delay,proc] of [['animateIV','iv',1800,'peripheral_iv'],['animateTwelveLead','ekg',1500,'twelve_lead'],['animateDrill','io',0,'io_access'],['animateCPR','cpr',0,'cpr']]){
+  for(const [fn,id,delay,proc] of [['animateIV','iv',100,'peripheral_iv'],['animateTwelveLead','ekg',1500,'twelve_lead'],['animateDrill','io',0,'io_access'],['animateCPR','cpr',0,'cpr']]){
     const f=fixture();
     for(const suffix of ['overlay','label']) f.elements.set(`${id}-${suffix}`,f.elements.get(`sga-${suffix}`));
     vm.runInContext(source.match(new RegExp('function '+fn+'\\(outcome\\) \\{[\\s\\S]*?\\n\\}'))[0],f.context);
@@ -339,7 +332,7 @@ test('legacy and route scenes align their sound to the action or result instead 
     assert.equal(f.played[0].sound,f.context.getProcedureSound(proc,'SUCCESS'));
     f.advance(4000);await done;assert.equal(f.timers.length,0);
   }
-  for(const [id,delay] of [['oralmed',1900],['inmed',1550],['nebmed',2100],['niv',2550],['infusion',1900],['oxygen',1900]]){
+  for(const [id,delay] of [['oralmed',1900],['immed',1900],['inmed',1550],['nebmed',2100],['niv',2550],['infusion',1900],['oxygen',1900]]){
     for (const outcome of ['SUCCESS', 'FAILURE']) {
       const f=fixture();
       for(const suffix of ['overlay','label']) f.elements.set(`${id}-${suffix}`,f.elements.get(`sga-${suffix}`));
@@ -347,21 +340,21 @@ test('legacy and route scenes align their sound to the action or result instead 
       vm.runInContext(source.slice(source.indexOf('function animateRouteMedication('),source.indexOf('function animateNIV(')),f.context);
       const done=f.context.animateRouteMedication(id,outcome,3200);
       f.advance(delay-1);
-      assert.deepEqual(['oxygen', 'nebmed', 'niv'].includes(id) ? [{sound:'oxygen_flow',time:100}] : ['infusion', 'inmed'].includes(id) ? [{sound:'healing',time:100}] : [], f.played);
-      f.advance(1);assert.deepEqual(f.played.at(-1),{sound:outcome === 'SUCCESS' ? 'success' : 'fail',time:delay});
+      assert.deepEqual(['oxygen', 'nebmed', 'niv'].includes(id) ? [{sound:'oxygen_flow',time:100}] : [{sound:({oralmed:'med_oral_action',immed:'med_im_action',inmed:'med_in_action'})[id] || 'healing',time:100}], f.played);
+      f.advance(1);assert.equal(f.played.length, 1, 'no duplicate outcome cue during the scene');
       assert.equal(f.elements.get(`${id}-overlay`).properties['--route-result-delay'],`${delay}ms`);
       f.advance(4000);await done;assert.equal(f.timers.length,0);
     }
   }
 });
 
-test('medication push, IV fluid, blood and intranasal medication use healing before the unchanged outcome cue', async () => {
+test('medication push and blood keep the healing cue without repeating dice feedback', async () => {
   const push = fixture();
   for (const suffix of ['overlay', 'label']) push.elements.set(`medpush-${suffix}`, push.elements.get(`sga-${suffix}`));
   vm.runInContext(source.slice(source.indexOf('function animateMedPush('), source.indexOf('// Explicit routes take precedence')), push.context);
   const pushDone = push.context.animateMedPush('FAILURE');
   push.advance(1800);
-  assert.deepEqual(push.played, [{ sound: 'healing', time: 100 }, { sound: 'fail', time: 1800 }]);
+  assert.deepEqual(push.played, [{ sound: 'healing', time: 100 }]);
   push.advance(920); await pushDone;
 
   const blood = fixture();
@@ -370,6 +363,103 @@ test('medication push, IV fluid, blood and intranasal medication use healing bef
   vm.runInContext(source.slice(source.indexOf('function animateRouteMedication('), source.indexOf('function animateNIV(')), blood.context);
   const bloodDone = blood.context.animateRouteMedication('infusion', 'SUCCESS', 3200);
   blood.advance(1900);
-  assert.deepEqual(blood.played, [{ sound: 'healing', time: 100 }, { sound: 'success', time: 1900 }]);
+  assert.deepEqual(blood.played, [{ sound: 'healing', time: 100 }]);
   blood.advance(1520); await bloodDone;
+});
+
+test('all medication routes keep their original action cue, including no-roll, reduced motion and missing overlays', async () => {
+  const cases = [
+    ['PO', 'oralmed', 'med_oral_action'], ['SL', 'oralmed', 'med_oral_action'],
+    ['IM', 'immed', 'med_im_action'], ['IN', 'inmed', 'med_in_action'],
+    ['IV', 'medpush', 'healing'], ['IO', 'medpush', 'healing'],
+    ['NEB', 'nebmed', 'oxygen_flow'],
+  ];
+  for (const [route, scene, cue] of cases) {
+    for (const options of [{}, { reduced: true }, { missing: true }]) {
+      for (const noRoll of [false, true]) {
+        const f = fixture(options);
+        for (const suffix of ['overlay', 'label']) f.elements.set(`${scene}-${suffix}`, f.elements.get(`sga-${suffix}`));
+        vm.runInContext(source.slice(source.indexOf('function animateMedPush('), source.indexOf('function animateNIV(')), f.context);
+        const done = f.context.animateMedicationAdministration({ administration_route: route, outcome: 'FAILURE', no_roll: noRoll });
+        f.advance(4000); await done;
+        assert.deepEqual(f.played.map(event => event.sound), [cue], `${route}: noRoll=${noRoll}, ${JSON.stringify(options)}`);
+        assert.equal(f.timers.length, 0);
+      }
+    }
+  }
+});
+
+test('procedure sound audit keeps explicit recordings for every outcome and ambulance/provider variant', () => {
+  const f = fixture();
+  const expected = {
+    defibrillation: 'defib_outside', cardioversion: 'defib_outside',
+    chest_seal: 'chest_slap', bleeding_control: 'squelch', tourniquet: 'squelch',
+    precordial_thump: 'thump', lucas: 'lucas', needle_decompression: 'hiss', needle_cricothyrotomy: 'hiss',
+    cpr: 'cpr_outside', io_access: 'io', medication_push: 'healing', peripheral_iv: 'healing',
+    cricothyrotomy: 'sword', finger_thoracostomy: 'sword', resuscitative_thoracotomy: 'surgical', perimortem_csection: 'surgical',
+    intubation: 'intubation', rsi: 'intubation', suction: 'suction',
+    oropharyngeal_airway: 'airway_gulp', supraglottic_airway: 'airway_gulp', nasopharyngeal_airway: 'airway_gulp',
+    foreign_body_removal: 'airway_gulp', abdominal_thrusts: 'airway_gulp',
+    oxygen: 'oxygen_flow', cpap: 'oxygen_flow', pacing: 'lifepak', twelve_lead: 'lifepak',
+  };
+  for (const [id, sound] of Object.entries(expected)) {
+    for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
+      assert.equal(f.context.getProcedureSound(id, outcome), sound, `${id} ${outcome}`);
+      assert.equal(f.context.hasProcedureAnimationSound(id), true, `${id} owns its cue`);
+    }
+  }
+  for (const provider of ['ALS', 'BLS']) {
+    f.context.localTranscript = { meta: { provider_level: provider } };
+    for (const moving of [false, true]) {
+      f.context.window._isMoving = moving;
+      assert.equal(f.context.getProcedureSound('cpr', 'FAILURE'), `cpr_${provider === 'BLS' ? 'bls_' : ''}${moving ? 'amb' : 'outside'}`);
+      for (const id of ['defibrillation', 'cardioversion']) assert.equal(f.context.getProcedureSound(id, 'FAILURE'), moving ? 'defib_amb' : 'defib_outside');
+    }
+  }
+});
+
+test('CPR, LUCAS, shock and thump recordings survive their shorter overlays', async () => {
+  for (const [fn, scene, args, sound, duration] of [
+    ['animateCPR', 'cpr', ['SUCCESS'], 'cpr_outside', 8.052],
+    ['animateLUCAS', 'lucas', ['FAILURE'], 'lucas', 5.604],
+    ['animateDefib', 'defib', ['defibrillation', 'SUCCESS'], 'defib_outside', 9.426],
+    ['animateDefib', 'defib', ['cardioversion', 'FAILURE'], 'defib_outside', 9.426],
+    ['animateThorsHammer', 'thump', ['FAILURE'], 'thump', 14.420],
+  ]) {
+    const f = fixture(), nodes = [];
+    for (const suffix of ['overlay', 'label']) if (!f.elements.has(`${scene}-${suffix}`)) f.elements.set(`${scene}-${suffix}`, f.elements.get(`sga-${suffix}`));
+    f.context.window.AudioContext = function () { return {
+      state: 'running', currentTime: 0, destination: {},
+      decodeAudioData: async () => ({ duration }),
+      createBufferSource() { const node = { connect() { return { connect() {} }; }, start() { this.started = true; }, stop() { this.stopped = true; }, disconnect() {} }; nodes.push(node); return node; },
+      createGain: () => ({ gain: {}, disconnect() {} }),
+    }; };
+    Object.assign(f.context, { EventTarget, Event, soundEnabled: true, fetch: async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) }) });
+    vm.runInContext(source.slice(0, source.indexOf('const SURGICAL_PROCS')), f.context);
+    vm.runInContext(source.slice(source.indexOf('function animateDefib('), source.indexOf('function animateIV(')), f.context);
+    const done = f.context[fn](...args);
+    f.advance(5000); await new Promise(resolve => setImmediate(resolve)); await done;
+    assert.equal(f.context.getProcedureSound(scene === 'thump' ? 'precordial_thump' : scene === 'defib' ? args[0] : scene, args.at(-1)), sound);
+    assert.equal(nodes.length, 1, `${fn}: one physical recording`);
+    assert.equal(nodes[0].buffer.duration, duration);
+    assert.equal(nodes[0].started, true);
+    assert.ok(!nodes[0].stopped, `${fn}: overlay cleanup must not truncate audio`);
+    nodes[0].onended();
+    assert.equal(vm.runInContext('ACTIVE_SOUND_VOICES.size', f.context), 0);
+  }
+});
+
+test('multi-roll pacing still reaches its scene after immediate outcome feedback', async () => {
+  const f = fixture(), events = [];
+  Object.assign(f.context, {
+    console: { log() {} },
+    playSound: sound => events.push(sound),
+    animateDiceRoll: async () => events.push('unexpected dice'),
+    animateProcedureScene: async (scene, id, outcome) => events.push([scene, id, outcome]),
+  });
+  const start = source.indexOf('    for (const r of (data.rolls || [])) {');
+  const end = source.indexOf('    for (const r of (data.rolls || [])) printRoll', start);
+  vm.runInContext('async function runOrders(data) {\n' + source.slice(start, end) + '\n}', f.context);
+  await f.context.runOrders({ rolls: [{ procedure_id: 'pacing', outcome: 'FAILURE', multi_roll: true, dc: [10, 12] }] });
+  assert.deepEqual(events, ['fail', ['pacing', 'pacing', 'FAILURE']]);
 });

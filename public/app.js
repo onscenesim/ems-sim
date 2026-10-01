@@ -10,6 +10,9 @@ const SOUNDS = {
   chest_slap: '/sounds/SlapReverb.mp3',
   airway_gulp: '/sounds/GULP.mp3',
   healing: '/sounds/health-healed-01.wav',
+  med_oral_action: '/sounds/MedicationBottleRattle.wav',
+  med_im_action: '/sounds/MedicationWetStab.wav',
+  med_in_action: '/sounds/MedicationSpritz.wav',
   squelch: '/sounds/WoundCompression.wav',
   glovebox: '/sounds/Glovebox.mp3',
   rummage: '/sounds/GloveboxRummage.wav',
@@ -52,12 +55,79 @@ const SOUNDS = {
   sfx_depart:       '/sounds/AmbulanceDeparting.m4a',
 };
 // Match these close-up interface recordings to the established effect bed.
-const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, squelch: .65 };
-// Mobile browsers have a small media-decoder budget. Create voices only for
-// effects actually heard and cap overlap so a long call cannot accumulate
-// hundreds of live audio elements.
-const SOUND_VOICES_PER_EFFECT = 2;
+const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .5, med_im_action: .55, med_in_action: .48, squelch: .65 };
+// One gesture-unlocked Web Audio context mixes short effects without competing
+// HTML media decoders. Buffers are decoded once; finished voices are released.
+let soundContext;
+const SOUND_BUFFERS = new Map();
+const ACTIVE_SOUND_VOICES = new Set();
+const SOUND_VOICES_PER_EFFECT = 2; // idle HTML fallback voices retained per effect
 const SOUND_VOICE_POOLS = new Map();
+function getSoundContext() {
+  const Context = window.AudioContext || window.webkitAudioContext;
+  if (!Context) return null;
+  if (!soundContext || soundContext.state === 'closed') soundContext = new Context();
+  return soundContext;
+}
+function loadSoundBuffer(name) {
+  const ctx = getSoundContext();
+  if (!ctx || !SOUNDS[name]) return Promise.resolve(null);
+  if (!SOUND_BUFFERS.has(name)) {
+    const pending = fetch(SOUNDS[name]).then(response => {
+      if (!response.ok) throw new Error(`Audio HTTP ${response.status}: ${name}`);
+      return response.arrayBuffer();
+    }).then(bytes => ctx.decodeAudioData(bytes)).catch(error => {
+      SOUND_BUFFERS.delete(name); // a failed request can be retried
+      throw error;
+    });
+    SOUND_BUFFERS.set(name, pending);
+  }
+  return SOUND_BUFFERS.get(name);
+}
+function playBufferedSound(name, ctx) {
+  const voice = new EventTarget();
+  let node, gain, startedAt = 0;
+  voice.name = name;
+  voice.paused = false;
+  voice.ended = false;
+  voice.volume = SOUND_LEVELS[name] ?? 1;
+  voice.duration = 0;
+  Object.defineProperty(voice, 'currentTime', { get: () => node ? Math.min(ctx.currentTime - startedAt, voice.duration) : 0 });
+  const release = () => { ACTIVE_SOUND_VOICES.delete(voice); node?.disconnect(); gain?.disconnect(); };
+  voice.pause = () => {
+    if (voice.paused || voice.ended) return;
+    voice.paused = true;
+    node?.stop();
+    release();
+    voice.dispatchEvent(new Event('pause'));
+  };
+  ACTIVE_SOUND_VOICES.add(voice); // includes pending decodes so mute/hide cancels them
+  loadSoundBuffer(name).then(buffer => {
+    if (voice.paused || document.hidden || !soundEnabled) { voice.pause(); return; }
+    // Never save a suspended cue to blast on the next tap.
+    if (ctx.state !== 'running') { voice.pause(); return; }
+    node = ctx.createBufferSource();
+    gain = ctx.createGain();
+    node.buffer = buffer;
+    voice.duration = buffer.duration;
+    gain.gain.value = voice.volume;
+    node.connect(gain).connect(ctx.destination);
+    node.onended = () => {
+      if (voice.paused) return;
+      voice.ended = true;
+      release();
+      voice.dispatchEvent(new Event('ended'));
+    };
+    startedAt = ctx.currentTime;
+    node.start();
+    voice.dispatchEvent(new Event('playing'));
+  }).catch(error => {
+    voice.pause();
+    voice.dispatchEvent(new Event('error'));
+    console.warn('[sound] decode/play error:', name, error.message);
+  });
+  return voice;
+}
 function soundVoice(name, source) {
   let voices = SOUND_VOICE_POOLS.get(name);
   if (!voices) {
@@ -66,21 +136,35 @@ function soundVoice(name, source) {
   }
   const idle = voices.find(voice => voice.paused || voice.ended);
   if (idle) return idle;
-  if (voices.length >= SOUND_VOICES_PER_EFFECT) return null;
   const voice = new Audio(source);
   voice.preload = 'auto';
   voices.push(voice);
+  voice.addEventListener('ended', () => {
+    if (voices.length > SOUND_VOICES_PER_EFFECT) {
+      voices.splice(voices.indexOf(voice), 1);
+      voice.removeAttribute('src');
+      voice.load();
+    }
+  });
   return voice;
 }
 
 function stopSound(name) {
-  for (const voice of SOUND_VOICE_POOLS.get(name) || []) {
+  for (const voice of ACTIVE_SOUND_VOICES) if (voice.name === name) voice.pause();
+  const voices = SOUND_VOICE_POOLS.get(name) || [];
+  for (const voice of voices) {
     voice.pause();
     voice.currentTime = 0;
+  }
+  while (voices.length > SOUND_VOICES_PER_EFFECT) {
+    const voice = voices.pop();
+    voice.removeAttribute('src');
+    voice.load();
   }
 }
 
 function stopAllSounds() {
+  for (const voice of ACTIVE_SOUND_VOICES) voice.pause();
   for (const name of SOUND_VOICE_POOLS.keys()) stopSound(name);
 }
 
@@ -117,6 +201,8 @@ function playSound(name) {
   const s = SOUNDS[name];
   if (s === undefined) { console.warn('[sound] unknown:', name); return; }
   if (s === null) return;  // known slot — file not yet assigned
+  const ctx = getSoundContext();
+  if (ctx) return playBufferedSound(name, ctx);
   const voice = soundVoice(name, s);
   if (!voice) return null;
   console.log('[sound] playing:', name);
@@ -124,7 +210,6 @@ function playSound(name) {
   voice.volume = SOUND_LEVELS[name] ?? 1;
   voice.currentTime = 0;
   voice.play().catch(err => {
-    if (err?.name === 'NotAllowedError') audioUnlocked = false;
     console.warn('[sound] play error:', name, err.message);
   });
   return voice;
@@ -145,14 +230,13 @@ function getProcedureSound(id, outcome) {
   if (id === 'defibrillation' || id === 'cardioversion')
     return window._isMoving ? 'defib_amb' : 'defib_outside';
   if (id === 'io_access') return 'io';
-  if (id === 'lucas') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'lucas' : 'fail';
-  if (id === 'precordial_thump') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'thump' : 'fail';
-  // Violent sword slice: the only sound for a surgical cric, and the opening
-  // sound of a finger thoracostomy.
+  if (id === 'lucas') return 'lucas';
+  if (id === 'precordial_thump') return 'thump';
+  // Physical cues are independent of dice feedback, including failed attempts.
   if (id === 'cricothyrotomy' || id === 'finger_thoracostomy') return 'sword';
-  // Air hiss on a successful chest/airway decompression (NCD + needle cric).
+  // Air release cue for chest/airway decompression.
   if (id === 'needle_decompression' || id === 'needle_cricothyrotomy')
-    return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'hiss' : 'fail';
+    return 'hiss';
   if (SURGICAL_PROCS.has(id)) return 'surgical';
   if (id === 'bvm') return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'bvm_success' : 'bvm_fail';
   if (id === 'cpr') {
@@ -161,46 +245,29 @@ function getProcedureSound(id, outcome) {
       ? (bls ? 'cpr_bls_amb'     : 'cpr_amb')
       : (bls ? 'cpr_bls_outside' : 'cpr_outside');
   }
+  const actionSounds = {
+    medication_push: 'healing', peripheral_iv: 'healing',
+    nasopharyngeal_airway: 'airway_gulp', foreign_body_removal: 'airway_gulp', abdominal_thrusts: 'airway_gulp',
+    pacing: 'lifepak', oxygen: 'oxygen_flow', cpap: 'oxygen_flow',
+    chest_seal: 'chest_slap', bleeding_control: 'squelch', tourniquet: 'squelch',
+    intubation: 'intubation', rsi: 'intubation', suction: 'suction',
+    supraglottic_airway: 'airway_gulp', oropharyngeal_airway: 'airway_gulp',
+  };
+  if (ECG_PROCS.has(id)) return 'lifepak';
+  return actionSounds[id] || null;
+}
+function getOutcomeSound(outcome) {
   return (outcome === 'SUCCESS' || outcome === 'MARGINAL') ? 'success' : 'fail';
 }
 
 // ── Mobile audio unlock ─────────────────────────────────────────────────────
-// Mobile browsers block programmatic audio until playback has been started once
-// from a user gesture. The OLD approach played EVERY sound (muted) on the first
-// tap — but the muted-before-play trick isn't reliable on mobile and the 30+
-// queued play() calls could flush audibly, blasting the whole library at once on
-// the menu. Modern iOS/Android unlock the page's audio session from a SINGLE
-// gesture-initiated play, so we unlock with one short SILENT clip instead. Real
-// sounds then play on demand via playSound().
-let audioUnlocked = false;
-let audioUnlockPending = false;
-function makeSilentClip() {
-  // ~0.05s of 8-bit mono PCM silence, built at runtime (no asset needed).
-  const rate = 8000, samples = 400, bytes = 44 + samples;
-  const buf = new ArrayBuffer(bytes), v = new DataView(buf);
-  const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  str(0, 'RIFF'); v.setUint32(4, 36 + samples, true); str(8, 'WAVE');
-  str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-  v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
-  str(36, 'data'); v.setUint32(40, samples, true);
-  for (let i = 0; i < samples; i++) v.setUint8(44 + i, 128); // 128 = silence (unsigned 8-bit)
-  const a = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })));
-  a.preload = 'auto';
-  return a;
-}
-const _unlockClip = makeSilentClip();
+// Resume the shared mixer directly inside the gesture, including after iOS
+// interrupts a session. Decoding buffers does not play or queue any effects.
 function unlockAudio() {
-  if (audioUnlocked || audioUnlockPending) return;
-  audioUnlockPending = true;
-  const p = _unlockClip.play();
-  if (p && typeof p.then === 'function') {
-    p.then(() => { audioUnlocked = !document.hidden; _unlockClip.pause(); _unlockClip.currentTime = 0; })
-      .catch(err => console.warn('[sound] unlock error:', err.message))
-      .finally(() => { audioUnlockPending = false; });
-  } else {
-    audioUnlocked = true;
-    audioUnlockPending = false;
-  }
+  const ctx = getSoundContext();
+  if (!ctx) return;
+  if (ctx.state !== 'running') ctx.resume().catch(error => console.warn('[sound] unlock error:', error.message));
+  for (const name of ['success', 'fail']) loadSoundBuffer(name).catch(() => {});
 }
 // touchend (not touchstart) avoids the iOS native <select> picker false-trigger.
 document.addEventListener('click',    unlockAudio);
@@ -211,7 +278,10 @@ document.addEventListener('touchend', unlockAudio);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     stopAllSounds();
-    audioUnlocked = false; // a resumed mobile audio session needs a fresh gesture
+    soundContext?.suspend().catch(() => {});
+  } else if (soundContext && soundContext.state !== 'running') {
+    // Resume the already-unlocked mixer without replaying hidden-page cues.
+    soundContext.resume().catch(() => {});
   }
 });
 
@@ -1183,24 +1253,18 @@ async function sendTurn(msg, opts = {}) {
       }
       const procSound = getProcedureSound(r.procedure_id, r.outcome);
       console.log('[roll]', r.procedure_id, r.outcome, '→ sound:', procSound);
-      if (r.multi_roll) {
-        if (!DEFIB_PROCS.has(r.procedure_id)) playSound(procSound);
-        if (DEFIB_PROCS.has(r.procedure_id)) await animateDefib(r.procedure_id, r.outcome);
-        continue;
-      }
-      // These scenes own their sound cues after the dice, at the action beat.
-      // Legacy action cues start with their scene, after the dice have cleared.
-      // Shocks resolve as a single roll now (no multi_roll branch) — keep the
-      // defib heart animation rather than the generic dice overlay.
-      if (DEFIB_PROCS.has(r.procedure_id)) { await animateDefib(r.procedure_id, r.outcome); continue; }
+      // Dice own outcome feedback; every procedure scene owns its physical cue.
+      // Shocks use the heart scene in place of the generic dice overlay.
+      if (DEFIB_PROCS.has(r.procedure_id)) { playSound(getOutcomeSound(r.outcome)); await animateDefib(r.procedure_id, r.outcome); continue; }
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
-      await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
-      if (!hasProcedureAnimationSound(r.procedure_id)) playSound(procSound);
+      if (r.multi_roll) playSound(getOutcomeSound(r.outcome));
+      else await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+      if (procSound && !hasProcedureAnimationSound(r.procedure_id)) playSound(procSound);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id, r.outcome);
       if (r.procedure_id === 'nasopharyngeal_airway') await animateProcedureScene('npa', r.procedure_id, r.outcome);
       if (OBSTRUCTION_PROCS.has(r.procedure_id)) await animateProcedureScene('obstruction', r.procedure_id, r.outcome);
       if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
-      if (THUMP_PROCS.has(r.procedure_id) && (r.outcome === 'SUCCESS' || r.outcome === 'MARGINAL')) await animateThorsHammer(r.outcome);
+      if (THUMP_PROCS.has(r.procedure_id)) await animateThorsHammer(r.outcome);
       if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
       if (r.procedure_id === 'cpr') await animateCPR(r.outcome);
       if (['bleeding_control', 'tourniquet', 'chest_seal', 'pacing'].includes(r.procedure_id)) await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
@@ -1248,7 +1312,7 @@ async function sendTurn(msg, opts = {}) {
     // Fires on [BASE_CONTACT] tag OR if Claude narrates the words "elevator music" (tag fallback)
     if (data.baseContact || /elevator music/i.test(data.reply || '')) {
       const _bc = SOUND_VOICE_POOLS.get('base_contact') || [];
-      if (_bc.every(voice => voice.paused || voice.ended)) {
+      if (_bc.every(voice => voice.paused || voice.ended) && ![...ACTIVE_SOUND_VOICES].some(voice => voice.name === 'base_contact')) {
         playSound('base_contact');
         setTimeout(() => stopSound('base_contact'), 7000);
       }
@@ -1286,7 +1350,6 @@ async function sendTurn(msg, opts = {}) {
         firstVitalsPlayed = true;
         const monitorSound = localTranscript?.meta?.provider_level === 'BLS' ? 'kitopen' : 'lifepak';
         playSound(monitorSound);
-        setTimeout(() => stopSound(monitorSound), 4000);
       }
     }
     if (data.backup) applyBackupStatus(data.backup);
@@ -2399,62 +2462,24 @@ const PROCEDURE_TIMING = Object.freeze({
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return ECG_PROCS.has(id) || ['medication_push', 'oxygen', 'cpap', 'peripheral_iv', 'needle_cricothyrotomy', 'io_access', 'cpr'].includes(id) || OBSTRUCTION_PROCS.has(id) || id === 'nasopharyngeal_airway' || DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
+  return ECG_PROCS.has(id) || ['precordial_thump', 'medication_push', 'oxygen', 'cpap', 'peripheral_iv', 'needle_cricothyrotomy', 'io_access', 'cpr'].includes(id) || OBSTRUCTION_PROCS.has(id) || id === 'nasopharyngeal_airway' || DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
-// Every scene owns its cue timers. A hidden page cancels pending cues instead
-// of replaying them later, and only this scene's action voice is stopped.
-function scheduleSceneAudio({ action, actionAt = 100, actionFadeMs = 0, resultSound, resultAt, reduced = false }) {
-  const timers = [];
-  let actionVoice, resultVoice, actionVolume = 1;
+// Scene cleanup cancels unstarted cues, but lets a started recording finish.
+// Muting or backgrounding still stops all active and pending voices globally.
+function scheduleSceneAudio({ action, actionAt = 100, resultSound, resultAt, reduced = false }) {
   let cancelled = false;
-  const stopAction = () => { actionVoice?.pause?.(); };
-  const cancel = (fadeResult = false) => {
-    cancelled = true;
-    timers.forEach(clearTimeout);
-    stopAction();
-    document.removeEventListener?.('visibilitychange', onVisibility);
-    if (!resultVoice?.pause) return;
-    if (fadeResult && !resultVoice.paused && !resultVoice.ended) {
-      // Fade the result with the outgoing overlay; never carry it into the
-      // next procedure or abruptly chop the tail of the recording.
-      const voice = resultVoice, volume = voice.volume;
-      for (let step = 1; step <= 4; step++) setTimeout(() => {
-        voice.volume = volume * (1 - step / 4);
-        if (step === 4) voice.pause();
-      }, step * 50);
-    } else resultVoice.pause();
-  };
+  const sound = action || resultSound;
   const onVisibility = () => { if (document.hidden) cancel(); };
-  const later = (fn, delay) => timers.push(setTimeout(() => {
-    if (!cancelled && !document.hidden) fn();
-  }, delay));
+  const timer = setTimeout(() => {
+    if (!cancelled && !document.hidden && sound) playSound(sound);
+  }, reduced ? 0 : action ? actionAt : resultAt);
+  const cancel = () => {
+    cancelled = true;
+    clearTimeout(timer);
+    document.removeEventListener?.('visibilitychange', onVisibility);
+  };
   document.addEventListener?.('visibilitychange', onVisibility);
-  if (reduced && !action) resultVoice = playSound(resultSound);
-  else {
-    if (action) later(() => {
-      actionVoice = playSound(action);
-      actionVolume = actionVoice?.volume ?? 1;
-    }, reduced ? 0 : actionAt);
-    if (action && actionFadeMs) {
-      // Ease the healing cue down through the first instant of the result cue.
-      // Its recording is longer than these scenes, so a hard stop is audible.
-      const overlapMs = 120;
-      const fadeStart = resultAt - actionFadeMs + overlapMs;
-      const steps = 8;
-      for (let step = 1; step <= steps; step++) {
-        later(() => {
-          if (!actionVoice || actionVoice.paused) return;
-          actionVoice.volume = actionVolume * (1 - step / steps);
-          if (step === steps) stopAction();
-        }, fadeStart + actionFadeMs * step / steps);
-      }
-    }
-    later(() => {
-      if (!actionFadeMs) stopAction();
-      resultVoice = playSound(resultSound);
-    }, resultAt);
-  }
-  return () => cancel(true);
+  return cancel;
 }
 
 function animateProcedureScene(id, procedureId, outcome) {
@@ -2463,7 +2488,7 @@ function animateProcedureScene(id, procedureId, outcome) {
   const label = document.getElementById(`${id}-label`);
   const sound = getProcedureSound(procedureId, outcome);
   // A missing optional scene must never stall the turn or swallow its sound.
-  if (!overlay || !label) { playSound(sound); return Promise.resolve(); }
+  if (!overlay || !label) { playSound(timing.action || sound); return Promise.resolve(); }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const labels = {
     npa: { SUCCESS: 'SUCCESS · AIRWAY SEATED', MARGINAL: 'MARGINAL · SHALLOW PLACEMENT', FAILURE: 'FAILURE · UNABLE TO ADVANCE', COMPLICATION: 'COMPLICATION · AIRWAY EXPELLED' },
@@ -2524,12 +2549,15 @@ function animateThorsHammer(outcome) {
     const FADE_MS = 220;
     const overlay = document.getElementById('thump-overlay');
     const label   = document.getElementById('thump-label');
-    if (!overlay) { resolve(); return; }
+    if (!overlay) { playSound(getProcedureSound('precordial_thump', outcome)); resolve(); return; }
     label.textContent = outcome;
     overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
+    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('precordial_thump', outcome), resultAt: 0,
+      reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
+      cancelAudio();
       overlay.classList.remove('visible');
       setTimeout(resolve, FADE_MS);
     }, HOLD_MS);
@@ -2586,7 +2614,7 @@ function animateIV(outcome) {
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
-    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('peripheral_iv', outcome), resultAt: 1800,
+    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('peripheral_iv', outcome), resultAt: 100,
       reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
       cancelAudio();
@@ -2608,7 +2636,7 @@ function animateMedPush(outcome) {
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
-    const cancelAudio = scheduleSceneAudio({ action: 'healing', actionFadeMs: 480, resultSound: getProcedureSound('medication_push', outcome), resultAt: 1800,
+    const cancelAudio = scheduleSceneAudio({ action: 'healing', resultSound: getProcedureSound('medication_push', outcome), resultAt: 1800,
       reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
       cancelAudio();
@@ -2641,7 +2669,9 @@ function animateRouteMedication(id, outcome, holdMs) {
     const overlay = document.getElementById(`${id}-overlay`);
     const label = document.getElementById(`${id}-label`);
     const resultSound = getProcedureSound(id === 'oxygen' ? 'oxygen' : 'medication_push', outcome);
-    if (!overlay || !label) { playSound(resultSound); resolve(); return; }
+    const action = ['oxygen', 'nebmed', 'niv'].includes(id) ? 'oxygen_flow'
+      : ({ oralmed: 'med_oral_action', immed: 'med_im_action', inmed: 'med_in_action' })[id] || 'healing';
+    if (!overlay || !label) { playSound(action); resolve(); return; }
     const resultAt = ({ inmed: 1550, nebmed: 2100, niv: 2550 })[id] || 1900;
     overlay.style.setProperty('--route-result-delay', `${resultAt}ms`);
     label.textContent = outcome || '';
@@ -2649,9 +2679,7 @@ function animateRouteMedication(id, outcome, holdMs) {
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
-    const usesOxygenFlow = id === 'oxygen' || id === 'nebmed' || id === 'niv';
-    const action = usesOxygenFlow ? 'oxygen_flow' : id === 'infusion' || id === 'inmed' ? 'healing' : null;
-    const cancelAudio = scheduleSceneAudio({ action, actionFadeMs: action === 'healing' ? 480 : 0, resultSound, resultAt,
+    const cancelAudio = scheduleSceneAudio({ action, resultSound, resultAt,
       reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
       cancelAudio();
@@ -2732,6 +2760,8 @@ function animateDepart() {
  * @param {string} outcome       'SUCCESS' | 'MARGINAL' | 'FAILURE' | 'COMPLICATION'
  */
 function animateDiceRoll(procedureId, roll, dc, outcome) {
+  // Warm the outcome while the die spins, before the landing beat.
+  loadSoundBuffer(getOutcomeSound(outcome)).catch(() => {});
   return new Promise(resolve => {
     const CYCLE_MS   = 48;   // time per random number during cycling
     const CYCLES     = 13;   // how many random numbers flash before landing
@@ -2764,6 +2794,7 @@ function animateDiceRoll(procedureId, roll, dc, outcome) {
         clearInterval(ticker);
         // Land on the real result
         diceNumberEl.textContent = roll;
+        playSound(getOutcomeSound(outcome));
         diceSvgEl.setAttribute('class', outcome);   // colours the number via CSS
 
         // Reveal outcome label
