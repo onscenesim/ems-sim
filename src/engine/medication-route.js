@@ -71,9 +71,24 @@ function medicationPresentationAt(text, start, length, medication, matchedKey) {
     medication_name: medication || null,
     medication_kind: BLOOD_PRODUCT_MEDICATIONS.has(medication) ? 'blood' : FLUID_MEDICATIONS.has(medication) ? 'fluid' : null,
     administration_route: route,
+    medication_route_explicit: explicit,
     medication_animation_route: explicit ? route
       : formulationDefault || MEDICATION_ANIMATION_DEFAULTS.get(medication) || null,
   };
 }
 
-module.exports = { medicationRouteAt, medicationPresentationAt };
+// Presentation only: explicit routes/formulations and nonvascular defaults win.
+// Use the same patent-before-marginal ranking as the access-state narration.
+function applyAccessAnimationRoutes(rolls, access) {
+  const usable = (access || []).filter(line => ['IV', 'IO'].includes(line.kind));
+  const best = usable.find(line => line.status === 'patent')
+    || usable.find(line => line.status === 'marginal');
+  if (!best) return;
+  for (const roll of rolls) {
+    if (roll.procedure_id !== 'medication_push' || roll.administration_route
+        || roll.medication_animation_route || roll.medication_route_explicit) continue;
+    roll.medication_animation_route = best.kind;
+  }
+}
+
+module.exports = { medicationRouteAt, medicationPresentationAt, applyAccessAnimationRoutes };

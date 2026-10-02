@@ -441,3 +441,22 @@ test('obstruction removal techniques share one roll, including combined attempts
     assert.deepEqual(detectWithConfirmation(phrase).rolls.map(r => r.procedure_id), ['foreign_body_removal'], phrase);
   }
 });
+
+test('session returns tracked IO animation metadata without adding access for route phrases', async () => {
+  const previousGenerate=generate;
+  generate=async()=>({text:'The ordered treatment is administered. [TIME: 1:00]'});
+  try {
+    for(const order of ['Give epinephrine','Give normal saline','Transfuse PRBCs',
+      'Give epinephrine IO push','Give epinephrine through the IO']) {
+      const session=sessionFixture();
+      session.access=[{kind:'IV',status:'blown'},{kind:'IO',status:'patent'}];
+      const result=await session.send(order);
+      const med=result.rolls.find(r=>r.procedure_id==='medication_push');
+      assert.ok(med,order);
+      assert.equal(med.administration_route||med.medication_animation_route,'IO',order);
+      assert.equal(result.rolls.some(r=>r.procedure_id==='io_access'),false,order);
+      assert.deepEqual(session.access,[{kind:'IV',status:'blown'},{kind:'IO',status:'patent'}]);
+      assert.equal(session.turns.at(-1).rolls.find(r=>r.procedure_id==='medication_push').medication_animation_route,'IO');
+    }
+  } finally {generate=previousGenerate;}
+});

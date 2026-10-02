@@ -9,6 +9,7 @@ const { evaluateObjectives } = require('./learning');
 const { sendTurn, sendDebrief } = require('./api');
 const { parseDebriefResponse } = require('./prompts/debrief');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
+const { applyAccessAnimationRoutes } = require('./medication-route');
 const { applyCapillaryRefill } = require('./capillary-refill');
 const { applyPulseOx } = require('./pulse-ox');
 const { acquireTwelveLeads, isECGProcedure, stripTwelveLeadNarration, applyEctopy } = require('./twelve-lead');
@@ -894,6 +895,7 @@ class Session {
     const reconciledRolls = reconcileRolls(rolls, reply);
     reply = stripTwelveLeadNarration(reply, reconciledRolls.some(r => isECGProcedure(r.procedure_id)));
     this._updateAccess(reconciledRolls, reply);
+    applyAccessAnimationRoutes(reconciledRolls, this.access);
     for (const roll of reconciledRolls) {
       logEvent(this.seed, roll.no_roll
         ? { event_type: 'procedure', procedure_id: roll.procedure_id, patient: roll.patient || 'primary', outcome: 'NO_ROLL' }

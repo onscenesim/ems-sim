@@ -58,6 +58,16 @@ async function main() {
     const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
     res.type('html').send(html.replace('<head>', '<head><base href="/">').replace('</body>', '<script src="/__preview/audio-controls.js"></script></body>'));
   });
+  // Exercise detection and the real session access ledger without a model call.
+  wrapper.post('/__preview/access-order', require('express').json(), async (req, res, next) => {
+    try {
+      const { Session } = require('../src/engine/session');
+      const session = new Session(rollScenario({ random_seed: 'access-animation-preview', difficulty: 'EASY' }));
+      session.access = [{ kind: req.body.access === 'IV' ? 'IV' : 'IO', status: 'patent' }];
+      const result = await session.send(String(req.body.order || 'Give epinephrine'));
+      res.json({ rolls: result.rolls, access: session.access });
+    } catch (error) { next(error); }
+  });
   wrapper.get('/__preview/audio-controls.js', (_req, res) => res.sendFile(path.join(__dirname, 'preview-audio-controls.js')));
   wrapper.use(app);
   const port = Number(process.env.PREVIEW_PORT || 3010);

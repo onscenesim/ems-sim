@@ -692,7 +692,10 @@ function detectAllProcedures(userText) {
 
     // Route qualifier guard: "push epi through the IO" → IO synonym is a route,
     // not a new procedure order. Suppress access/device rolls in this context.
-    const routeQual = isRouteQualifier(context, bestMatchIndex);
+    const ioPush = bestMatch.proc.id === 'io_access'
+      && /^io$/i.test(bestMatch.key)
+      && /^\s+push\b/i.test(context.slice(bestMatchIndex + bestMatch.matchLen));
+    const routeQual = isRouteQualifier(context, bestMatchIndex) || ioPush;
 
     // Post-match staging guard: e.g. "LUCAS backboard" should not roll.
     const stagingPost = hasStagingPostContext(context, bestMatchIndex + bestMatch.matchLen);
@@ -759,12 +762,13 @@ function detectAllProcedures(userText) {
 function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
   const entries = detectAllProcedures(userText);
   const suction_assisted = entries.some(e => e.proc.id === 'suction' && !e.precharge);
-  return entries.map(({ proc, matchedKey, administration_route, medication_animation_route, medication_name, medication_kind }) => {
+  return entries.map(({ proc, matchedKey, administration_route, medication_animation_route, medication_name, medication_kind, medication_route_explicit }) => {
     const result = rollProcedure(proc, { ...contextFlags, suction_assisted }, difficulty);
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
       if (medication_name) result.medication_name = medication_name;
       if (medication_kind) result.medication_kind = medication_kind;
+      if (medication_route_explicit) result.medication_route_explicit = true;
       if (administration_route) result.administration_route = administration_route;
       if (medication_animation_route) result.medication_animation_route = medication_animation_route;
     }
@@ -816,6 +820,7 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
       result.matched_drug = matchedKey;
       if (entry.medication_name) result.medication_name = entry.medication_name;
       if (entry.medication_kind) result.medication_kind = entry.medication_kind;
+      if (entry.medication_route_explicit) result.medication_route_explicit = true;
       if (entry.administration_route) result.administration_route = entry.administration_route;
       if (entry.medication_animation_route) result.medication_animation_route = entry.medication_animation_route;
     }

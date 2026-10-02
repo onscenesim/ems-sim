@@ -162,3 +162,44 @@ test('explicit routes override IM animation defaults', () => {
     assert.equal(roll.medication_animation_route, route, text);
   }
 });
+
+
+test('tracked access selects unspecified vascular animations without overriding routes or formulations', () => {
+  const { applyAccessAnimationRoutes } = require('../src/engine/medication-route');
+  for (const text of ['Give epinephrine', 'Give normal saline', 'Transfuse PRBCs']) {
+    for (const [access, expected] of [
+      [[{kind:'IO',status:'patent'}], 'IO'],
+      [[{kind:'IV',status:'blown'},{kind:'IO',status:'patent'}], 'IO'],
+      [[{kind:'IV',status:'marginal'},{kind:'IO',status:'patent'}], 'IO'],
+      [[{kind:'IO',status:'marginal'},{kind:'IV',status:'patent'}], 'IV'],
+      [[{kind:'IO',status:'marginal'}], 'IO'],
+      [[{kind:'IO',status:'blown'}], undefined],
+      [[], undefined],
+    ]) {
+      const rolls=medications(text);
+      applyAccessAnimationRoutes(rolls,access);
+      assert.equal(rolls[0].medication_animation_route,expected,text);
+      assert.equal(rolls[0].administration_route,undefined,'presentation must not invent an explicit order');
+    }
+  }
+  for (const text of ['Give epinephrine IV','Give aspirin','Give naloxone IN','Give epinephrine IM',
+    'Give nitro paste','Give epinephrine not IO','Give naloxone IN or IM','Give albuterol MDI']) {
+    const rolls=medications(text), before=structuredClone(rolls);
+    applyAccessAnimationRoutes(rolls,[{kind:'IO',status:'patent'}]);
+    assert.deepEqual(rolls,before,text);
+  }
+});
+
+test('IO administration phrases do not roll placement, while separate placement orders still do', () => {
+  const { detectAllProcedures }=require('../src/engine/dice');
+  for (const text of ['IO push','Through the IO','Give epinephrine IO push',
+    'Give epinephrine through the IO','Give normal saline through the IO','Transfuse PRBCs through the IO']) {
+    assert.equal(detectAllProcedures(text).some(r=>r.proc.id==='io_access'),false,text);
+    assert.equal(detectWithConfirmation(text,{},'NORMAL',{allow:['io_access']}).rolls.some(r=>r.procedure_id==='io_access'),false,text);
+    assert.equal(detectAllAndRoll(text).some(r=>r.procedure_id==='io_access'),false,text);
+  }
+  for (const text of ['IO','Place IO','Drill the tibia','IO push epinephrine; place IO',
+    'Give epinephrine through the IO. Place another IO.']) {
+    assert.equal(detectAllProcedures(text).filter(r=>r.proc.id==='io_access').length,1,text);
+  }
+});
