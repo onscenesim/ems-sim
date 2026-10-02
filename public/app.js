@@ -63,7 +63,18 @@ let soundResumePromise = null;
 let soundMediaPrimer;
 let soundMediaPrimed = false;
 let soundGestureContext;
+function configureSoundSession() {
+  // iOS can report a running AudioContext while the ambient session is muted
+  // by the ringer switch. The pen's HTML audio implicitly selects media output;
+  // select it explicitly for the mixer, before context creation or resumption.
+  // https://bugs.webkit.org/show_bug.cgi?id=237322
+  try {
+    const session = window.navigator?.audioSession;
+    if (session && session.type !== 'playback') session.type = 'playback';
+  } catch (_) { /* Optional API: retain gesture unlocking on older browsers. */ }
+}
 function resumeSoundContext(ctx) {
+  configureSoundSession();
   if (ctx.state === 'running') return Promise.resolve();
   if (soundResumePromise) return soundResumePromise;
   // A refused mobile resume can remain pending until another gesture. Do not
@@ -85,6 +96,7 @@ const ACTIVE_SOUND_VOICES = new Set();
 const SOUND_VOICES_PER_EFFECT = 2; // idle HTML fallback voices retained per effect
 const SOUND_VOICE_POOLS = new Map();
 function getSoundContext() {
+  configureSoundSession();
   const Context = window.AudioContext || window.webkitAudioContext;
   if (!Context) return null;
   if (!soundContext || soundContext.state === 'closed') soundContext = new Context();
@@ -284,9 +296,8 @@ function getOutcomeSound(outcome) {
 }
 
 // ── Mobile audio unlock ─────────────────────────────────────────────────────
-// The pen starts HTML audio synchronously in a gesture; merely resuming a
-// context and decoding later did not prime the output on affected mobile devices.
-// Prime both playback paths with silence, before any button handler can play a cue.
+// Select the media session and prime both playback paths inside the gesture.
+// A running context alone does not guarantee audible output on iOS.
 function unlockAudio() {
   if (document.hidden) return;
   const ctx = getSoundContext();
@@ -335,7 +346,7 @@ document.addEventListener('visibilitychange', () => {
     soundGestureContext = null;
     soundMediaPrimer?.pause();
     soundContext?.suspend().catch(() => {});
-  } else if (soundContext && soundContext.state !== 'running') {
+  } else if (soundContext) {
     // Resume the already-unlocked mixer without replaying hidden-page cues.
     resumeSoundContext(soundContext);
   }

@@ -257,3 +257,37 @@ test('returning from the background re-primes output on the next normal gesture'
   assert.equal(mediaStarts, 2);
   assert.equal(f.nodes.filter(node => node.buffer.silent).length, 2);
 });
+
+
+test('iOS selects playback before creating a running mixer, without a pen click', async () => {
+  const f = soundFixture(), order = [];
+  let type = 'auto';
+  f.context.window.navigator = { audioSession: {
+    get type() { return type; },
+    set type(value) { type = value; order.push(value); },
+  } };
+  f.context.window.AudioContext = function () {
+    order.push('context');
+    assert.equal(type, 'playback', 'running Web Audio must not use the ringer-muted ambient session');
+    return f.ctx;
+  };
+  f.context.playSound('success'); await flush();
+  assert.deepEqual(order, ['playback', 'context']);
+  assert.equal(f.nodes[0].started, true);
+  type = 'auto';
+  await f.context.resumeSoundContext(f.ctx);
+  assert.equal(type, 'playback', 'restore the session even when the context already reports running');
+  type = 'ambient';
+  f.context.playSound('healing'); await flush();
+  assert.equal(type, 'playback', 'every effect can recover the media session');
+  assert.equal(f.nodes[1].started, true);
+});
+
+test('unavailable or rejected audio session configuration cannot break effects', async () => {
+  for (const navigator of [undefined, {}, { audioSession: { get type() { return 'auto'; }, set type(_) { throw new Error('unsupported'); } } }]) {
+    const f = soundFixture();
+    f.context.window.navigator = navigator;
+    f.context.playSound('healing'); await flush();
+    assert.equal(f.nodes[0].started, true);
+  }
+});
