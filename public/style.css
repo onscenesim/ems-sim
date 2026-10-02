@@ -4931,16 +4931,21 @@ body.light-mode #instructor-panel :is(input, textarea, select) { color-scheme: l
 #infusion-overlay[data-route="IO"] .infusion-io-only { display: inline; }
 #infusion-overlay[data-route="IO"] .infusion-iv-only { display: none; }
 #infusion-overlay[data-route="IO"] #infusion-bag { transform-origin: 98px 116px; }
-#infusion-overlay[data-route="IO"].visible #infusion-bag { animation: pressureSqueeze 1s ease-in-out .15s both; }
-#infusion-overlay[data-route="IO"].visible #infusion-cuff-left { animation: pressureCuffLeft 1s ease-in-out .15s both; }
-#infusion-overlay[data-route="IO"].visible #infusion-cuff-right { animation: pressureCuffRight 1s ease-in-out .15s both; }
+#infusion-overlay[data-route="IO"].visible #infusion-bag { animation: pressureSqueeze 1.5s ease-in-out .15s both; }
+#infusion-pressure-bag { transform-origin: 98px 89px; }
+#infusion-overlay[data-route="IO"].visible #infusion-pressure-bag { animation: pressureInflate 1.5s ease-in-out .15s both; }
 #infusion-bulb { transform-origin: 30px 134px; }
-#infusion-overlay.visible #infusion-bulb { animation: pressurePump .5s ease-in-out .15s 2; }
+#infusion-overlay.visible #infusion-bulb { animation: pressurePump .5s ease-in-out .15s 3; }
 #infusion-gauge-needle { transform-origin: 168px 59px; }
-#infusion-overlay.visible #infusion-gauge-needle { animation: pressureGauge 1s ease-in-out .15s both; }
+#infusion-overlay.visible #infusion-gauge-needle { animation: pressureGauge 1.5s ease-in-out .15s both; }
 @keyframes pressureSqueeze { from { transform: scaleX(1); } to { transform: scaleX(.78); } }
-@keyframes pressureCuffLeft { from { transform: translateX(0); } to { transform: translateX(5px); } }
-@keyframes pressureCuffRight { from { transform: translateX(0); } to { transform: translateX(-5px); } }
+/* Each bulb squeeze adds volume; the lower edge stays above the colored tail. */
+@keyframes pressureInflate {
+  0% { transform: scale(1); }
+  20%, 33% { transform: scale(1.09, 1.035); }
+  53%, 66% { transform: scale(1.18, 1.07); }
+  86%, 100% { transform: scale(1.27, 1.1); }
+}
 @keyframes pressurePump { 0%, 100% { transform: scale(1); } 45% { transform: scale(.65, .88); } }
 @keyframes pressureGauge { from { transform: rotate(-65deg); } to { transform: rotate(45deg); } }
 #infusion-overlay[data-fluid="blood"] { --infusion-color: #dc4956; }
@@ -4972,8 +4977,7 @@ body.light-mode #instructor-panel :is(input, textarea, select) { color-scheme: l
 @keyframes oxygenEmpty { from { transform: scale(.5, .9); } to { transform: scale(.3, .95); } }
 @media (prefers-reduced-motion: reduce) {
   #infusion-overlay[data-route="IO"].visible #infusion-bag { animation: none; transform: scaleX(.78); }
-  #infusion-overlay[data-route="IO"].visible #infusion-cuff-left { animation: none; transform: translateX(5px); }
-  #infusion-overlay[data-route="IO"].visible #infusion-cuff-right { animation: none; transform: translateX(-5px); }
+  #infusion-overlay[data-route="IO"].visible #infusion-pressure-bag { animation: none; transform: scale(1.27, 1.1); }
   #infusion-overlay.visible #infusion-bulb { animation: none; }
   #infusion-overlay.visible #infusion-gauge-needle { animation: none; transform: rotate(45deg); }
   #infusion-overlay.visible :is(#infusion-bag, #infusion-liquid, .infusion-flow, #infusion-drop, .infusion-clamp),

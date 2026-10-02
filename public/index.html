@@ -1433,14 +1433,15 @@
             <path class="infusion-clamp" d="M160 140 L170 150 M170 140 L160 150" stroke="#e67859" stroke-width="3"/>
             <text x="214" y="232" fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing=".6" opacity=".6">IO ACCESS</text>
           </g>
-          <!-- Transparent pressure sleeve wraps the same fluid/blood bag. -->
+          <!-- Opaque pressure bag leaves only the colored fluid-bag tail exposed. -->
           <g id="infusion-pressure" class="infusion-io-only" stroke="#8bbdd0">
-            <rect x="61" y="17" width="74" height="92" rx="8" fill="#5993aa" fill-opacity=".06" stroke-width="1.5"/>
-            <path id="infusion-cuff-left" d="M65 26 Q70 21 76 26 L76 98 Q70 105 65 98 Z" fill="#78acc1" fill-opacity=".35"/>
-            <path id="infusion-cuff-right" d="M120 26 Q126 21 131 26 L131 98 Q126 105 120 98 Z" fill="#78acc1" fill-opacity=".35"/>
-            <path d="M78 31 L118 31 M78 91 L118 91 M82 25 L82 101 M114 25 L114 101" stroke-width=".7" opacity=".45"/>
-            <!-- Separate air line, pressure gauge and inflation bulb. -->
-            <path d="M64 98 C43 98 30 105 30 131 M134 88 L156 88 Q168 88 168 75" stroke-width="2"/>
+            <!-- Air lines pass behind the expanding pressure bag. -->
+            <path d="M74 84 C43 84 30 105 30 131 M122 84 L156 84 Q168 84 168 75" stroke-width="2"/>
+            <g id="infusion-pressure-bag">
+              <path d="M74 14 Q98 10 122 14 Q132 17 132 29 L132 74 Q132 87 121 89 L75 89 Q64 87 64 74 L64 29 Q64 17 74 14 Z" fill="#f7f8fa" stroke="#c9d0d7" stroke-width="1.5"/>
+              <path d="M76 20 Q98 17 120 20 M70 29 L70 73 Q70 81 78 83 L118 83 Q126 81 126 73 L126 29" stroke="#d8dde2" stroke-width="1"/>
+            </g>
+            <!-- Retain the pressure gauge and inflation bulb. -->
             <circle cx="168" cy="59" r="16" fill="#111c27"/>
             <path d="M155 60 A13 13 0 0 1 181 60 M157 51 L160 54 M168 46 L168 50 M179 51 L176 54" stroke-width="1" opacity=".65"/>
             <path id="infusion-gauge-needle" d="M168 59 L168 48" stroke="#d4eaf1" stroke-width="1.8"/>
