@@ -11,7 +11,8 @@ function soundFixture({ delayed = false } = {}) {
   const nodes = [], gains = [], requests = [];
   let releaseFetch;
   const ctx = {
-    state: 'running', currentTime: 0, destination: {},
+    state: 'running', currentTime: 0, destination: {}, sampleRate: 44100,
+    createBuffer: () => ({ duration: 1 / 44100, silent: true }),
     decodeAudioData: async () => ({ duration: 4 }),
     createBufferSource() {
       const node = { connect() { return gains.at(-1); }, disconnect() {}, start() { this.started = true; }, stop() { this.stopped = true; } };
@@ -26,6 +27,13 @@ function soundFixture({ delayed = false } = {}) {
   };
   const context = vm.createContext({
     window: { AudioContext: function () { return ctx; } }, EventTarget, Event,
+    setTimeout, clearTimeout, btoa,
+    Audio: class {
+      constructor(src) { this.src = src; }
+      setAttribute() {}
+      play() { return Promise.resolve(); }
+      pause() {}
+    },
     document: { hidden: false }, soundEnabled: true,
     fetch: async url => { requests.push(url); if (delayed) await new Promise(resolve => { releaseFetch = resolve; }); return { ok: true, arrayBuffer: async () => new ArrayBuffer(1) }; },
     console: { log() {}, warn() {} },
@@ -69,10 +77,10 @@ test('suspended sessions do not queue stale cues; a gesture resumes playback', a
   f.ctx.state = 'suspended';
   f.context.playSound('fail'); await flush();
   assert.equal(f.nodes.length, 0);
-  vm.runInContext(source.slice(source.indexOf('function unlockAudio()'), source.indexOf('// touchend (not touchstart)')), f.context);
+  vm.runInContext(source.slice(source.indexOf('function unlockAudio()'), source.indexOf('// Capture runs')), f.context);
   f.context.unlockAudio(); await flush();
   f.context.playSound('success'); await flush();
-  assert.equal(f.nodes.length, 1);
+  assert.equal(f.nodes.filter(node => !node.buffer.silent).length, 1);
   assert.equal(f.ctx.state, 'running');
 });
 
@@ -164,4 +172,88 @@ test('HTML fallback retains overlap and releases surplus decoders after stop', (
   context.stopSound('lucas');
   assert.ok(voices.every(v => v.paused));
   assert.equal(voices.filter(v => v.src).length, 2);
+});
+
+test('first normal gesture primes both outputs synchronously, before asynchronous effects', async () => {
+  const f = soundFixture(), events = [], listeners = new Map();
+  let primed = false;
+  f.context.Audio = class {
+    constructor(src) { this.src = src; events.push('create media'); }
+    setAttribute() {}
+    play() { events.push('media play'); primed = true; return Promise.resolve(); }
+  };
+  f.ctx.state = 'suspended';
+  f.ctx.resume = () => { events.push('resume'); assert.equal(primed, true); f.ctx.state = 'running'; return Promise.resolve(); };
+  f.context.document.addEventListener = (name, handler, options) => listeners.set(name, { handler, options });
+  vm.runInContext(source.slice(source.indexOf('function unlockAudio()'), source.indexOf('// Stop all sounds when')), f.context);
+  for (const event of ['pointerup', 'touchend', 'click', 'keydown']) {
+    assert.equal(listeners.get(event).options.capture, true, `${event} activates before the action handler`);
+  }
+  listeners.get('touchend').handler();
+  assert.deepEqual(events, ['create media', 'media play', 'resume']);
+  assert.equal(f.nodes[0].buffer.silent, true);
+  assert.equal(f.nodes[0].started, true, 'starts a silent source inside the gesture, not after resume resolves');
+  f.context.playSound('success'); await flush();
+  assert.equal(f.nodes.filter(node => !node.buffer.silent).length, 1);
+  listeners.get('click').handler(); await flush();
+  assert.equal(events.filter(event => event === 'media play').length, 1, 'reuses the unlocked session');
+});
+
+test('first cue waits for an in-flight gesture resume without losing playback', async () => {
+  const f = soundFixture(); let finishResume;
+  f.ctx.state = 'suspended';
+  f.ctx.resume = () => new Promise(resolve => { finishResume = () => { f.ctx.state = 'running'; resolve(); }; });
+  vm.runInContext(source.slice(source.indexOf('function unlockAudio()'), source.indexOf('// Capture runs')), f.context);
+  f.context.unlockAudio();
+  const voice = f.context.playSound('healing'); await flush();
+  assert.equal(voice.paused, false, 'do not drop the first cue while resume is settling');
+  assert.equal(f.nodes.filter(node => !node.buffer.silent).length, 0);
+  finishResume(); await flush();
+  assert.equal(f.nodes.filter(node => !node.buffer.silent).length, 1);
+});
+
+test('muting during gesture activation still cancels the pending first cue', async () => {
+  const f = soundFixture(); let finishResume;
+  f.ctx.state = 'suspended';
+  f.ctx.resume = () => new Promise(resolve => { finishResume = () => { f.ctx.state = 'running'; resolve(); }; });
+  vm.runInContext(source.slice(source.indexOf('function unlockAudio()'), source.indexOf('// Capture runs')), f.context);
+  f.context.unlockAudio(); f.context.playSound('healing'); await flush();
+  f.context.stopAllSounds(); finishResume(); await flush();
+  assert.equal(f.nodes.filter(node => !node.buffer.silent).length, 0);
+  assert.equal(f.context.activeCount(), 0);
+});
+
+test('a blocked resume expires; later activation cannot replay the abandoned cue', async () => {
+  const f = soundFixture(); let expire, finishResume;
+  f.context.setTimeout = fn => { expire = fn; return 1; };
+  f.context.clearTimeout = () => {};
+  f.ctx.state = 'suspended';
+  f.ctx.resume = () => new Promise(resolve => { finishResume = () => { f.ctx.state = 'running'; resolve(); }; });
+  vm.runInContext(source.slice(source.indexOf('function unlockAudio()'), source.indexOf('// Capture runs')), f.context);
+  f.context.unlockAudio();
+  const voice = f.context.playSound('healing'); await flush();
+  expire(); await flush();
+  assert.equal(voice.paused, true);
+  finishResume(); await flush();
+  assert.equal(f.nodes.filter(node => !node.buffer.silent).length, 0);
+  assert.equal(f.context.activeCount(), 0);
+});
+
+test('returning from the background re-primes output on the next normal gesture', async () => {
+  const f = soundFixture(), listeners = new Map(); let mediaStarts = 0, mediaPauses = 0;
+  f.context.Audio = class {
+    setAttribute() {}
+    play() { mediaStarts++; return Promise.resolve(); }
+    pause() { mediaPauses++; }
+  };
+  f.context.document.addEventListener = (name, handler) => listeners.set(name, handler);
+  vm.runInContext(source.slice(source.indexOf('function unlockAudio()'), source.indexOf('const startScreen')), f.context);
+  listeners.get('click')(); await flush();
+  assert.equal(mediaStarts, 1);
+  f.context.document.hidden = true; listeners.get('visibilitychange')();
+  assert.equal(mediaPauses, 1);
+  f.context.document.hidden = false; listeners.get('visibilitychange')(); await flush();
+  listeners.get('touchend')(); await flush();
+  assert.equal(mediaStarts, 2);
+  assert.equal(f.nodes.filter(node => node.buffer.silent).length, 2);
 });

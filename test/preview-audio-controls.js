@@ -26,7 +26,7 @@
     return voice;
   };
   async function run(id,outcome){
-    unlockAudio();
+    // Use the production capture listener; no preview-only audio unlocking.
     runVoices = [];
     localTranscript = {meta:{provider_level:panel.querySelector('#qa-provider').value}};
     window._isMoving = panel.querySelector('#qa-moving').checked;

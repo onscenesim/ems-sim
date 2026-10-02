@@ -59,6 +59,27 @@ const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: 1, i
 // One gesture-unlocked Web Audio context mixes short effects without competing
 // HTML media decoders. Buffers are decoded once; finished voices are released.
 let soundContext;
+let soundResumePromise = null;
+let soundMediaPrimer;
+let soundMediaPrimed = false;
+let soundGestureContext;
+function resumeSoundContext(ctx) {
+  if (ctx.state === 'running') return Promise.resolve();
+  if (soundResumePromise) return soundResumePromise;
+  // A refused mobile resume can remain pending until another gesture. Do not
+  // let a cue wait indefinitely and burst out on that later gesture.
+  const resume = ctx.resume();
+  let timer;
+  const pending = Promise.race([
+    resume,
+    new Promise(resolve => { timer = setTimeout(resolve, 1000); }),
+  ]).catch(error => console.warn('[sound] unlock error:', error.message)).finally(() => {
+    clearTimeout(timer);
+    if (soundResumePromise === pending) soundResumePromise = null;
+  });
+  soundResumePromise = pending;
+  return pending;
+}
 const SOUND_BUFFERS = new Map();
 const ACTIVE_SOUND_VOICES = new Set();
 const SOUND_VOICES_PER_EFFECT = 2; // idle HTML fallback voices retained per effect
@@ -102,7 +123,9 @@ function playBufferedSound(name, ctx) {
     voice.dispatchEvent(new Event('pause'));
   };
   ACTIVE_SOUND_VOICES.add(voice); // includes pending decodes so mute/hide cancels them
-  loadSoundBuffer(name).then(buffer => {
+  const activating = soundResumePromise;
+  loadSoundBuffer(name).then(async buffer => {
+    if (ctx.state !== 'running' && activating) await activating;
     if (voice.paused || document.hidden || !soundEnabled) { voice.pause(); return; }
     // Never save a suspended cue to blast on the next tap.
     if (ctx.state !== 'running') { voice.pause(); return; }
@@ -261,27 +284,60 @@ function getOutcomeSound(outcome) {
 }
 
 // ── Mobile audio unlock ─────────────────────────────────────────────────────
-// Resume the shared mixer directly inside the gesture, including after iOS
-// interrupts a session. Decoding buffers does not play or queue any effects.
+// The pen starts HTML audio synchronously in a gesture; merely resuming a
+// context and decoding later did not prime the output on affected mobile devices.
+// Prime both playback paths with silence, before any button handler can play a cue.
 function unlockAudio() {
+  if (document.hidden) return;
   const ctx = getSoundContext();
+  if (!soundMediaPrimed) {
+    if (!soundMediaPrimer) {
+      // 50ms of unsigned 8-bit PCM silence; no fetch, audible effect, or library burst.
+      const bytes = new Uint8Array(444), view = new DataView(bytes.buffer);
+      const word = (offset, value) => { for (let i = 0; i < value.length; i++) bytes[offset + i] = value.charCodeAt(i); };
+      word(0, 'RIFF'); view.setUint32(4, 436, true); word(8, 'WAVE');
+      word(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+      view.setUint32(24, 8000, true); view.setUint32(28, 8000, true); view.setUint16(32, 1, true); view.setUint16(34, 8, true);
+      word(36, 'data'); view.setUint32(40, 400, true); bytes.fill(128, 44);
+      soundMediaPrimer = new Audio('data:audio/wav;base64,' + btoa(String.fromCharCode(...bytes)));
+      soundMediaPrimer.preload = 'auto';
+      soundMediaPrimer.setAttribute('playsinline', '');
+    }
+    // Do not use muted/zero volume: it is the silent recording that unlocks output.
+    soundMediaPrimer.play().then(() => {
+      if (!document.hidden) soundMediaPrimed = true;
+    }).catch(() => {}); // retry on the next gesture if this event was not eligible
+  }
   if (!ctx) return;
-  if (ctx.state !== 'running') ctx.resume().catch(error => console.warn('[sound] unlock error:', error.message));
+  if (soundGestureContext !== ctx || ctx.state !== 'running') {
+    resumeSoundContext(ctx);
+    const silent = ctx.createBufferSource();
+    silent.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+    silent.connect(ctx.destination);
+    silent.onended = () => { silent.disconnect(); };
+    silent.start(0); // synchronous: never move this behind a promise/fetch
+    soundGestureContext = ctx;
+  }
   for (const name of ['success', 'fail']) loadSoundBuffer(name).catch(() => {});
 }
-// touchend (not touchstart) avoids the iOS native <select> picker false-trigger.
-document.addEventListener('click',    unlockAudio);
-document.addEventListener('touchend', unlockAudio);
+// Capture runs before scenario/send/pen handlers and cannot be swallowed by
+// descendant handlers. Touchend covers iOS; pointerup and keydown cover other input.
+for (const event of ['pointerup', 'touchend', 'click', 'keydown']) {
+  document.addEventListener(event, unlockAudio, { capture: true, passive: true });
+}
 
 // Stop all sounds when the page is backgrounded so iOS doesn't queue pending
 // play() calls and flush them all when the user tabs back in.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     stopAllSounds();
+    soundMediaPrimed = false;
+    soundGestureContext = null;
+    soundMediaPrimer?.pause();
     soundContext?.suspend().catch(() => {});
   } else if (soundContext && soundContext.state !== 'running') {
     // Resume the already-unlocked mixer without replaying hidden-page cues.
-    soundContext.resume().catch(() => {});
+    resumeSoundContext(soundContext);
   }
 });
 
