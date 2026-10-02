@@ -68,9 +68,12 @@ test('client selects explicit or default route scenes and retains outcomes and r
   const source=fs.readFileSync(require.resolve('../public/app.js'),'utf8');
   const helper=source.slice(source.indexOf('async function animateMedicationAdministration('),source.indexOf('function animateRouteMedication('));
   const calls=[];
+  const infusion={dataset:{}};
+  const header={textContent:''};
   const context=vm.createContext({
+    document:{getElementById:id=>id==='infusion-overlay'?infusion:header},
     animateRouteMedication:async(...args)=>calls.push(['route',...args]),
-    animateMedPush:async outcome=>calls.push(['iv',outcome]),
+    animateMedPush:async (...args)=>calls.push(['push',...args]),
     showDrugPanel:drug=>calls.push(['card',drug]),
   });
   vm.runInContext(helper,context);
@@ -80,10 +83,23 @@ test('client selects explicit or default route scenes and retains outcomes and r
     assert.equal(calls[0][0],'route'); assert.equal(calls[0][1],id); assert.equal(calls[0][2],'MARGINAL');
     assert.deepEqual(calls[1],['card','test-drug']);
   }
-  for(const route of [undefined,'IV','IO','constructor']) {
+  for(const route of [undefined,'IV','constructor']) {
     calls.length=0;
     await context.animateMedicationAdministration({administration_route:route,outcome:'FAILURE'});
-    assert.deepEqual(calls,[['iv','FAILURE']]);
+    assert.deepEqual(calls,[['push','FAILURE']]);
+  }
+  calls.length=0;
+  await context.animateMedicationAdministration({administration_route:'IO',outcome:'SUCCESS'});
+  assert.deepEqual(calls,[['push','SUCCESS','IO','MEDICATION']]);
+  for (const kind of ['fluid','blood']) {
+    for (const route of ['IO','IV']) {
+      calls.length=0;
+      await context.animateMedicationAdministration({administration_route:route,medication_kind:kind,medication_name:'Test product',outcome:'SUCCESS'});
+      assert.deepEqual(calls,[['route','infusion','SUCCESS',3200]], 'fluids and blood always use their bag');
+      assert.equal(infusion.dataset.route,route, 'replaying IV after IO must remove the pressure sleeve and marrow');
+      assert.equal(infusion.dataset.fluid,kind);
+      assert.equal(header.textContent,route==='IO'?'IO · Test product · PRESSURE INFUSION':'Test product');
+    }
   }
   for (const [route,id] of [['PO','oralmed'],['IN','inmed'],['NEB','nebmed']]) {
     calls.length=0;
@@ -92,7 +108,7 @@ test('client selects explicit or default route scenes and retains outcomes and r
   }
   calls.length=0;
   await context.animateMedicationAdministration({administration_route:'IV',medication_animation_route:'IN',outcome:'SUCCESS'});
-  assert.deepEqual(calls,[['iv','SUCCESS']]);
+  assert.deepEqual(calls,[['push','SUCCESS']]);
   calls.length=0;
   await context.animateMedicationAdministration({administration_route:'PO',no_roll:true});
   assert.equal(calls[0][1],'oralmed'); assert.equal(calls[0][2],'SUCCESS');

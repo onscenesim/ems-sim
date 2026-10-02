@@ -3077,6 +3077,9 @@ body.light-mode .brief-options-note { color: #536159; }
   flex-shrink: 0;
   color: rgba(190, 205, 220, 0.92);
 }
+.medpush-io-only { display: none; }
+#medpush-overlay.is-io .medpush-io-only { display: inline; }
+#medpush-overlay.is-io .medpush-iv-only { display: none; }
 /* Couple the luer tip to the fixed needle-free connector before the push. */
 #medpush-overlay.visible #medpush-syringe {
   animation: medConnect 0.4s ease-in-out 0.15s both;
@@ -3105,8 +3108,8 @@ body.light-mode .brief-options-note { color: #536159; }
   to   { transform: translateX(106px); }
 }
 /* A short, neutral highlight traces the closed fluid path during the push. */
-#medpush-flow { opacity: 0; stroke-dasharray: 22 122; stroke-dashoffset: 22; }
-#medpush-overlay.visible #medpush-flow {
+.medpush-flow { opacity: 0; stroke-dasharray: 22 122; stroke-dashoffset: 22; }
+#medpush-overlay.visible .medpush-flow {
   animation: medFlow 1.05s ease-in-out 0.65s both;
 }
 @keyframes medFlow {
@@ -3144,7 +3147,7 @@ body.light-mode .brief-options-note { color: #536159; }
   #medpush-overlay.visible #medpush-syringe { animation: none; transform: none; }
   #medpush-overlay.visible #medpush-plunger { animation: none; transform: translateX(106px); }
   #medpush-overlay.visible #medpush-fill { animation: none; transform: scaleX(0); }
-  #medpush-overlay.visible #medpush-flow { animation: none; opacity: 0; }
+  #medpush-overlay.visible .medpush-flow { animation: none; opacity: 0; }
 }
 
 /* ── Oral, intranasal and intramuscular medication overlays ─────────── */
@@ -4924,18 +4927,34 @@ body.light-mode #instructor-panel :is(input, textarea, select) { color-scheme: l
 
 /* Hanging infusion bag and NRB oxygen delivery, using the existing line art. */
 #infusion-overlay { --infusion-color: #a5deee; }
+.infusion-io-only { display: none; }
+#infusion-overlay[data-route="IO"] .infusion-io-only { display: inline; }
+#infusion-overlay[data-route="IO"] .infusion-iv-only { display: none; }
+#infusion-overlay[data-route="IO"] #infusion-bag { transform-origin: 98px 116px; }
+#infusion-overlay[data-route="IO"].visible #infusion-bag { animation: pressureSqueeze 1s ease-in-out .15s both; }
+#infusion-overlay[data-route="IO"].visible #infusion-cuff-left { animation: pressureCuffLeft 1s ease-in-out .15s both; }
+#infusion-overlay[data-route="IO"].visible #infusion-cuff-right { animation: pressureCuffRight 1s ease-in-out .15s both; }
+#infusion-bulb { transform-origin: 30px 134px; }
+#infusion-overlay.visible #infusion-bulb { animation: pressurePump .5s ease-in-out .15s 2; }
+#infusion-gauge-needle { transform-origin: 168px 59px; }
+#infusion-overlay.visible #infusion-gauge-needle { animation: pressureGauge 1s ease-in-out .15s both; }
+@keyframes pressureSqueeze { from { transform: scaleX(1); } to { transform: scaleX(.78); } }
+@keyframes pressureCuffLeft { from { transform: translateX(0); } to { transform: translateX(5px); } }
+@keyframes pressureCuffRight { from { transform: translateX(0); } to { transform: translateX(-5px); } }
+@keyframes pressurePump { 0%, 100% { transform: scale(1); } 45% { transform: scale(.65, .88); } }
+@keyframes pressureGauge { from { transform: rotate(-65deg); } to { transform: rotate(45deg); } }
 #infusion-overlay[data-fluid="blood"] { --infusion-color: #dc4956; }
 #infusion-header { max-width: 90vw; text-align: center; line-height: 1.7; }
 #infusion-liquid { fill: var(--infusion-color); opacity: .7; transform-origin: 98px 104px; }
-#infusion-flow, #infusion-drop { stroke: var(--infusion-color); opacity: 0; }
-#infusion-clamp, #oxygen-block { opacity: 0; }
+.infusion-flow, #infusion-drop { stroke: var(--infusion-color); opacity: 0; }
+.infusion-clamp, #oxygen-block { opacity: 0; }
 #infusion-overlay.visible #infusion-bag { animation: infusionHang .55s ease-out both; }
 #infusion-overlay.visible #infusion-liquid { animation: infusionDrain 2s linear .7s both; }
-#infusion-overlay.visible #infusion-flow { animation: treatmentFlow .65s linear .65s infinite; }
+#infusion-overlay.visible .infusion-flow { animation: treatmentFlow .65s linear .65s infinite; }
 #infusion-overlay.visible #infusion-drop { animation: infusionDrip .65s linear .65s infinite; }
 #infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) #infusion-liquid { animation: none; }
-#infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) :is(#infusion-flow, #infusion-drop) { animation: none; }
-#infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) #infusion-clamp { animation: accessReveal .2s ease .8s both; }
+#infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) :is(.infusion-flow, #infusion-drop) { animation: none; }
+#infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) .infusion-clamp { animation: accessReveal .2s ease .8s both; }
 #oxygen-reservoir { transform-origin: 206px 166px; }
 #oxygen-flow, #oxygen-air { opacity: 0; }
 #oxygen-overlay.visible #oxygen-mask { animation: oxygenFit .6s ease-out both; }
@@ -4952,12 +4971,17 @@ body.light-mode #instructor-panel :is(input, textarea, select) { color-scheme: l
 @keyframes oxygenBreath { 0% { transform: scale(.45, .9); } 25%, 65%, 100% { transform: scale(1); } 45%, 85% { transform: scale(.78, .97); } }
 @keyframes oxygenEmpty { from { transform: scale(.5, .9); } to { transform: scale(.3, .95); } }
 @media (prefers-reduced-motion: reduce) {
-  #infusion-overlay.visible :is(#infusion-bag, #infusion-liquid, #infusion-flow, #infusion-drop, #infusion-clamp),
+  #infusion-overlay[data-route="IO"].visible #infusion-bag { animation: none; transform: scaleX(.78); }
+  #infusion-overlay[data-route="IO"].visible #infusion-cuff-left { animation: none; transform: translateX(5px); }
+  #infusion-overlay[data-route="IO"].visible #infusion-cuff-right { animation: none; transform: translateX(-5px); }
+  #infusion-overlay.visible #infusion-bulb { animation: none; }
+  #infusion-overlay.visible #infusion-gauge-needle { animation: none; transform: rotate(45deg); }
+  #infusion-overlay.visible :is(#infusion-bag, #infusion-liquid, .infusion-flow, #infusion-drop, .infusion-clamp),
   #oxygen-overlay.visible :is(#oxygen-mask, #oxygen-reservoir, #oxygen-flow, #oxygen-air, #oxygen-block) { animation: none; }
-  #infusion-overlay.visible #infusion-flow, #oxygen-overlay.visible :is(#oxygen-flow, #oxygen-air) { opacity: .85; }
-  #infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) #infusion-flow,
+  #infusion-overlay.visible .infusion-flow, #oxygen-overlay.visible :is(#oxygen-flow, #oxygen-air) { opacity: .85; }
+  #infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) .infusion-flow,
   #oxygen-overlay.visible.outcome-COMPLICATION :is(#oxygen-flow, #oxygen-air) { opacity: 0; }
-  #infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) #infusion-clamp,
+  #infusion-overlay.visible:is(.outcome-FAILURE, .outcome-COMPLICATION) .infusion-clamp,
   #oxygen-overlay.visible.outcome-COMPLICATION #oxygen-block { opacity: 1; }
   #oxygen-overlay.visible.outcome-COMPLICATION #oxygen-reservoir { transform: scale(.3, .95); }
 }

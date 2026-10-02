@@ -2691,7 +2691,7 @@ function animateIV(outcome) {
   });
 }
 
-function animateMedPush(outcome) {
+function animateMedPush(outcome, route = 'IV', name = 'MEDICATION') {
   return new Promise(resolve => {
     const HOLD_MS = 2500; // connection, plunger stroke, fluid path, result
     const FADE_MS = 220;
@@ -2699,7 +2699,10 @@ function animateMedPush(outcome) {
     const label   = document.getElementById('medpush-label');
     if (!overlay) { playSound(getProcedureSound('medication_push', outcome)); resolve(); return; }
     label.textContent = outcome || '';
+    const header = document.getElementById('medpush-header');
+    if (header) header.textContent = route === 'IO' ? `IO · ${name}` : 'MEDICATION';
     overlay.className = '';
+    if (route === 'IO') overlay.classList.add('is-io');
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
@@ -2722,10 +2725,16 @@ async function animateMedicationAdministration(roll) {
   const scene = Object.hasOwn(routes, route) ? routes[route] : null;
   if (roll.medication_kind === 'fluid' || roll.medication_kind === 'blood') {
     const overlay = document.getElementById('infusion-overlay');
-    if (overlay) overlay.dataset.fluid = roll.medication_kind;
+    if (overlay) {
+      overlay.dataset.fluid = roll.medication_kind;
+      overlay.dataset.route = route === 'IO' ? 'IO' : 'IV';
+    }
     const header = document.getElementById('infusion-header');
-    if (header) header.textContent = roll.medication_name || 'IV FLUID';
+    const name = roll.medication_name || (roll.medication_kind === 'blood' ? 'BLOOD' : 'IV FLUID');
+    if (header) header.textContent = route === 'IO' ? `IO · ${roll.medication_name || roll.medication_kind.toUpperCase()} · PRESSURE INFUSION` : name;
     await animateRouteMedication('infusion', outcome, 3200);
+  } else if (route === 'IO') {
+    await animateMedPush(outcome, 'IO', roll.medication_name || 'MEDICATION');
   } else if (scene) await animateRouteMedication(scene[0], outcome, scene[1]);
   else await animateMedPush(outcome);
   if (roll.matched_drug) showDrugPanel(roll.matched_drug);

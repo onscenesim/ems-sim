@@ -1333,6 +1333,7 @@
       <svg id="medpush-svg" viewBox="0 0 360 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <!-- The same catheter and dressing, now connected to an extension set. -->
+          <g class="medpush-iv-only">
           <g id="medpush-access">
             <path d="M40 148 Q146 131 255 149 L255 201 Q147 188 40 202 Z" fill="currentColor" fill-opacity="0.025" stroke-opacity="0.3"/>
             <path d="M40 148 Q146 131 255 149 M40 154 Q146 137 255 155" stroke-width="1.3" opacity="0.6"/>
@@ -1345,7 +1346,19 @@
           <!-- Extension tubing: continuous fluid path with no exposed needle. -->
           <path id="medpush-tube" d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C257 127 258 145 238 145 L212 145" stroke-width="5.5" opacity="0.3"/>
           <path d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C257 127 258 145 238 145 L212 145" stroke="#0b121a" stroke-width="2.5"/>
-          <path id="medpush-flow" d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C257 127 258 145 238 145 L212 145" pathLength="100" stroke-width="2"/>
+          <path class="medpush-flow" id="medpush-flow" d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C257 127 258 145 238 145 L212 145" pathLength="100" stroke-width="2"/>
+          </g>
+          <!-- Reuse the IO cutaway and seated catheter, without the drill. -->
+          <g class="medpush-io-only">
+            <g transform="translate(5 78) scale(.7)">
+              <use href="#io-tissue"/>
+              <use href="#io-needle" transform="translate(60 0)"/>
+            </g>
+            <!-- Extension loops back to the exposed hub; flow reaches marrow. -->
+            <path d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C260 126 278 181 247 187 L129 187 C104 187 108 133.3 130 133.3 L142.2 133.3" stroke-width="5.5" opacity=".3"/>
+            <path d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C260 126 278 181 247 187 L129 187 C104 187 108 133.3 130 133.3 L142.2 133.3" stroke="#0b121a" stroke-width="2.5"/>
+            <path class="medpush-flow" id="medpush-io-flow" d="M306 70 L322 70 C349 70 350 98 327 105 L278 120 C260 126 278 181 247 187 L129 187 C104 187 108 133.3 130 133.3 L190.5 133.3" pathLength="100" stroke-width="2"/>
+          </g>
           <!-- Needle-free connector with a flat septum and luer-lock collar. -->
           <path d="M284 60 L297 60 L306 65 L306 75 L297 80 L284 80 Z" fill="#151e28" stroke-width="1.8"/>
           <path d="M289 63 L289 77 M295 64 L295 76 M302 67 L302 73" stroke-width="1.1" opacity="0.65"/>
@@ -1374,7 +1387,8 @@
             </g>
           </g>
           <g fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing="0.6" opacity="0.6">
-            <text x="271" y="44">IV PORT</text><text x="80" y="222">PERIPHERAL IV</text>
+            <g class="medpush-iv-only"><text x="271" y="44">IV PORT</text><text x="80" y="222">PERIPHERAL IV</text></g>
+            <g class="medpush-io-only"><text x="271" y="44">IO PORT</text><text x="29" y="222">IO ACCESS</text></g>
           </g>
         </g>
       </svg>
@@ -1386,12 +1400,12 @@
       <div id="medpush-label"></div>
     </div>
 
-    <!-- Fluids and blood products share the established IV access artwork. -->
-    <div id="infusion-overlay" class="route-med-overlay" data-fluid="fluid" aria-hidden="true">
+    <!-- Fluids and blood products share the existing bag, with pressure-assisted IO delivery. -->
+    <div id="infusion-overlay" class="route-med-overlay" data-fluid="fluid" data-route="IV" aria-hidden="true">
       <div id="infusion-header" class="route-med-header">IV FLUID</div>
       <svg class="route-med-svg" viewBox="0 0 360 238" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <use href="#medpush-access"/>
+          <use class="infusion-iv-only" href="#medpush-access"/>
           <path d="M98 9 L98 17 M88 9 L108 9" opacity=".5"/>
           <g id="infusion-bag">
             <path d="M77 20 Q98 15 119 20 L126 89 Q127 100 114 104 L105 108 L91 108 L82 104 Q69 100 70 89 Z" fill="currentColor" fill-opacity=".025"/>
@@ -1403,10 +1417,38 @@
           </g>
           <rect x="91" y="117" width="14" height="20" rx="5" fill="#101820"/>
           <path id="infusion-drop" d="M98 120 L98 123" stroke-width="3"/>
-          <path d="M98 137 C98 147 119 144 133 130 C158 109 239 102 244 129 Q247 145 212 145" stroke-width="5" opacity=".25"/>
-          <path id="infusion-flow" d="M98 137 C98 147 119 144 133 130 C158 109 239 102 244 129 Q247 145 212 145 L199 145 L165 176 Q111 168 58 179" stroke-width="2.5" stroke-dasharray="6 12"/>
-          <path id="infusion-clamp" d="M140 119 L150 130 M150 119 L140 130" stroke="#e67859" stroke-width="3"/>
-          <text x="80" y="222" fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing=".6" opacity=".6">PERIPHERAL IV</text>
+          <g class="infusion-iv-only">
+            <path d="M98 137 C98 147 119 144 133 130 C158 109 239 102 244 129 Q247 145 212 145" stroke-width="5" opacity=".25"/>
+            <path id="infusion-flow" class="infusion-flow" d="M98 137 C98 147 119 144 133 130 C158 109 239 102 244 129 Q247 145 212 145 L199 145 L165 176 Q111 168 58 179" stroke-width="2.5" stroke-dasharray="6 12"/>
+            <path id="infusion-clamp" class="infusion-clamp" d="M140 119 L150 130 M150 119 L140 130" stroke="#e67859" stroke-width="3"/>
+            <text x="80" y="222" fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing=".6" opacity=".6">PERIPHERAL IV</text>
+          </g>
+          <g class="infusion-io-only">
+            <g transform="translate(55 62) scale(.7)">
+              <use href="#io-tissue"/>
+              <use href="#io-needle" transform="translate(60 0)"/>
+            </g>
+            <path d="M98 137 C98 175 165 175 165 140 Q165 117.3 185 117.3 L192.2 117.3" stroke-width="5" opacity=".25"/>
+            <path id="infusion-io-flow" class="infusion-flow" d="M98 137 C98 175 165 175 165 140 Q165 117.3 185 117.3 L240.5 117.3" stroke-width="2.5" stroke-dasharray="6 12"/>
+            <path class="infusion-clamp" d="M160 140 L170 150 M170 140 L160 150" stroke="#e67859" stroke-width="3"/>
+            <text x="214" y="232" fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing=".6" opacity=".6">IO ACCESS</text>
+          </g>
+          <!-- Transparent pressure sleeve wraps the same fluid/blood bag. -->
+          <g id="infusion-pressure" class="infusion-io-only" stroke="#8bbdd0">
+            <rect x="61" y="17" width="74" height="92" rx="8" fill="#5993aa" fill-opacity=".06" stroke-width="1.5"/>
+            <path id="infusion-cuff-left" d="M65 26 Q70 21 76 26 L76 98 Q70 105 65 98 Z" fill="#78acc1" fill-opacity=".35"/>
+            <path id="infusion-cuff-right" d="M120 26 Q126 21 131 26 L131 98 Q126 105 120 98 Z" fill="#78acc1" fill-opacity=".35"/>
+            <path d="M78 31 L118 31 M78 91 L118 91 M82 25 L82 101 M114 25 L114 101" stroke-width=".7" opacity=".45"/>
+            <!-- Separate air line, pressure gauge and inflation bulb. -->
+            <path d="M64 98 C43 98 30 105 30 131 M134 88 L156 88 Q168 88 168 75" stroke-width="2"/>
+            <circle cx="168" cy="59" r="16" fill="#111c27"/>
+            <path d="M155 60 A13 13 0 0 1 181 60 M157 51 L160 54 M168 46 L168 50 M179 51 L176 54" stroke-width="1" opacity=".65"/>
+            <path id="infusion-gauge-needle" d="M168 59 L168 48" stroke="#d4eaf1" stroke-width="1.8"/>
+            <circle cx="168" cy="59" r="2" fill="#d4eaf1" stroke="none"/>
+            <path d="M26 128 L34 128 L34 136 L26 136 Z" fill="#172735"/>
+            <path id="infusion-bulb" d="M30 134 C11 134 14 160 22 164 Q30 168 38 164 C46 160 49 134 30 134 Z" fill="#38576a"/>
+            <text x="98" y="192" text-anchor="middle" fill="currentColor" stroke="none" font-family="monospace" font-size="7" letter-spacing=".6">PRESSURE INFUSER</text>
+          </g>
         </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
