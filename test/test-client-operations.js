@@ -113,3 +113,14 @@ test('torsades twists across the baseline while VF remains aperiodic', () => {
   assert.ok(meanDifference(a,b)>0.20,'VF repeated after two seconds');
   assert.ok(meanDifference(a,c)>0.20,'VF repeated after four seconds');
 });
+
+test('live strip schedules PVCs with early wide beats, no P, and compensatory pauses',()=>{
+  const {stripY,stripSchedule,rhythmStrip:s}=ecgHelpers();
+  s.type='sinus';s.rate=80;s.ectopy='frequent';
+  stripSchedule(10);
+  const index=s.beats.findIndex(b=>b.pvc),b=s.beats[index];
+  assert.ok(b.wide&&!b.p);assert.ok(index>0);
+  assert.ok(Math.abs(s.beats[index+1].t-s.beats[index-1].t-1.5)<1e-9);
+  assert.ok(stripY(b.t)<-.8);
+  assert.ok(s.beats.filter(b=>b.pvc).length>=2);
+});

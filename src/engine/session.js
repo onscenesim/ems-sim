@@ -11,7 +11,7 @@ const { parseDebriefResponse } = require('./prompts/debrief');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 const { applyCapillaryRefill } = require('./capillary-refill');
 const { applyPulseOx } = require('./pulse-ox');
-const { acquireTwelveLeads, isECGProcedure, stripTwelveLeadNarration } = require('./twelve-lead');
+const { acquireTwelveLeads, isECGProcedure, stripTwelveLeadNarration, applyEctopy } = require('./twelve-lead');
 const { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords } = require('./patient-records');
 
 // Phrases that close the scenario and trigger debrief offer
@@ -227,7 +227,7 @@ function parseVitalsTag(reply) {
     }
 
     // Placeholder ("not_yet", "pending") — the field was not measured; omit it.
-    if (VITALS_PLACEHOLDER_RE.test(rawValue) && !(key === 'PulseOxArtifact' && rawValue === 'none')) continue;
+    if (VITALS_PLACEHOLDER_RE.test(rawValue) && !(['PulseOxArtifact','Ectopy'].includes(key) && rawValue === 'none')) continue;
 
     let parsedValue = rawValue;
     if (VITALS_NUMERIC.has(key)) {
@@ -855,7 +855,8 @@ class Session {
     const switchedPatient = patientId !== previousId;
     if (switchedPatient) this.lastVitals = null;
     const { cleanedReply: vitalsClean, vitals: rawVitals } = parseVitalsTag(focusClean);
-    const assessedVitals = applyCapillaryRefill(rawVitals, this.patientVitals[patientId],
+    const rhythmVitals = applyEctopy(rawVitals, this.patientVitals[patientId], vitalsClean, patientId === 'patient_1' ? this.seed : {});
+    const assessedVitals = applyCapillaryRefill(rhythmVitals, this.patientVitals[patientId],
       reconcileRolls(rolls, focusClean).some(r => r.procedure_id === 'capillary_refill'),
       parseTimeTag(rawReply).timeMinutes ?? this.sceneMinute, vitalsClean);
     const vitals = applyPulseOx(assessedVitals, this.patientVitals[patientId] || null,

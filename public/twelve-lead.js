@@ -14,6 +14,33 @@
     return Object.keys(rhythms).find(key=>rhythms[key].aliases?.test(k))||'sinus';
   }
   const value = v => v && typeof v === 'object' ? v.value : v;
+  // Ectopy is independent of regional ST-T morphology. Unsupported electrical
+  // families retain their own timing (e.g. VF cannot have interspersed PVCs).
+  function ectopyFromText(raw) {
+    const text=String(value(raw)||'').toLowerCase().replace(/[_-]/g,' ');
+    if(Object.hasOwn(catalog.ectopy,text))return text;
+    if(/\b(?:no|without|absent|resolved)(?: further| any| frequent| ventricular)* (?:ectopy|pvcs?|bigeminy|trigeminy)\b|\b(?:ectopy|pvcs?)\b(?: has| have| is| are| now| completely)* (?:resolved|absent|ceased)\b/.test(text))return 'none';
+    if(/\b(?:atrial|supraventricular) ectopy\b|\bpacs?\b/.test(text))return undefined;
+    if(/\bbigeminy\b/.test(text))return 'bigeminy';
+    if(/\btrigeminy\b/.test(text))return 'trigeminy';
+    if(/\b(?:pvcs?|vpcs?|ventricular ectop(?:y|ics?)|premature ventricular (?:complex|contraction|beat)s?|frequent ectopy)\b/.test(text))
+      return /\b(?:occasional|isolated|rare|infrequent)\b/.test(text)?'occasional':'frequent';
+  }
+  function resolveEctopy(raw, rhythmRaw) {
+    const definition=rhythms[normalizeRhythm(rhythmRaw)];
+    if(!['sinus','sinus_tach','sinus_brad','av_block_1','hyperk'].includes(definition.waveform))return 'none';
+    return ectopyFromText(raw)??ectopyFromText(rhythmRaw)??definition.ectopy??'none';
+  }
+  function ectopyTiming(mode,count) {
+    const isPVC=n=>n>=0&&(mode==='bigeminy'?n%2===1:mode==='trigeminy'?n%3===2:mode==='frequent'?[2,6].includes(n%9):mode==='occasional'?n%10===5:false);
+    const pvc=isPVC(count);
+    return {pvc,factor:pvc?.62:isPVC(count-1)?1.38:1};
+  }
+  function pvcSignal(lead,d,width=.17) {
+    const polarity={I:.9,II:-1,III:-.8,aVR:.65,aVL:.9,aVF:-1,V1:1.1,V2:.9,V3:.4,V4:-.6,V5:-1,V6:-.9,
+      V7:-.55,V8:-.45,V9:-.35,V1R:.9,V2R:1.1,V3R:1,V4R:.8,V5R:.6,V6R:.45}[lead]??-1;
+    return polarity*(1.15*gauss(d,width/5)-.32*gauss(d-width*.42,width/5)-.38*gauss(d-.32,.065));
+  }
   function hash(text) { let h = 2166136261; for (const c of String(text)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
   function random(seed) { let a=seed>>>0; return () => { a+=0x6D2B79F5; let t=Math.imul(a^a>>>15,1|a); t^=t+Math.imul(t^t>>>7,61|t); return ((t^t>>>14)>>>0)/4294967296; }; }
   const gauss = (x,s) => Math.exp(-x*x/(2*s*s));
@@ -94,6 +121,7 @@
     const measured=Number(value(vitals.HR));
     const rhythm=normalizeRhythm(raw || (measured>100?'sinus_tach':measured>0&&measured<60?'sinus_brad':'sinus'));
     const definition=rhythms[rhythm], type=definition.waveform;
+    const ectopy=resolveEctopy(value(vitals.Ectopy)??seed.ecg_ectopy,raw||rhythm);
     const rate=definition.noRate?0:Number.isFinite(measured)&&measured>0?Math.max(15,Math.min(300,measured)):rates[rhythm];
     const priority=definition.priority||(definition.priorityAt!=null&&rate>=definition.priorityAt);
     const pattern=definition.pattern||(priority?'normal':selectPattern(seed,variant));
@@ -127,8 +155,9 @@
       const dropped=group>1&&count%group===group-1;
       const pr=type==='av_block_1'?.32:type==='av_block_2_i'?.16+.045*(count%group):morphology.pr||.16;
       const irregular=type==='afib'||preexcited;
-      t+=interval*(irregular?.62+r()*.76:1);
-      beats.push({t,pr,dropped,width:preexcited?.13+r()*.09:qrs});
+      const timing=ectopyTiming(ectopy,count);
+      t+=interval*(irregular?.62+r()*.76:timing.factor);
+      beats.push({t,pr,dropped,width:timing.pvc?.17:preexcited?.13+r()*.09:qrs,...(timing.pvc?{pvc:true}:{})});
     }
     const quality=qualities[outcome]||qualities.SUCCESS;
     const variants=definition.variants||[];
@@ -136,7 +165,7 @@
     const selectedVariant=rhythmVariant??(variants.includes(seed.ecg_rhythm_variant)?seed.ecg_rhythm_variant:undefined)??variants[Math.floor(random(waveSeed+97)()*variants.length)];
     const recording = {version:3,id,view,leadLabels:{...views[view].leads},ink:/^#[0-9a-f]{6}$/i.test(ink)?ink:'#283a57',demographics:{name:patient.name||null,age:patient.age_display??patient.age??null,sex:patient.sex||null},patientId,minute,rate,rhythm,rateEstimated:!(Number.isFinite(measured)&&measured>0)&&rate>0,
       seed:waveSeed,leads,beats,qtScale,delta:!!morphology.delta,preexcited,
-      waveform:type,pWaves:!!definition.pWaves,rhythmVariant:selectedVariant,
+      waveform:type,pWaves:!!definition.pWaves,rhythmVariant:selectedVariant,ectopy,
       // A clean asystole has no electrical complexes; artifact still applies
       // to every poor acquisition, even the flat variant.
       noise:type==='asystole'&&quality===qualities.SUCCESS?0:quality.noise,
@@ -163,6 +192,7 @@
     for(const b of ecg.beats) {
       const d=t-b.t;
       if(d<-.5||d>.8)continue;
+      if(b.pvc){y+=pvcSignal(ecg.leadLabels?.[lead]||lead,d,b.width);continue;}
       const p=ecg.pWaves??rhythms[type]?.pWaves;
       if(p) {y+=l.p*gauss(d+b.pr,.022);if(d> -b.pr+.04&&d<-.045)y+=l.pr;}
       if(b.dropped)continue;
@@ -193,7 +223,7 @@
   const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function measurements(ecg) {
     if(!ecg.rate||['vf','torsades','asystole'].includes(ecg.waveform||ecg.rhythm)||ecg.noise>.012) return {pr:'—',qrs:'—',qt:'—',axes:'— / — / —'};
-    const beat=ecg.beats.find(b=>!b.dropped), rr=60/ecg.rate;
+    const beat=ecg.beats.find(b=>!b.dropped&&!b.pvc), rr=60/ecg.rate;
     const sinus=ecg.pWaves??rhythms[ecg.rhythm]?.pWaves;
     const recovery=Math.min(.34,Math.max(.15,.30*Math.sqrt(rr/.8)))*ecg.qtScale;
     const tWidth=(ecg.leads.II.tWidth||.052)*Math.min(1,Math.sqrt(rr/.8));
@@ -258,5 +288,5 @@
     const accessible=`Captured ${placement}, ${ecg.rate||'no organized'} beats per minute. ${ecg.quality}. Leads ${names.map(n=>ecg.leadLabels?.[n]||n).join(', ')} in three rows of four and a ten second lead II strip.${machine?' Unconfirmed automated interpretation: '+[machine.headline,...machine.lines].filter(Boolean).join('. '):''}`;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(accessible)}"><defs><pattern id="${gridId}-small" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M4 0H0V4" fill="none" stroke="#e9a9ab" stroke-width=".4"/></pattern><pattern id="${gridId}-grid" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="url(#${gridId}-small)"/><path d="M20 0H0V20" fill="none" stroke="#d47d83" stroke-width=".7"/></pattern></defs><rect width="${width}" height="${height}" fill="#fff9f2"/><rect x="16" y="155" width="1108" height="516" fill="url(#${gridId}-grid)"/><g fill="#292526" font-family="Arial Narrow, Liberation Sans Narrow, Arial, sans-serif" font-size="16">${header}${body}${field(16,700,'×1.0   10 mm/mV   25 mm/s',15,true)}${field(360,700,ecg.quality,13)}${field(735,700,'SIMULATED · 3 × 4 · 10 s sequential',12)}</g></svg>`;
   }
-  return {catalog,rates,names,normalizeRhythm,selectPattern,autoInterpret,create,sample,measurements,svg};
+  return {catalog,rates,names,normalizeRhythm,ectopyFromText,resolveEctopy,ectopyTiming,pvcSignal,selectPattern,autoInterpret,create,sample,measurements,svg};
 });

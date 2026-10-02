@@ -321,3 +321,97 @@ test('live sessions file extended views with captured ink and preserve them thro
   const next=session.turns.at(-1).twelveLeads[0];assert.equal(next.view,'right');assert.equal(next.ink,'#a52c37');
   assert.equal(ECG.svg(first),saved);
 });
+
+test('PVC aliases and modifiers preserve the underlying rhythm and reject incompatible rhythms',()=>{
+  for(const raw of ['PVC','PVCs','VPCs','premature ventricular contractions','ventricular ectopy']) {
+    assert.equal(ECG.normalizeRhythm(raw),'pvc',raw);
+    assert.equal(ECG.create({vitals:{Rhythm:raw}}).ectopy,'frequent');
+  }
+  assert.equal(ECG.normalizeRhythm('sinus tach with frequent PVCs'),'sinus_tach');
+  assert.equal(ECG.resolveEctopy(undefined,'sinus tach with frequent PVCs'),'frequent');
+  assert.equal(ECG.resolveEctopy('none','pvc'),'none');
+  for(const raw of ['no PVCs','without ventricular ectopy','ectopy resolved','frequent atrial ectopy','PACs'])
+    assert.equal(ECG.resolveEctopy(raw,'sinus'),'none',raw);
+  for(const Rhythm of ['vf','vt','torsades','asystole','paced','afib','svt','av_block_3']) {
+    const e=ECG.create({vitals:{Rhythm,Ectopy:'frequent'}});
+    assert.equal(e.ectopy,'none');assert.ok(e.beats.every(b=>!b.pvc));
+  }
+});
+
+test('PVCs are premature wide complexes without a preceding P and have a compensatory pause',()=>{
+  for(const Ectopy of ['occasional','frequent','bigeminy','trigeminy']) {
+    const e=ECG.create({vitals:{Rhythm:'sinus',HR:80,Ectopy}}),rr=60/80;
+    const pvcs=e.beats.filter(b=>b.pvc&&b.t>=0&&b.t<10);
+    assert.ok(pvcs.length>0,Ectopy);
+    if(Ectopy==='frequent')assert.ok(pvcs.length>=2);
+    for(const b of pvcs) {
+      const index=e.beats.indexOf(b),previous=e.beats[index-1],next=e.beats[index+1];
+      assert.ok(b.width>=.12);assert.ok(b.t-previous.t<rr*.7);
+      assert.ok(Math.abs(next.t-previous.t-2*rr)<1e-9,'full compensatory pause');
+      const isolated={...e,noise:0,beats:[b]};
+      assert.ok(Math.abs(ECG.sample(isolated,'II',b.t-b.pr))<.005,'no preceding sinus P wave');
+      assert.ok(ECG.sample(isolated,'II',b.t)<-.8,'broad ventricular deflection');
+      assert.ok(ECG.sample(isolated,'II',b.t+.32)>.3,'discordant T wave');
+    }
+    if(Ectopy==='bigeminy')assert.ok(e.beats.every((b,i)=>!!b.pvc===(i%2===1)));
+    if(Ectopy==='trigeminy')assert.ok(e.beats.every((b,i)=>!!b.pvc===(i%3===2)));
+  }
+});
+
+test('every pathology has ectopy variants across every placement and acquisition quality',()=>{
+  for(const ecg_pattern of Object.keys(ECG.catalog.patterns))for(const view of Object.keys(ECG.catalog.views)) {
+    const options={seed:{ecg_pattern},view,id:'ectopy-catalog',vitals:{Rhythm:'sinus',HR:80}};
+    const base=ECG.create(options);
+    for(const Ectopy of ['occasional','frequent','bigeminy','trigeminy'])for(const outcome of Object.keys(ECG.catalog.qualities)) {
+      const e=ECG.create({...options,outcome,vitals:{...options.vitals,Ectopy}});
+      assert.deepEqual(e.leads,base.leads,'PVCs must preserve primary morphology');
+      assert.ok(e.beats.some(b=>b.pvc));assert.equal(e.ectopy,Ectopy);
+      const restored=JSON.parse(JSON.stringify(e));
+      for(const lead of ECG.names)for(let t=0;t<10;t+=.137){
+        const y=ECG.sample(e,lead,t);assert.ok(Number.isFinite(y));assert.equal(ECG.sample(restored,lead,t),y);
+      }
+      assert.equal(e.noise,ECG.catalog.qualities[outcome].noise);
+    }
+  }
+  const legacy=make('Inferior STEMI');delete legacy.ectopy;
+  assert.equal(ECG.svg(legacy),ECG.svg(JSON.parse(JSON.stringify(legacy))));
+});
+
+test('narrated ectopy populates monitor metadata without using historical or hypothetical mentions',()=>{
+  const {applyEctopy}=require('../src/engine/twelve-lead');
+  const v={HR:80,Rhythm:'sinus'};
+  assert.equal(applyEctopy(v,null,'The monitor shows frequent ectopy.').Ectopy,'frequent');
+  assert.equal(applyEctopy(v,null,'Occasional PVCs appear on the strip.').Ectopy,'occasional');
+  assert.equal(applyEctopy(v,null,'No chest pain, frequent ectopy persists on the monitor.').Ectopy,'frequent');
+  for(const text of ['History of frequent PVCs.','Watch for frequent ectopy.','The patient reports frequent PVCs.','The monitor shows no PVCs.','Frequent atrial ectopy.'])
+    assert.equal(applyEctopy(v,null,text).Ectopy,'none',text);
+  assert.equal(applyEctopy({GCS:15},null,'Frequent ectopy.').Ectopy,undefined,'monitor gating');
+  assert.equal(applyEctopy(v,{...v,Ectopy:'frequent'},'Patient answers.').Ectopy,'frequent');
+  assert.equal(applyEctopy({...v,Ectopy:'none'},{...v,Ectopy:'frequent'}).Ectopy,'none');
+  assert.equal(applyEctopy(v,{...v,Ectopy:'frequent'},'The ectopy has resolved.').Ectopy,'none');
+  assert.equal(applyEctopy(v,null,'',{ecg_ectopy:'frequent'}).Ectopy,'frequent');
+  assert.equal(applyEctopy(v,{...v,Ectopy:'none'},'',{ecg_ectopy:'frequent'}).Ectopy,'none');
+});
+
+test('live ectopy narration reaches acquisition, clears explicitly, and remains patient-specific',async()=>{
+  let response='';
+  require.cache[require.resolve('../src/engine/api')]={exports:{sendTurn:async()=>response,sendDebrief:async()=>''}};
+  delete require.cache[require.resolve('../src/engine/session')];
+  const {Session}=require('../src/engine/session');
+  const {rollScenario}=require('../src/engine/roller');
+  const session=new Session({...rollScenario({random_seed:'pvc-integration'}),ecg_pattern:'inferior',provider_level:'ALS'},'pvc-session');
+  response='The monitor shows frequent ectopy. [PATIENT_FOCUS: patient_1 | Primary] [VITALS: HR=80 Rhythm=sinus] [TIME: 1:00]';
+  const first=await session.send('Place the cardiac monitor');assert.equal(first.vitals.Ectopy,'frequent');
+  response='Paper filed. [PATIENT_FOCUS: patient_1 | Primary] [VITALS: HR=80 Rhythm=sinus] [TIME: 2:00]';
+  await session.send('Obtain a 12 lead ECG');
+  const paper=session.turns.at(-1).twelveLeads[0];assert.equal(paper.ectopy,'frequent');assert.ok(paper.beats.some(b=>b.pvc));assert.ok(paper.leads.III.st>.2);
+  const saved=ECG.svg(paper);
+  response='The passenger is monitored. [PATIENT_FOCUS: patient_2 | Passenger] [VITALS: HR=80 Rhythm=sinus] [TIME: 3:00]';
+  const other=await session.send('Focus on the passenger and place the monitor');assert.equal(other.vitals.Ectopy,'none');
+  response='The primary patient is reassessed. [PATIENT_FOCUS: patient_1 | Primary] [VITALS: HR=80 Rhythm=sinus Ectopy=none] [TIME: 4:00]';
+  const cleared=await session.send('Reassess the primary patient');assert.equal(cleared.vitals.Ectopy,'none');
+  response='Paper filed. [VITALS: HR=80 Rhythm=sinus Ectopy=none] [TIME: 5:00]';
+  await session.send('Obtain another 12 lead ECG');
+  assert.ok(session.turns.at(-1).twelveLeads[0].beats.every(b=>!b.pvc));
+  assert.equal(ECG.svg(JSON.parse(JSON.stringify(paper))),saved);
+});

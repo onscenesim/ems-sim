@@ -397,6 +397,7 @@ function rollScenario(opts = {}) {
     true_diagnosis: presentation.true_diagnosis || null,
     ecg_pattern: presentation.ecg_pattern || null,
     ecg_rhythm_variant: presentation.ecg_rhythm_variant || null,
+    ecg_ectopy: presentation.ecg_ectopy || null,
     reveal_trigger: presentation.reveal_trigger || null,
     // Arrest entries store the case key as `reversible_cause_hint` — reading
     // only `.hint` shipped every arrest scenario with NO hidden case key.

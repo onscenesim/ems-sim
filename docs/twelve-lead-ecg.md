@@ -12,7 +12,7 @@ Columns represent sequential 2.5-second windows. Grid geometry is 25 mm/s and
 10 mm/mV, with a 1 mV calibration pulse. Fit view scales the entire paper;
 Actual size permits horizontal scrolling.
 
-All 19 monitor rhythm tokens use the shared normalizer. Ventricular rhythms,
+All monitor rhythm tokens use the shared normalizer. Ventricular rhythms,
 pacing and active tachyarrhythmias suppress primary injury overlays; bradycardia
 and AV blocks retain appropriate ST-T changes. Sinus tachycardia still permits
 pathology morphology. Rates drive beat spacing, including irregular AF and
@@ -186,3 +186,38 @@ Additional references:
 - [LITFL lead positioning](https://litfl.com/ecg-lead-positioning/)
 - [LITFL right ventricular infarction](https://litfl.com/right-ventricular-infarction-ecg-library/)
 - [LITFL myocardial ischemia](https://litfl.com/myocardial-ischaemia-ecg-library/)
+
+
+## PVCs and ectopy variants
+
+`Rhythm=pvc` (also PVCs, VPCs, premature ventricular contractions) selects sinus
+with frequent PVCs. To retain a specific underlying rhythm, use
+`Rhythm=sinus_tach Ectopy=frequent`. Ectopy supports `none`, `occasional`,
+`frequent`, `bigeminy`, and `trigeminy`. It works with sinus, sinus tachycardia,
+sinus bradycardia, first-degree AV block, and hyperkalemia rhythms. Other rhythm
+families retain their original timing without a PVC overlay.
+
+Every catalog pathology automatically supports these variants, including normal,
+STEMI territories, ischemia, LVH/LBBB and the other mimics. Normal beats keep
+the original lead morphology. PVCs use a separate broad ventricular complex,
+no preceding sinus P, discordant T, early coupling and a full compensatory pause.
+One shared cadence drives monitor and paper; supplemental placements have their
+own PVC projections. Acquisition artifact applies as usual. The beat schedule
+and ectopy modifier are frozen with the recording and survive restoration.
+These remain simplified, monomorphic synthetic teaching traces.
+
+The model is instructed to emit the modifier whenever it describes ectopy.
+For omitted metadata, the session also recognizes current affirmative ectopy
+observations, excluding history, hypothetical warnings and negated findings.
+Explicit `Ectopy=none` clears it; partial updates retain it for the same patient
+and rhythm. Monitor placement still gates the live strip. Cases can seed
+`ecg_ectopy: 'frequent'` for initial monitoring; post-ROSC ventricular ectopy uses
+this default. Subsequent explicit resolution takes precedence.
+
+The focused preview offers an Ectopy selector alongside the pathology selector.
+Select any case and ectopy mode, then acquire a paper; the live strip updates
+immediately when rhythm, rate or ectopy changes. Catalog-wide tests cover every
+pathology, placement, ectopy mode and acquisition quality, plus session
+acquisition, resolution, patient isolation and restoration.
+
+Morphology reference: [Premature ventricular complex (LITFL)](https://litfl.com/premature-ventricular-complex-pvc-ecg-library/).

@@ -20,6 +20,7 @@
   // waveform names select existing signal families in BOTH monitor and paper.
   // New presets can reuse any family with a rate, aliases and optional pattern.
   const rhythms={
+    pvc:{rate:80,waveform:'sinus',aliases:/^(?:pvcs?|vpcs?|premature_ventricular_(?:complex|contraction|beat)s?|ventricular_ectopy|frequent_ectopy)$/,ectopy:'frequent',prompt:'Sinus rhythm with frequent premature ventricular complexes. Preserve the underlying rhythm with Ectopy=frequent when it is sinus_tach, sinus_brad, AV_block_1 or hyperK.'},
     torsades:{rate:220,waveform:'torsades',aliases:/torsad|(?:^|_)tdp(?:_|$)|polymorphic_(?:v_?t|ventricular_tach)/,priority:true},
     vf:{rate:0,waveform:'vf',aliases:/^v_?fib|ventricular_fib|fine_vf|coarse_vf/,priority:true,noRate:true},
     vt:{rate:185,waveform:'vt',aliases:/^v_?tach|ventricular_tach|monomorphic_(?:v_?t|ventricular_tach)|wide|broad|wct/,priority:true,broad:true},
@@ -129,5 +130,6 @@
     for(const parent of own.extends||[])result=merge(result,resolvePattern(parent,[...ancestors,key]));
     return merge(result,own);
   }
-  return {names,views,procedureViews,rhythms,patterns,qualities,resolvePattern};
+  const ectopy={none:'None',occasional:'Occasional PVCs',frequent:'Frequent PVCs',bigeminy:'Ventricular bigeminy',trigeminy:'Ventricular trigeminy'};
+  return {names,views,procedureViews,rhythms,patterns,qualities,resolvePattern,ectopy};
 });

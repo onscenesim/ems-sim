@@ -3261,6 +3261,7 @@ const rhythmStrip = {
   canvas: document.getElementById('rhythm-strip'),
   ctx: null, dpr: 1, w: 0, h: 0,
   active: false, type: null, rate: 80,
+  ectopy: 'none', ectopyCount: 0,
   clock: 0, x: 0, penY: null, lastTs: null, raf: null,
   beats: [], horizon: 0, beatCount: 0,
   waveSeed: Math.random() * 10000,
@@ -3329,6 +3330,9 @@ function stripSchedule(until) {
         break;
       // svt, junctional: narrow, no P — defaults are already right
     }
+    const ectopic = TwelveLead.ectopyTiming(s.ectopy, s.ectopyCount++);
+    interval *= ectopic.factor;
+    if (ectopic.pvc) beat = {pvc:true, p:false, wide:true};
     beat.t = s.horizon + interval;
     s.beats.push(beat);
     s.horizon += interval;
@@ -3354,6 +3358,7 @@ function stripNoise(t, frequency, seed) {
 
 /* One beat's contribution at time offset dt from its QRS. */
 function stripBeatY(dt, b) {
+  if (b.pvc) return TwelveLead.pvcSignal('II', dt);
   let y = 0;
   if (b.p) y += 0.14 * gaus(dt + b.pr, 0.022);            // P wave
   if (b.dropped) return y;                                 // blocked — P only
@@ -3501,18 +3506,21 @@ function stripIdle() {
   ctx.restore();
 }
 
-function setRhythmStrip(rhythmRaw, hr) {
+function setRhythmStrip(rhythmRaw, hr, ectopyRaw) {
   const s = rhythmStrip;
   if (!s.canvas) return;
   const rhythm = normalizeRhythm(rhythmRaw);
   const definition = TwelveLead.catalog.rhythms[rhythm];
   const type = definition.waveform;
+  const ectopy = TwelveLead.resolveEctopy(ectopyRaw, rhythmRaw);
   const rate = definition.noRate ? 0 : (hr && hr > 0) ? hr : RHYTHM_RATE_DEFAULT[rhythm];
-  if (s.active && type === s.type && Math.abs(rate - s.rate) < 1) return;  // unchanged
+  if (s.active && type === s.type && ectopy === s.ectopy && Math.abs(rate - s.rate) < 1) return;  // unchanged
   const wasActive = s.active;
   const previousType = s.type;
   s.type = type;
   s.rate = rate;
+  s.ectopy = ectopy;
+  s.ectopyCount = 0;
   if (type !== previousType && (type === 'vf' || type === 'torsades')) {
     s.waveSeed = Math.random() * 10000;
   }
@@ -3546,7 +3554,7 @@ function updateRhythmStrip(vitals) {
   if (!val) { stopRhythmStrip(); return; }
   const hrRaw = vitals.HR;
   const hrVal = Number((hrRaw && typeof hrRaw === 'object') ? hrRaw.value : hrRaw);
-  setRhythmStrip(val, Number.isFinite(hrVal) ? hrVal : null);
+  setRhythmStrip(val, Number.isFinite(hrVal) ? hrVal : null, vitals.Ectopy);
 }
 
 window.addEventListener('resize', () => {
