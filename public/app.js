@@ -706,6 +706,7 @@ renderBriefingPreference();
 
 function renderPlayer() {
   renderBriefingPreference();
+  window.EMSTutorial?.renderPreference();
   if (!playerLabel) return;
   if (currentPlayer) {
     const started = currentPlayer.stats?.scenariosStarted || 0;
@@ -1146,7 +1147,7 @@ checkResume();
 
 // ── Start scenario ────────────────────────────────────────────────────────
 
-startBtn.addEventListener('click', startScenario);
+startBtn.addEventListener('click', () => window.EMSTutorial.offer());
 
 async function startScenario(replayOf = null) {
   replayOf = typeof replayOf === 'string' ? replayOf : null;
@@ -1270,6 +1271,7 @@ async function startScenario(replayOf = null) {
 // ── Send turn ────────────────────────────────────────────────────────────
 
 async function sendTurn(msg, opts = {}) {
+  if (window.EMSTutorial?.active) return window.EMSTutorial.send(msg, opts);
   if (!sessionId || sendingTurn || document.getElementById('proc-confirm')) return;
   if (retryTurn) { msg = retryTurn.msg; opts = retryTurn.opts; }
   sendingTurn = true;
@@ -1813,6 +1815,7 @@ function updateSkipBtn() {
 }
 
 skipBtn.addEventListener('click', () => {
+  if (window.EMSTutorial?.active) return window.EMSTutorial.endCall();
   if (isClosed || skipBtn.disabled || !sessionId) return;
   showConfirm({
     title:        'END CALL?',
