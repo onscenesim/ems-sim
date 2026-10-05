@@ -387,11 +387,11 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   lines.push(`  Category: ${seed.category} | Difficulty: ${seed.difficulty}`);
   lines.push(`  Presentation: ${seed.presentation}`);
   if (seed.true_diagnosis) lines.push(`  True diagnosis: ${seed.true_diagnosis}`);
-  // The case key is the authoritative answer sheet for what the patient had and
-  // how it should have been managed. Without it the evaluator was left to infer
+  // The case key explains the pathology for the educational reveal, not a
+  // retrospective checklist for grading field care. Without it the evaluator inferred
   // the diagnosis from the presentation label alone — and for an unfamiliar named
   // syndrome (e.g. FOSPE) it would confabulate a wrong definition. Teach from this.
-  if (seed.hint) lines.push(`  Case key (authoritative — the correct clinical picture and management; teach the "what this patient actually had" section from THIS, never from a guess): ${seed.hint}`);
+  if (seed.hint) lines.push(`  Case key (hidden educational context for "what this patient actually had", not a required diagnosis or treatment checklist; evaluate care against the revealed findings, scope, and available resources): ${seed.hint}`);
   if (seed.arrest_rhythm) lines.push(`  Arrest rhythm: ${seed.arrest_rhythm}`);
   if (seed.special_flags) lines.push(`  Special flags: ${seed.special_flags}`);
   lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
@@ -464,6 +464,7 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   // ── How to judge ──────────────────────────────────────
   lines.push('--- HOW TO JUDGE ---');
   lines.push('Grade the provider ONLY against the records above — their actions and the vitals timeline, with the SCENE narration establishing what they knew and when, and the ground truth establishing what was actually wrong.');
+  lines.push('CARE FIRST: Prioritize threat recognition, ABC support, appropriate treatment, reassessment, and timely appropriate transport over matching the hidden diagnosis. Commend sound diagnostic reasoning, but an uncertain or incorrect label alone does not make competent care deficient. Criticize diagnostic reasoning only when available evidence supports a specific missed assessment, unsafe action, or consequential care delay; explain that care gap. Use the hidden case key for education, never as a hindsight checklist.');
   lines.push('INFORMATION TIMING — NO HINDSIGHT: if a critical finding (a DNR bracelet, a hidden hazard, a second patient) first appears in the SCENE text at time T, the provider could not have acted on it before T. Judge their response from the moment of reveal, not from the start of the call. Faulting them for not asking sooner is allowed ONLY when standard practice demands that question regardless of cues — and say so explicitly.');
   lines.push('Do NOT assume or invent any action, medication, dose, assessment, or vital not listed above; if it is not in the log, it did not happen. Do NOT invent scene details (documents, signage, bystanders, locations) that never appear in the SCENE text.');
   lines.push('NEVER fabricate specific facility or hospital names — use "the receiving facility".');

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Care-first debrief evaluation</title>
+  <link rel="stylesheet" href="/public/style.css">
+  <link rel="stylesheet" href="/public/practice.css">
+</head>
+<body style="max-width:980px;margin:20px auto;background:#273238;padding:16px;color:#fff">
+  <h1>Care-first debrief evaluation</h1>
+  <p>Actual model responses to synthetic calls. Compare diagnostic uncertainty, incorrect and correct impressions, and a consequential care delay.</p>
+  <label>Evaluation case <select id="case"></select></label>
+  <main id="preview"></main>
+  <script src="/public/practice.js"></script>
+  <script>
+    fetch('/reviews.json').then(response => response.json()).then(cases => {
+      const select = document.querySelector('#case');
+      cases.forEach((item, index) => select.add(new Option(item.label, index)));
+      const render = () => document.querySelector('#preview').replaceChildren(PracticeUI.learning(cases[select.value].review));
+      select.addEventListener('change', render);
+      render();
+    }).catch(error => { document.querySelector('#preview').textContent = error.message; });
+  </script>
+</body>
+</html>
