@@ -7,6 +7,7 @@ const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, getProcedure, PRECHARGE_RE } = require('./dice');
 const { evaluateObjectives } = require('./learning');
 const { sendTurn, sendDebrief } = require('./api');
+const { operationError } = require('./operations');
 const { parseDebriefResponse } = require('./prompts/debrief');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 const { applyAccessAnimationRoutes } = require('./medication-route');
@@ -188,6 +189,16 @@ function stripProviderSpeech(text) {
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+// A short, untagged response is usually the model speaking as a director rather
+// than portraying the scene. The OB transcript contained only "She's stable.
+// Call a report to the hospital" — no speaker, vitals, crew, or clock — and the
+// old path committed that text as if it were an ordinary scene turn. Keep this
+// narrow: long narration and partial-tag replies still use existing fallbacks.
+function isUnframedSceneReply(reply) {
+  return reply.trim().length <= 240
+    && !/\[(?:TIME|VITALS|CREW_STATUS|PATIENT_FOCUS|LOADING|EN_ROUTE|BACKUP|BASE_CONTACT):?\b/i.test(reply);
 }
 
 /**
@@ -837,7 +848,21 @@ class Session {
 
     this.messages.push({ role: 'user', content: messageText });
 
-    const rawReply = await sendTurn(this.systemPrompt, this.messages, options);
+    let rawReply = await sendTurn(this.systemPrompt, this.messages, options);
+    if (isUnframedSceneReply(rawReply)) {
+      const mins = Math.floor(this.sceneMinute);
+      const secs = String(Math.round((this.sceneMinute - mins) * 60)).padStart(2, '0');
+      // Repair a malformed draft before it can enter the visible timeline or
+      // model history. The rejected draft and correction are local to this call.
+      rawReply = await sendTurn(this.systemPrompt, [
+        ...this.messages,
+        { role: 'assistant', content: rawReply },
+        { role: 'user', content: `[SYSTEM NOTE: Your last draft was out of scene and omitted the required scene tags. Regenerate your response to the provider's previous message as the patient/scene only. Do not advise the provider what to do next or speak as a trainer. The official scene clock is T+${mins}:${secs}; include [CREW_STATUS:], [VITALS:], and a final [TIME: M:SS]. Do not add any provider action.]` },
+      ], options);
+      if (isUnframedSceneReply(rawReply)) {
+        throw operationError('invalid_scene_reply', 'The scene reply was malformed. Please retry your message.', 502);
+      }
+    }
 
     options.signal?.throwIfAborted();
 

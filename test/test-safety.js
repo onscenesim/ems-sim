@@ -281,6 +281,37 @@ test('failed/timeout turns preserve messages, seed events, access, arrival, and 
   assert.deepEqual({...session},before);
 });
 
+test('short out-of-scene model reply is repaired before it reaches the player or history', async () => {
+  const session = sessionFixture();
+  session.sceneMinute = 13;
+  session.moving = true;
+  let calls = 0, correction;
+  generate = async messages => {
+    calls++;
+    if (calls === 1) return { text: "She's stable. Call a report to the hospital" };
+    correction = messages.at(-1).content;
+    return { text: 'Alice nods and rests beneath the blankets. Patient: "Thank you."\n[CREW_STATUS: partner=driving captain=not_on_scene]\n[VITALS: HR=100 BP=108/70 RR=18]\n[TIME: 13:30]' };
+  };
+  const result = await session.send('I know. No one deserves to go through this.');
+  assert.equal(calls, 2);
+  assert.match(correction, /last draft was out of scene/);
+  assert.match(result.reply, /Alice nods/);
+  assert.doesNotMatch(JSON.stringify(session.messages), /Call a report to the hospital/);
+  assert.equal(session.turns.length, 1);
+  assert.equal(session.sceneMinute, 13.5);
+  assert.equal(session.lastReplyHadTime, true);
+});
+
+test('repeated out-of-scene model replies fail without committing a turn', async () => {
+  const session = sessionFixture();
+  const before = structuredClone(session);
+  let calls = 0;
+  generate = async () => { calls++; return { text: "She's stable. Call a report to the hospital" }; };
+  await assert.rejects(session.send('I know. No one deserves to go through this.'), { code: 'invalid_scene_reply' });
+  assert.equal(calls, 2);
+  assert.deepEqual({ ...session }, before);
+});
+
 test('real turn route confirms procedures without state changes and requires operation IDs', async () => {
   const session=sessionFixture();
   assert.equal((await route('/:id/turn',{message:'epi'},{id:session.sessionId})).status,400);

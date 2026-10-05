@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Scene reply repair preview</title>
+  <link rel="stylesheet" href="/public/style.css">
+  <style>
+    body { max-width: 940px; margin: 24px auto; padding: 16px; background: #252d32; color: #eee; }
+    #output { min-height: 300px; height: auto; margin: 12px 0; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+    button { padding: 8px 14px; cursor: pointer; }
+    #status { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Scene reply repair preview</h1>
+  <p>A scripted model first returns the unframed line from the OB transcript. Send the player message to exercise the real Session repair path.</p>
+  <div id="output" aria-live="polite">
+    <div class="line narrative">Patient: "Thank you for being so gentle... it just hurts so much."</div>
+    <div class="line user">&gt; I know. No one deserves to go through this.</div>
+  </div>
+  <div class="controls">
+    <button id="repair">Send reassurance</button>
+    <button id="repeat">Try two malformed drafts</button>
+  </div>
+  <p id="status">Awaiting a turn.</p>
+  <script>
+    const output = document.querySelector('#output');
+    const status = document.querySelector('#status');
+    async function simulate(mode) {
+      status.textContent = 'Generating scene response…';
+      const response = await fetch(`/simulate/${mode}`, { method: 'POST' });
+      const data = await response.json();
+      output.querySelectorAll('.repaired').forEach(element => element.remove());
+      if (data.reply) {
+        data.reply.split('\n').forEach(line => {
+          const row = document.createElement('div');
+          row.className = `line repaired ${/^Patient:\s*"/.test(line) ? 'dialogue' : 'narrative'}`;
+          row.textContent = line;
+          output.append(row);
+        });
+        status.textContent = `One turn committed at T+${data.minute}; ${data.calls} model drafts. The discarded draft is absent from the scene.`;
+      } else {
+        status.textContent = `${data.error} ${data.calls} model drafts; ${data.turns} turns committed. The clock remains T+${data.minute}.`;
+      }
+    }
+    document.querySelector('#repair').addEventListener('click', () => simulate('repair'));
+    document.querySelector('#repeat').addEventListener('click', () => simulate('repeat'));
+  </script>
+</body>
+</html>
