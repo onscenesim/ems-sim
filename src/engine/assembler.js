@@ -331,6 +331,14 @@ function assembleSeedBlock(seed) {
     );
     ruleNum++;
   }
+  // Current suspected-ischemic-stroke priorities. Keep this separate from
+  // hemorrhage/ICP cases, whose positioning and airway goals may differ.
+  if (/ischemic stroke|transient ischemic attack|\bTIA\b/i.test(seed.presentation || '')) {
+    lines.push(
+      ruleNum + '. SUSPECTED ACUTE ISCHEMIC STROKE — PRIORITY SEQUENCE: Treat this as a time-critical stroke alert. The provider must be prompted to obtain LAST KNOWN WELL (the last time the patient was definitely at baseline) from the patient, family, caregivers, facility staff, or witnesses and document the exact date/time; this is more important than a nonessential history or procedure. Activate the stroke alert and pre-notify the receiving facility as early as possible. Keep the head of the stretcher flat for suspected acute ischemic stroke unless airway protection, vomiting/aspiration risk, respiratory distress, or a stated local protocol requires another position. Obtain only essential ABCs, glucose, focused stroke findings, and access/interventions that do not delay movement. Minimize on-scene time: load and transport promptly, with the partner explicitly calling out unnecessary delay or repeated nonessential attempts. If airway or aspiration risk conflicts with a flat position, protect the airway first and narrate why the position changes.'
+    );
+    ruleNum++;
+  }
     // California base-hospital contact rule
   if (seed.region === 'CALIFORNIA_Urban') {
     lines.push(
