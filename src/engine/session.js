@@ -886,7 +886,7 @@ class Session {
       reconcileRolls(rolls, focusClean).some(r => r.procedure_id === 'capillary_refill'),
       parseTimeTag(rawReply).timeMinutes ?? this.sceneMinute, vitalsClean);
     const vitals = applyPulseOx(assessedVitals, this.patientVitals[patientId] || null,
-      patientId === 'patient_1' ? this.seed : { complication_type: this.seed.complication_type });
+      patientId === 'patient_1' ? this.seed : { complication_type: this.seed.complication_type }, vitalsClean);
     if (vitals) this.lastVitals = vitals;
     if (vitals) this.patientVitals[patientId] = vitals;
     const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);

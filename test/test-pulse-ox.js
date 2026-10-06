@@ -8,6 +8,42 @@ const PlethWaveform = require('../public/pleth');
 const normal = { HR: 80, SpO2: 98, BP: { value: '120/80', t: 'T+1:00' }, Rhythm: 'sinus' };
 const equipment = { complication_type: 'equipment_failure' };
 
+test('explicit central pulse findings reconcile missing perfusion without changing ordinary retention', () => {
+  const before = applyPulseOx({ ...normal, SpO2: 91, Perfusion: 'poor' });
+  for (const narrative of [
+    'Palpation at the carotid and femoral sites reveals no palpable pulse, despite the organized rhythm continuing on the monitor screen.',
+    'No central pulses are palpable during a five-second compressor pause.',
+    'Femoral pulse checks confirm pulselessness.',
+    'The monitor remains organized, but no spontaneous pulse is present at the femoral or carotid sites.',
+  ]) {
+    const arrest = applyPulseOx({ HR: 138, Rhythm: 'sinus_tach', ETCO2: 12 }, before, {}, narrative);
+    assert.equal(arrest.SpO2, undefined, narrative);
+    assert.equal(arrest.PulseOx.quality, 'absent');
+    assert.equal(arrest.PulseOx.trueSpO2, 91);
+    assert.equal(arrest.HR, 138); assert.equal(arrest.Rhythm, 'sinus_tach');
+    const continued = applyPulseOx({ HR: 42, Rhythm: 'idioventricular', BP: normal.BP }, JSON.parse(JSON.stringify(arrest)), {});
+    assert.equal(continued.SpO2, undefined); assert.equal(continued.BP, undefined, 'stale BP cannot revive perfusion');
+    assert.equal(applyPulseOx({ HR: 42, Rhythm: 'idioventricular' }, continued, {}, 'Carotid pulses are palpable with LUCAS compressions.').SpO2, undefined, 'compression-generated pulses are not ROSC');
+    const rosc = applyPulseOx({ HR: 80, Rhythm: 'sinus', TrueSpO2: 96, Perfusion: 'normal' }, continued, {});
+    assert.equal(rosc.SpO2, 96); assert.equal(rosc.PulseOx.quality, 'good');
+    const narratedRosc = applyPulseOx({ HR: 80, Rhythm: 'sinus', TrueSpO2: 95 }, continued, {}, 'The carotid pulse returns.');
+    assert.equal(narratedRosc.SpO2, 95); assert.equal(narratedRosc.PulseOx.perfusion, 'poor');
+  }
+  for (const narrative of [
+    '', 'His radial pulses are now barely perceptible.', 'No radial pulse is palpable.',
+    'Start CPR and get the LUCAS.', 'If no carotid pulse is palpable, begin CPR.',
+    'Earlier, no central pulses were palpable.', 'There is no loss of carotid pulse.',
+    'Are no central pulses palpable?', 'Check whether no femoral pulses are palpable.',
+    'Partner: "No carotid pulse is palpable."', 'No central pulse deficit is present.',
+  ]) {
+    const retained = applyPulseOx({ HR: 42, Rhythm: 'idioventricular', ETCO2: 13 }, before, {}, narrative);
+    assert.equal(retained.SpO2, 91, narrative);
+  }
+  assert.equal(applyPulseOx({ ...normal, Perfusion: 'normal' }, before, {}, 'No central pulses are palpable.').SpO2, 98, 'explicit structured perfusion remains authoritative');
+  assert.equal(applyPulseOx(normal, null, {}, 'The carotid pulse is palpable.').PulseOx.quality, 'good', 'normal pulse narration does not weaken a good signal');
+  assert.equal(applyPulseOx(null, before, {}, 'No central pulses are palpable.'), null, 'no vitals snapshot preserves existing semantics');
+});
+
 test('PI varies within the waveform bands, with intermittent missing garbage PI', () => {
   const readings = quality => Array.from({ length: 240 }, (_, t) => PlethWaveform.perfusionIndex({ quality, pulseRate: 104 }, t * 1.5));
   assert.ok(readings('good').every(pi => pi > 1));
@@ -193,6 +229,25 @@ require.cache[require.resolve('../src/engine/api')] = { exports: { sendTurn: asy
 require.cache[require.resolve('../src/server/adminLogger')] = { exports: { logRun() {}, updateRunDebrief() {} } };
 const { Session } = require('../src/engine/session');
 const { buildDebriefContext } = require('../src/engine/assembler');
+test('Session clears the stale saturation on the reported organized-rhythm arrest turn', async () => {
+  const session = new Session({ scenario_id: 'organized-arrest-regression', difficulty: 'NORMAL',
+    provider_level: 'ALS', region: 'SUBURBAN', category: 'medical', patient_age: 45,
+    age_group: 'middle_aged', sex: 'male', patient_name: 'Test Patient', presentation: 'Weakness',
+    trajectory: 'stable', decompensation_clock: null, complication_type: 'none', events: [] });
+  reply = 'Weak pulses. [VITALS: HR=142 TrueSpO2=91 PulseOxProbe=connected Perfusion=poor PulseRate=142 PulseOxArtifact=none ETCO2=18 RR=10 Rhythm=sinus_tach BP=68/40@T+4:15 GCS=8] [TIME: 4:15]';
+  assert.equal((await session.send('Observe', true)).vitals.SpO2, 91);
+  reply = 'Palpation at the carotid and femoral sites reveals no palpable pulse, despite the organized rhythm continuing on the monitor screen. The pulse oximetry plethysmograph goes flat and the SpO2 reading disappears. [VITALS: HR=138 ETCO2=12 RR=4 Rhythm=sinus_tach GCS=3] [TIME: 5:30]';
+  const arrest = (await session.send('Observe', true)).vitals;
+  assert.equal(arrest.SpO2, undefined); assert.equal(arrest.PulseOx.quality, 'absent');
+  assert.equal(arrest.HR, 138); assert.equal(arrest.Rhythm, 'sinus_tach');
+  reply = 'Transport continues. [VITALS: HR=42 ETCO2=13 RR=10 Rhythm=idioventricular GCS=3] [TIME: 14:30]';
+  assert.equal((await session.send('Observe', true)).vitals.SpO2, undefined);
+  reply = 'Circulation returns. [VITALS: HR=90 TrueSpO2=96 Perfusion=poor PulseRate=90 Rhythm=sinus BP=92/60@T+16:00] [TIME: 16:00]';
+  const rosc = (await session.send('Observe', true)).vitals;
+  assert.equal(rosc.SpO2, 96); assert.equal(rosc.PulseOx.quality, 'poor');
+  assert.equal(rosc.BP.value, '92/60');
+});
+
 test('Session parses signal tags, clears none, retains hidden truth and records both readings for debrief', async () => {
   const seed = {
     scenario_id: 'pulse-ox-test', difficulty: 'NORMAL', provider_level: 'ALS',

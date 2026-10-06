@@ -18,6 +18,28 @@ function isPulseless(vitals) {
     || /^(?:vf|v_?fib\w*|ventricular_fib\w*|fine_vf|coarse_vf|asystole|flatline|pea|pulseless\w*)$/.test(rhythm);
 }
 
+// A model can describe a completed central pulse check but omit Perfusion.
+// Only reconcile explicit current findings, never treatment requests, weak
+// peripheral pulses, dialogue, hypothetical checks, or the ECG rate alone.
+function narratedPerfusion(narrative) {
+  const text = String(narrative || '').replace(/\[[^\]]*\]/g, '')
+    .replace(/"[^"\n]*"|“[^”\n]*”/g, '');
+  let perfusion = null;
+  for (const sentence of text.match(/[^.!?\n]+[.!?]?/g) || []) {
+    if (sentence.endsWith('?') || /^\s*(?:check|assess|confirm|palpate|look|ensure)\b/i.test(sentence)) continue;
+    if (/\b(?:if|would|could|should|may|might|previously|earlier|initially|history|was|were|had)\b/i.test(sentence)) continue;
+    const central = /\b(?:carotid|femoral|central)\b/i.test(sentence);
+    if (!central) continue;
+    if (/\bno (?:(?:spontaneous|palpable|detectable|central|carotid|femoral|or|and)\s+){0,5}(?:pulses?|pulsations)\b(?!\s+(?:deficits?|checks?|loss|changes?|abnormalities)\b)/i.test(sentence)
+      || /\b(?:pulses?|pulsations)\s+(?:is|are|remains?|remain)\s+(?:absent|not palpable)\b/i.test(sentence)
+      || /\bpulse checks?\s+confirms?\s+(?:pulselessness|an absence of spontaneous circulation)\b/i.test(sentence)) perfusion = 'absent';
+    // An explicit return of central pulses can clear this fallback after ROSC.
+    else if (/\b(?:pulses?|pulsations)\s+(?:returns?|return|is palpable|are palpable)\b/i.test(sentence)
+      && !/\b(?:no|not|without|compressions?|compressor|lucas)\b/i.test(sentence)) perfusion = 'poor';
+  }
+  return perfusion;
+}
+
 function derivePulseOx(vitals, previous = null, seed = {}) {
   const measured = saturation(vitals.TrueSpO2) ?? saturation(vitals.SpO2);
   const trueSpO2 = measured ?? previous?.trueSpO2 ?? null;
@@ -31,7 +53,8 @@ function derivePulseOx(vitals, previous = null, seed = {}) {
   const lowSbp = Number.isFinite(age) && age < 10 ? (age < 1 ? 70 : 70 + 2 * age) : 90;
   const perfusion = isPulseless(vitals) ? 'absent'
     : choice(vitals.Perfusion, ['normal', 'poor'])
-      || (bp ? (Number(bp[1]) < lowSbp ? 'poor' : 'normal') : previous?.perfusion || 'normal');
+      || (previous?.perfusion === 'absent' ? 'absent'
+        : bp ? (Number(bp[1]) < lowSbp ? 'poor' : 'normal') : previous?.perfusion || 'normal');
 
   // Only the equipment and clinical complication roles may introduce a false
   // sensor reading. A lying bystander cannot change the monitor electronically.
@@ -65,14 +88,16 @@ function derivePulseOx(vitals, previous = null, seed = {}) {
   };
 }
 
-function applyPulseOx(vitals, previous, seed) {
+function applyPulseOx(vitals, previous, seed, narrative = '') {
   if (!vitals) return vitals;
-  const pulseOx = derivePulseOx(vitals, previous?.PulseOx, seed);
+  const finding = choice(vitals.Perfusion, ['normal', 'poor', 'absent']) ? null : narratedPerfusion(narrative);
+  const inferred = finding === 'absent' || previous?.PulseOx?.perfusion === 'absent' ? finding : null;
+  const pulseOx = derivePulseOx(inferred ? { ...vitals, Perfusion: inferred } : vitals, previous?.PulseOx, seed);
   const result = { ...vitals, PulseOx: pulseOx };
   for (const field of ['TrueSpO2', 'Perfusion', 'PulseOxProbe', 'PulseOxArtifact', 'PulseRate']) delete result[field];
   if (pulseOx.displayedSpO2 === null) delete result.SpO2;
   else result.SpO2 = pulseOx.displayedSpO2;
-  if (isPulseless(vitals)) delete result.BP;
+  if (pulseOx.perfusion === 'absent') delete result.BP;
   return result;
 }
 
