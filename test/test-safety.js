@@ -10,6 +10,27 @@ const { requestModel } = require('../src/engine/modelRequest');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
 
+test('12-lead acquisition orders accept punctuation and transcript retry spelling', () => {
+  for (const phrase of [
+    "Do a 12-Lead, and I can cover Billy's eye with an approprote cover",
+    'obtain a 12-lead', 'Repeat 12-;ead', '12-lead', 'Run a twelve-lead',
+    'Obtain a 12‑lead', 'Get a 12–lead', 'Repeat 12lead', '12 lead ECG',
+    'Read the ECG and obtain a repeat 12-lead',
+  ]) {
+    const {rolls,suppressed} = detectWithConfirmation(phrase);
+    assert.deepEqual(rolls.map(r=>r.procedure_id), ['twelve_lead'], phrase);
+    assert.equal(rolls[0].no_roll, false, phrase);
+    assert.equal(rolls[0].dc, 6, phrase);
+    assert.deepEqual(suppressed, [], phrase);
+  }
+  for (const phrase of [
+    'What do i see on the 12-lead?', 'Read the 12-lead', 'Interpret the EKG',
+    'Show me the 12-lead', 'Review the posterior ECG', 'The 12-lead shows sinus rhythm',
+    'We already obtained a 12-lead', 'We obtained a 12-lead',
+    'Do not obtain a 12-lead', 'Consider a 12-lead', 'Obtain a 12-lead if needed',
+  ]) assert.deepEqual(detectWithConfirmation(phrase).rolls, [], phrase);
+});
+
 test('every exact procedure ID and alias retains its registered intervention', () => {
   let count = 0;
   for (const proc of INTERVENTIONS) for (const alias of [proc.id, ...proc.synonyms]) {

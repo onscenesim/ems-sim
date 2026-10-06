@@ -87,6 +87,28 @@ test('real session acquisition captures final rhythm once and retains earlier pa
   await session.send('Ask about allergies');assert.equal(session.turns.at(-1).twelveLeads.length,0);
   const restored=new Session(seed);restored.turns=JSON.parse(JSON.stringify(session.turns));
   const filed=restored.turns.flatMap(t=>t.twelveLeads||[]);assert.equal(filed.length,2);assert.equal(ECG.svg(filed[0]),original);
+
+  // Reproduce the debug transcript: the model claimed to file paper, but bare
+  // hyphenated orders had no engine roll and therefore no recording or animation.
+  const replay=new Session({...seed,presentation:'Acute angle-closure glaucoma'},'ecg-order-replay');
+  replay.moving=true;
+  response='The 12-lead electrodes are attached and the acquisition is completed. 12-lead printout filed in More Vitals. [VITALS: HR=80 Rhythm=sinus] [TIME: 14:30]';
+  const result=await replay.send("Do a 12-Lead, and I can cover Billy's eye with an approprote cover");
+  assert.deepEqual(result.rolls.map(r=>r.procedure_id),['twelve_lead']);
+  assert.match(replay.messages.at(-2).content,/SYSTEM ROLL: twelve_lead/);
+  assert.equal(replay.turns.at(-1).twelveLeads.length,1);
+  const paper=ECG.svg(replay.turns.at(-1).twelveLeads[0]);
+  response='The 12-lead printout is available for inspection under More Vitals. [TIME: 15:00]';
+  assert.deepEqual((await replay.send('What do i see on the 12-lead?')).rolls,[]);
+  assert.equal(replay.turns.at(-1).twelveLeads.length,0);
+  for(const order of ['obtain a 12-lead','Repeat 12-;ead']) {
+    response='A fresh 12-lead acquisition is run. 12-lead printout filed in More Vitals. [VITALS: HR=78 Rhythm=sinus] [TIME: 16:00]';
+    assert.deepEqual((await replay.send(order)).rolls.map(r=>r.procedure_id),['twelve_lead']);
+    assert.equal(replay.turns.at(-1).twelveLeads.length,1);
+  }
+  const recordings=replay.turns.flatMap(t=>t.twelveLeads);
+  assert.equal(new Set(recordings.map(r=>r.id)).size,3);
+  assert.equal(ECG.svg(recordings[0]),paper);
 });
 
 test('cardiac comorbidities generate stable non-infarct LVH and LBBB mimics',()=>{

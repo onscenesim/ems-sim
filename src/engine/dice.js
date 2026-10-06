@@ -67,7 +67,10 @@ for (const proc of INTERVENTIONS) {
     // every position, even when the original synonym contains one. This makes
     // "place an IV" match "place IV" / "place an IV" / "place the IV" equally.
     const stripped = key.replace(/\s+(an?|the|another|second|additional)\s+/g, ' ').replace(/\s+/g, ' ').trim();
-    const escaped = stripped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Lead counts are routinely typed with a hyphen (including phone-keyboard
+    // Unicode hyphens) or no separator. Keep aliases and confirmation keys stable.
+    const escaped = stripped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\b(12|twelve)[ -]lead\b/g, '$1[\\s\\u002d\\u2010-\\u2014]*lead');
     // Each whitespace gap can optionally swallow an article
     const flexible = escaped.replace(/\\? /g, '\\s+(?:an?\\s+|the\\s+|another\\s+|second\\s+|additional\\s+)?');
     // Word-boundary via lookbehind/lookahead — handles hyphens and acronyms
@@ -152,7 +155,10 @@ function fuzzyThreshold(len) {
  * word doesn't already match exactly.
  */
 function normalizeForDetection(text) {
-  return text.replace(/\b[a-zA-Z]{5,}\b/g, token => {
+  // Narrow keyboard-neighbor typo from a reported retry; do not fuzzy-correct
+  // arbitrary short words or reinterpret unrelated semicolon-separated orders.
+  return text.replace(/\b(12|twelve)([\s\-\u2010-\u2014]*);ead\b/gi, '$1$2lead')
+    .replace(/\b[a-zA-Z]{5,}\b/g, token => {
     const lower = token.toLowerCase();
     // Preserve all words in exact phrases, including packing, section, and delivery.
     if (SYNONYM_WORDS.has(lower)) return token;
@@ -624,6 +630,15 @@ function detectAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
  * Returns an array (may be empty).
  */
 function isTreatmentAssessment(text, start, length, proc, key) {
+  if (['twelve_lead', 'posterior_ecg', 'right_sided_ecg', 'v4r_ecg'].includes(proc.id)) {
+    const [s,e] = sentenceBounds(text,start);
+    const before = text.slice(s,start).split(/,|\b(?:and|then|but|also)\b/i).at(-1);
+    const after = text.slice(start+length,e);
+    // Inspecting an existing tracing must not acquire another one. Check the
+    // local clause so "read the ECG and obtain a repeat 12-lead" still rolls.
+    return /\b(?:read|interpret|inspect|review|look at|what|show me|tell me|already|obtained|acquired|performed)\b/i.test(before)
+      || /^\s*(?:shows?|showing|reveals?|was|is|looks?|results?|interpretation)\b/i.test(after);
+  }
   const oxygen = proc.id === 'oxygen';
   const ambiguousFluid = proc.id === 'medication_push' && /^(?:plasma|plazma|platelets?|platlets|plt|plts|albumin|albumen|fibrinogen|pcc|ns|lr|crystalloid|saline|blood|units? of blood|blood products?|blood components?)$/i.test(key);
   if (!oxygen && !ambiguousFluid) return false;
