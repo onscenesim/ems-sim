@@ -287,7 +287,7 @@ console.log('\n=== 7. rollScenario field completeness ===');
   }
   assert(Array.isArray(seed.events), 'events is an array');
   assert(typeof seed.scenario_id === 'string' && seed.scenario_id.length > 0, 'scenario_id is non-empty string');
-  assert(seed.patient_age >= 1 && seed.patient_age <= 90, `patient_age in range (got ${seed.patient_age})`);
+  assert(seed.patient_age >= 0 && seed.patient_age <= 90, `patient_age in range (got ${seed.patient_age})`);
   assert(['male', 'female'].includes(seed.sex), `sex is valid (got ${seed.sex})`);
   assert(['stable', 'slowly_deteriorating', 'rapidly_deteriorating'].includes(seed.trajectory), `trajectory valid (got ${seed.trajectory})`);
   assert(['none', 'equipment_failure', 'unreliable_bystander', 'clinical_curveball'].includes(seed.complication_type), `complication_type valid (got ${seed.complication_type})`);

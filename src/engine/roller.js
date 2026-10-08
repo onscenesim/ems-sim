@@ -406,6 +406,7 @@ function rollScenario(opts = {}) {
     // Arrest entries also seed the arrest rhythm — drive the monitor with it
     // instead of letting the model invent one.
     arrest_rhythm: presentation.rhythm || null,
+    amiodarone_contraindicated: presentation.amiodarone_contraindicated === true,
     special_flags: presentation.special_flags || null,
     patient_name: patientName,
     patient_age: age,

@@ -1,0 +1,37 @@
+{
+  "backupDate": "2026-10-08",
+  "gitCommit": "e4a8eca8b0fcbf5f785708267ffab5b230a99a97",
+  "sourceHashes": {
+    "src/engine/api.js": "0874906ad35684f8ab10e923b4c3d55024c8173971ea322c35f182c61199c581",
+    "src/engine/assembler.js": "d391a7846d475d08386e554bcd2b94521f7940c6d9e917e9e6cad4beb751ef3b",
+    "src/engine/session.js": "c73a52d1cafe01533578bdd2a58c0bc57ac0b28ffbf8c1954e5a2c6f842fe3f9",
+    "src/engine/prompts/debrief.js": "da3a72073cd167fad4ba1677851a4bbc581ca062838cc48f732f33379ff2ac93",
+    "public/ecg-catalog.js": "51c8c9c646603b0475a4829020c0620b46f1df2aaaeef45980c2e6e67c2d95b4",
+    "src/data/ageGroups.js": "145b9dfb22bb1914681317d846312769262c47a21840832f8cfa78b68aa0ad10",
+    "src/data/comorbidities.js": "021a9762d435f109260285982d9b9feff7fd37bdfb03b369631373abb500aab3",
+    "src/data/config.js": "4900a51f5305f4589d733a1e55a27288f768a9e7c9651e7b8ffcb15b781d1fec",
+    "src/data/crew.js": "ff08bf590a34faf4002cfbfc42c7ad26ec9b750f046edc947b78fb9bd8890d0c",
+    "src/data/interventions.js": "36ecee75338bfd83b38fc55ca099c4ae1c40616268a34908923cbba0ea7b9c6e",
+    "src/data/modifiers.js": "5c27e553303c0038d9d1fa7cffac19d0a9b1afa88a8c0eb9fbd44eec698bbb99",
+    "src/data/patientNames.js": "bffb74af97529bb6c4a36e542f2e60710c6f0b85e083cf36a788241a052466f2",
+    "src/data/regions.js": "54a602cd4c61c043021870057369e018df2d329c5116216156829e34f5728eab",
+    "src/data/scenarios/arrest.js": "9aaa43d80ed890ac688ecd6cab353d4bb205e91357efb5d3e3258e477b65d467",
+    "src/data/scenarios/behavioral.js": "a5cb85e0aad1c31cf12d643503a1a8a20779a2d5e74f0b6ab8ac8fda52dbcabe",
+    "src/data/scenarios/cardiac.js": "03a4185cac347a89c915e143758a2bd8eaf1f33e61e7f79917100cde8bab13c1",
+    "src/data/scenarios/curveballs.js": "f69b912fca81de2e445ab6d0f1d4af18437146e9ffe3812c9c893a4b9f44e562",
+    "src/data/scenarios/doa.js": "7c885840b4c08ea41d44568a73600b3074f868c9e8a212021ea50228ce78705d",
+    "src/data/scenarios/index.js": "b04988c0a9ce8bd57d963ca3d1d7355cadafd90110f4af64897931a49d839f8e",
+    "src/data/scenarios/medical.js": "034a010849a81612d6f94e9617e95f4cf22ff2997162a335dd4f093cbb37ba80",
+    "src/data/scenarios/neuro.js": "e69e5b57b38c9daa0d0e6f1decf2e02ed9d3801666fd054215e5c6fc26abf61d",
+    "src/data/scenarios/ob.js": "3c0fd1e2e08227f3ad28f453e07f48c6895615aa288ee30ec9578ed241910b80",
+    "src/data/scenarios/pediatric.js": "2bfe0bc4d3f4e644b1ecec7ddbaf1300c2b2c5f8cf20a7b4f9f03ba1af6a4191",
+    "src/data/scenarios/pulmonary.js": "e14fee5f16458661da1dc7630ea1e73d95e3d5559c4e12c616b8e63d6da4387f",
+    "src/data/scenarios/toxicology.js": "69d51d53b3b6cbfc5cd4cb5dad331428aa42b8888ab8cc0bd6eae69c8104b3d6",
+    "src/data/scenarios/trauma.js": "0ea6cb2873772b2831896dfe7e8ed5a4b5987181b67f1bcf451f98fb33993847"
+  },
+  "scope": {
+    "gameplay": "api.js EMS_SYSTEM_RULES + assembler.js assembleSeedBlock + session.js runtime notes + crew/data dependencies",
+    "debrief": "prompts/debrief.js buildDebriefPrompt + assembler.js buildDebriefContext; evaluated separately from gameplay"
+  },
+  "examples": "Synthetic deterministic examples; not real player runs."
+}

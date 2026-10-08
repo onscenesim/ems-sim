@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Debrief evidence verification</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #17252b; color: #edf4f5; font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 1100px; margin: auto; padding: 24px; }
+    h1 { font-size: 26px; margin: 0; } h2 { font-size: 18px; }
+    p { color: #bdced3; }
+    section { background: #21363e; border: 1px solid #38535c; border-radius: 10px; padding: 16px; margin: 16px 0; }
+    button, select { font: inherit; padding: 8px 12px; border-radius: 6px; border: 1px solid #67848e; background: #304b55; color: #fff; margin: 4px 0; }
+    button:disabled { opacity: .45; } button { cursor: pointer; }
+    #monitor { color: #aff6c4; font: bold 17px/1.6 ui-monospace, monospace; }
+    #scene { max-height: 260px; overflow: auto; white-space: pre-wrap; }
+    #paper svg { width: 100%; height: auto; }
+    pre { overflow: auto; max-height: 480px; background: #102027; padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+    .ok { color: #a5e6b5; } .pending { color: #d5c699; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Debrief evidence verification</h1>
+    <p>Offline fixture: the real debrief context builder and ECG renderer. This checks the evidence supplied for grading; it does not generate a model review.</p>
+    <label for="turn">Review through turn </label><select id="turn"></select>
+    <button id="next">Next turn</button>
+    <section><h2 id="time"></h2><div id="order"></div><h2>Player-visible monitor</h2><div id="monitor"></div><h2>Scene narration</h2><div id="scene"></div></section>
+    <section><h2>Stored ECG printout</h2><label><input type="checkbox" id="auto" checked> Show optional unconfirmed annotation</label><div id="paper"></div></section>
+    <section><h2>Evaluator evidence checks</h2><ul id="checks"></ul><details><summary>Exact debrief input through this turn</summary><pre id="context"></pre></details></section>
+  </main>
+  <script src="/public/ecg-catalog.js"></script><script src="/public/twelve-lead.js"></script>
+  <script>
+    fetch('/evidence.json').then(response => response.json()).then(fixture => {
+      const el = id => document.getElementById(id);
+      const labels = ['Monitor attached', 'ECG acquired; DNR disclosed', 'Transport begins', 'Skip to hospital arrival'];
+      fixture.turns.forEach((turn, index) => el('turn').add(new Option(`${index + 1} · ${labels[index]}`, index)));
+      function render() {
+        const index = Number(el('turn').value), turn = fixture.turns[index], context = fixture.contexts[index];
+        el('time').textContent = `Turn ${index + 1} · T+${turn.sceneMinute} min`;
+        el('order').textContent = `Provider: ${turn.user}`;
+        el('scene').textContent = turn.assistant;
+        el('scene').scrollTop = 0;
+        const visible = fixture.turns.slice(0, index + 1).filter(item => item.vitals).at(-1)?.vitals;
+        el('monitor').textContent = visible ? `HR ${visible.HR} | BP ${visible.BP.value} (T+${visible.BP.tMin} min) | SpO₂ ${visible.SpO2}% | RR ${visible.RR} | ${visible.Rhythm}` : 'No readings acquired';
+        const paper = fixture.turns.slice(0, index + 1).flatMap(item => item.twelveLeads || []).at(-1);
+        el('paper').innerHTML = paper ? TwelveLead.svg(paper, {autoInterpret: el('auto').checked, idPrefix: 'evidence-paper'}) : 'No ECG acquired yet.';
+        el('context').textContent = context;
+        el('checks').replaceChildren();
+        const checks = [
+          [context.includes('DISPLAYED VITALS: HR 48'), 'Monitor findings supplied with their timestamp'],
+          [context.includes(fixture.disclosure), index >= 1 ? 'Full middle-of-scene DNR disclosure retained' : 'DNR not disclosed yet'],
+          [context.includes('ECG PRINTOUT: T+2min'), index >= 1 ? 'Original ECG waveform supplied at its capture time' : 'ECG not acquired yet'],
+          [context.includes('PROVIDER: (time-skip'), index >= 3 ? 'Skip records ongoing care continued; no new interventions ordered' : 'Transport skip not performed yet'],
+        ];
+        checks.forEach(([available, text]) => {
+          const li = document.createElement('li'); li.className = available ? 'ok' : 'pending';
+          li.textContent = `${available ? '✓' : '—'} ${text}`; el('checks').append(li);
+        });
+        el('next').disabled = index === fixture.turns.length - 1;
+      }
+      el('turn').addEventListener('change', render); el('auto').addEventListener('change', render);
+      el('next').addEventListener('click', () => { el('turn').value = Number(el('turn').value) + 1; render(); });
+      render();
+    });
+  </script>
+</body>
+</html>

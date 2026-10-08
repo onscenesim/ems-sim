@@ -1,7 +1,6 @@
 'use strict';
 
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
-const { DESTINATION_DIALOGUE_POLICY } = require('./prompts/transport');
 const { reviewText } = require('./instructor');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
@@ -721,8 +720,8 @@ class Session {
       if (skipMode === 'to_ambulance') {
         messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — LOAD THE PATIENT. The provider skips ahead to load the '
           + 'patient into the ambulance now. In 1-2 sentences, narrate the crew packaging and loading the patient. '
-          + noTreat + ' Emit [LOADING]. The unit is loaded but NOT yet moving. '
-          + DESTINATION_DIALOGUE_POLICY + ' Do not begin driving and do not arrive anywhere. The unit is parked, '
+          + noTreat + ' Emit [LOADING]. The unit is loaded but NOT yet moving — if no destination has been chosen, '
+          + 'the partner asks once which hospital. Do not begin driving and do not arrive anywhere. The unit is parked, '
           + 'so keep [CREW_STATUS: partner=on_scene captain=' + captainStatus + '] — nobody is driving yet.]';
       } else if (skipMode === 'to_hospital') {
         messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — TRANSPORT TO HOSPITAL. The provider skips ahead: transport the '
@@ -746,9 +745,7 @@ class Session {
     // Fast-path for NIBP cycle — keep Claude's reply brief to avoid jarring wall-of-text
     const isNibpCycle = userText.trim() === 'Cycle NIBP';
     if (isNibpCycle) {
-      messageText += this.seed.provider_level === 'BLS'
-        ? '\n\n[SYSTEM NOTE: Manual BP reassessment only. This BLS unit has no NIBP. Obtain one manual cuff/stethoscope reading and update only BP and its timestamp. Keep the scene response to one short sentence and use the canonical footer.]'
-        : '\n\n[SYSTEM NOTE: NIBP cycle only. Respond in ONE short sentence acknowledging the cuff is cycling and give the new reading when it completes. No extra exam findings, no additional narration, no partner dialogue. Just the BP result. Then update only the BP timestamp in the VITALS tag; all other vitals fields remain unchanged from the previous turn.]';
+      messageText += '\n\n[SYSTEM NOTE: NIBP cycle only. Respond in ONE short sentence acknowledging the cuff is cycling and give the new reading when it completes. No extra exam findings, no additional narration, no partner dialogue. Just the BP result. Then update only the BP timestamp in the VITALS tag; all other vitals fields remain unchanged from the previous turn.]';
     }
     // Inject transport lock when the unit is already moving so the model never
     // asks about destination again or invents a phantom driver.
@@ -759,7 +756,7 @@ class Session {
     // this turn instead of deferring it, so narration and the [LOADING] tag agree.
     if (wantsLoad) {
       const _capStatus = (this.crewStatus && this.crewStatus.captain) || 'not_on_scene';
-      messageText += '\n\n[SYSTEM NOTE: LOAD THE PATIENT NOW. The provider ordered the patient loaded into the ambulance. Resolve loading COMPLETELY this turn — narrate the crew packaging and moving the patient into the rig — and emit [LOADING]. Unless the provider ALSO explicitly named a destination to drive to in THIS same message, the unit is loaded but PARKED: do NOT emit [EN_ROUTE], do NOT narrate the rig pulling away or arriving anywhere, and keep the crew on scene ([CREW_STATUS: partner=on_scene captain=' + _capStatus + ']). ' + DESTINATION_DIALOGUE_POLICY + ']';
+      messageText += '\n\n[SYSTEM NOTE: LOAD THE PATIENT NOW. The provider ordered the patient loaded into the ambulance. Resolve loading COMPLETELY this turn — narrate the crew packaging and moving the patient into the rig — and emit [LOADING]. Unless the provider ALSO explicitly named a destination to drive to in THIS same message, the unit is loaded but PARKED: do NOT emit [EN_ROUTE], do NOT narrate the rig pulling away or arriving anywhere, and keep the crew on scene ([CREW_STATUS: partner=on_scene captain=' + _capStatus + ']). The two destination options are presented to the provider by the system — the partner does NOT ask which hospital.]';
     }
     // Player ✗'d the LOAD PATIENT confirm row — the wording mentioned the rig but
     // the patient is staying put this turn.
@@ -860,7 +857,7 @@ class Session {
       rawReply = await sendTurn(this.systemPrompt, [
         ...this.messages,
         { role: 'assistant', content: rawReply },
-        { role: 'user', content: `[SYSTEM NOTE: Your last draft was out of scene and omitted the required scene tags. Regenerate your response to the provider's previous message as the patient/scene only. Do not speak as a trainer; named crew dialogue and initiative must follow the CREW BEHAVIOR CONTRACT. The official scene clock is T+${mins}:${secs}; use the canonical Rule 14 footer: [CREW_STATUS:], [PATIENT_FOCUS:], [VITALS:], then [TIME: M:SS], each once on its own line. Do not add any provider action.]` },
+        { role: 'user', content: `[SYSTEM NOTE: Your last draft was out of scene and omitted the required scene tags. Regenerate your response to the provider's previous message as the patient/scene only. Do not advise the provider what to do next or speak as a trainer. The official scene clock is T+${mins}:${secs}; include [CREW_STATUS:], [VITALS:], and a final [TIME: M:SS]. Do not add any provider action.]` },
       ], options);
       if (isUnframedSceneReply(rawReply)) {
         throw operationError('invalid_scene_reply', 'The scene reply was malformed. Please retry your message.', 502);

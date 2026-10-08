@@ -1,0 +1,33 @@
+=== RUN LOG FOR DEBRIEF ===
+
+[1] SCENARIO GROUND TRUTH (what was actually true — the student could not see this)
+  Scenario ID: 8e2a66d6-eecf-4253-bf48-77dcacce6d25
+  Call date (day 0 for the patient outcome): 2026-10-08
+  Category: medical | Difficulty: NORMAL
+  Presentation: Moderate hypothermia — non-arrest, core temperature 28 to 32 degrees, ataxia, slurred speech, shivering absent, cardiac monitoring mandatory
+  Case key (hidden educational context for "what this patient actually had", not a required diagnosis or treatment checklist; evaluate care against the revealed findings, scope, and available resources): Shivering stops below 30 degrees — its absence is a sign of severity not improvement. J waves on ECG are pathognomonic. Handle extremely gently — cold myocardium fibrillates with the slightest stimulation. Passive and active external rewarming. Warm humidified oxygen. Do not give cold IV fluids. Expected vitals: conscious but ataxic — GCS 12-14, never comatose; HR 40s-50s, RR 8-12, Temp 84-90F (report in Fahrenheit).
+  Special flags: gentle_handling — cold_myocardium_fibrillates_with_agitation. no_cold_IV_fluids. J_waves_are_pathognomonic. shivering_absence_is_severity
+  Patient: 29 years old male | Comorbidity: immunocompromised
+  Trajectory: rapidly_deteriorating | Deterioration threshold: 9 min
+  Complication: none
+  Region: SUBURBAN | Provider level: BLS
+  Total call time (arrival to close, INCLUDING any transport): N/A
+  On-scene time: the unit never departed scene — the entire call was on scene.
+
+[2] CALL TIMELINE (chronological). Each entry: the provider's order, its dice results, then SCENE — what the simulation narrated back. The SCENE text is the provider's ONLY source of information: anything it has not yet mentioned, the provider does not know.
+  (no provider actions recorded)
+
+[3] VITAL SIGNS OVER TIME (the patient's objective response — judge trends against the actions above)
+  (no vital signs were ever obtained)
+
+[4] OBJECTIVE FLAGS
+  (none)
+
+--- HOW TO JUDGE ---
+Grade the provider ONLY against the records above — their actions and the vitals timeline, with the SCENE narration establishing what they knew and when, and the ground truth establishing what was actually wrong.
+CARE FIRST: Prioritize threat recognition, ABC support, appropriate treatment, reassessment, and timely appropriate transport over matching the hidden diagnosis. Commend sound diagnostic reasoning, but an uncertain or incorrect label alone does not make competent care deficient. Criticize diagnostic reasoning only when available evidence supports a specific missed assessment, unsafe action, or consequential care delay; explain that care gap. Use the hidden case key for education, never as a hindsight checklist.
+INFORMATION TIMING — NO HINDSIGHT: if a critical finding (a DNR bracelet, a hidden hazard, a second patient) first appears in the SCENE text at time T, the provider could not have acted on it before T. Judge their response from the moment of reveal, not from the start of the call. Faulting them for not asking sooner is allowed ONLY when standard practice demands that question regardless of cues — and say so explicitly.
+Do NOT assume or invent any action, medication, dose, assessment, or vital not listed above; if it is not in the log, it did not happen. Do NOT invent scene details (documents, signage, bystanders, locations) that never appear in the SCENE text.
+NEVER fabricate specific facility or hospital names — use "the receiving facility".
+TIME TERMS: "on-scene time" means arrival until departing for the hospital; "call time" means the whole run. Both are labeled in section [1] — use the terms precisely and never call total call time "scene time".
+=== END LOG ===

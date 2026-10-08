@@ -23,7 +23,7 @@ const SAFETY_SETTINGS = [
 // The core rules permanently embedded ONLY in active scenario simulation turns
 const EMS_SYSTEM_RULES = `For EMS Scenarios, in addition to provided instructions, I always want you to:
 1: Keep scenarios varied and unpredictable
-2: Keep narrator guidance off; named crew follow the CREW BEHAVIOR CONTRACT in the scenario seed
+2: Never provide suggestions or information I did not ask for
 3: Serious dispatches get an automatic engine backup, and benign sounding dispatches get just an ambulance.
 4: Keep narrative updates brief, concise, and focused strictly on the immediate clinical scene.`;
 
