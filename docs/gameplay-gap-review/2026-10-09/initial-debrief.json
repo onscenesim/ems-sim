@@ -1,0 +1,68 @@
+{
+  "state": "complete",
+  "review": {
+    "version": 5,
+    "scored": false,
+    "score": null,
+    "notice": "This record shows the call sequence and logged observations. Times mark the end of a turn, not the exact intervention time. Procedure outcomes reflect the simulation, not decision quality. See the debrief for clinical takeaways.",
+    "findings": [],
+    "timeline": [
+      {
+        "turn": 1,
+        "minute": 2,
+        "patient": "patient_1",
+        "action": "Assess ABCs, vitals, glucose, focused history and exam.",
+        "scene": "Awake, patent airway, adequate ventilation, pale and clammy, weak pulses. Sudden abdominal pain. Nearby hospital has emergency vascular surgery; ALS cannot intercept before arrival.",
+        "report": false,
+        "skip": false,
+        "procedures": [],
+        "vitals": {
+          "HR": 124,
+          "BP": "82/50",
+          "RR": 24,
+          "Glucose": 112,
+          "GCS": 15
+        }
+      },
+      {
+        "turn": 2,
+        "minute": 4,
+        "patient": "patient_1",
+        "action": "I suspect sepsis but recognize shock of uncertain cause. Keep warm, monitor ABCs, load now and depart for the surgical-capable hospital. Pre-notify with shock findings and uncertainty.",
+        "scene": "Patient secured and warm; transport begins and the receiving team acknowledges the report.",
+        "report": false,
+        "skip": false,
+        "procedures": [],
+        "vitals": {}
+      },
+      {
+        "turn": 3,
+        "minute": 17,
+        "patient": "patient_1",
+        "action": "[Skip ahead to arrival]",
+        "scene": "Existing care and monitoring continue. The patient remains awake on arrival.",
+        "report": false,
+        "skip": true,
+        "procedures": [],
+        "vitals": {
+          "HR": 128,
+          "BP": "80/48",
+          "GCS": 15
+        }
+      },
+      {
+        "turn": 4,
+        "minute": 18,
+        "patient": "patient_1",
+        "action": "Transfer care with onset, vital trends, interventions and diagnostic uncertainty.",
+        "scene": "Hospital team accepts handoff and begins evaluation. No imaging, surgery or recovery is recorded.",
+        "report": true,
+        "skip": false,
+        "procedures": [],
+        "vitals": {}
+      }
+    ],
+    "debriefText": "1. SCENE & ASSESSMENT\nYou promptly performed an efficient primary survey, identifying critical decompensated shock evidenced by marked hypotension, tachycardia, tachypnea, and poor peripheral perfusion alongside sudden abdominal pain. Rather than getting bogged down by prolonged scene assessments, you recognized the immediate instability and established baseline vitals within minutes. Your assessment appropriately prioritized immediate physiologic threats over an exhaustive diagnostic workup.\n\n2. CLINICAL DECISION-MAKING\nYour clinical management was exemplary. While your working differential leaned toward sepsis, your care was appropriately driven by the syndromic reality of severe, undifferentiated shock. Hypoperfusion impairs cellular oxygenation and rapidly causes end-organ ischemia; in sudden abdominal shock, internal hemorrhage is a lethal concern that BLS interventions cannot definitively arrest. By minimizing your on-scene time to four minutes, preventing hypothermia—which critically protects enzymatic clotting function from coagulopathy—and immediately transporting to a facility equipped for emergency vascular surgery, you prioritized definitive survival needs. Pre-notifying the receiving facility with vital signs and diagnostic uncertainty allowed the hospital team to mobilize resuscitation resources prior to your arrival.\n\n3. WHAT THIS PATIENT ACTUALLY HAD\nThis patient suffered a ruptured abdominal aortic aneurysm causing catastrophic internal hemorrhage and profound hemorrhagic shock. Definitive differentiation between severe intra-abdominal sepsis and vascular rupture requires hospital imaging or surgical exploration. Even though the exact etiology remained uncertain in the field, your rapid recognition of hemodynamic collapse and immediate routing to a surgical-capable facility provided the exact supportive care and transport priority this lethal pathology demanded.\n\n4. KEY TAKEAWAYS\n- **Prioritize the \"load and go\" approach in undifferentiated shock:** Immediate surgical or intensive intervention is often the only definitive cure for acute abdominal collapse; keeping on-scene time minimal gives the patient the best chance at survival.\n- **Aggressively prevent hypothermia:** Maintaining body temperature is crucial in suspected shock states, as hypothermia directly impairs platelet function and accelerates the lethal triad of trauma and hemorrhage.\n- **Communicate diagnostic uncertainty clearly:** Relaying physiologic instability and vital trends rather than anchoring on a single label ensures receiving teams prepare broad resuscitative and surgical resources.\n\n5. PROTOCOL CHECK\nThis is your cue to pull your own local protocols and the NREMT skills checklist and check them against how you ran this call. Simulation scope and your real-world scope may differ — your protocols are the final authority."
+  },
+  "patientOutcome": "Expired on October 10, 2026"
+}

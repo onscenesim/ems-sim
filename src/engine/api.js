@@ -1,12 +1,13 @@
 'use strict';
 const { GoogleGenAI, HarmCategory, HarmBlockThreshold } = require('@google/genai');
-const { buildDebriefPrompt } = require('./prompts/debrief');
+const { buildDebriefPrompt, debriefEvidenceIssues } = require('./prompts/debrief');
 
 // Initialize the Google Gen AI client explicitly passing the API key
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const MODEL = 'gemini-3.7-flash';
-const { requestModel } = require('./modelRequest');
+const { requestModel, REQUEST_TIMEOUT_MS } = require('./modelRequest');
+const { operationError } = require('./operations');
 
 // Output budgets for simulation turns and debriefs.
 const TURN_MAX_TOKENS = 4000; 
@@ -79,7 +80,8 @@ async function sendDebrief(debriefContext, providerLevel, options = {}) {
     const dynamicDebriefInstruction = buildDebriefPrompt(providerLevel);
     
     try {
-        const response = await requestModel(params => ai.models.generateContent(params), {
+        const started = Date.now();
+        const params = {
             model: MODEL,
             contents: [{ role: 'user', parts: [{ text: debriefContext }] }],
             config: {
@@ -89,10 +91,22 @@ async function sendDebrief(debriefContext, providerLevel, options = {}) {
                 topP: 0.8,
                 safetySettings: SAFETY_SETTINGS,
             }
-        }, options);
-        return extractText(response);
+        };
+        let draft = extractText(await requestModel(p => ai.models.generateContent(p), params, options));
+        const issues = debriefEvidenceIssues(draft);
+        if (issues.length) {
+            const repair = 'EVIDENCE CHECK: The draft below makes unsupported guarantees about downstream outcomes or hospital events. Rewrite the complete five-section debrief using the original recorded evidence. Explain possible benefits without claiming guaranteed survival, treatment, preparation or recovery. Retain supported care gaps and the separate likely PATIENT_OUTCOME line.\nFlagged claims:\n' + issues.join('\n');
+            params.contents.push({ role: 'model', parts: [{ text: draft }] }, { role: 'user', parts: [{ text: repair }] });
+            draft = extractText(await requestModel(p => ai.models.generateContent(p), params, {
+                ...options, timeoutMs: Math.max(1, (options.timeoutMs ?? REQUEST_TIMEOUT_MS) - (Date.now() - started)),
+            }));
+            if (debriefEvidenceIssues(draft).length) {
+                throw operationError('invalid_debrief_evidence', 'The debrief made unsupported outcome claims. No review was saved; please retry.', 502);
+            }
+        }
+        return draft;
     } catch (error) {
-        if (options.signal?.aborted || error.code === 'model_timeout') throw error;
+        if (options.signal?.aborted || error.code === 'model_timeout' || error.code === 'invalid_debrief_evidence') throw error;
         console.error("Gemini API Error (Debrief):", error);
         throw new Error("Failed to connect to the Gemini API during debrief.");
     }

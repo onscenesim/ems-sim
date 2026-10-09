@@ -14,6 +14,7 @@ const { logRun, updateRunDebrief } = require('../server/adminLogger');
 const { applyAccessAnimationRoutes } = require('./medication-route');
 const { applyCapillaryRefill } = require('./capillary-refill');
 const { applyPulseOx } = require('./pulse-ox');
+const { hasCardiacMonitor } = require('./equipment');
 const { acquireTwelveLeads, isECGProcedure, stripTwelveLeadNarration, applyEctopy } = require('./twelve-lead');
 const { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords } = require('./patient-records');
 
@@ -355,11 +356,15 @@ function parseBackupTag(reply) {
   const inner = matches[matches.length - 1][1].trim();
   const statusMatch = inner.match(/^(\w+)/);
   const etaMatch = inner.match(/ETA=(\d+)/i);
+  const level = inner.match(/\bLEVEL=(ALS|BLS)\b/i);
+  const monitor = inner.match(/\bMONITOR=(available|unavailable)\b/i);
   return {
     cleanedReply,
     backup: {
       status: statusMatch ? statusMatch[1].toLowerCase() : 'unknown',
       eta:    etaMatch    ? parseInt(etaMatch[1], 10)    : null,
+      ...(level ? { level: level[1].toUpperCase() } : {}),
+      ...(monitor ? { monitor: monitor[1].toLowerCase() === 'available' } : {}),
     },
   };
 }
@@ -634,6 +639,10 @@ class Session {
     const rollContext = buildTurnContextFlags(
       this.seed, this.contextFlags, this.lastVitals, userText, this.moving
     );
+    // Freeze resource eligibility before this order. A crew arriving in the
+    // response cannot retroactively authorize an acquisition already attempted.
+    const monitorBackup = this.backupStatus ? { ...this.backupStatus } : null;
+    rollContext.monitor_available = hasCardiacMonitor(this.seed, monitorBackup);
     const detection = (reportMode || skipMode)
       ? { rolls: [], suppressed: [] }
       : detectWithConfirmation(userText, rollContext, this.seed.difficulty, procOverrides);
@@ -649,6 +658,10 @@ class Session {
     let messageText = userText;
     if (rolls.some(r => r.procedure_id === 'capillary_refill')) {
       messageText += '\n\n[SYSTEM NOTE: Explicit capillary refill assessment requested. Perform it for the patient being assessed and state the measured duration numerically in seconds. Include CapRefill=<seconds>@T+M:SS in the VITALS tag, using this assessment time. Do not report only "brisk", "normal", or "delayed". If the assessment cannot be performed, state that and omit the reading.]';
+    }
+    if (this.seed.provider_level === 'BLS' && rollContext.monitor_available
+        && rolls.some(r => isECGProcedure(r.procedure_id))) {
+      messageText += '\n\n[SYSTEM NOTE: An arrived ALS resource has an available cardiac monitor. The injected ECG roll represents the requested acquisition with that crew and device. This does not change the BLS unit manifest or provider scope. Narrate the equipped crew assisting; do not invent additional ALS interventions.]';
     }
 
     // During an active arrest cycle, a standalone request to check the pulse or
@@ -680,7 +693,8 @@ class Session {
         + 'No procedure rolls occurred this turn. Procedures mentioned are past events already completed. '
         + 'Respond as the receiving party (hospital, medical control, or incoming crew). '
         + 'Acknowledge the report, ask any clinically appropriate follow-up questions, '
-        + 'and confirm estimated time of arrival or transfer acceptance as appropriate.]';
+        + 'and confirm estimated time of arrival or transfer acceptance as appropriate. '
+        + 'Reports consume scene time too: advance the mandatory TIME footer by the realistic duration of this exchange.]';
     }
     // Time-skip directive — fast-forward an uneventful transport leg, assuming the
     // provider kept monitoring (not an abandonment of care), and pick up from the
@@ -786,7 +800,11 @@ class Session {
     // discussion/planning): tell the model explicitly, or it narrates them
     // being performed anyway ("...for intubation later" → an intubation).
     const prechargeSuppressed = suppressed.filter(s => s.precharge);
-    const plainSuppressed     = suppressed.filter(s => !s.precharge);
+    const unavailable = suppressed.filter(s => s.unavailable);
+    for (const item of unavailable) {
+      messageText += `\n\n[SYSTEM NOTE: ${item.procedure_id} CANNOT be performed: ${item.reason} No roll occurred. Explain the unavailable equipment briefly; do not place electrodes, acquire a tracing, file a printout, or invent an equipped crew.]`;
+    }
+    const plainSuppressed     = suppressed.filter(s => !s.precharge && !s.unavailable);
     if (plainSuppressed.length > 0) {
       const names = plainSuppressed.map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
       const plural = names.length > 1;
@@ -921,7 +939,11 @@ class Session {
     // Reconcile dice against the narration: drop any roll the model declined or
     // showed didn't happen, so the debrief/log and client only see real events.
     const reconciledRolls = reconcileRolls(rolls, reply);
-    reply = stripTwelveLeadNarration(reply, reconciledRolls.some(r => isECGProcedure(r.procedure_id)));
+    reply = stripTwelveLeadNarration(reply, reconciledRolls.some(r => isECGProcedure(r.procedure_id)),
+      suppressed.some(s => s.unavailable && isECGProcedure(s.procedure_id)));
+    if (unavailable.length) {
+      reply = ['ECG acquisition was not performed: no cardiac monitor is available.', reply].filter(Boolean).join('\n');
+    }
     this._updateAccess(reconciledRolls, reply);
     applyAccessAnimationRoutes(reconciledRolls, this.access);
     for (const roll of reconciledRolls) {
@@ -938,7 +960,9 @@ class Session {
       if (backup.status === 'on_scene' || backup.status === 'cancelled') {
         this.backupArrivalMinute = null;
       }
-      this.backupStatus = backup;
+      const priorResource = this.backupStatus && !['cancelled', 'not_called'].includes(this.backupStatus.status)
+        ? this.backupStatus : {};
+      this.backupStatus = { ...priorResource, ...backup };
     }
     if (crewStatus) this.crewStatus = crewStatus;
     // Older replies used a source-only tag for the seeded patient. Never apply it
@@ -1007,11 +1031,16 @@ class Session {
     if (enRoute) {
       // Record which hospital the unit committed to so the destination panel can
       // mark the chosen side when it flashes on a load-and-go.
-      this.transportDest = transportDest || 'nearest';
+      const previousDest = this.transportDest;
+      // A skip completes the committed journey; a normal explicit destination
+      // tag may redirect it. Missing tags never erase a previous choice.
+      this.transportDest = skipMode
+        ? (previousDest || transportDest || 'nearest')
+        : (transportDest || previousDest || 'nearest');
       // Compute transport ETA from region data
       const _reg = REGIONS.find(r => r.id === this.seed.region);
-      if (_reg) {
-        const _etaStr = transportDest === 'major' ? _reg.major_hospital_min : _reg.nearest_hospital_min;
+      if (_reg && (this.transportEtaMin == null || previousDest !== this.transportDest)) {
+        const _etaStr = this.transportDest === 'major' ? _reg.major_hospital_min : _reg.nearest_hospital_min;
         this.transportEtaMin = parseHospitalEtaMin(_etaStr);
       }
     }
@@ -1040,30 +1069,26 @@ class Session {
     // Advance scene clock.
     // Primary:   [TIME: M:SS] tag — Claude's explicit, authoritative timestamp.
     // Secondary: vitals @T+M:SS timestamps — used only if TIME tag absent.
-    // Fallback:  fixed increment per turn.
+    // Fallback:  fixed increment for care turns only; missing report time holds
+    // the last known clock rather than inventing the duration of an exchange.
     this.lastReplyHadTime = timeMinutes !== null;
-    if (!reportMode) {
-      if (timeMinutes !== null && timeMinutes > this.sceneMinute) {
-        // [TIME] tag is the single source of truth
-        this.sceneMinute = timeMinutes;
-      } else {
-        // TIME tag absent or didn't advance — try vitals timestamps
-        let maxTMin = null;
-        if (vitals) {
-          for (const v of Object.values(vitals)) {
-            if (v && typeof v.tMin === 'number' && (maxTMin === null || v.tMin > maxTMin)) {
-              maxTMin = v.tMin;
-            }
+    if (timeMinutes !== null && timeMinutes > this.sceneMinute) {
+      this.sceneMinute = timeMinutes;
+    } else if (!reportMode) {
+      // TIME tag absent or didn't advance — try vitals timestamps
+      let maxTMin = null;
+      if (vitals) {
+        for (const v of Object.values(vitals)) {
+          if (v && typeof v.tMin === 'number' && (maxTMin === null || v.tMin > maxTMin)) {
+            maxTMin = v.tMin;
           }
         }
-        if (maxTMin !== null && maxTMin > this.sceneMinute) {
-          this.sceneMinute = maxTMin;
-        } else if (this.turns.length > 0) {
-          // Last resort: fixed increment. Not on the opening dispatch turn —
-          // arrival IS T+0, and charging it +3 shifted every event in the log
-          // (the first pulse check of an arrest showed up at T+6).
-          this.sceneMinute += 2;
-        }
+      }
+      if (maxTMin !== null && maxTMin > this.sceneMinute) {
+        this.sceneMinute = maxTMin;
+      } else if (this.turns.length > 0) {
+        // Opening dispatch establishes T+0; later care turns use a fallback.
+        this.sceneMinute += 2;
       }
     }
 
@@ -1087,7 +1112,7 @@ class Session {
       assistant: reply,
       rolls: reconciledRolls,
       twelveLeads: acquireTwelveLeads({ seed: this.seed, vitals: this.lastVitals, rolls: reconciledRolls,
-        patientId, ink:options.ecgInk, patientRecords: this.patientRecords, minute: this.sceneMinute, turn: this.turns.length, sessionId: this.sessionId || this.seed.scenario_id }),
+        patientId, ink:options.ecgInk, backup:monitorBackup, patientRecords: this.patientRecords, minute: this.sceneMinute, turn: this.turns.length, sessionId: this.sessionId || this.seed.scenario_id }),
       sceneMinute: this.sceneMinute,
       vitals: vitals || null,
       patientFocus: this.patientFocus,

@@ -7,6 +7,37 @@ const { buildDebriefContext } = require('../src/engine/assembler');
 const { buildDebriefPrompt } = require('../src/engine/prompts/debrief');
 const { evidenceFixture } = require('./fixtures/debrief-evidence');
 
+test('evidence guard detects downstream guarantees but permits qualified benefits and likely disposition', () => {
+  const { debriefEvidenceIssues } = require('../src/engine/prompts/debrief');
+  for (const text of [
+    'Transport ensured survival.',
+    'Routing to this hospital ensures definitive hemorrhage control.',
+    'Pre-notification allowed the hospital team to mobilize resuscitation resources.',
+    'Calling ahead ensures receiving teams prepare.',
+    'Warmth prevented collapse.',
+  ]) assert.equal(debriefEvidenceIssues(text).length, 1, text);
+  for (const text of [
+    'Transport may improve the chance of survival.',
+    'Calling ahead could allow the hospital team to prepare resuscitation resources.',
+    'You alerted the receiving team and supported timely evaluation.',
+    'Warming reduces heat loss and supports clotting function.',
+    'Appropriate care.\n[PATIENT_OUTCOME: Likely recovery after surgery on October 12, 2026]',
+  ]) assert.deepEqual(debriefEvidenceIssues(text), [], text);
+});
+
+test('debrief distinguishes recorded handoff from hypothetical hospital events and causal benefits', () => {
+  const { seed } = evidenceFixture();
+  const context = buildDebriefContext(seed, [{ user: 'Transfer care.', assistant: 'Hospital team accepts care.', sceneMinute: 18, report: true }]);
+  assert.match(context, /Arrival or acceptance of handoff establishes transfer only/);
+  assert.match(context, /Hospital tests, procedures and recovery are unrecorded unless explicitly described/);
+  for (const level of ['ALS', 'BLS']) {
+    const prompt = buildDebriefPrompt(level);
+    assert.match(prompt, /Never assert that hospital preparation, resource mobilization, surgery, imaging, definitive treatment, discharge or recovery occurred unless the timeline explicitly records it/);
+    assert.match(prompt, /applies to praise as well as criticism/);
+    assert.match(prompt, /likely simulated disposition, not evidence/);
+  }
+});
+
 test('complete scene and provider evidence survives middle disclosures and closing turns', () => {
   const { seed, turns, disclosure } = evidenceFixture();
   const user = 'Continue assessment. '.repeat(40) + 'Honor the valid DNR and continue oxygen.';

@@ -11,17 +11,45 @@ const { buildDebriefPrompt } = require('../src/engine/prompts/debrief');
 // Capture the actual outgoing API configurations without a network request.
 let request;
 let response = 'Test response.';
+let responseQueue = [];
+let requests = [];
 const sdkPath = require.resolve('@google/genai');
 const sdk = require(sdkPath);
 require.cache[sdkPath].exports = { ...sdk, GoogleGenAI: class {
   constructor() {
     this.models = { generateContent: async params => {
       request = params;
-      return { text: response };
+      requests.push(params);
+      return { text: responseQueue.length ? responseQueue.shift() : response };
     } };
   }
 } };
 const { sendTurn, sendDebrief } = require('../src/engine/api');
+
+test('debrief repairs unsupported hospital guarantees before returning feedback', async () => {
+  const original = 'Recorded handoff only; no hospital treatment is documented.';
+  const corrected = 'Timely transfer supported evaluation; definitive treatment remained unrecorded.\n[PATIENT_OUTCOME: Likely discharged on October 12, 2026]';
+  requests = [];
+  responseQueue = ['Routing to this hospital ensures definitive hemorrhage control.', corrected];
+  try {
+    assert.equal(await sendDebrief(original, 'BLS', { timeoutMs: 2000 }), corrected);
+    assert.equal(requests.length, 2);
+    const repair = requests[1];
+    assert.equal(repair.contents[0].parts[0].text, original);
+    assert.match(repair.contents.at(-1).parts[0].text, /Rewrite the complete five-section debrief/);
+    assert.equal(repair.contents[1].role, 'model');
+    assert.ok(repair.config.httpOptions.timeout > 0 && repair.config.httpOptions.timeout <= 2000);
+  } finally { responseQueue = []; }
+});
+
+test('a debrief still making guarantees after repair fails instead of returning saved feedback', async () => {
+  requests = [];
+  responseQueue = ['Transport ensured survival.', 'The handoff guaranteed recovery.'];
+  try {
+    await assert.rejects(sendDebrief('No outcome recorded.', 'ALS'), error => error.code === 'invalid_debrief_evidence');
+    assert.equal(requests.length, 2, 'one repair attempt only');
+  } finally { responseQueue = []; }
+});
 
 test('each catalog character retains its behavior under one gameplay contract in every difficulty', () => {
   for (const member of CREW) for (const difficulty of ['EASY', 'NORMAL', 'HARD', 'BLACK_CLOUD']) {
@@ -196,13 +224,16 @@ test('arrest dosing branches on scope, age and shipped case contraindications', 
 });
 
 test('gameplay and debrief share the identical arrest transport default and all four exceptions', () => {
-  const { ARREST_TRANSPORT_DOCTRINE } = require('../src/engine/prompts/arrest');
+  const { ARREST_TRANSPORT_PRINCIPLES, ARREST_TRANSPORT_DOCTRINE, ARREST_TRANSPORT_REVIEW } = require('../src/engine/prompts/arrest');
   for (const level of ['ALS', 'BLS']) {
     const seed = rollScenario({ random_seed: 'arrest-transport', category: 'arrest', provider_level: level });
     const game = assembleSeedBlock(seed);
     const evaluation = buildDebriefPrompt(level);
     assert.equal(game.split(ARREST_TRANSPORT_DOCTRINE).length - 1, 1);
-    assert.equal(evaluation.split(ARREST_TRANSPORT_DOCTRINE).length - 1, 1);
+    assert.equal(evaluation.split(ARREST_TRANSPORT_REVIEW).length - 1, 1);
+    assert.ok(game.includes(ARREST_TRANSPORT_PRINCIPLES));
+    assert.ok(evaluation.includes(ARREST_TRANSPORT_PRINCIPLES));
+    assert.doesNotMatch(evaluation, /crew concern is voiced once|crew complies|automatic loading\/departure orders/);
     assert.match(evaluation, /TRAUMATIC[\s\S]*HYPOTHERMIC[\s\S]*MATERNAL[\s\S]*ECPR/);
     assert.doesNotMatch(evaluation, /Never fault a student for refusing to transport an active medical arrest/);
   }

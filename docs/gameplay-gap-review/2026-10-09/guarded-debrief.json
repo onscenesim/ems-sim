@@ -1,0 +1,68 @@
+{
+  "state": "complete",
+  "review": {
+    "version": 5,
+    "scored": false,
+    "score": null,
+    "notice": "This record shows the call sequence and logged observations. Times mark the end of a turn, not the exact intervention time. Procedure outcomes reflect the simulation, not decision quality. See the debrief for clinical takeaways.",
+    "findings": [],
+    "timeline": [
+      {
+        "turn": 1,
+        "minute": 2,
+        "patient": "patient_1",
+        "action": "Assess ABCs, vitals, glucose, focused history and exam.",
+        "scene": "Awake, patent airway, adequate ventilation, pale and clammy, weak pulses. Sudden abdominal pain. Nearby hospital has emergency vascular surgery; ALS cannot intercept before arrival.",
+        "report": false,
+        "skip": false,
+        "procedures": [],
+        "vitals": {
+          "HR": 124,
+          "BP": "82/50",
+          "RR": 24,
+          "Glucose": 112,
+          "GCS": 15
+        }
+      },
+      {
+        "turn": 2,
+        "minute": 4,
+        "patient": "patient_1",
+        "action": "I suspect sepsis but recognize shock of uncertain cause. Keep warm, monitor ABCs, load now and depart for the surgical-capable hospital. Pre-notify with shock findings and uncertainty.",
+        "scene": "Patient secured and warm; transport begins and the receiving team acknowledges the report.",
+        "report": false,
+        "skip": false,
+        "procedures": [],
+        "vitals": {}
+      },
+      {
+        "turn": 3,
+        "minute": 17,
+        "patient": "patient_1",
+        "action": "[Skip ahead to arrival]",
+        "scene": "Existing care and monitoring continue. The patient remains awake on arrival.",
+        "report": false,
+        "skip": true,
+        "procedures": [],
+        "vitals": {
+          "HR": 128,
+          "BP": "80/48",
+          "GCS": 15
+        }
+      },
+      {
+        "turn": 4,
+        "minute": 18,
+        "patient": "patient_1",
+        "action": "Transfer care with onset, vital trends, interventions and diagnostic uncertainty.",
+        "scene": "Hospital team accepts handoff and begins evaluation. No imaging, surgery or recovery is recorded.",
+        "report": true,
+        "skip": false,
+        "procedures": [],
+        "vitals": {}
+      }
+    ],
+    "debriefText": "SCENE & ASSESSMENT\nYou immediately recognized decompensated shock in this patient presenting with sudden abdominal pain, pallor, diaphoresis, tachycardia, and profound hypotension. Rather than getting bogged down in an exhaustive secondary exam on scene, you rapidly confirmed airway patency, adequate ventilation, and checked a blood glucose to rule out hypoglycemia. Prioritizing these essential baseline checks kept your on-scene time to just four minutes. This rapid threat identification was critical for an unstable patient who clearly required immediate definitive care.\n\nCLINICAL DECISION-MAKING\nYour clinical decision-making was outstanding. While you considered sepsis, you appropriately managed the presentation as undifferentiated shock without letting diagnostic uncertainty delay life-saving transport. Recognizing severe hypotension and compensatory tachycardia, you promptly focused on passive warming, continuous airway monitoring, and immediate egress. In hypoperfused patients, maintaining normothermia is vital because hypothermia impairs clotting factor function and worsens metabolic acidosis, accelerating cardiovascular collapse. Selecting a facility with emergency vascular surgical capability and delivering an early pre-notification supported the receiving team's preparation for a critically unstable patient. Restricting on-scene time to four minutes prioritized definitive surgical intervention over prolonged field assessment, which is the single most important factor when occult internal hemorrhage is driving hemodynamic collapse.\n\nWHAT THIS PATIENT ACTUALLY HAD\nThe patient was experiencing a ruptured abdominal aortic aneurysm (AAA), causing retroperitoneal hemorrhage and severe hemorrhagic shock. Definitive identification requires hospital imaging, such as bedside ultrasound or CT angiography, which is well outside the prehospital BLS scope. However, sudden severe abdominal pain coupled with unexplained hypotension and tachycardia strongly points toward a catastrophic vascular event. Your syndrome-based approach—identifying shock, mitigating heat loss, and rapidly routing the patient to a surgical-capable center—addressed this life-threatening bleed effectively despite the absence of a confirmed field diagnosis.\n\nKEY TAKEAWAYS\n* Manage undifferentiated shock by physiological severity rather than waiting for a definitive diagnosis, as delaying transport to identify the exact source increases mortality in surgical emergencies.\n* Aggressively preserve body heat in hypoperfused patients because hypothermia exacerbates trauma- and hemorrhage-induced coagulopathy, worsening occult bleeding.\n* Deliver early pre-notification with vital trends and shock severity to alert the receiving team so they can anticipate resuscitation and surgical evaluation before arrival.\n\nPROTOCOL CHECK\nThis is your cue to pull your own local protocols and the NREMT skills checklist and check them against how you ran this call. Simulation scope and your real-world scope may differ — your protocols are the final authority."
+  },
+  "patientOutcome": "Expired on October 9, 2026"
+}

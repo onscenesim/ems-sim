@@ -15,6 +15,7 @@ const { REGIONS } = require('../../data/regions');
 const { DIFFICULTY_POOL } = require('../../data/config');
 const { PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed } = require('../../engine/roller');
 const { detectAllProcedures } = require('../../engine/dice');
+const { hasCardiacMonitor, unavailableProcedure } = require('../../engine/equipment');
 const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
 
 const { operationsFor } = require('../../engine/operations');
@@ -539,6 +540,9 @@ router.post('/:id/turn', async (req, res) => {
         matched:      e.matchedKey,
         reason:       e.reason,       // null = confident detection
         sentence:     e.sentence,
+        unavailable: unavailableProcedure(e.proc.id, {
+          monitor_available: hasCardiacMonitor(session.seed, session.backupStatus),
+        }),
       }));
     // Loading the patient is a state-changing event worth the same ✓/✗ beat as a
     // dice skill: surface a LOAD PATIENT row whenever the wording orders the

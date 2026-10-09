@@ -3786,7 +3786,8 @@ body.light-mode .export-btn:hover { background: #c4d0e4; }
 }
 .proc-confirm-btns { display: flex; gap: 6px; flex-shrink: 0; }
 .proc-confirm-btns button,
-.proc-confirm-actions button {
+.proc-confirm-actions button,
+.proc-confirm-edit button {
   font-family: var(--font-block, monospace);
   font-size: 0.55rem;
   letter-spacing: 0.08em;
@@ -3806,6 +3807,12 @@ body.light-mode .export-btn:hover { background: #c4d0e4; }
   gap: 8px;
   margin-top: 10px;
 }
+.proc-confirm-edit { margin: 12px 0; color: #d9c99d; font-size: 13px; line-height: 1.5; }
+.proc-confirm-edit summary { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.proc-confirm-edit p { margin: 8px 0; }
+.proc-confirm-edit textarea { display: block; box-sizing: border-box; width: 100%; margin: 8px 0; padding: 8px; font: inherit; color: #e8e5d8; background: #151610; border: 1px solid #7a5a10; resize: vertical; }
+.proc-confirm-edit :is(summary, textarea, button):focus-visible { outline: 2px solid #e8a838; outline-offset: 3px; }
+.proc-confirm-edit button:disabled, .proc-confirm-btns button:disabled { opacity: .5; cursor: default; }
 .proc-confirm-continue:not(:disabled) { border-color: #e8a838; color: #e8a838; }
 .proc-confirm-continue:disabled { opacity: 0.4; cursor: default; }
 .proc-confirm-cancel:hover { border-color: #999; color: #ccc; }
@@ -3814,7 +3821,10 @@ body.light-mode .proc-confirm { background: rgba(240, 220, 160, 0.35); border-co
 body.light-mode .proc-confirm-name { color: #5a4408; }
 body.light-mode .proc-confirm-why  { color: #8a7030; }
 body.light-mode .proc-confirm-btns button,
-body.light-mode .proc-confirm-actions button { background: #f0ede8; color: #666; border-color: #aaa; }
+body.light-mode .proc-confirm-actions button,
+body.light-mode .proc-confirm-edit button { background: #f0ede8; color: #666; border-color: #aaa; }
+body.light-mode .proc-confirm-edit { color: #5a4408; }
+body.light-mode .proc-confirm-edit textarea { color: #302c21; background: #fffdf4; border-color: #b08820; }
 
 /* CPAP / BiPAP shares the profile and outcome palette of the route scenes. */
 #niv-overlay { --route-result-delay: 2.55s; }

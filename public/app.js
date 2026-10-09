@@ -1394,8 +1394,11 @@ async function sendTurn(msg, opts = {}) {
     printReply(data.reply);
     // Mentions that were confirmed (or classified) as not-performed
     if (data.suppressed && data.suppressed.length) {
-      const names = data.suppressed.map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
-      print(`[mentioned, not performed: ${names.join(', ')}]`, 'system');
+      for (const item of data.suppressed.filter(s => s.unavailable)) {
+        print(`[not performed: ${item.procedure_id.replace(/_/g, ' ')} — ${item.reason}]`, 'system');
+      }
+      const names = data.suppressed.filter(s => !s.unavailable).map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
+      if (names.length) print(`[mentioned, not performed: ${names.join(', ')}]`, 'system');
     }
     printHr();
 
@@ -1515,10 +1518,10 @@ function showProcConfirm(msg, opts, items) {
     info.appendChild(name);
     // Only ambiguous detections need the "why are we asking" line; confident
     // rows stay one-line for a fast scan.
-    if (!confident) {
+    if (!confident || item.unavailable) {
       const why = document.createElement('div');
       why.className = 'proc-confirm-why';
-      why.textContent = `“…${item.sentence}…” — ${item.reason}`;
+      why.textContent = item.unavailable || `“…${item.sentence}…” — ${item.reason}`;
       info.appendChild(why);
     }
     row.appendChild(info);
@@ -1531,6 +1534,10 @@ function showProcConfirm(msg, opts, items) {
     const no = document.createElement('button');
     no.className = 'proc-no';
     no.textContent = '✗ JUST TALK';
+    if (item.unavailable) {
+      yes.disabled = true;
+      no.textContent = 'NOT AVAILABLE';
+    }
     yes.addEventListener('click', () => {
       choices.set(item.key, true);
       yes.classList.add('chosen'); no.classList.remove('chosen');
@@ -1549,12 +1556,36 @@ function showProcConfirm(msg, opts, items) {
 
     // Confident detections default to ✓ so the common case is a single click
     // on CONFIRM; flipping any row to ✗ is still one click away.
-    if (confident) {
-      choices.set(item.key, true);
-      yes.classList.add('chosen');
+    if (confident || item.unavailable) {
+      choices.set(item.key, !item.unavailable);
+      (item.unavailable ? no : yes).classList.add('chosen');
     }
   }
   refresh();
+
+  const edit = document.createElement('details');
+  edit.className = 'proc-confirm-edit';
+  const editSummary = document.createElement('summary');
+  editSummary.textContent = 'Edit or add a missed action';
+  const editedMessage = document.createElement('textarea');
+  editedMessage.value = msg;
+  editedMessage.maxLength = 8000;
+  editedMessage.rows = 3;
+  editedMessage.setAttribute('aria-label', 'Orders to recheck');
+  const editHelp = document.createElement('p');
+  editHelp.textContent = 'Use a direct order, such as “try an IV in the left arm.” Recheck the full message before confirming.';
+  const recheck = document.createElement('button');
+  recheck.textContent = 'RECHECK ORDERS';
+  editedMessage.addEventListener('input', () => { recheck.disabled = !editedMessage.value.trim(); });
+  recheck.addEventListener('click', () => {
+    const next = editedMessage.value.trim();
+    if (!next) return;
+    wrap.remove();
+    setLoading(false);
+    sendTurn(next, { ...opts });
+  });
+  edit.append(editSummary, editHelp, editedMessage, recheck);
+  wrap.appendChild(edit);
 
   const actions = document.createElement('div');
   actions.className = 'proc-confirm-actions';

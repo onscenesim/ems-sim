@@ -160,6 +160,23 @@ test('narration removes printed ECG findings while preserving patient and proced
   assert.equal(strip('12-lead deferred while you ventilate the patient.'),'12-lead deferred while you ventilate the patient.');
 });
 
+test('ECG questions and requests retain dialogue integrity without leaking asserted findings',()=>{
+  const {stripTwelveLeadNarration:strip}=require('../src/engine/twelve-lead');
+  for(const text of [
+    'The receiving nurse asks, “What is his current 12-lead finding, and do you have an updated ETA once wheels roll?”',
+    'Nurse: "Does the ECG show ST elevation?"',
+    'Nurse: “Please send the 12-lead and an updated ETA.”',
+    'The nurse asks for the 12-lead and an updated ETA.',
+    'Nurse: “Please tell me your 12-lead interpretation.”',
+    'The receiving nurse requests your ECG interpretation and ETA.',
+  ]) assert.equal(strip(text),text);
+  assert.equal(strip('Nurse: “The ECG shows an inferior STEMI. What is your updated ETA?”'), 'Nurse: “What is your updated ETA?”');
+  assert.equal(strip('Nurse: "The ECG looks normal. What is your updated ETA?"'), 'Nurse: "What is your updated ETA?"');
+  assert.equal(strip('Nurse: “The ECG shows an inferior STEMI.”'), '');
+  assert.equal(strip('The patient states, “I had an infarct in 2014.”',true), 'The patient states, “I had an infarct in 2014.”');
+  assert.equal(strip('The 12-lead shows 2.5 mm ST elevation. Patient remains pale.',true), 'Patient remains pale.');
+});
+
 test('every catalog pattern and rhythm automatically gets increasingly noisy quality variants',()=>{
   const catalog=ECG.catalog;
   for(const [key,definition] of Object.entries(catalog.patterns)){

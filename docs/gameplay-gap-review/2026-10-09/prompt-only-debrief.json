@@ -1,0 +1,68 @@
+{
+  "state": "complete",
+  "review": {
+    "version": 5,
+    "scored": false,
+    "score": null,
+    "notice": "This record shows the call sequence and logged observations. Times mark the end of a turn, not the exact intervention time. Procedure outcomes reflect the simulation, not decision quality. See the debrief for clinical takeaways.",
+    "findings": [],
+    "timeline": [
+      {
+        "turn": 1,
+        "minute": 2,
+        "patient": "patient_1",
+        "action": "Assess ABCs, vitals, glucose, focused history and exam.",
+        "scene": "Awake, patent airway, adequate ventilation, pale and clammy, weak pulses. Sudden abdominal pain. Nearby hospital has emergency vascular surgery; ALS cannot intercept before arrival.",
+        "report": false,
+        "skip": false,
+        "procedures": [],
+        "vitals": {
+          "HR": 124,
+          "BP": "82/50",
+          "RR": 24,
+          "Glucose": 112,
+          "GCS": 15
+        }
+      },
+      {
+        "turn": 2,
+        "minute": 4,
+        "patient": "patient_1",
+        "action": "I suspect sepsis but recognize shock of uncertain cause. Keep warm, monitor ABCs, load now and depart for the surgical-capable hospital. Pre-notify with shock findings and uncertainty.",
+        "scene": "Patient secured and warm; transport begins and the receiving team acknowledges the report.",
+        "report": false,
+        "skip": false,
+        "procedures": [],
+        "vitals": {}
+      },
+      {
+        "turn": 3,
+        "minute": 17,
+        "patient": "patient_1",
+        "action": "[Skip ahead to arrival]",
+        "scene": "Existing care and monitoring continue. The patient remains awake on arrival.",
+        "report": false,
+        "skip": true,
+        "procedures": [],
+        "vitals": {
+          "HR": 128,
+          "BP": "80/48",
+          "GCS": 15
+        }
+      },
+      {
+        "turn": 4,
+        "minute": 18,
+        "patient": "patient_1",
+        "action": "Transfer care with onset, vital trends, interventions and diagnostic uncertainty.",
+        "scene": "Hospital team accepts handoff and begins evaluation. No imaging, surgery or recovery is recorded.",
+        "report": true,
+        "skip": false,
+        "procedures": [],
+        "vitals": {}
+      }
+    ],
+    "debriefText": "You rapidly identified critical, decompensating shock in an awake 68-year-old presenting with sudden severe abdominal pain, tachycardia, and severe hypotension. Your focused assessment correctly established patent ABCs, gathered essential vitals, and ruled out hypoglycemia without introducing unnecessary on-scene delays. You appropriately prioritized immediate life threats over exhaustive on-scene diagnostic testing.\n\nYour clinical decision-making was exemplary. Although your working differential leaned toward sepsis, you correctly focused on managing the life-threatening syndrome of undifferentiated circulatory collapse. Recognizing profound hypotension and hypoperfusion, you prioritized passive rewarming to counter the lethal triad of hypothermia, acidosis, and coagulopathy. Most crucially, you kept on-scene time to four minutes and chose a receiving facility with emergency vascular surgical capabilities while recognizing ALS was unavailable. Initiating early pre-notification with objective vital trends and diagnostic uncertainty alerted the receiving team to prepare for an unstable resuscitation. Your rapid transport decision preserved critical time for definitive intervention.\n\nThe patient suffered a ruptured abdominal aortic aneurysm causing catastrophic internal hemorrhage and severe hypovolemic shock. In the field, a retroperitoneal or intraperitoneal rupture frequently presents as undifferentiated shock with vague or sudden abdominal pain, and definitive identification requires point-of-care ultrasound or hospital imaging. Your syndrome-based management addressed the acute threat perfectly: by maintaining warmth, avoiding scene delays, and routing directly to a surgical center, you delivered the exact care indicated for occult catastrophic bleeding regardless of the diagnostic label.\n\n* **Treat the clinical syndrome over the diagnostic label**: Managing undifferentiated shock with immediate transport rather than delaying scene time to isolate a definitive source protects vital organ perfusion.\n* **Select the destination based on potential surgical need**: Routing undifferentiated abdominal pain in deep shock to a facility with vascular surgical capability ensures the patient reaches definitive hemorrhage control.\n* **Prevent hypothermia early**: Applying passive warming preserves clotting factor function and prevents hypothermia-induced coagulopathy during active internal hemorrhage.\n\nThis is your cue to pull your own local protocols and the NREMT skills checklist and check them against how you ran this call. Simulation scope and your real-world scope may differ — your protocols are the final authority."
+  },
+  "patientOutcome": "Discharged to skilled nursing facility on October 24, 2026."
+}

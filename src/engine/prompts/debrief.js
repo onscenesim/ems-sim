@@ -1,6 +1,6 @@
 'use strict';
 
-const { ARREST_TRANSPORT_DOCTRINE, ARREST_MEDICATION_PRINCIPLES } = require('./arrest');
+const { ARREST_TRANSPORT_REVIEW, ARREST_MEDICATION_PRINCIPLES } = require('./arrest');
 
 /**
  * Returns the system prompt for the post-call debrief API call.
@@ -27,7 +27,7 @@ EVIDENCE & CLINICAL RULES:
 1. SEPARATE DECISIONS FROM DICEROLLS: Backend dice outcomes (d20 vs DC) show chance. A correct decision with an unfavorable roll is still CORRECT. An incorrect decision with a favorable roll is an ERROR.
 2. TIMING & EVIDENCE BINDING: Tie each specific observation to the supplied turn number and scene minute; times are turn-end snapshots, not precise procedure start times. Never invent timestamps. Judge decisions using all player-visible evidence available at that moment: SCENE narration, DISPLAYED VITALS (including monitor rhythm and signal quality), and stored ECG PRINTOUTS. These observations become available after the corresponding turn's order; do not penalize that order for findings it first produced. A monitor or ECG finding need not be narrated to be available. Respect each ECG's capture time, patient, lead placement and signal quality; do not treat artifact-obscured waveform parameters as discernible findings or assume an automated diagnosis was displayed. Hidden ground truth and physiology are educational context, never prior player knowledge. If a finding was never available through any player-visible source, do not fault the student for missing it.
 3. STRICT CONSISTENCY: Never flag an action as an error in one section and praise it as correct elsewhere in the debrief.
-4. ${ARREST_TRANSPORT_DOCTRINE}
+4. ${ARREST_TRANSPORT_REVIEW}
    ${ARREST_MEDICATION_PRINCIPLES} Evaluate medication choice/dosing only against the actual age/weight, rhythm, revealed findings, provider scope and applicable protocol; a hidden contraindication is not evidence the provider knew its cause.
 5. IMMERSION: Write directly to the student ("You did X..."). NEVER cite section numbers, "the log", "ground truth", or "SCENE text" in your output.
 6. PULSE OX: True SpO2 is hidden physiology; displayed SpO2 and pleth quality are monitor observations available to the student. Never equate a false or missing reading with hypoxemia, and never assume the student knew the hidden true saturation. Explain signal artifacts separately from actual oxygenation changes when relevant.
@@ -35,7 +35,8 @@ EVIDENCE & CLINICAL RULES:
 8. LOCAL PROTOCOLS: When the student identifies a plausible local-protocol variation, do not grade it against generic ACLS timing alone. Their local protocol remains the final authority.
 9. BLACK CLOUD CONTEXT: If the RUN LOG identifies the difficulty as BLACK_CLOUD, include this exact sentence in section 2: "Black Cloud context: this experimental mode imposes arbitrary, compounded difficulty; an unsalvageable or incoherent presentation is not, by itself, evidence of provider error." Keep that context in mind throughout the debrief: do not equate an inability to save the patient with incorrect care.
 10. SUSPECTED ACUTE ISCHEMIC STROKE: When the presentation is suspected acute ischemic stroke or TIA, treat LAST KNOWN WELL as a top-priority time datum. Evaluate whether the provider obtained it from a reliable source, activated/pre-notified a stroke-capable receiving facility, and minimized on-scene time. For positioning, recognize a flat head-of-bed position as the default for suspected acute ischemic stroke, while accepting a documented airway, vomiting/aspiration, respiratory, or local-protocol reason to use another position. Do not penalize essential airway or glucose care when it was performed promptly; do penalize nonessential scene delay.
-11. TRANSPORT SKIPS: Ongoing care continued; no new interventions ordered. The provider kept monitoring and continued existing care throughout a skipped interval. A time-skip alone is not evidence of interrupted treatment, missed monitoring or abandonment.
+11. HOSPITAL EVENTS & CAUSAL CLAIMS: Arrival and accepted handoff establish transfer of care only. Never assert that hospital preparation, resource mobilization, surgery, imaging, definitive treatment, discharge or recovery occurred unless the timeline explicitly records it. Explain plausible benefits with calibrated language ("supported timely evaluation", "may improve the chance of survival"); never claim that a field action "ensured", "guaranteed" or "prevented" an unobserved outcome, or invent what would certainly have happened under different care. For pre-notification, "alerted the receiving team" is supported by an acknowledged report; "could support preparation" is a possible benefit, whereas "mobilized resources" or "ensures teams prepare" asserts an unrecorded event or guarantee. This boundary applies to praise as well as criticism and to every visible section. The separate PATIENT_OUTCOME is a likely simulated disposition, not evidence to cite as an established hospital course.
+12. TRANSPORT SKIPS: Ongoing care continued; no new interventions ordered. The provider kept monitoring and continued existing care throughout a skipped interval. A time-skip alone is not evidence of interrupted treatment, missed monitoring or abandonment.
 
 ---
 
@@ -81,4 +82,18 @@ function parseDebriefResponse(value, callDate = null) {
   return { debrief, patientOutcome };
 }
 
-module.exports = { buildDebriefPrompt, parseDebriefResponse, normalizePatientOutcome };
+// Catch concrete outcome guarantees before a draft can become saved feedback.
+// This is deliberately narrower than clinical-content validation: physiology
+// explanations and the separately labelled likely disposition are not graded.
+function debriefEvidenceIssues(value) {
+  const { debrief } = parseDebriefResponse(value);
+  const endpoint = /\b(?:surg\w*|operati\w*|definitive (?:treatment|care|intervention|hemorrhage control)|hemorrhage control|surviv\w*|death|collapse|recovery|discharg\w*|mobiliz\w*|prepar\w* resuscitation|resuscitation resources|teams? prepare)\b/i;
+  return debrief.split(/(?<=[.!?])\s+|\n/).filter(sentence => {
+    if (!endpoint.test(sentence)) return false;
+    if (/\b(?:ensur\w*|guarantee\w*|saved|prevented)\b/i.test(sentence)) return true;
+    return /\b(?:enabled|allowed)\b[^.!?]*\b(?:to|hospital|team)\b/i.test(sentence)
+      && !/\b(?:may|might|could|potentially)\b/i.test(sentence);
+  }).slice(0, 4);
+}
+
+module.exports = { buildDebriefPrompt, parseDebriefResponse, normalizePatientOutcome, debriefEvidenceIssues };

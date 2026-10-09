@@ -2,6 +2,7 @@
 
 const { INTERVENTIONS } = require('../data/interventions');
 const { medicationPresentationAt } = require('./medication-route');
+const { unavailableProcedure } = require('./equipment');
 const { MEDICATION_ALIASES } = require('../../public/medication-aliases');
 const MEDICATION_NAMES = new Map(Object.entries(MEDICATION_ALIASES).flatMap(
   ([name, aliases]) => aliases.map(alias => [alias.toLowerCase(), name])));
@@ -820,6 +821,11 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
     // confirm click: the wording itself says "charge, don't shock."
     if (precharge) {
       suppressed.push({ procedure_id: proc.id, matchedKey, precharge: true, reason: 'pre-charging — charging the defibrillator in anticipation, no shock ordered' });
+      continue;
+    }
+    const unavailable = unavailableProcedure(proc.id, contextFlags);
+    if (unavailable) {
+      suppressed.push({ procedure_id: proc.id, matchedKey, unavailable: true, reason: unavailable });
       continue;
     }
     if (deny.has(key)) {
