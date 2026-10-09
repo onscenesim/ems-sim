@@ -540,6 +540,7 @@ router.post('/:id/turn', async (req, res) => {
         matched:      e.matchedKey,
         reason:       e.reason,       // null = confident detection
         sentence:     e.sentence,
+        targets:      e.targets,
         unavailable: unavailableProcedure(e.proc.id, {
           monitor_available: hasCardiacMonitor(session.seed, session.backupStatus),
         }),

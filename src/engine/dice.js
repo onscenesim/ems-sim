@@ -1,6 +1,7 @@
 'use strict';
 
 const { INTERVENTIONS } = require('../data/interventions');
+const { SITE_PROCEDURES, procedureTargets, rollEntry } = require('./procedure-targets');
 const { medicationPresentationAt } = require('./medication-route');
 const { unavailableProcedure } = require('./equipment');
 const { MEDICATION_ALIASES } = require('../../public/medication-aliases');
@@ -73,7 +74,9 @@ for (const proc of INTERVENTIONS) {
     const escaped = stripped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       .replace(/\b(12|twelve)[ -]lead\b/g, '$1[\\s\\u002d\\u2010-\\u2014]*lead');
     // Each whitespace gap can optionally swallow an article
-    const flexible = escaped.replace(/\\? /g, '\\s+(?:an?\\s+|the\\s+|another\\s+|second\\s+|additional\\s+)?');
+    const plural = SITE_PROCEDURES.has(proc.id)
+      ? escaped.replace(/\b(iv|io|tourniquet|tq|cat)$/i, '$1s?') : escaped;
+    const flexible = plural.replace(/\\? /g, '\\s+(?:an?\\s+|the\\s+|another\\s+|second\\s+|additional\\s+)?');
     // Word-boundary via lookbehind/lookahead — handles hyphens and acronyms
     const pattern = new RegExp(`(?<![a-z0-9])${flexible}(?![a-z0-9])`, 'i');
     // Precompute specificity using the ORIGINAL raw string so uppercase acronyms
@@ -240,7 +243,7 @@ const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|l
 
 // Route qualifier prepositions: when immediately preceding a device/access synonym,
 // the user is specifying an admin route ("push epi through the IO"), not placing new access.
-const ROUTE_QUALIFIER_RE = /\b(?:through|via|into|from|out\s+of)\s*(?:the\s+|an?\s+|my\s+)?$/i;
+const ROUTE_QUALIFIER_RE = /\b(?:through|via|into|from|out\s+of)\s*(?:the\s+|an?\s+|my\s+)?(?:both\s+|bilateral\s+|bilat\s+)?$/i;
 
 // Contingent / hypothetical phrasing — the action is NOT a committed order this
 // turn. Rolling these produced phantom outcomes ("if respiratory depression, give
@@ -627,7 +630,7 @@ function detectAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
  * Detect ALL distinct procedures in a message and roll each one.
  * Scans greedily (longest synonym first); once a procedure fires its
  * matched text is consumed so shorter overlapping synonyms don't double-fire.
- * A procedure can only roll once per message even if mentioned multiple times.
+ * Site procedures may repeat for distinct targets; other procedures roll once.
  * Returns an array (may be empty).
  */
 function isTreatmentAssessment(text, start, length, proc, key) {
@@ -659,6 +662,7 @@ function detectAllProcedures(userText) {
   let found = [];
   const usedProcIds = new Set();
   const usedMedications = new Set();
+  const distinctEntries = new Set();
 
   // Command-style input: the whole message is a terse list of bare keywords
   // separated by commas / "and" / "or" / "then" — no sentence structure.
@@ -670,7 +674,7 @@ function detectAllProcedures(userText) {
                        chunks.every(c => c.split(/\s+/).length <= 3);
 
   // Safety cap — no message should have more than 10 distinct procedures
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 40 && distinctEntries.size < 10; i++) {
     let bestMatch = null;
     let bestMatchIndex = -1;
 
@@ -735,8 +739,10 @@ function detectAllProcedures(userText) {
       const medication = bestMatch.proc.id === 'medication_push' ? MEDICATION_NAMES.get(bestMatch.key) : null;
       if (medication && usedMedications.has(medication)) continue;
       if (medication) usedMedications.add(medication);
+      distinctEntries.add(procEntryKey(bestMatch.proc.id, medication || bestMatch.proc.id));
       found.push({
         proc: bestMatch.proc,
+        ...(SITE_PROCEDURES.has(bestMatch.proc.id) ? { targets: procedureTargets(normalized, bestMatchIndex, bestMatch.matchLen, bestMatch.proc.id) } : {}),
         matchedKey: bestMatch.key,
         ...(bestMatch.proc.id === 'medication_push'
           ? medicationPresentationAt(normalized, bestMatchIndex, bestMatch.matchLen, medication, bestMatch.key) : {}),
@@ -748,13 +754,29 @@ function detectAllProcedures(userText) {
       });
       // medication_push can fire multiple times in one message (once per drug).
       // Canonical medication identities also prevent brand/generic double rolls.
-      if (bestMatch.proc.id !== 'medication_push') {
+      if (bestMatch.proc.id !== 'medication_push' && !SITE_PROCEDURES.has(bestMatch.proc.id)) {
         usedProcIds.add(bestMatch.proc.id);
       }
     }
     // If negated, leave proc.id eligible — a NON-negated mention later in the
     // same message should still fire ("no IV yet, give morphine 4mg, then try IV").
   }
+
+  // Merge repeated aliases and repeated site orders into one confirmation row.
+  // Each unique anatomical target is rolled separately after confirmation.
+  const siteEntries = new Map();
+  found = found.filter(entry => {
+    if (!SITE_PROCEDURES.has(entry.proc.id)) return true;
+    const previous = siteEntries.get(entry.proc.id);
+    if (!previous) { siteEntries.set(entry.proc.id, entry); return true; }
+    // Discussion about one site must not become an order just because a
+    // different site was clearly ordered in the same message.
+    if (previous.uncertain && !entry.uncertain) Object.assign(previous, entry);
+    else if (previous.uncertain === entry.uncertain) {
+      previous.targets = [...new Set([...previous.targets, ...entry.targets])];
+    }
+    return false;
+  });
 
   // A generic bag/bolus description beside a named solution is the same order.
   const genericFluids = new Set(['IV Fluids (specify solution)', 'Blood Products (specify component)']);
@@ -778,8 +800,10 @@ function detectAllProcedures(userText) {
 function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
   const entries = detectAllProcedures(userText);
   const suction_assisted = entries.some(e => e.proc.id === 'suction' && !e.precharge);
-  return entries.map(({ proc, matchedKey, administration_route, medication_animation_route, medication_name, medication_kind, medication_route_explicit }) => {
-    const result = rollProcedure(proc, { ...contextFlags, suction_assisted }, difficulty);
+  return entries.flatMap(entry => {
+    const { proc, matchedKey, administration_route, medication_animation_route, medication_name, medication_kind, medication_route_explicit } = entry;
+    const results = rollEntry(entry, { ...contextFlags, suction_assisted }, difficulty, rollProcedure);
+    const result = results[0];
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
       if (medication_name) result.medication_name = medication_name;
@@ -788,7 +812,7 @@ function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
       if (administration_route) result.administration_route = administration_route;
       if (medication_animation_route) result.medication_animation_route = medication_animation_route;
     }
-    return result;
+    return results;
   });
 }
 
@@ -836,7 +860,8 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
       suppressed.push({ procedure_id: proc.id, matchedKey, reason });
       continue;
     }
-    const result = rollProcedure(proc, { ...contextFlags, suction_assisted }, difficulty);
+    const results = rollEntry(entry, { ...contextFlags, suction_assisted }, difficulty, rollProcedure);
+    const result = results[0];
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
       if (entry.medication_name) result.medication_name = entry.medication_name;
@@ -845,7 +870,7 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
       if (entry.administration_route) result.administration_route = entry.administration_route;
       if (entry.medication_animation_route) result.medication_animation_route = entry.medication_animation_route;
     }
-    rolls.push(result);
+    rolls.push(...results);
   }
   return { rolls, suppressed };
 }

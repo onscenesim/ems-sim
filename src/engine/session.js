@@ -102,6 +102,11 @@ function reconcileRolls(rolls, reply) {
     const terms = rollSearchTerms(r);
     for (const sent of sentences) {
       const sl = sent.toLowerCase();
+      if (r.target && /^(left|right)\b/.test(r.target)) {
+        const side = r.target.split(' ')[0];
+        const opposite = side === 'left' ? 'right' : 'left';
+        if (sl.includes(opposite) && !sl.includes(side)) continue;
+      }
       if (terms.some(t => sl.includes(t)) && REFUSAL_RE.test(sent)) return false;
     }
     return true;
@@ -558,7 +563,7 @@ class Session {
     const counts = {};
     return this.access.map(a => {
       counts[a.kind] = (counts[a.kind] || 0) + 1;
-      return `${a.kind} #${counts[a.kind]}: ${a.status.toUpperCase()}`;
+      return `${a.kind} #${counts[a.kind]}${a.target ? ` (${a.target})` : ''}: ${a.status.toUpperCase()}`;
     }).join(', ');
   }
 
@@ -570,17 +575,18 @@ class Session {
     for (const r of rolls) {
       if (r.no_roll) continue;
       if (r.procedure_id === 'peripheral_iv') {
-        if (r.outcome === 'SUCCESS')       this.access.push({ kind: 'IV', status: 'patent' });
-        else if (r.outcome === 'MARGINAL') this.access.push({ kind: 'IV', status: 'marginal' });
-        else if (r.outcome === 'COMPLICATION') this.access.push({ kind: 'IV', status: 'blown' });
+        if (r.outcome === 'SUCCESS')       this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IV', status: 'patent' });
+        else if (r.outcome === 'MARGINAL') this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IV', status: 'marginal' });
+        else if (r.outcome === 'COMPLICATION') this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IV', status: 'blown' });
         // FAILURE: no line placed
       } else if (r.procedure_id === 'io_access') {
-        if (r.outcome === 'SUCCESS')       this.access.push({ kind: 'IO', status: 'patent' });
-        else if (r.outcome === 'MARGINAL') this.access.push({ kind: 'IO', status: 'marginal' });
+        if (r.outcome === 'SUCCESS')       this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IO', status: 'patent' });
+        else if (r.outcome === 'MARGINAL') this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IO', status: 'marginal' });
       }
     }
     // Narrated line failure ("IV's blown", "the catheter has infiltrated")
-    if (/\b(?:iv|line|catheter)\b[^.!?]{0,80}\b(?:blown|blew|infiltrat\w*|extravasat\w*|no longer patent|lost)\b|\b(?:blown|infiltrat\w+)\b[^.!?]{0,40}\b(?:iv|line|catheter)\b/i.test(reply)) {
+    if (!rolls.some(r => r.target && ['peripheral_iv', 'io_access'].includes(r.procedure_id))
+        && /\b(?:iv|line|catheter)\b[^.!?]{0,80}\b(?:blown|blew|infiltrat\w*|extravasat\w*|no longer patent|lost)\b|\b(?:blown|infiltrat\w+)\b[^.!?]{0,40}\b(?:iv|line|catheter)\b/i.test(reply)) {
       const last = [...this.access].reverse().find(a => a.kind === 'IV' && a.status !== 'blown');
       if (last) last.status = 'blown';
     }
@@ -789,11 +795,12 @@ class Session {
         const mLabel = r.matched_drug ? ` (${r.matched_drug})` : '';
         return `[SYSTEM ROLL: ${r.procedure_id}${mLabel} — ${parts.join(' | ')}${guideStr}]`;
       }
-      const drugLabel = r.matched_drug ? ` (${r.matched_drug})` : '';
+      const drugLabel = (r.matched_drug ? ` (${r.matched_drug})` : '') + (r.target ? ` [${r.target}]` : '');
       return `[SYSTEM ROLL: ${r.procedure_id}${drugLabel} — d20=${r.roll} vs DC ${r.dc} — ${r.outcome}${guideStr}]`;
     });
     if (rollLines.length > 0) {
       messageText += '\n\n' + rollLines.join('\n');
+      if (rolls.some(r => r.target)) messageText += '\n[SYSTEM NOTE: Each labeled target is an independent attempt. Honor and describe each target’s own outcome; one successful side does not make a failed side successful. Only SUCCESS or MARGINAL IV/IO placements create usable access. Do not invent extra access sites.]';
     }
 
     // Mentions the player confirmed are NOT orders (or that context marked as
@@ -949,7 +956,7 @@ class Session {
     for (const roll of reconciledRolls) {
       logEvent(this.seed, roll.no_roll
         ? { event_type: 'procedure', procedure_id: roll.procedure_id, patient: roll.patient || 'primary', outcome: 'NO_ROLL' }
-        : { event_type: 'procedure', procedure_id: roll.procedure_id, patient: roll.patient || 'primary', dice_roll: roll.roll, dc_value: Array.isArray(roll.dc) ? roll.dc[0] : roll.dc, outcome: roll.outcome },
+        : { event_type: 'procedure', procedure_id: roll.procedure_id, patient: roll.patient || 'primary', ...(roll.target ? { target: roll.target } : {}), dice_roll: roll.roll, dc_value: Array.isArray(roll.dc) ? roll.dc[0] : roll.dc, outcome: roll.outcome },
         this.sceneMinute);
     }
     if (backup) {

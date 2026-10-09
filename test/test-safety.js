@@ -135,12 +135,13 @@ test('ongoing and pronoun suction orders trigger suctioning', () => {
   }
 });
 
-test('singular and plural needle decompression orders trigger one NCD roll', () => {
+test('needle decompression rolls once per ordered side', () => {
   for (const phrase of [
     'Perform needle decompression', 'Perform needle decompressions',
     'Perform bilateral needle decompression', 'Perform bilateral needle decompressions',
   ]) {
-    assert.deepEqual(detectWithConfirmation(phrase).rolls.map(r => r.procedure_id), ['needle_decompression'], phrase);
+    assert.deepEqual(detectWithConfirmation(phrase).rolls.map(r => r.procedure_id),
+      Array(phrase.includes('bilateral') ? 2 : 1).fill('needle_decompression'), phrase);
   }
 });
 

@@ -515,7 +515,7 @@ function printReply(text) {
 
 function printRoll(roll) {
   if (!roll || roll.no_roll) return;
-  const disSuffix = roll.disadvantage ? ' (dis)' : '';
+  const disSuffix = (roll.target ? ` [${roll.target}]` : '') + (roll.disadvantage ? ' (dis)' : '');
   function fmtRoll(r) {
     if (r.both_rolls && r.both_rolls.length === 2) {
       return `d20=${r.both_rolls[0]}↓${r.both_rolls[1]}=${r.roll} vs DC ${r.dc} → ${r.outcome}`;
@@ -1328,7 +1328,7 @@ async function sendTurn(msg, opts = {}) {
       if (DEFIB_PROCS.has(r.procedure_id)) { playSound(getOutcomeSound(r.outcome)); await animateDefib(r.procedure_id, r.outcome); continue; }
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       if (r.multi_roll) playSound(getOutcomeSound(r.outcome));
-      else await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome);
+      else await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome, r.target);
       if (procSound && !hasProcedureAnimationSound(r.procedure_id)) playSound(procSound);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id, r.outcome);
       if (r.procedure_id === 'nasopharyngeal_airway') await animateProcedureScene('npa', r.procedure_id, r.outcome);
@@ -1514,7 +1514,8 @@ function showProcConfirm(msg, opts, items) {
     const name = document.createElement('div');
     name.className = 'proc-confirm-name';
     name.textContent = (OBSTRUCTION_PROCS.has(item.procedure_id) ? 'REMOVE OBSTRUCTION' : item.procedure_id.replace(/_/g, ' ').toUpperCase())
-      + (item.matched && item.matched !== item.procedure_id ? ` ("${item.matched}")` : '');
+      + (item.matched && item.matched !== item.procedure_id ? ` ("${item.matched}")` : '')
+      + (item.targets?.length > 1 ? ` — ${item.targets.length} rolls (${item.targets.join(', ')})` : '');
     info.appendChild(name);
     // Only ambiguous detections need the "why are we asking" line; confident
     // rows stay one-line for a fast scan.
@@ -2871,7 +2872,7 @@ function animateDepart() {
  * @param {number|number[]} dc   DC value(s)
  * @param {string} outcome       'SUCCESS' | 'MARGINAL' | 'FAILURE' | 'COMPLICATION'
  */
-function animateDiceRoll(procedureId, roll, dc, outcome) {
+function animateDiceRoll(procedureId, roll, dc, outcome, target) {
   // Warm the outcome while the die spins, before the landing beat.
   loadSoundBuffer(getOutcomeSound(outcome)).catch(() => {});
   return new Promise(resolve => {
@@ -2882,6 +2883,7 @@ function animateDiceRoll(procedureId, roll, dc, outcome) {
 
     // Populate static labels
     diceProcEl.textContent    = OBSTRUCTION_PROCS.has(procedureId) ? 'REMOVE OBSTRUCTION' : procedureId.replace(/_/g, ' ').toUpperCase();
+    if (target) diceProcEl.textContent += ` · ${target.toUpperCase()}`;
     const dcLabel = Array.isArray(dc) ? dc.join(' / ') : dc;
     diceDCEl.textContent      = `DC ${dcLabel}`;
     diceOutcomeEl.textContent = '';
@@ -3008,7 +3010,7 @@ function formatBackendSection(t, backend) {
         const t2 = `T+${Number(ev.scene_minute ?? 0).toFixed(1)}m`;
         if (ev.event_type === 'procedure') {
           const dice = ev.dice_roll != null ? ` d20=${ev.dice_roll} vs DC${ev.dc_value} -> ${ev.outcome}` : ` ${ev.outcome || ''}`;
-          lines.push(`  ${t2} procedure ${ev.procedure_id}${ev.patient && ev.patient !== 'primary' ? ' [' + ev.patient + ']' : ''}${dice}`);
+          lines.push(`  ${t2} procedure ${ev.procedure_id}${ev.patient && ev.patient !== 'primary' ? ' [' + ev.patient + ']' : ''}${ev.target ? ' [' + ev.target + ']' : ''}${dice}`);
         } else {
           lines.push(`  ${t2} ${ev.event_type}${ev.detail ? ' — ' + ev.detail : ''}`);
         }
@@ -3031,7 +3033,7 @@ function formatBackendSection(t, backend) {
         const parts = (r.rolls || []).map(x => `d20=${x.roll} vs DC${x.dc} -> ${x.outcome}`).join(' | ');
         lines.push(`      roll: ${r.procedure_id}${r.matched_drug ? ' (' + r.matched_drug + ')' : ''} ${parts}`);
       } else {
-        lines.push(`      roll: ${r.procedure_id}${r.matched_drug ? ' (' + r.matched_drug + ')' : ''} d20=${r.roll} vs DC${r.dc} -> ${r.outcome}${r.disadvantage ? ' (dis)' : ''}`);
+        lines.push(`      roll: ${r.procedure_id}${r.matched_drug ? ' (' + r.matched_drug + ')' : ''}${r.target ? ' [' + r.target + ']' : ''} d20=${r.roll} vs DC${r.dc} -> ${r.outcome}${r.disadvantage ? ' (dis)' : ''}`);
       }
     }
     if (turn.suppressed && turn.suppressed.length) {

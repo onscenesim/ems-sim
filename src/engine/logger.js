@@ -14,6 +14,7 @@ function logEvent(seed, event, sceneMin) {
     event_type: event.event_type,
     procedure_id: event.procedure_id || null,
     patient: event.patient || 'primary',
+    ...(event.target ? { target: event.target } : {}),
     dice_roll: event.dice_roll ?? null,
     dc_value: event.dc_value ?? null,
     outcome: event.outcome || null,
