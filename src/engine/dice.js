@@ -192,7 +192,7 @@ const ADMIN_VERB_RE = /\b(transfus(?:e|ing)|appl(?:y|ying)|instill(?:s|ing)?|giv
 
 // Oxygen device changes are administration orders without a generic "give" verb.
 // Keep this gate local to oxygen so "switch" cannot authorize unrelated drugs.
-const OXYGEN_ORDER_RE = /\b(?:switch(?:ing)?|chang(?:e|ing)|transition(?:ing)?|wean(?:ing)?|increas(?:e|ing)|decreas(?:e|ing)|turn(?:ing)?|put(?:ting)?)\b/i;
+const OXYGEN_ORDER_RE = /\b(?:switch(?:ing)?|chang(?:e|ing)|transition(?:ing)?|wean(?:ing)?|increas(?:e|ing)|decreas(?:e|ing)|turn(?:ing)?|put(?:ting)?|pre[ -]?oxygenat(?:e|ing|ion)|pre[ -]?ox)\b/i;
 
 function isSamplingCannula(text,start,length,key) {
   if(!/^(?:nc|nasal can(?:nula|ula|nulla))$/i.test(key))return false;

@@ -35,7 +35,7 @@ test('generic fluid wording does not duplicate a named bag, while components sta
 });
 
 test('oxygen administration recognizes devices and spelling variants but excludes assessments', () => {
-  for (const text of ['Give oxygen', 'Start O2 at 15 lpm via NRB', 'Apply a non-rebreather', 'Place nasal canula', 'Give oxgyen', 'Give oxigen', 'Apply O₂', 'Give supplemental oxygen']) {
+  for (const text of ['Give oxygen', 'Start O2 at 15 lpm via NRB', 'Apply a non-rebreather', 'Place nasal canula', 'Give oxgyen', 'Give oxigen', 'Apply O₂', 'Give supplemental oxygen', 'Preoxygenate before intubation', 'Start preoxygenation', 'Preox the patient']) {
     assert.equal(detectWithConfirmation(text).rolls.filter(r => r.procedure_id === 'oxygen').length, 1, text);
   }
   for (const text of ['Oxygen level', 'check oxygen', 'Check O2 saturation', 'Recheck oxygen sats', 'Is oxygen flowing?', 'What is his oxygen level?', 'Check the NRB mask', 'Do not give oxygen', 'Check oxygen supply']) {

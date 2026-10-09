@@ -28,6 +28,7 @@ const SOUNDS = {
   lucas:    '/sounds/LUCAS.m4a',
   lifepak:  '/sounds/LifepakStartup.m4a',
   radio:    '/sounds/RadioCrackle.m4a',
+  signoff:  '/sounds/RadioSignoff.mp3',
   surgical:         '/sounds/SurgicalIncision.m4a',
   sword:            '/sounds/SwordSlice.mp3',
   hiss:             '/sounds/SteamHiss.mp3',
@@ -55,7 +56,7 @@ const SOUNDS = {
   sfx_depart:       '/sounds/AmbulanceDeparting.m4a',
 };
 // Match these close-up interface recordings to the established effect bed.
-const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .5, med_im_action: .55, med_in_action: .48, squelch: .65 };
+const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .5, med_im_action: .55, med_in_action: .48, squelch: .65, signoff: .65 };
 // One gesture-unlocked Web Audio context mixes short effects without competing
 // HTML media decoders. Buffers are decoded once; finished voices are released.
 let soundContext;
@@ -1710,6 +1711,7 @@ function showSignoffAnimation() {
   }
   overlay.classList.remove('fade-out');
   overlay.classList.add('visible');
+  playSound('signoff');
   setTimeout(() => {
     overlay.classList.add('fade-out');
     setTimeout(() => overlay.classList.remove('visible', 'fade-out'), 350);

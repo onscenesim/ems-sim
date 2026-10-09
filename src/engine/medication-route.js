@@ -58,7 +58,7 @@ function medicationRouteAt(text, start, length) {
 
 const MEDICATION_ANIMATION_DEFAULTS = new Map([
   ['Nitroglycerin', 'PO'], ['Aspirin', 'PO'], ['Naloxone', 'IN'],
-  ['Oral Glucose', 'PO'], ['Activated Charcoal', 'PO'],
+  ['Oral Glucose', 'PO'], ['Activated Charcoal', 'PO'], ['Acetaminophen', 'PO'],
   ['Albuterol / DuoNeb', 'NEB'], ['Levalbuterol', 'NEB'],
   ['Midazolam', 'IM'], ['Haloperidol', 'IM'], ['Ketamine', 'IM'],
   ['B52', 'IM'],
