@@ -23,7 +23,7 @@ test('all region/season/category combinations generate compatible scenarios', ()
   for (const region of REGIONS) for (const season of SEASONS) for (const category of Object.keys(SCENARIO_POOLS)) {
     for (let i = 0; i < 10; i++) {
       const seed = rollScenario({ region_id: region.id, season, category, difficulty: 'HARD' });
-      const entry = SCENARIO_POOLS[seed.category].find(e => (e.presentation || e.surface_presentation) === seed.presentation);
+      const entry = SCENARIO_POOLS[seed.dispatch_category || seed.category].find(e => (e.presentation || e.surface_presentation) === seed.presentation);
       assert.ok(validateCombination(entry, seed), `${seed.presentation}: ${JSON.stringify(seed)}`);
     }
   }

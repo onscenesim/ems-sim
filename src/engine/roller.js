@@ -346,12 +346,15 @@ function rollScenario(opts = {}) {
   const curveballWeight = CURVEBALL_WEIGHTS[difficulty];
   // Honor an explicit player choice (if it's a selectable category); otherwise
   // pick by weight. A forced choice intentionally bypasses the no-repeat history.
-  const category = instructor?.entry.category || ((requestedCategory && PLAYER_SELECTABLE_CATEGORIES.has(requestedCategory))
+  const dispatchCategory = instructor?.entry.category || ((requestedCategory && PLAYER_SELECTABLE_CATEGORIES.has(requestedCategory))
     ? requestedCategory
     : pickCategory(difficulty, history, curveballWeight));
-  const presentation = instructor?.entry || pickPresentation(category, difficulty, history, region_id, season);
+  const presentation = instructor?.entry || pickPresentation(dispatchCategory, difficulty, history, region_id, season);
 
-  if (!presentation) throw new Error(`No eligible presentation for category: ${category}`);
+  if (!presentation) throw new Error(`No eligible presentation for category: ${dispatchCategory}`);
+  // Caller labels describe the dispatch, not confirmed circulation or death.
+  // All runtime care rules use the actual patient category from the case key.
+  const category = presentation.category_override || dispatchCategory;
 
   const forcedAge = instructor?.seed.patient_age;
   const ageGroup = forcedAge === undefined ? rollAgeGroup(category, presentation)
@@ -360,9 +363,17 @@ function rollScenario(opts = {}) {
   const ageDisplay = formatAgeDisplay(ageGroup, age);
   const sex = instructor?.seed.sex || rollSex(presentation, category);
   const patientName = rollPatientName(sex, random);
-  const trajectory = instructor?.seed.trajectory || (category === 'doa' ? 'stable' : rollTrajectory(difficulty));
+  const trajectory = instructor?.seed.trajectory || presentation.trajectory_override
+    || (category === 'doa' ? 'stable' : rollTrajectory(difficulty));
   const decompensationClock = category === 'doa' ? null : rollDecompensationClock(difficulty, trajectory);
   const complication = rollComplication(difficulty);
+  // A stable paired encounter must not secretly become its acute counterpart
+  // through the generic complication engine, even on BLACK_CLOUD.
+  if (presentation.frequent_caller?.variant === 'stable'
+    && ['clinical_curveball', 'all'].includes(complication.type)) {
+    complication.type = 'equipment_failure';
+    delete complication.types;
+  }
   const callerBehavior = rollCallerBehavior(category);
   const timeOfDay = rollTimeOfDay();
 
@@ -374,7 +385,7 @@ function rollScenario(opts = {}) {
   const specialCircumstance = rollSpecialCircumstance(
     difficulty, category, ageGroup, presentation, trajectory
   );
-  const comorbidityBundle = rollComorbidity(difficulty, category, ageGroup);
+  const comorbidityBundle = presentation.frequent_caller ? null : rollComorbidity(difficulty, category, ageGroup);
   let crew = pickCrew(region_id, history);
   if (partner_name) {
     const override = CREW.find(c => c.name === partner_name);
@@ -393,6 +404,7 @@ function rollScenario(opts = {}) {
     user_id,
     timestamp_start: new Date().toISOString(),
     category,
+    ...(presentation.category_override ? { dispatch_category: dispatchCategory } : {}),
     presentation: presentation.presentation || presentation.surface_presentation,
     true_diagnosis: presentation.true_diagnosis || null,
     ecg_pattern: presentation.ecg_pattern || null,
@@ -408,6 +420,7 @@ function rollScenario(opts = {}) {
     arrest_rhythm: presentation.rhythm || null,
     amiodarone_contraindicated: presentation.amiodarone_contraindicated === true,
     special_flags: presentation.special_flags || null,
+    ...(presentation.frequent_caller ? { frequent_caller: structuredClone(presentation.frequent_caller) } : {}),
     patient_name: patientName,
     patient_age: age,
     patient_age_display: ageDisplay,

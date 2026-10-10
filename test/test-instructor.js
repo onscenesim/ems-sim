@@ -33,7 +33,8 @@ test('every catalog scenario is selectable regardless of normal difficulty, hist
   for (const entry of entries) {
     const seed = rollScenario({ difficulty: 'EASY', region_id: 'TROPICAL_ISLAND', instructor: prepareInstructor({ case_id: entry.case_id, seed: { season: 'summer', random_seed: 'all-instructor-cases' } }), history: { presentations: [entry.presentation], categories: [entry.category], total_count: 1, doa_positions: [0], zoo_positions: [0] } });
     assert.equal(seed.case_id, entry.case_id);
-    assert.equal(seed.category, entry.category);
+    assert.equal(seed.category, entry.category_override || entry.category);
+    if (entry.category_override) assert.equal(seed.dispatch_category, entry.category);
     assert.equal(seed.instructor_mode, true);
   }
 });

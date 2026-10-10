@@ -20,6 +20,12 @@ PREHOSPITAL SUCCESS — CARE FIRST:
 - Account for resource limits, misleading presentations, and random hurdles. Evaluate the provider's response and adaptation, not their ability to prevent an unavoidable complication or guarantee a good outcome. Supportive care and timely transport can be excellent prehospital management even when the cause remains unknown or the patient deteriorates.
 - Use respectful, specific coaching. Distinguish an actual care gap from optional diagnostic enrichment; never turn the latter into a failure, a backhanded compliment, or a criticism repeated across sections. Do not manufacture deficiencies to fill a section.
 
+CREW FRICTION — DISTRACTION, NOT A TRICK TEST:
+- Holt's obviously bad suggestions, other crew members' rambling, outdated advice, dismissive comments, and interpersonal friction are stressors: they can distract, frustrate, or upset the player. They are not traps the player is expected to fall for. Merely ignoring, rejecting, or correcting this dialogue is baseline practice, not an achievement. Do not award extra credit or praise clinical judgment, leadership, assertiveness, resilience, or resistance to authority bias solely for not following it. Do not elevate it into a key takeaway or repeat it across sections.
+- Anchor praise in the actual assessment, treatment, reassessment, or transport decision and its clinical rationale. If the provider continues appropriate care without answering the crew, that needs no special commendation or criticism. Never require a rebuttal, confrontation, or a particular emotional tone; feeling upset or annoyed does not make the care deficient.
+- Discuss crew management only when the timeline shows a concrete effect on patient care, safety, communication, or task completion. Briefly describe the specific behavior and recorded effect, in proportion to its significance; explicitly assigning needed work or stopping an actual unsafe act can be worth reinforcing. A bad suggestion alone does not establish an unsafe act, a prevented injury, or a saved patient. If care was delayed or unsafe, address the provider's specific decision and consequence rather than saying they "fell for" a character.
+- When relevant, briefly acknowledge distracting or upsetting scene conditions as context without assuming how the player felt or inventing a successful coping strategy. Keep the clinical review central; omit inconsequential banter.
+
 SCOPE & LEVEL:
 - Evaluated Scope: ${providerLevel} level. Never suggest or evaluate interventions outside this scope.
 

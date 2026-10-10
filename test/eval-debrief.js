@@ -6,6 +6,9 @@
 // Human acceptance: the first three cases receive credit for the same care;
 // correct suspicion earns additional praise. Only the last case warrants
 // criticism for delayed care, tied to visible shock rather than the hidden label.
+// For crew-friction acceptance: node test/eval-debrief.js --crew-friction
+// The first four cases should receive equivalent clinical credit, with no bonus
+// for ignoring/correcting rambling. The fifth should address the recorded delay.
 require('dotenv').config({ quiet: true });
 const fs = require('node:fs');
 const os = require('node:os');
@@ -15,6 +18,7 @@ const { sendDebrief } = require('../src/engine/api');
 const { buildDebriefContext } = require('../src/engine/assembler');
 const { parseDebriefResponse } = require('../src/engine/prompts/debrief');
 const { evaluateObjectives } = require('../src/engine/learning');
+const { crewFrictionCases } = require('./fixtures/debrief-crew-friction');
 
 const seed = {
   scenario_id: 'debrief-care-first-evaluation', timestamp_start: '2026-10-05T12:00:00Z',
@@ -62,18 +66,25 @@ async function main() {
   if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is required for the live evaluation.');
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-debrief-eval-'));
   const reviews = [];
-  for (const [label, impression, delayed] of cases) {
-    const turns = caseTurns(impression, delayed);
-    const caseSeed = { ...seed, total_scene_minutes: delayed ? 38 : 18 };
-    const context = buildDebriefContext(caseSeed, turns, delayed ? 24 : 4);
-    const raw = await sendDebrief(context, seed.provider_level);
-    const { debrief, patientOutcome } = parseDebriefResponse(raw, seed.timestamp_start);
+  const evaluations = process.argv.includes('--crew-friction') ? crewFrictionCases()
+    : cases.map(([label, impression, delayed]) => ({ label, turns: caseTurns(impression, delayed),
+      seed: { ...seed, total_scene_minutes: delayed ? 38 : 18 }, departSceneMinute: delayed ? 24 : 4 }));
+  for (const { label, turns, seed: caseSeed, departSceneMinute } of evaluations) {
+    const context = buildDebriefContext(caseSeed, turns, departSceneMinute);
+    const raw = await sendDebrief(context, caseSeed.provider_level);
+    const { debrief, patientOutcome } = parseDebriefResponse(raw, caseSeed.timestamp_start);
     reviews.push({ label, review: { ...evaluateObjectives(caseSeed, turns), debriefText: debrief }, patientOutcome });
     fs.writeFileSync(path.join(directory, 'reviews.json'), JSON.stringify(reviews, null, 2));
     console.log(`Generated: ${label}`);
   }
   const app = express();
-  app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'preview-debrief.html')));
+  app.get('/', (_req, res) => {
+    const html = fs.readFileSync(path.join(__dirname, 'preview-debrief.html'), 'utf8');
+    res.send(process.argv.includes('--crew-friction') ? html
+      .replaceAll('Care-first debrief evaluation', 'Crew distraction debrief evaluation')
+      .replace('Compare diagnostic uncertainty, incorrect and correct impressions, and a consequential care delay.',
+        'Compare the same care with quiet, rambling, and upsetting crew dialogue, then an argument that delayed care.') : html);
+  });
   app.use('/public', express.static(path.join(__dirname, '../public')));
   app.get('/reviews.json', (_req, res) => res.sendFile(path.join(directory, 'reviews.json')));
   app.listen(0, '127.0.0.1', function () {

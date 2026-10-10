@@ -12,6 +12,7 @@ const { PEDIATRIC }  = require('./pediatric');
 const { ARREST }     = require('./arrest');
 const { DOA }        = require('./doa');
 const { CURVEBALLS } = require('./curveballs');
+const { FREQUENT_CALLERS } = require('./frequent-callers');
 
 const SCENARIO_POOLS = {
   cardiac:     CARDIAC,
@@ -27,6 +28,10 @@ const SCENARIO_POOLS = {
   doa:         DOA,
   curveballs:  CURVEBALLS,
 };
+
+for (const [category, entries] of Object.entries(FREQUENT_CALLERS)) {
+  SCENARIO_POOLS[category].push(...entries);
+}
 
 const { createHash } = require('node:crypto');
 for (const [category, entries] of Object.entries(SCENARIO_POOLS)) {

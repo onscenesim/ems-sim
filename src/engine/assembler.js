@@ -7,6 +7,7 @@ const { CREW }    = require('../data/crew');
 const { REGIONS } = require('../data/regions');
 const { COMORBIDITIES } = require('../data/comorbidities');
 const { CREW_BEHAVIOR_CONTRACT } = require('./prompts/crew');
+const { ENCOUNTER_CONTRACT } = require('../data/scenarios/frequent-callers');
 const { DESTINATION_DIALOGUE_POLICY } = require('./prompts/transport');
 const { ARREST_TRANSPORT_DOCTRINE, buildArrestMedicationRules } = require('./prompts/arrest');
 
@@ -57,6 +58,7 @@ function assembleSeedBlock(seed) {
   lines.push(`Age: ${seed.patient_age_display || `${seed.patient_age} years old`} (${seed.age_group.replace('_', ' ')})`);
   lines.push(`Sex: ${seed.sex}`);
   lines.push(`Category: ${seed.category}`);
+  if (seed.dispatch_category) lines.push(`Dispatch pool: ${seed.dispatch_category} (unconfirmed caller report; actual clinical category above governs care)`);
   if (isCurveball) {
     lines.push(`Surface presentation: ${seed.presentation}`);
     lines.push(`TRUE diagnosis (hidden until reveal): ${seed.true_diagnosis}`);
@@ -73,11 +75,23 @@ function assembleSeedBlock(seed) {
   if (seed.special_flags) {
     lines.push(`Special flags: ${seed.special_flags}`);
   }
+  if (seed.frequent_caller) {
+    lines.push('--- PAIRED FREQUENT CALLER (hidden from user) ---');
+    lines.push(`Pair: ${seed.frequent_caller.pair_id}; variant (private): ${seed.frequent_caller.variant}`);
+    lines.push(`Shared dispatch information: ${seed.frequent_caller.dispatch}`);
+    lines.push(`Shared first impression: ${seed.frequent_caller.opening}`);
+    lines.push(`Interpersonal friction: ${seed.frequent_caller.behavior}`);
+    lines.push(ENCOUNTER_CONTRACT);
+  }
   lines.push('');
 
   // --- Comorbidities ---
   lines.push('--- COMORBIDITY BUNDLE ---');
-  if (comorbidity) {
+  if (seed.frequent_caller) {
+    lines.push('Bundle: case-specific chronic and behavioral history (authoritative in both variants)');
+    lines.push(`Components: ${seed.frequent_caller.history}`);
+    lines.push('Reveal through elicited history, available care plans and collateral; do not substitute an otherwise-healthy history or invent extra comorbidities.');
+  } else if (comorbidity) {
     lines.push(`Bundle: ${comorbidity.id}`);
     lines.push(`Components: ${comorbidity.components}`);
     lines.push(`Clinical impact: ${comorbidity.clinical_impact}`);
@@ -218,6 +232,9 @@ function assembleSeedBlock(seed) {
   if (seed.backup_present_on_arrival) {
     const capName = captain ? captain.name : 'your captain';
     lines.push(`Backup on arrival: ${capName} — the named captain above — is already on scene when your unit arrives (they ARE the backup; do not substitute a generic "supervisor"). Treat backup status as on_scene at T+0. On your very first response: emit [BACKUP: on_scene ETA=0], set captain=on_scene in the CREW_STATUS tag, and INTRODUCE ${capName} by name in the narration — they greet the crew, give a one-line scene brief, and are physically available. From then on ${capName} is a real, directable crew member (Rule 19): the provider can hand them tasks, order them to help package, and have them ride in the back during transport (captain=in_back). Do NOT mark the captain on_scene and then let them vanish — a backup the provider cannot see or use is a bug. Keep captain=on_scene (or driving-exception per Rule 18: the captain never drives) for the rest of the call.`);
+  }
+  if (seed.frequent_caller) {
+    lines.push(`CALL-SPECIFIC CREW REACTIONS — mandatory alongside the cards above: ${partner?.name || seed.crew_partner || 'The partner'} shows irritation AND a skeptical prior-call assumption in an early private aside, grounded in the supplied repeat-call history. High enthusiasm and kindness do not suppress this reaction. ${captain?.name || seed.crew_captain || 'The captain'} does the same in their first exchange when present or contacted, including the initial scene brief if backup is already on scene. A neutral greeting, logistical warning or clinical praise alone does not fulfill this. Each uses their own style; they continue accurate, competent care and can respond to redirection or fresh findings. Do not invent past misconduct, coach from hidden information or make an off-scene captain appear.`);
   }
   lines.push('');
 
@@ -404,6 +421,7 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   lines.push(`  Scenario ID: ${seed.scenario_id}`);
   lines.push(`  Call date (day 0 for the patient outcome): ${String(seed.timestamp_start || '').slice(0, 10) || 'unknown'}`);
   lines.push(`  Category: ${seed.category} | Difficulty: ${seed.difficulty}`);
+  if (seed.dispatch_category) lines.push(`  Original dispatch pool: ${seed.dispatch_category}; caller report did not establish arrest or death.`);
   lines.push(`  Presentation: ${seed.presentation}`);
   if (seed.true_diagnosis) lines.push(`  True diagnosis: ${seed.true_diagnosis}`);
   // The case key explains the pathology for the educational reveal, not a
@@ -413,7 +431,12 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   if (seed.hint) lines.push(`  Case key (hidden educational context for "what this patient actually had", not a required diagnosis or treatment checklist; evaluate care against the revealed findings, scope, and available resources): ${seed.hint}`);
   if (seed.arrest_rhythm) lines.push(`  Arrest rhythm: ${seed.arrest_rhythm}`);
   if (seed.special_flags) lines.push(`  Special flags: ${seed.special_flags}`);
-  lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.comorbidity_bundle || 'otherwise_healthy'}`);
+  if (seed.frequent_caller) {
+    lines.push(`  Paired frequent caller: ${seed.frequent_caller.pair_id}; variant: ${seed.frequent_caller.variant}`);
+    lines.push(`  Chronic and behavioral history: ${seed.frequent_caller.history}`);
+    lines.push('  Evaluate assessment and proportional care in the face of crew skepticism. Rudeness does not establish fabrication or incapacity. A stable variant does not require finding an invented emergency; an acute variant does not require guessing the hidden diagnosis. Credit redirection of crew bias only when recorded.');
+  }
+  lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.frequent_caller ? 'case-specific chronic history' : seed.comorbidity_bundle || 'otherwise_healthy'}`);
   lines.push(`  Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
   lines.push(`  Complication: ${seed.complication_type}`);
   lines.push(`  Region: ${seed.region} | Provider level: ${seed.provider_level}`);

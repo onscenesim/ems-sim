@@ -291,7 +291,22 @@ const MEDICATION_ALIASES = {
   ],
   "Methylprednisolone": [
     "methylprednisolone",
-    "solu-medrol"
+    "methylprednisone",
+    "methylprednison",
+    "methylprednisolon",
+    "methylpredisolone",
+    "methylprednisilone",
+    "methylprednsolone",
+    "methylpred",
+    "methyl pred",
+    "methylprednisolone sodium succinate",
+    "methylprednisolone succinate",
+    "solu-medrol",
+    "solu medrol",
+    "solumedrol",
+    "solu-medral",
+    "solu medral",
+    "solumedral"
   ],
   "Glucagon": [
     "glucagon",
