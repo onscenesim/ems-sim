@@ -14,6 +14,8 @@ require.cache[require.resolve('../src/server/adminLogger')] = { exports: { logRu
 const { Session, reconcileRolls } = require('../src/engine/session');
 const { rollScenario } = require('../src/engine/roller');
 const { logEvent } = require('../src/engine/logger');
+const { INTERVENTIONS } = require('../src/data/interventions');
+const { SITE_PROCEDURES } = require('../src/engine/procedure-targets');
 
 function withDice(values, work) {
   const original = Math.random;
@@ -21,6 +23,60 @@ function withDice(values, work) {
   Math.random = () => ((values[index++ % values.length] - 0.5) / 20);
   try { return work(); } finally { Math.random = original; }
 }
+
+test('every site-procedure synonym accepts bilateral modifiers at every word boundary', () => {
+  for (const proc of INTERVENTIONS.filter(p => SITE_PROCEDURES.has(p.id))) {
+    for (const alias of [proc.id, ...proc.synonyms]) {
+      const ordinary = detectWithConfirmation(`Perform ${alias}`).rolls;
+      assert.ok(ordinary.some(r => r.procedure_id === proc.id), alias);
+      const ordinaryIds = [...new Set(ordinary.map(r => r.procedure_id))].sort();
+      const words = alias.split(/\s+/);
+      for (const modifier of ['Bilateral', 'Bilat', 'Bilat.']) {
+        for (let position = 0; position <= words.length; position++) {
+          const modified = [...words];
+          modified.splice(position, 0, modifier);
+          const text = `Perform ${modified.join(' ')}`;
+          const rolls = detectWithConfirmation(text).rolls;
+          const siteRolls = rolls.filter(r => r.procedure_id === proc.id);
+          assert.equal(siteRolls.length, 2, text);
+          assert.equal(new Set(siteRolls.map(r => r.target)).size, 2, text);
+          assert.deepEqual([...new Set(rolls.map(r => r.procedure_id))].sort(), ordinaryIds, text);
+        }
+        // Bare abbreviations/aliases remain usable wherever the normal order is.
+        if (detectWithConfirmation(alias).rolls.some(r => r.procedure_id === proc.id)) {
+          assert.equal(detectWithConfirmation(`${modifier} ${alias}`).rolls
+            .filter(r => r.procedure_id === proc.id).length, 2, `${modifier} ${alias}`);
+        }
+      }
+    }
+  }
+});
+
+test('modifier placement preserves confirmation keys, single orders and suppression', () => {
+  for (const [ordinary, modified, id] of [
+    ['TQ', 'Bilateral TQ', 'tourniquet'],
+    ['TQ', 'Bilat TQ', 'tourniquet'],
+    ['Apply CAT TQ', 'Apply a Bilat. CAT TQ', 'tourniquet'],
+    ['Establish access', 'Establish Bilat access', 'peripheral_iv'],
+    ['Get a line', 'Get Bilateral a line', 'peripheral_iv'],
+    ['IO access', 'IO Bilateral access', 'io_access'],
+    ['Perform needle decompression', 'Perform needle Bilat. decompression', 'needle_decompression'],
+  ]) {
+    const normal = detectAllProcedures(ordinary).find(e => e.proc.id === id);
+    const detected = detectAllProcedures(modified);
+    assert.equal(detected.length, 1, modified);
+    assert.equal(detected[0].key, normal.key, modified);
+    assert.equal(detectWithConfirmation(modified, {}, 'NORMAL', { deny: [normal.key] }).rolls.length, 0, modified);
+  }
+  for (const text of [
+    'Do not establish Bilat access', 'Consider Bilateral TQ',
+    'If needed, apply Bilat. CAT TQ', 'Push epinephrine through the Bilat. IO access',
+  ]) {
+    assert.equal(detectWithConfirmation(text).rolls.filter(r => SITE_PROCEDURES.has(r.procedure_id)).length, 0, text);
+  }
+  assert.equal(detectWithConfirmation('TQ').rolls.length, 1);
+  assert.equal(detectWithConfirmation('Establish access').rolls.length, 1);
+});
 
 test('bilateral and Bilat access make independent rolls and independent access entries', () => {
   for (const [text, kind, id] of [

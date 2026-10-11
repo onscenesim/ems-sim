@@ -73,10 +73,14 @@ for (const proc of INTERVENTIONS) {
     // Unicode hyphens) or no separator. Keep aliases and confirmation keys stable.
     const escaped = stripped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       .replace(/\b(12|twelve)[ -]lead\b/g, '$1[\\s\\u002d\\u2010-\\u2014]*lead');
-    // Each whitespace gap can optionally swallow an article
+    // Use the normal alias registry for bilateral orders too. A modifier may
+    // sit inside a phrase ("establish Bilat access"), alongside its articles.
     const plural = SITE_PROCEDURES.has(proc.id)
       ? escaped.replace(/\b(iv|io|tourniquet|tq|cat)$/i, '$1s?') : escaped;
-    const flexible = plural.replace(/\\? /g, '\\s+(?:an?\\s+|the\\s+|another\\s+|second\\s+|additional\\s+)?');
+    const gap = SITE_PROCEDURES.has(proc.id)
+      ? '\\s+(?:(?:an?|the|another|second|additional|bilateral(?:ly)?|bilat)\\s+)*'
+      : '\\s+(?:an?\\s+|the\\s+|another\\s+|second\\s+|additional\\s+)?';
+    const flexible = plural.replace(/\\? /g, gap);
     // Word-boundary via lookbehind/lookahead — handles hyphens and acronyms
     const pattern = new RegExp(`(?<![a-z0-9])${flexible}(?![a-z0-9])`, 'i');
     // Precompute specificity using the ORIGINAL raw string so uppercase acronyms
@@ -88,7 +92,12 @@ for (const proc of INTERVENTIONS) {
   register(proc.id);
   for (const syn of proc.synonyms) register(syn);
 }
-DETECT_PATTERNS.sort((a, b) => b.key.length - a.key.length);
+// Bilateral is a target modifier, not extra procedure specificity. Otherwise
+// the generic "bilateral access" alias can consume "IO Bilateral access"
+// before the more specific IO-access alias gets a chance to match it.
+const specificity = entry => SITE_PROCEDURES.has(entry.proc.id)
+  ? entry.key.replace(/\b(?:bilateral(?:ly)?|bilat)\s*/gi, '').length : entry.key.length;
+DETECT_PATTERNS.sort((a, b) => specificity(b) - specificity(a));
 
 // ---------------------------------------------------------------------------
 // Fuzzy normalization — corrects misspellings before pattern matching.
@@ -162,6 +171,8 @@ function normalizeForDetection(text) {
   // Narrow keyboard-neighbor typo from a reported retry; do not fuzzy-correct
   // arbitrary short words or reinterpret unrelated semicolon-separated orders.
   return text.replace(/\b(12|twelve)([\s\-\u2010-\u2014]*);ead\b/gi, '$1$2lead')
+    // The period in this common abbreviation is not a sentence boundary.
+    .replace(/\bbilat\.(?=\s|$)/gi, 'bilat')
     .replace(/\b[a-zA-Z]{5,}\b/g, token => {
     const lower = token.toLowerCase();
     // Preserve all words in exact phrases, including packing, section, and delivery.
@@ -668,7 +679,9 @@ function detectAllProcedures(userText) {
   // separated by commas / "and" / "or" / "then" — no sentence structure.
   // e.g. "atropine", "defib and epi", "IO, bicarb, intubate"
   // In this mode skip the admin-verb requirement so bare drug/procedure names fire.
-  const chunks = remaining.split(/\s*[,;]\s*|\s+(?:and|or|then|also|&)\s+/i).map(c => c.trim()).filter(Boolean);
+  // Target modifiers do not make an otherwise terse procedure order into prose.
+  const commandText = remaining.replace(/\b(?:bilateral(?:ly)?|bilat)\b/g, '').trim();
+  const chunks = commandText.split(/\s*[,;]\s*|\s+(?:and|or|then|also|&)\s+/i).map(c => c.trim()).filter(Boolean);
   const commandStyle = !ADMIN_VERB_RE.test(remaining) &&
                        chunks.length >= 1 && chunks.length <= 8 &&
                        chunks.every(c => c.split(/\s+/).length <= 3);
