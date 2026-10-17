@@ -300,6 +300,57 @@ test('extended ECG orders select a single placement, including separate views in
     assert.equal(detectWithConfirmation(text).rolls.filter(r=>Object.hasOwn(ECG.catalog.procedureViews,r.procedure_id)).length,0,text);
 });
 
+test('coordinated ECG placements accept shared nouns, reversed order and shorthand',()=>{
+  const {detectWithConfirmation,detectAllAndRoll}=require('../src/engine/dice');
+  const expected=['posterior_ecg','right_sided_ecg'];
+  const orders=[
+    'Get right sided and posterior EKGs', 'R sided + post', 'R sided and posterior',
+    'Obtain posterior & right-sided ECGs', 'Get ECGs right sided and posterior',
+    'Get right sided ECG and posterior ECG', 'RT-sided/post ECG',
+    'Obtain right-sided, posterior leads', 'right sided as well as posterior EKG',
+    'right sided and posterior ECG, then right sided and posterior EKG',
+  ];
+  for(const noun of ['ECG','EKG','ECGs','EKGs','12-lead','12 lead','12-lead ECG','12 lead ECG','12-lead EKG','12 lead EKG','12–lead','twelve lead']){
+    orders.push(`Obtain right sided and posterior ${noun}`,`Obtain ${noun} with posterior + R sided`);
+  }
+  for(const order of orders){
+    const rolls=detectWithConfirmation(order).rolls;
+    assert.deepEqual(rolls.map(r=>r.procedure_id).sort(),expected,order);
+    assert.deepEqual(detectAllAndRoll(order).map(r=>r.procedure_id).sort(),expected,order);
+    const records=acquireTwelveLeads({seed:{ecg_pattern:'normal'},vitals:{HR:80,Rhythm:'sinus'},rolls});
+    assert.deepEqual(records.map(r=>r.view).sort(),['posterior','right'],order);
+    assert.equal(new Set(records.map(r=>r.id)).size,2,order);
+  }
+});
+
+test('paired ECGs roll independently and preserve suppression and confirmation',()=>{
+  const {detectWithConfirmation,detectAllProcedures}=require('../src/engine/dice');
+  const order='Get R sided + post ECG';
+  const original=Math.random;let count=0;
+  let rolls;
+  try{Math.random=()=>[.875,.025][count++];rolls=detectWithConfirmation(order).rolls;}
+  finally{Math.random=original;}
+  assert.equal(count,2);assert.deepEqual(rolls.map(r=>r.roll),[18,1]);
+  assert.deepEqual(rolls.map(r=>r.outcome),['SUCCESS','COMPLICATION']);
+  const records=acquireTwelveLeads({seed:{ecg_pattern:'normal'},vitals:{HR:80,Rhythm:'sinus'},rolls});
+  assert.deepEqual(records.map(r=>r.quality),['SUCCESS','COMPLICATION'].map(o=>ECG.catalog.qualities[o].label));
+  for(const text of [
+    'Do not obtain right sided and posterior ECGs', 'Skip R sided + post',
+    'Consider right sided and posterior EKGs', 'If needed, get R sided + post ECG',
+    'Review right sided and posterior ECGs', 'Show me right sided and posterior 12-leads',
+    'Already obtained right sided and posterior EKGs', 'Right sided and posterior ECGs show artifact',
+    'Check right sided and posterior breath sounds', 'Palpate right sided and posterior ribs',
+  ])assert.equal(detectWithConfirmation(text).rolls.filter(r=>ECG.catalog.procedureViews[r.procedure_id]).length,0,text);
+  const uncertain='Discuss obtaining right sided and posterior ECGs';
+  const entries=detectAllProcedures(uncertain);
+  assert.equal(entries.length,2);assert.ok(entries.every(e=>e.uncertain));
+  assert.equal(detectWithConfirmation(uncertain).rolls.length,0);
+  assert.equal(detectWithConfirmation(uncertain,{},'NORMAL',{allow:entries.map(e=>e.key)}).rolls.length,2);
+  const denied=detectAllProcedures(order).find(e=>e.proc.id==='right_sided_ecg').key;
+  assert.deepEqual(detectWithConfirmation(order,{},'NORMAL',{deny:[denied]}).rolls.map(r=>r.procedure_id),['posterior_ecg']);
+  assert.equal(detectWithConfirmation('No R sided + post ECG. Get R sided + post ECG.').rolls.length,2);
+});
+
 test('all catalog pathologies inherit every placement and quality without altering unrelocated leads',()=>{
   for(const ecg_pattern of Object.keys(ECG.catalog.patterns))for(const outcome of Object.keys(ECG.catalog.qualities)){
     const opts={seed:{ecg_pattern},vitals:{Rhythm:'sinus',HR:75},entropy:77,outcome};

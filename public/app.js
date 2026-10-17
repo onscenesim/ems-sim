@@ -990,18 +990,18 @@ const TILE_DESCS = {
     'BLACK_CLOUD': "Every call is your worst. Experimental, not to be taken seriously.",
   },
   provider: {
-    'ALS': "Full paramedic scope — IVs, drips, advanced airway.",
-    'BLS': "EMT-Basic scope. No IV meds. ALS as backup only.",
+    'ALS': "Paramedic care. Customize your protocol checklist below.",
+    'BLS': "EMT care. Choose local additions in My Protocols.",
   },
   region: {
-    'SUBURBAN':                "Mixed career/volunteer. Standard scope. ~12 min to hospital.",
+    'SUBURBAN':                "Mixed career/volunteer. ~12 min to hospital.",
     'URBAN_DENSE':             "Chicago, NYC. High volume, fast ALS, protocol-driven.",
-    'URBAN_SPRAWL':            "Houston, Phoenix. Full scope. Longer transport.",
+    'URBAN_SPRAWL':            "Houston, Phoenix. Longer transport.",
     'RURAL_TEMPERATE':         "Rural PA/Ontario. Long transport. Often BLS only.",
     'RURAL_REMOTE':            "Northern Alberta, Montana. Air medical. 60-120 min out.",
     'NORTHERN_URBAN':          "Winnipeg, Anchorage. Urban resources. Extreme cold.",
-    'TROPICAL_ISLAND':         "Hawaii, Caribbean. Heat, humidity. Restricted ALS scope.",
-    'CALIFORNIA_Urban':        "LA, SF. Heavy restrictions. Base contact required.",
+    'TROPICAL_ISLAND':         "Hawaii, Caribbean. Heat, humidity. Inter-island transport.",
+    'CALIFORNIA_Urban':        "LA, SF. Skill restrictions in My Protocols.",
     'INTERNATIONAL_DEVELOPING':"Rural Mexico/Central America. Resource-limited. Improvise.",
   },
   partner: {
@@ -1095,6 +1095,8 @@ function updateReportBtn() {
 reportBtn.addEventListener('click', () => {
   reportMode = !reportMode;
   updateReportBtn();
+  // The next keystroke belongs to the report, not the toggle button.
+  focusActionInput(true);
 });
 updateReportBtn();
 
@@ -1168,7 +1170,7 @@ async function startScenario(replayOf = null) {
     const rosterCaptain = replayOf ? null : InstructorUI.rosterCaptain(captainSelect.value);
     const captain_name = captainSelect.value.startsWith('custom:') ? null : (captainSelect.value || null);
     const instructorRequest = replayOf ? {} : InstructorUI.request();
-    const data = await apiPost('/api/scenario/new', { ...instructorRequest, ...(rosterPartner ? { custom_partner: rosterPartner } : {}), ...(rosterCaptain ? { custom_captain: rosterCaptain } : {}), difficulty, provider_level, region_id, unit_name, partner_name, captain_name, category, ...(replayOf ? { replay_of: replayOf } : {}) });
+    const data = await apiPost('/api/scenario/new', { ...instructorRequest, ...(rosterPartner ? { custom_partner: rosterPartner } : {}), ...(rosterCaptain ? { custom_captain: rosterCaptain } : {}), difficulty, provider_level, region_id, protocols: ProtocolMenu.selection(), unit_name, partner_name, captain_name, category, ...(replayOf ? { replay_of: replayOf } : {}) });
 
     if (!replayOf) InstructorUI.started();
     if (currentPlayer?.stats) currentPlayer.stats.scenariosStarted += 1;
@@ -2062,6 +2064,9 @@ userInput.addEventListener('pointerdown', () => {
   hideCrewPanel();
   hideDrugPanel();
   setVitalsPanelOpen(false);
+  // Establish real input focus even when the browser has a caret in page text.
+  // Keep the default pointer action so selecting/editing existing text still works.
+  focusActionInput(true);
 });
 
 userInput.addEventListener('keydown', e => {

@@ -665,7 +665,7 @@ class Session {
     if (rolls.some(r => r.procedure_id === 'capillary_refill')) {
       messageText += '\n\n[SYSTEM NOTE: Explicit capillary refill assessment requested. Perform it for the patient being assessed and state the measured duration numerically in seconds. Include CapRefill=<seconds>@T+M:SS in the VITALS tag, using this assessment time. Do not report only "brisk", "normal", or "delayed". If the assessment cannot be performed, state that and omit the reading.]';
     }
-    if (this.seed.provider_level === 'BLS' && rollContext.monitor_available
+    if (this.seed.provider_level === 'BLS' && !this.seed.protocols && rollContext.monitor_available
         && rolls.some(r => isECGProcedure(r.procedure_id))) {
       messageText += '\n\n[SYSTEM NOTE: An arrived ALS resource has an available cardiac monitor. The injected ECG roll represents the requested acquisition with that crew and device. This does not change the BLS unit manifest or provider scope. Narrate the equipped crew assisting; do not invent additional ALS interventions.]';
     }

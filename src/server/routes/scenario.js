@@ -397,7 +397,7 @@ router.post('/new', async (req, res) => {
     try { rosterCaptain = require('../../engine/instructor').prepareCustomCaptain(req.body.custom_captain); }
     catch (err) { return res.status(400).json({ error: 'invalid_custom_captain', message: err.message }); }
   }
-  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name, partner_name = null, captain_name = null, category = null } = req.body;
+  const { difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', protocols, unit_name, partner_name = null, captain_name = null, category = null } = req.body;
 
   if (!Object.hasOwn(DIFFICULTY_POOL, difficulty) || !['BLS', 'ALS'].includes(provider_level)
       || !REGIONS.some(r => r.id === region_id)
@@ -417,7 +417,7 @@ router.post('/new', async (req, res) => {
     const existingOwner = getCookie(req, OWNER_COOKIE_NAME);
     const ownerId = existingOwner && /^[a-zA-Z0-9_-]{16,80}$/.test(existingOwner)
       ? existingOwner : randomUUID();
-    const { id, seed } = createSession({ difficulty, provider_level, region_id, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null, instructor, custom_partner: rosterPartner, custom_captain: rosterCaptain, replay_seed: replay?.initialSeed || null }, userId, tier);
+    const { id, seed } = createSession({ difficulty, provider_level, region_id, protocols, unit_name: cleanUnitName, partner_name: partner_name || null, captain_name: captain_name || null, category: category || null, instructor, custom_partner: rosterPartner, custom_captain: rosterCaptain, replay_seed: replay?.initialSeed || null }, userId, tier);
     createdId = id;
     const session = getSession(id);
     session.ownerId = ownerId;

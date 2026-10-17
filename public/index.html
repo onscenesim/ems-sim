@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=87">
+  <link rel="stylesheet" href="style.css?v=89">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
   <link rel="stylesheet" href="practice.css?v=9">
@@ -199,6 +199,8 @@
             <option value="BLS">BLS — EMT</option>
           </select>
           <div class="tile-desc" id="desc-provider"></div>
+          <button id="protocol-open" type="button">MY PROTOCOLS…</button>
+          <div id="protocol-summary" class="tile-desc" aria-live="polite"></div>
         </div>
 
         <div class="cfg-tile tile-region">
@@ -1997,7 +1999,7 @@
     </div>
 
     <div id="input-row">
-      <span class="prompt">&gt;&nbsp;</span>
+      <label class="prompt" for="user-input" aria-hidden="true">&gt;&nbsp;</label>
       <input
         id="user-input"
         type="text"
@@ -2079,6 +2081,16 @@
     <footer class="cosmetics-footer"><p id="cosmetics-status" role="status"></p><button id="cosmetics-apply" type="button">APPLY</button></footer>
   </dialog>
 
+  <dialog id="protocol-dialog" aria-labelledby="protocol-title" aria-describedby="protocol-help">
+    <div class="protocol-header"><h2 id="protocol-title">My protocols</h2><button id="protocol-close" type="button">Done</button></div>
+    <p id="protocol-context"></p>
+    <p id="protocol-help">Uncheck to cross off care you cannot provide. The debrief will not fault you for omitting it. Included care is reviewed only when indicated, with normal weight. You can still attempt any listed action.</p>
+    <p id="protocol-region-note"></p>
+    <div id="protocol-list"></div>
+    <div class="protocol-footer"><span>Saved for future runs. Each run keeps its starting settings. Replays keep the original settings. Region presets are simulation rules.</span><button id="protocol-reset" type="button">Reset defaults</button></div>
+  </dialog>
+  <script src="protocols.js?v=1"></script>
+  <script src="protocol-menu.js?v=1"></script>
   <script src="medication-aliases.js?v=2"></script>
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
@@ -2093,7 +2105,7 @@
   <script src="ecg-catalog.js?v=3"></script>
   <script src="twelve-lead.js?v=6"></script>
   <script src="twelve-lead-viewer.js?v=5"></script>
-  <script src="app.js?v=100"></script>
+  <script src="app.js?v=102"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

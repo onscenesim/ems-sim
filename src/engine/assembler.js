@@ -5,6 +5,7 @@ const ECG = require('../../public/twelve-lead');
 
 const { CREW }    = require('../data/crew');
 const { REGIONS } = require('../data/regions');
+const { describe: describeProtocols } = require('../../public/protocols');
 const { COMORBIDITIES } = require('../data/comorbidities');
 const { CREW_BEHAVIOR_CONTRACT } = require('./prompts/crew');
 const { ENCOUNTER_CONTRACT } = require('../data/scenarios/frequent-callers');
@@ -161,8 +162,11 @@ function assembleSeedBlock(seed) {
   if (seed.provider_level === 'BLS') {
     lines.push('BLS UNIT. Standard equipment: BVMs (infant/ped/adult), OPA/NPA set, O2 delivery (NC, simple mask, NRB), BP cuffs, stethoscope, standalone pulse oximeter, glucometer, 2x CAT tourniquets, hemostatic gauze, pressure bandages, occlusive chest seals, needle decompression, splints, c-collars, LSB, scoop stretcher, stair chair, stretcher, soft restraints, OB kit.');
     lines.push('BLS AIRWAYS: Supraglottic airways (King LT, i-Gel) only. NO intubation equipment. NO cric kit.');
-    lines.push('AED on board — for shockable arrest rhythms only. NO cardiac monitor: no 12-lead, no rhythm display, no waveform capnography, no ETCO2, no defibrillator controls, no cardioversion, no pacing.');
-    lines.push('NO drug bag. NO IO kit. NO LUCAS. NO transport ventilator. NO infusion pump.');
+    lines.push(seed.protocols
+      ? 'AED on board for shockable arrest rhythms. ECG acquisition/transmission device available for ordered 12-leads (including additional views); this does not provide continuous rhythm monitoring, capnography, manual defibrillation, cardioversion or pacing.'
+      : 'AED on board — for shockable arrest rhythms only. NO cardiac monitor: no 12-lead, no rhythm display, no waveform capnography, no ETCO2, no defibrillator controls, no cardioversion, no pacing.');
+    lines.push('BLS medications only. NO ALS drug bag. NO IO kit. NO LUCAS. NO transport ventilator. NO infusion pump.');
+    if (seed.protocols) lines.push('CHECKLIST PRACTICE SUPPLIES: IV supplies and crystalloid, ECG acquisition/transmission device, supraglottic airways, glucose testing, CPAP and listed BLS medications remain available for ordered actions, even when crossed off. Do not invent an ALS crew to perform these listed actions.');
     lines.push('BLS vitals: SpO2 (pulse ox), BP (manual cuff + stethoscope), RR (manual count), Glucose (glucometer), GCS, Pain. HR = manual pulse rate only — no monitor-derived values.');
   } else {
     lines.push('ALS UNIT. Full ALS equipment on board — trust providers to know their scope.');
@@ -172,13 +176,15 @@ function assembleSeedBlock(seed) {
     lines.push('ALS-only: LUCAS/AutoPulse (mechanical CPR) = "the LUCAS"; transport ventilator = "the vent"; infusion pump = "the pump."');
   }
 
-  lines.push('BLS MEDICATION SCOPE: aspirin (chewable, suspected ACS), sublingual nitroglycerin (assisting per protocol or the patient\'s own), oral glucose, epinephrine auto-injector (anaphylaxis), naloxone (IN/IM), albuterol (MDI or nebulized per protocol), and CPAP are ALL within modern EMT/BLS scope. NEVER have any NPC — including a BLS partner or first responder — call these "ALS only," "above my ticket," or otherwise out of an EMT\'s scope; they are routine BLS skills.');
+  lines.push('BLS MEDICATION SCOPE: aspirin (chewable, suspected ACS), sublingual nitroglycerin (assisting per protocol or the patient\'s own), oral glucose, epinephrine auto-injector (anaphylaxis), naloxone (IN/IM), albuterol (MDI or nebulized per protocol), and CPAP are supported BLS simulation actions; the run checklist determines omission expectations. NEVER have any NPC — including a BLS partner or first responder — call these "ALS only," "above my ticket," or otherwise out of an EMT\'s scope; they are routine BLS skills.');
   lines.push('Ambulance aliases: the box, the rig, the unit, the truck, the bus, the ambo — all mean the vehicle, NOT the monitor.');
   lines.push('Off-manifest equipment: if a device truly does not exist on a standard unit, narrate realistically (partner can\'t locate it) — teaching moment, never a hard stop. ALS DRUGS: never refuse a medication on stocking grounds. ALS carries a full formulary — 3% saline, hypertonic saline, TXA, ketamine, push-dose epi, mag, calcium, bicarb, alteplase — all available. If the drug is unusual, administer it and address the clinical context; never tell the student their drug is not on board. CALCIUM DEFAULT: if the provider orders "calcium" without specifying the salt, treat it as calcium chloride -- the standard prehospital formulation.');
   lines.push('VASCULAR ACCESS CONTINUITY: Track every line for the whole call. A line that failed, blew, or infiltrated is GONE — never push another drug through it and never let it quietly work again later. When the provider orders a medication without naming a route, use the best PATENT access the patient actually has (patent line before marginal, never a blown one) and NAME the route in your narration ("...through the IO"). If no usable access exists, say so — do not invent a route. An [ACCESS STATE] note in the user message is the server\'s authoritative ledger; your narration must match it. The [ACCESS STATE] tag is SERVER-ONLY — never write, echo, or invent an [ACCESS STATE ...] tag in your reply.');
   lines.push('FLUIDS AND BLOOD PRODUCTS: medication_push rolls also cover fluid infusions and transfusions. The procedure ID does NOT mean syringe push: honor the ordered solution/component, volume, rate and route. Never invent a rapid bolus or substitute another blood component. OXYGEN: administration has its own oxygen roll; only a natural 1 may produce a delivery problem (not flowing, disconnected tubing, empty supply). On every other roll, the ordered oxygen is delivered normally, regardless of difficulty or scene complications. Clinical response still follows physiology; successful delivery does not guarantee improved oxygenation. Checking oxygen level or existing oxygen equipment is assessment, not new administration. An ETCO2 sampling nasal cannula (ETCO2 NC) places capnography only unless oxygen delivery or a positive flow rate is explicitly ordered. Honor an explicit switch to an oxygen device and its ordered timing, such as switching to a nonrebreather when a nebulizer finishes.');
   lines.push('LINE STATUS IS ENGINE-CONTROLLED — DO NOT INVENT FAILURES: A vascular line NEVER infiltrates, blows, goes marginal, "develops resistance," or fails on your own initiative. Line patency changes ONLY when the engine dictates it — a [SYSTEM ROLL] for IV/IO access that returns FAILURE or COMPLICATION at PLACEMENT, or an [ACCESS STATE] note that already lists a line as marginal or blown. A medication pushed through a line the [ACCESS STATE] lists as PATENT ALWAYS goes in cleanly — do NOT narrate the site swelling, tensing, infiltrating, or the push meeting resistance. A MARGINAL medication_push roll degrades the DRUG effect (slow, partial, delayed), NOT the line. Treat every line the [ACCESS STATE] lists as fully reliable unless it is explicitly marked marginal or blown. Spontaneously blowing a working line for drama is forbidden — it is the single most common way this simulation goes wrong.');
   lines.push('');
+
+  lines.push(describeProtocols(seed));
 
   // --- Region context ---
   if (region) {
@@ -196,9 +202,7 @@ function assembleSeedBlock(seed) {
       lines.push(`Major hospital: ${region.major_hospital_min}`);
     }
     lines.push(`ALS availability: ${region.als_availability}`);
-    lines.push(`ALS scope tag: ${region.als_scope_tag}`);
     lines.push(`Medical direction: ${region.medical_direction_culture}`);
-    lines.push(`BLS scope notes: ${region.bls_scope_notes}`);
     if (region.agency_culture) lines.push(`Agency culture: ${region.agency_culture}`);
     lines.push('');
   }
@@ -374,18 +378,6 @@ function assembleSeedBlock(seed) {
     );
     ruleNum++;
   }
-    // California base-hospital contact rule
-  if (seed.region === 'CALIFORNIA_Urban') {
-    lines.push(
-      ruleNum + '. CALIFORNIA BASE HOSPITAL CONTACT \u2014 MACHINE TAG REQUIRED: '
-      + 'This region requires base hospital authorization before initiating: cardioversion, transcutaneous pacing, or push-dose epinephrine. '
-      + 'When the student orders one of these interventions:\n'
-      + '  (a) Narrate the partner dialing base hospital. There is a realistic hold \u2014 base may be slow to answer, put you on hold, or transfer you to the charge physician. This takes time. Make it uncomfortable.\n'
-      + '  (b) Emit [BASE_CONTACT] exactly once, on the turn when you first narrate the call being placed or the hold occurring.\n'
-      + '  (c) The base physician may ask clarifying questions, request repeat vitals, or deny the order outright for borderline indications. Denial is realistic.\n'
-      + '  (d) Do NOT emit [BASE_CONTACT] on follow-up turns of the same exchange \u2014 only on the turn the call is first placed.'
-    );
-  }
   lines.push('=== END SEED ==='); 
 
   return lines.join('\n');
@@ -440,6 +432,7 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   lines.push(`  Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
   lines.push(`  Complication: ${seed.complication_type}`);
   lines.push(`  Region: ${seed.region} | Provider level: ${seed.provider_level}`);
+  lines.push(describeProtocols(seed));
   const totalCall = seed.total_scene_minutes;
   lines.push(`  Total call time (arrival to close, INCLUDING any transport): ${totalCall != null ? Math.round(totalCall) + ' min' : 'N/A'}`);
   if (departSceneMinute != null) {

@@ -115,13 +115,14 @@ function updateHistory(userId, seed) {
  * Roll a new scenario, wrap it in a Session, and persist it.
  * Returns { id, seed }.
  */
-function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', unit_name = 'Medic 1', partner_name = null, captain_name = null, category = null, instructor = null, custom_partner = null, custom_captain = null, replay_seed = null } = {}, userId = 'anon', tier = 'free') {
+function createSession({ difficulty = 'NORMAL', provider_level = 'ALS', region_id = 'SUBURBAN', protocols = undefined, unit_name = 'Medic 1', partner_name = null, captain_name = null, category = null, instructor = null, custom_partner = null, custom_captain = null, replay_seed = null } = {}, userId = 'anon', tier = 'free') {
   const history = getOrInitHistory(userId);
 
   const seed = replay_seed ? { ...structuredClone(replay_seed), scenario_id: uuidv4(), user_id: userId, timestamp_start: new Date().toISOString(), events: [] } : rollScenario({
     difficulty,
     provider_level,
     region_id,
+    protocols,
     unit_name,
     user_id: userId,
     history,

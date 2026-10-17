@@ -1,9 +1,10 @@
 'use strict';
 
-// An en-route crew or an unspecified backup cannot supply a monitor. On BLS,
-// require both an arrived ALS resource and explicit equipment availability.
+// ECG acquisition availability, not continuous monitoring or ALS privileges.
+// Legacy BLS runs require an arrived, explicitly equipped ALS resource.
 function hasCardiacMonitor(seed, backup = null) {
-  return seed.provider_level !== 'BLS'
+  // Checklist options remain attemptable, including acquisition/transmission only.
+  return Boolean(seed.protocols) || seed.provider_level !== 'BLS'
     || (backup?.status === 'on_scene' && backup.level === 'ALS' && backup.monitor === true);
 }
 

@@ -99,6 +99,27 @@ const specificity = entry => SITE_PROCEDURES.has(entry.proc.id)
   ? entry.key.replace(/\b(?:bilateral(?:ly)?|bilat)\s*/gi, '').length : entry.key.length;
 DETECT_PATTERNS.sort((a, b) => specificity(b) - specificity(a));
 
+// A shared ECG noun applies to both placements: "right sided and posterior
+// 12-lead". Match the whole pair before individual aliases can consume it so
+// both views inherit the same negation, review and confirmation context.
+const ECG_NOUN = '(?:(?:12|twelve)[\\s\\u002d\\u2010-\\u2014]*leads?(?:\\s+(?:ecgs?|ekgs?))?|ecgs?|ekgs?|leads?|tracings?)';
+const ECG_RIGHT = '(?:right|rt|r)\\.?[\\s\\u002d\\u2010-\\u2014]*(?:sided|side)';
+const ECG_POSTERIOR = '(?:posterior|post)(?:[ -]sided)?';
+const ECG_JOIN = '\\s*(?:,?\\s*(?:and|&|\\+|/|as\\s+well\\s+as)|,)\\s*(?:a\\s+|the\\s+)?';
+for (const [first, second, ids] of [
+  [ECG_RIGHT, ECG_POSTERIOR, ['right_sided_ecg', 'posterior_ecg']],
+  [ECG_POSTERIOR, ECG_RIGHT, ['posterior_ecg', 'right_sided_ecg']],
+]) {
+  const body = `(?:${ECG_NOUN}\\s+(?:with\\s+)?)?${first}(?:\\s+${ECG_NOUN})?${ECG_JOIN}${second}(?:\\s+${ECG_NOUN})?`;
+  DETECT_PATTERNS.unshift({
+    key: 'right sided and posterior ECG',
+    pattern: new RegExp(`(?<![a-z0-9])${body}(?![a-z0-9])`, 'i'),
+    proc: INTERVENTIONS.find(p => p.id === ids[0]),
+    ecgProcedures: ids.map(id => INTERVENTIONS.find(p => p.id === id)),
+    specific: true,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Fuzzy normalization — corrects misspellings before pattern matching.
 // Only single-word synonyms with length ≥ 5 are indexed.
@@ -380,7 +401,7 @@ const UNCERTAIN_DISCUSS_RE = /\b(?:report|handoff|hand-off|explain\w*|describe|d
 
 // The sentence defers the action to a future moment: "for intubation later",
 // "once cap gets here we'll...", "planning to", "prep for".
-const UNCERTAIN_FUTURE_RE = /\b(?:later|in a (?:bit|minute|moment|few)|after (?:we|the|that|this|cap)|once (?:we|the|cap|he|she|they)|when (?:we|the|cap|he|she|they)|we(?:'|’)?ll\b|we will|going to|gonna|about to|plan(?:ning)?(?: to| on)?|prep(?:are|ping)? for|get(?:ting)? ready for|set(?:ting)? up for|thinking about|consider(?:ing)?|might|may need|eventually|soon|next)\b/i;
+const UNCERTAIN_FUTURE_RE = /\b(?:later|in a (?:bit|minute|moment|few)|after (?:we|the|that|this|cap)|once (?:we|the|cap|he|she|they)|when (?:we|the|cap|he|she|they)|we(?:'|’)ll\b|we will|going to|gonna|about to|plan(?:ning)?(?: to| on)?|prep(?:are|ping)? for|get(?:ting)? ready for|set(?:ting)? up for|thinking about|consider(?:ing)?|might|may need|eventually|soon|next)\b/i;
 
 // Procedure NOUNS that name the act without performing it ("RSI", "intubation").
 // Acronyms bypass the admin-verb gate, so a bare mention in prose rolled the
@@ -691,10 +712,16 @@ function detectAllProcedures(userText) {
     let bestMatch = null;
     let bestMatchIndex = -1;
 
-    for (const { key, pattern, proc, specific } of DETECT_PATTERNS) {
-      if (usedProcIds.has(proc.id)) continue;
+    for (const { key, pattern, proc, specific, ecgProcedures } of DETECT_PATTERNS) {
+      // Even a repeated pair must be consumed to keep its shared ECG noun
+      // from falling through to a spurious standard 12-lead acquisition.
+      if (!ecgProcedures && usedProcIds.has(proc.id)) continue;
       const exec = pattern.exec(remaining);
       if (!exec) continue;
+      // Bare paired shorthand is an order, but anatomical prose such as
+      // "right sided and posterior breath sounds" is not an ECG acquisition.
+      if (ecgProcedures && !new RegExp(`\\b${ECG_NOUN}\\b`, 'i').test(exec[0])
+          && !/^\s*(?:$|[.;!?\n,]|\b(?:and|then|also|but)\b)/i.test(remaining.slice(exec.index + exec[0].length))) continue;
       // Use precomputed 'specific' flag so uppercase acronyms (BGL, SpO2, IV)
       // don't require an admin verb. Also bypass verb check in command-style input.
       // The verb must live in the SAME SENTENCE as the match — a message-wide
@@ -706,7 +733,7 @@ function detectAllProcedures(userText) {
         const sentence=context.slice(s,e);
         if (!ADMIN_VERB_RE.test(sentence) && !(proc.id==='oxygen'&&OXYGEN_ORDER_RE.test(sentence))) continue;
       }
-      bestMatch = { key, pattern, proc, matchLen: exec[0].length };
+      bestMatch = { key, pattern, proc, ecgProcedures, matchLen: exec[0].length };
       bestMatchIndex = exec.index;
       break; // sorted longest-first, so first match is most specific
     }
@@ -749,26 +776,31 @@ function detectAllProcedures(userText) {
       + remaining.slice(bestMatchIndex + bestMatch.matchLen);
 
     if (!negated && !conditional && !routeQual && !stagingPost && !isTreatmentAssessment(context, bestMatchIndex, bestMatch.matchLen, bestMatch.proc, bestMatch.key) && !isPastContext(context, bestMatchIndex)) {
-      const medication = bestMatch.proc.id === 'medication_push' ? MEDICATION_NAMES.get(bestMatch.key) : null;
-      if (medication && usedMedications.has(medication)) continue;
-      if (medication) usedMedications.add(medication);
-      distinctEntries.add(procEntryKey(bestMatch.proc.id, medication || bestMatch.proc.id));
-      found.push({
-        proc: bestMatch.proc,
-        ...(SITE_PROCEDURES.has(bestMatch.proc.id) ? { targets: procedureTargets(normalized, bestMatchIndex, bestMatch.matchLen, bestMatch.proc.id) } : {}),
-        matchedKey: bestMatch.key,
-        ...(bestMatch.proc.id === 'medication_push'
-          ? medicationPresentationAt(normalized, bestMatchIndex, bestMatch.matchLen, medication, bestMatch.key) : {}),
-        uncertain: !!uncertain,
-        reason: uncertain || null,
-        precharge,
-        sentence,
-        key: procEntryKey(bestMatch.proc.id, bestMatch.key),
-      });
-      // medication_push can fire multiple times in one message (once per drug).
-      // Canonical medication identities also prevent brand/generic double rolls.
-      if (bestMatch.proc.id !== 'medication_push' && !SITE_PROCEDURES.has(bestMatch.proc.id)) {
-        usedProcIds.add(bestMatch.proc.id);
+      for (const proc of bestMatch.ecgProcedures || [bestMatch.proc]) {
+        if (usedProcIds.has(proc.id)) continue;
+        const matchedKey = bestMatch.ecgProcedures
+          ? (proc.id === 'right_sided_ecg' ? 'right sided ecg' : 'posterior ecg') : bestMatch.key;
+        const medication = proc.id === 'medication_push' ? MEDICATION_NAMES.get(matchedKey) : null;
+        if (medication && usedMedications.has(medication)) continue;
+        if (medication) usedMedications.add(medication);
+        distinctEntries.add(procEntryKey(proc.id, medication || proc.id));
+        found.push({
+          proc,
+          ...(SITE_PROCEDURES.has(proc.id) ? { targets: procedureTargets(normalized, bestMatchIndex, bestMatch.matchLen, proc.id) } : {}),
+          matchedKey,
+          ...(proc.id === 'medication_push'
+            ? medicationPresentationAt(normalized, bestMatchIndex, bestMatch.matchLen, medication, matchedKey) : {}),
+          uncertain: !!uncertain,
+          reason: uncertain || null,
+          precharge,
+          sentence,
+          key: procEntryKey(proc.id, matchedKey),
+        });
+        // medication_push can fire multiple times in one message (once per drug).
+        // Canonical medication identities also prevent brand/generic double rolls.
+        if (proc.id !== 'medication_push' && !SITE_PROCEDURES.has(proc.id)) {
+          usedProcIds.add(proc.id);
+        }
       }
     }
     // If negated, leave proc.id eligible — a NON-negated mention later in the

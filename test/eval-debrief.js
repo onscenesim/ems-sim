@@ -19,6 +19,8 @@ const { buildDebriefContext } = require('../src/engine/assembler');
 const { parseDebriefResponse } = require('../src/engine/prompts/debrief');
 const { evaluateObjectives } = require('../src/engine/learning');
 const { crewFrictionCases } = require('./fixtures/debrief-crew-friction');
+const { protocolCases } = require('./fixtures/debrief-protocols');
+// node test/eval-debrief.js --protocols compares ECG omission with the checkbox off/on.
 
 const seed = {
   scenario_id: 'debrief-care-first-evaluation', timestamp_start: '2026-10-05T12:00:00Z',
@@ -66,7 +68,8 @@ async function main() {
   if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is required for the live evaluation.');
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-debrief-eval-'));
   const reviews = [];
-  const evaluations = process.argv.includes('--crew-friction') ? crewFrictionCases()
+  const evaluations = process.argv.includes('--protocols') ? protocolCases()
+    : process.argv.includes('--crew-friction') ? crewFrictionCases()
     : cases.map(([label, impression, delayed]) => ({ label, turns: caseTurns(impression, delayed),
       seed: { ...seed, total_scene_minutes: delayed ? 38 : 18 }, departSceneMinute: delayed ? 24 : 4 }));
   for (const { label, turns, seed: caseSeed, departSceneMinute } of evaluations) {
@@ -80,7 +83,11 @@ async function main() {
   const app = express();
   app.get('/', (_req, res) => {
     const html = fs.readFileSync(path.join(__dirname, 'preview-debrief.html'), 'utf8');
-    res.send(process.argv.includes('--crew-friction') ? html
+    res.send(process.argv.includes('--protocols') ? html
+      .replaceAll('Care-first debrief evaluation', 'Protocol checklist debrief evaluation')
+      .replace('Compare diagnostic uncertainty, incorrect and correct impressions, and a consequential care delay.',
+        'Compare identical BLS care with 12-lead acquisition crossed off versus included.')
+      : process.argv.includes('--crew-friction') ? html
       .replaceAll('Care-first debrief evaluation', 'Crew distraction debrief evaluation')
       .replace('Compare diagnostic uncertainty, incorrect and correct impressions, and a consequential care delay.',
         'Compare the same care with quiet, rambling, and upsetting crew dialogue, then an argument that delayed care.') : html);

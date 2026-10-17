@@ -5,6 +5,7 @@ const { SCENARIO_POOLS } = require('../data/scenarios/index');
 const { CALLER_BEHAVIORS, WEATHER, TIME_OF_DAY, SPECIAL_CIRCUMSTANCES } = require('../data/modifiers');
 const { CREW } = require('../data/crew');
 const { REGIONS } = require('../data/regions');
+const { resolve: resolveProtocols } = require('../../public/protocols');
 const { COMORBIDITIES } = require('../data/comorbidities');
 const { AGE_GROUPS } = require('../data/ageGroups');
 const { SEASONS, compatibleWeather, caseCompatible, validateCombination } = require('./compatibility');
@@ -457,6 +458,7 @@ function rollScenario(opts = {}) {
     // trauma/cath/stroke). This binary is presented to the provider on every run.
     hospitals: region && region.hospitals ? region.hospitals : null,
     provider_level,
+    protocols: resolveProtocols(provider_level, region_id, opts.protocols),
     difficulty,
     unit_name,
     events: [],

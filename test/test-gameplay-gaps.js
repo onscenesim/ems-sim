@@ -22,15 +22,18 @@ const { acquireTwelveLeads } = require('../src/engine/twelve-lead');
 const { hasCardiacMonitor } = require('../src/engine/equipment');
 const router = require('../src/server/routes/scenario');
 after(() => fs.rmSync(dataDir, { recursive: true, force: true }));
-function session(level = 'ALS') {
-  return new Session(rollScenario({ random_seed: 'gameplay-gaps', provider_level: level, region: 'SUBURBAN', category: 'medical' }));
+function session(level = 'ALS', legacy = false) {
+  const seed = rollScenario({ random_seed: 'gameplay-gaps', provider_level: level, region_id: 'SUBURBAN', category: 'medical' });
+  // Saved pre-checklist runs retain their original equipment behavior.
+  if (legacy) delete seed.protocols;
+  return new Session(seed);
 }
 function reply(text, time, tags = '') {
   response = `${text}\n${tags}\n[CREW_STATUS: partner=on_scene captain=not_on_scene]\n[TIME: ${time}]`;
 }
 
-test('every ECG view is blocked before rolling and filing on an unequipped BLS unit', async () => {
-  const s = session('BLS');
+test('legacy runs: every ECG view is blocked before rolling and filing on an unequipped BLS unit', async () => {
+  const s = session('BLS', true);
   for (const order of ['Acquire a 12-lead ECG.', 'Acquire posterior leads.', 'Acquire right-sided leads.', 'Acquire V4R leads.']) {
     // Even a model ignoring the restriction cannot create a roll or printout.
     reply('The ECG paper is filed.', '2:00');
@@ -45,8 +48,8 @@ test('every ECG view is blocked before rolling and filing on an unequipped BLS u
   assert.deepEqual(acquireTwelveLeads({ seed: s.seed, rolls: [{ procedure_id: 'twelve_lead', outcome: 'SUCCESS' }] }), []);
 });
 
-test('only arrived ALS backup with an explicitly available monitor enables BLS ECGs', async () => {
-  const s = session('BLS');
+test('legacy runs: only arrived ALS backup with an explicitly available monitor enables BLS ECGs', async () => {
+  const s = session('BLS', true);
   for (const backup of [null, { status: 'en_route', level: 'ALS', monitor: true },
     { status: 'on_scene' }, { status: 'on_scene', level: 'BLS', monitor: true },
     { status: 'on_scene', level: 'ALS', monitor: false }, { status: 'cancelled', level: 'ALS', monitor: true }]) {
@@ -68,8 +71,8 @@ test('only arrived ALS backup with an explicitly available monitor enables BLS E
   deleteSession(restored.sessionId);
 });
 
-test('backup arrival in the same response cannot retroactively acquire an unrolled ECG', async () => {
-  const s = session('BLS');
+test('legacy runs: backup arrival in the same response cannot retroactively acquire an unrolled ECG', async () => {
+  const s = session('BLS', true);
   reply('ALS crew arrives with a monitor.', '1:00', '[BACKUP: on_scene ETA=0 LEVEL=ALS MONITOR=available]');
   const result = await s.send('Acquire a 12-lead ECG.');
   assert.equal(result.rolls.length, 0);
@@ -144,8 +147,8 @@ test('IV retry wording gets one attempt while conditional, negated and historica
   }
 });
 
-test('the real turn route returns unavailable equipment during confirmation without running a turn', async () => {
-  const s = session('BLS');
+test('legacy runs: the real turn route returns unavailable equipment during confirmation without running a turn', async () => {
+  const s = session('BLS', true);
   const id = randomUUID(), ownerId = 'gap-test-browser-owner';
   restoreSession({ id, seed: s.seed, ownerId, messages: [], turns: [], meta: {}, crew: {} });
   const layer = router.stack.find(entry => entry.route?.path === '/:id/turn');
@@ -156,4 +159,15 @@ test('the real turn route returns unavailable equipment during confirmation with
   assert.equal(payload.needs_confirmation.length, 1);
   assert.match(payload.needs_confirmation[0].unavailable, /No cardiac monitor/);
   deleteSession(id);
+});
+
+
+test('checklist runs permit BLS ECG acquisition even when crossed off, without inventing ALS backup', async () => {
+  const s = session('BLS');
+  assert.equal(s.seed.protocols.ecg_transmit, false);
+  reply('The ECG paper is acquired and transmitted.', '2:00');
+  const result = await s.send('Acquire a 12-lead ECG.');
+  assert.equal(result.rolls[0].procedure_id, 'twelve_lead');
+  assert.equal(s.turns.at(-1).twelveLeads.length, 1);
+  assert.doesNotMatch(request, /An arrived ALS resource|CANNOT be performed/);
 });

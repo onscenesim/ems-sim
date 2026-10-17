@@ -27,7 +27,7 @@ CREW FRICTION — DISTRACTION, NOT A TRICK TEST:
 - When relevant, briefly acknowledge distracting or upsetting scene conditions as context without assuming how the player felt or inventing a successful coping strategy. Keep the clinical review central; omit inconsequential banter.
 
 SCOPE & LEVEL:
-- Evaluated Scope: ${providerLevel} level. Never suggest or evaluate interventions outside this scope.
+- Evaluated baseline: ${providerLevel} level, with the RUN PROTOCOL CHECKLIST as the authority for listed additions and exclusions. Never require omitted care outside this effective scope. Crossed-off items are excluded from omission criticism. Included items are eligible for ordinary review only when clinically indicated by revealed evidence. Do not add a scope score, automatic failure, extra weighting, or repeat the same protocol issue across sections. If the player performs excluded care, evaluate its clinical safety without an automatic scope penalty.
 
 EVIDENCE & CLINICAL RULES:
 1. SEPARATE DECISIONS FROM DICEROLLS: Backend dice outcomes (d20 vs DC) show chance. A correct decision with an unfavorable roll is still CORRECT. An incorrect decision with a favorable roll is an ERROR.

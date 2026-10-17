@@ -42,10 +42,10 @@ app.get('/',(_req,res)=>{
       const r=await fetch('/preview/order',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({order:qaGet('qa-order').value,patient:qaPatient,turn:++qaCount})});
       const {rolls,records}=await r.json();
-      const roll=rolls.find(r=>r.procedure_id==='twelve_lead');
-      if(roll)await animateTwelveLead(roll.outcome);
+      const ecgRolls=rolls.filter(r=>TwelveLead.catalog.procedureViews[r.procedure_id]);
+      for(const roll of ecgRolls)await animateTwelveLead(roll.outcome);
       qaRecords.push(...records);qaApply(records.length>0);
-      qaGet('qa-status').textContent=(roll?'d20 '+roll.roll+' vs DC '+roll.dc+' — '+roll.outcome:'No acquisition roll')+' · '+qaRecords.length+' recording(s)';
+      qaGet('qa-status').textContent=(ecgRolls.length?ecgRolls.map(roll=>TwelveLead.catalog.views[TwelveLead.catalog.procedureViews[roll.procedure_id]].label+': d20 '+roll.roll+' vs DC '+roll.dc+' — '+roll.outcome).join(' / '):'No acquisition roll')+' · '+qaRecords.length+' recording(s)';
     }finally{qaGet('qa-send-order').disabled=false;}
   };
   qaGet('qa-switch').onclick=()=>{qaPatient=qaPatient==='patient_1'?'patient_2':'patient_1';qaApply();qaGet('qa-status').textContent=qaPatient;};
