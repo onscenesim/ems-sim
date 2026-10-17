@@ -18,23 +18,27 @@
     ['agitation_sedation', 'Sedation of agitated patients', true, true, false],
     ['ketamine', 'Ketamine', true, true, false],
     ['norepinephrine', 'Levophed / norepinephrine (pressor)', false, true, true],
-    ['epinephrine_pressor', 'Epinephrine (pressor, not cardiac arrest doses)', true, true, true],
+    ['epinephrine_pressor', 'Epinephrine (pressor, not cardiac arrest doses)', true, true, false],
     ['lucas', 'LUCAS / mechanical CPR device', true, false, true],
     ['ventilator', 'Transport ventilator', false, true, true],
     ['bipap', 'BiPAP (separate from CPAP)', false, true, true],
   ];
   const BLS = [
+    ['lucas', 'LUCAS / mechanical CPR device', true, false, true],
     ['iv_fluids', 'Start IVs and give crystalloid fluids', false, true, true],
     ['ecg_transmit', 'Obtain and transmit a 12-lead ECG', false, true, true],
     ['sga_arrest', 'Supraglottic airway in cardiac arrest', true, true, true],
     ['sga_alive', 'Supraglottic airway with a pulse', false, true, true],
-    ['glucose_check', 'Blood glucose measurement', true, true, true],
+    ['glucose_check', 'Blood glucose measurement (BGL)', false, false, true],
     ['cpap', 'CPAP', true, true, true],
     ['albuterol', 'Albuterol (nebulizer or MDI)', true, true, true],
-    ['epinephrine_autoinjector', 'Epinephrine auto-injector for anaphylaxis', true, true, true],
-    ['naloxone', 'Naloxone (intranasal or intramuscular)', true, true, true],
+    ['epinephrine_autoinjector', 'Epinephrine auto-injector (EpiPen) for anaphylaxis', false, false, false],
+    ['naloxone', 'Naloxone / Narcan (intranasal or intramuscular)', false, false, true],
     ['nitroglycerin_assist', 'Assist with prescribed nitroglycerin', true, true, true],
   ];
+  function requiresTraining(item, level, region) {
+    return level === 'BLS' && region === 'CALIFORNIA_Urban' && ['glucose_check', 'epinephrine_autoinjector', 'naloxone'].includes(item.id);
+  }
   function catalog(level) {
     return (level === 'BLS' ? BLS : ALS).map(([id, label, enabled, california, international]) => ({ id, label, enabled, california, international }));
   }
@@ -67,5 +71,5 @@
       'Distinguish epinephrine pressor use from arrest epinephrine and anaphylaxis auto-injectors; BiPAP from CPAP; paralytic RSI from medication facilitated intubation; and BLS SGA during arrest from SGA with a pulse. Drug permission does not imply permission for every use (ketamine and each sedation indication are separate). Post intubation sedation can apply to an already-intubated patient even if intubation is excluded.',
     ].join('\n');
   }
-  return { catalog, lockReason, resolve, describe };
+  return { catalog, lockReason, resolve, describe, requiresTraining };
 });

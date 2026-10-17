@@ -165,7 +165,7 @@ function assembleSeedBlock(seed) {
     lines.push(seed.protocols
       ? 'AED on board for shockable arrest rhythms. ECG acquisition/transmission device available for ordered 12-leads (including additional views); this does not provide continuous rhythm monitoring, capnography, manual defibrillation, cardioversion or pacing.'
       : 'AED on board — for shockable arrest rhythms only. NO cardiac monitor: no 12-lead, no rhythm display, no waveform capnography, no ETCO2, no defibrillator controls, no cardioversion, no pacing.');
-    lines.push('BLS medications only. NO ALS drug bag. NO IO kit. NO LUCAS. NO transport ventilator. NO infusion pump.');
+    lines.push('BLS medications only. NO ALS drug bag. NO IO kit. LUCAS / mechanical CPR device available = "the LUCAS". NO transport ventilator. NO infusion pump.');
     if (seed.protocols) lines.push('CHECKLIST PRACTICE SUPPLIES: IV supplies and crystalloid, ECG acquisition/transmission device, supraglottic airways, glucose testing, CPAP and listed BLS medications remain available for ordered actions, even when crossed off. Do not invent an ALS crew to perform these listed actions.');
     lines.push('BLS vitals: SpO2 (pulse ox), BP (manual cuff + stethoscope), RR (manual count), Glucose (glucometer), GCS, Pain. HR = manual pulse rate only — no monitor-derived values.');
   } else {
@@ -173,7 +173,7 @@ function assembleSeedBlock(seed) {
     lines.push('Bags: jump bag (BLS supplies + glucometer + pulse ox + hemostatic gauze), airway bag (direct + video laryngoscopy, ETTs 6.0–8.5mm, King LT/i-Gel, surgical cric kit, CPAP, waveform capnography, PEEP valve, Yankauer), drug bag (full ALS formulary), IO kit (EZ-IO + FAST1), trauma bag (hemorrhage control, chest seals, needle decompression, traction splint), OB kit.');
     lines.push('Cardiac monitor/defibrillator — standalone device with a handle, not stored in any bag. Integrates: 12-lead ECG, SpO2, ETCO2/waveform capnography, NIBP, pacing, cardioversion, defibrillation. Call it "the monitor."');
     lines.push('Monitor aliases: LP, LP12, LP15, LP20, LifePak, LIFEPAK, Physio-Control, Zoll, Corpuls, the defibrillator, the defib, the AED, the 12-lead machine — all mean the monitor. Accept any; never correct.');
-    lines.push('ALS-only: LUCAS/AutoPulse (mechanical CPR) = "the LUCAS"; transport ventilator = "the vent"; infusion pump = "the pump."');
+    lines.push('LUCAS/AutoPulse (mechanical CPR) = "the LUCAS"; transport ventilator = "the vent"; infusion pump = "the pump."');
   }
 
   lines.push('BLS MEDICATION SCOPE: aspirin (chewable, suspected ACS), sublingual nitroglycerin (assisting per protocol or the patient\'s own), oral glucose, epinephrine auto-injector (anaphylaxis), naloxone (IN/IM), albuterol (MDI or nebulized per protocol), and CPAP are supported BLS simulation actions; the run checklist determines omission expectations. NEVER have any NPC — including a BLS partner or first responder — call these "ALS only," "above my ticket," or otherwise out of an EMT\'s scope; they are routine BLS skills.');

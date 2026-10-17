@@ -91,3 +91,18 @@ test('request choices reach saved seeds, restore, and replay independently of cu
   assert.equal(saved.initialSeed.protocols.iv_fluids, true);
   assert.equal(getSession(payload.session_id).seed.protocols.ecg_transmit, true);
 });
+
+test('International epinephrine and California BLS training options are selectable', () => {
+  assert.equal(Protocols.resolve('ALS', 'INTERNATIONAL_DEVELOPING').epinephrine_pressor, true);
+  assert.equal(Protocols.resolve('BLS', 'INTERNATIONAL_DEVELOPING', { epinephrine_autoinjector: true }).epinephrine_autoinjector, true);
+  const defaults = Protocols.resolve('BLS', 'CALIFORNIA_Urban');
+  assert.equal(defaults.lucas, true);
+  for (const id of ['glucose_check', 'epinephrine_autoinjector', 'naloxone']) {
+    assert.equal(defaults[id], false);
+    assert.equal(Protocols.resolve('BLS', 'CALIFORNIA_Urban', { [id]: true })[id], true);
+    assert.equal(Protocols.requiresTraining({ id }, 'BLS', 'CALIFORNIA_Urban'), true);
+  }
+  const seed = rollScenario({ provider_level: 'BLS', protocols: { lucas: true } });
+  assert.doesNotMatch(assembleSeedBlock(seed), /NO LUCAS/);
+  assert.match(assembleSeedBlock(seed), /LUCAS \/ mechanical CPR device available/);
+});

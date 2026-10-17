@@ -24,9 +24,9 @@
     summary.textContent = `${count} of ${items.length} included · ${provider.value}`;
     document.getElementById('protocol-context').textContent = `${provider.options[provider.selectedIndex].text} · ${region.options[region.selectedIndex].text}`;
     document.getElementById('protocol-region-note').textContent = region.value === 'CALIFORNIA_Urban'
-      ? (provider.value === 'BLS' ? 'California preset: all listed BLS additions are locked off.' : 'California preset: listed skill and medication additions are locked off. LUCAS remains selectable for ALS.')
+      ? (provider.value === 'BLS' ? 'California preset: LUCAS is selectable. BGL measurement, Narcan and EpiPen require completed training modules and local LEMSA approval; enable each after training. These three default off.' : 'California preset: listed skill and medication additions are locked off. LUCAS remains selectable for ALS.')
       : region.value === 'INTERNATIONAL_DEVELOPING'
-        ? (provider.value === 'BLS' ? 'International preset: all listed BLS additions are locked off for resource limits.' : 'International preset: resource-dependent options are locked off. Other ALS skills remain selectable.')
+        ? (provider.value === 'BLS' ? 'International preset: EpiPen remains selectable; resource-dependent BLS additions are locked off.' : 'International preset: resource-dependent options are locked off. Epinephrine and other ALS skills remain selectable.')
         : 'No regional locks. Choose the capabilities in your protocols.';
     list.replaceChildren();
     for (const item of items) {
@@ -45,7 +45,9 @@
       name.className = 'protocol-name';
       name.textContent = item.label;
       const status = document.createElement('small');
-      status.textContent = lock || dependency || (values[item.id] ? 'Included in your protocols' : 'Excluded from omission feedback');
+      status.textContent = lock || dependency || (EMSProtocols.requiresTraining(item, provider.value, region.value)
+        ? (values[item.id] ? 'LEMSA Approved!' : 'Training module not completed!')
+        : (values[item.id] ? 'Included in your protocols' : 'Excluded from omission feedback'));
       text.append(name, status);
       label.append(checkbox, text);
       checkbox.addEventListener('change', () => {
