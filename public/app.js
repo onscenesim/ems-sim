@@ -2248,6 +2248,19 @@ function buildCrewMemberCard(member) {
   name.textContent = member.name;
   wrap.appendChild(name);
 
+  const portraitPath = window.CrewPortraits.find(member);
+  if (portraitPath) {
+    const portrait = document.createElement('img');
+    portrait.className = 'crew-portrait';
+    portrait.src = portraitPath;
+    portrait.alt = member.name + ' in EMS uniform';
+    portrait.width = 512;
+    portrait.height = 512;
+    portrait.decoding = 'async';
+    portrait.addEventListener('error', () => portrait.remove(), { once: true });
+    wrap.appendChild(portrait);
+  }
+
   // Stat grid: competency / enthusiasm / confrontation
   const grid = document.createElement('div');
   grid.className = 'crew-stats';

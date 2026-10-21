@@ -1879,6 +1879,19 @@ body.light-mode .brief-options-note { color: #536159; }
   border-radius: 0;
 }
 
+.crew-portrait {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  align-self: center;
+  margin: 6px 0 8px;
+  border: 1px solid var(--reference-border);
+  background: var(--reference-bg);
+}
+
 .crew-role-tag {
   font-family: var(--font-xp);
   font-size: 14px;

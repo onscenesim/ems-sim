@@ -1,0 +1,213 @@
+{
+  "tool": "built-in imagegen",
+  "sourceDirectory": "Cyberpunk-Branch/public/images/crew",
+  "encoding": {
+    "width": 512,
+    "height": 512,
+    "format": "WebP",
+    "quality": 90
+  },
+  "prompts": {
+    "uniform-1": "Use case: precise-object-edit. Edit this exact square painted crew portrait for a contemporary EMS simulator. Preserve EXACTLY the existing person's identity, face, skin tones, hair, expression, eye marks, eyewear if present, gaze, head angle, pose, hands if present, silhouette, square framing, abstract colored background, and degree of loose fragmented palette-knife abstraction. Change ONLY clothing: replace the ivory Trauma Team protective vest/harness and teal futuristic jumpsuit with an ordinary plain dark NAVY-BLUE EMS collared work shirt with simple fabric folds and ONE small GOLD six-point Star of Life medical patch on chest or sleeve. This crew member is a PARAMEDIC so the medical patch must be GOLD/OCHRE, not blue. Preserve how tidy or rumpled the clothing is and any undershirt. No armor, ivory harness, red star, futuristic gear, text, new accessories or props. Paint the shirt in the same broad broken matte brushwork as source; no photorealism, detailed rendering or smooth gradients. Absolutely keep face, features, expression, head, eyewear and background unchanged. One square portrait.",
+    "sleeve-1": "Use case: precise-object-edit. Keep this exact painted portrait unchanged except for uniform insignia. Remove the gold chest emblem and leave plain navy fabric there. On the outer upper sleeve at the lower-left image edge, suggest ONE SMALL ordinary fabric sleeve patch using ONLY a flat muted slate-blue paint block with a crude GOLD medical asterisk made of THREE short broad intersecting brush dabs. The sleeve patch is understated and only partly visible, cropped by the left frame. Its backing follows the sleeve angle and is only slightly lighter than the navy shirt. It must be as crudely painted and abbreviated as the neighboring shirt folds: 4 or 5 broad flat paint marks total, irregular broken edges, no extra rendering detail. No border, no outline, no stitching, no embroidery texture, no snake, no rod, no lettering, no fine internal symbol, no crisp geometrical icon, no badge-like shine. No floating chest logo. Do not enlarge or center the patch to show it. Keep the face, hair, skin, expression, collar, pose, entire colored background, square crop and all other paint marks exactly unchanged.",
+    "sleeve-2": "Use case: precise-object-edit. Input 1 is the exact edit target; input 2 is ONLY the reference for the SIMPLE painted sleeve patch treatment. In input 1 remove the chest emblem and restore plain navy fabric there. On the most visible OUTER UPPER ARM sleeve below the shoulder seam, suggest ONE SMALL fabric sleeve patch using ONLY a flat muted slate-blue paint block supporting a crude GOLD medical asterisk made of THREE short broad intersecting brush dabs. Match input 2's abbreviated patch simplicity. The patch follows the existing sleeve angle and curvature. It can be partly or mostly cropped by the frame, like the reference; keep framing and pose unchanged. Patch backing only slightly lighter than the navy shirt. Paint patch as crudely and loosely as neighboring shirt folds: just 4 or 5 broad flat paint marks total, irregular broken edges, no extra rendering detail. No border, no outline, no stitching, no embroidery texture, no snake, no rod, no lettering, no fine internal symbol, no crisp geometrical icon or badge shine. No floating chest logo or duplicate patch. Do not enlarge or center the patch to show it. Preserve the target's ENTIRE face, identity, skin, hair, gaze, expression, hands, collar, navy shirt, pose, colored background, square crop and ALL other paint marks exactly. Do not borrow the second image's person or palette.",
+    "sleeve-3": "Use case: precise-object-edit. Input 1 is the exact edit target; input 2 is ONLY the reference for the SIMPLE painted sleeve patch treatment. In input 1 remove the chest emblem and restore plain navy fabric there. On the most visible OUTER UPPER ARM sleeve below the shoulder seam, suggest ONE SMALL fabric sleeve patch using ONLY a flat muted slate-blue paint block supporting a crude GOLD medical asterisk made of THREE short broad intersecting brush dabs. Match input 2's abbreviated patch simplicity. The patch follows the existing sleeve angle and curvature. It can be partly or mostly cropped by the frame, like the reference; keep framing and pose unchanged. Patch backing only slightly lighter than the navy shirt. Paint patch as crudely and loosely as neighboring shirt folds: just 4 or 5 broad flat paint marks total, irregular broken edges, no extra rendering detail. No border, no outline, no stitching, no embroidery texture, no snake, no rod, no lettering, no fine internal symbol, no crisp geometrical icon or badge shine. No floating chest logo or duplicate patch. Do not enlarge or center the patch to show it. Preserve the target's ENTIRE face, identity, skin, hair, eyewear if present, gaze, expression, collar, navy shirt, pose, colored background, square crop and ALL other paint marks exactly. Do not borrow the second image's person or palette.",
+    "uniform-2": "Use case: precise-object-edit. Edit this exact square painted crew portrait for a contemporary EMS simulator. Preserve EXACTLY the existing person's identity, face, skin tones, hair, expression, abstract eye marks, gaze, head angle, pose, silhouette, square framing, abstract colored background, and the same loose fragmented palette-knife abstraction. Change ONLY clothing: replace the ivory Trauma Team armored vest/harness and teal jumpsuit with an ordinary WHITE EMS captain's collared uniform shirt, soft fabric, button front and simple folds, NO protective vest, NO armor or harness. Add ONE small GOLD six-point Star of Life medical patch directly sewn onto the white shirt's visible sleeve or chest. This captain is a paramedic so the medical patch must be gold, not blue. The WHITE shirt must read as a normal contemporary dress/work shirt, not white body armor. Preserve uniform neatness and any undershirt. No red star, futuristic gear, text, new accessories or props. Same broad broken matte brush strokes throughout. No photorealism or smooth gradients. Absolutely keep the existing face, facial features, expression, hair and background unchanged. One square portrait.",
+    "sleeve-4": "Use case: precise-object-edit. Input 1 is the exact edit target; input 2 is ONLY the reference for the SIMPLE painted sleeve patch treatment, never for shirt color or person. In input 1 remove the current medical emblem and restore plain WHITE captain's shirt fabric at the old spot. On the most visible OUTER UPPER ARM sleeve below the shoulder seam, suggest ONE SMALL fabric sleeve patch using ONLY a flat dark desaturated navy paint block supporting a crude muted GOLD medical asterisk made of THREE short broad intersecting brush dabs. Match input 2's abbreviated patch simplicity. The patch follows the existing sleeve angle and curvature. It can be partly or mostly cropped by the frame, like the reference; keep framing and pose unchanged. Paint patch as crudely and loosely as neighboring shirt folds: just 4 or 5 broad flat paint marks total, irregular broken edges, no extra rendering detail. No border, no outline, no stitching, no embroidery texture, no snake, no rod, no lettering, no fine internal symbol, no crisp geometrical icon or badge shine. No floating chest logo or duplicate patch. Do not enlarge or center the patch to show it. Preserve this captain's WHITE shirt, ENTIRE face, identity, skin, hair, gaze, expression, collar, pose, colored background, square crop and ALL other paint marks exactly. Do not borrow the second image's person or palette.",
+    "uniform-3": "Use case: precise-object-edit. Edit this exact square painted crew portrait for a contemporary EMS simulator. Preserve EXACTLY the existing person's identity, face, skin tones, hair, expression, eye marks, gaze, head angle, pose, silhouette, square framing, abstract colored background, and the same loose fragmented palette-knife abstraction. Change ONLY clothing: replace ivory Trauma Team protective vest/harness and teal jumpsuit with an ordinary plain dark NAVY-BLUE EMS collared work shirt, simple painted fabric folds and ONE small BLUE six-point Star of Life medical patch on chest or sleeve. This crew member is an EMT, so the patch must be BLUE, not gold. Preserve how tidy or rumpled the clothing is and any undershirt. No armor, ivory harness, red star, futuristic gear, text, new accessories or props. Same broad broken matte brushwork as source, no photorealism, detailed rendering or smooth gradients. Absolutely keep face, features, expression, head and background unchanged. One square portrait.",
+    "sleeve-5": "Use case: precise-object-edit. Input 1 is the exact edit target; input 2 is ONLY the reference for the SIMPLE painted sleeve patch treatment, never for shirt color or person. In input 1 remove the current medical emblem/patch and restore plain navy fabric at its old location. On the most visible OUTER UPPER ARM sleeve below the shoulder seam, suggest ONE SMALL fabric sleeve patch using ONLY a flat dark desaturated navy paint block supporting a crude WHITE medical asterisk made of THREE short broad intersecting brush dabs. This is an EMT: the medical symbol must be WHITE, not blue or gold. Match input 2's abbreviated patch simplicity, using WHITE in place of gold. The patch follows the existing sleeve angle and curvature. It can be partly or mostly cropped by the frame, like the reference; keep framing and pose unchanged. Paint patch as crudely and loosely as neighboring shirt folds: just 4 or 5 broad flat paint marks total, irregular broken edges, no extra rendering detail. No border, no outline, no stitching, no embroidery texture, no snake, no rod, no lettering, no fine internal symbol, no crisp geometrical icon or badge shine. No floating chest logo or duplicate patch. Do not enlarge or center the patch to show it. Preserve the target's NAVY EMS collared shirt, ENTIRE face, identity, skin, hair, gaze, expression, collar, pose, colored background, square crop and ALL other paint marks exactly. Do not borrow the second image's person or palette.",
+    "uniform-4": "Use case: precise-object-edit. Edit this exact square painted crew portrait for a contemporary EMS simulator. Preserve EXACTLY the existing person's identity, face, skin tones, hair, expression, abstract eye marks, gaze, head angle, pose, silhouette, square framing, abstract colored background, and the same loose fragmented palette-knife abstraction. Change ONLY clothing: replace the ivory Trauma Team armored vest/harness and teal jumpsuit with an ordinary WHITE EMS captain's collared uniform shirt, soft fabric, button front and simple folds, NO protective vest, NO armor or harness. Add ONE small BLUE six-point Star of Life medical patch directly sewn onto the white shirt's visible sleeve or chest. This captain is an EMT so the medical patch must be blue. The WHITE shirt must read as a normal contemporary dress/work shirt, not white body armor. Preserve uniform neatness and any undershirt. No red star, futuristic gear, text, new accessories or props. Same broad broken matte brush strokes throughout. No photorealism or smooth gradients. Absolutely keep the existing face, facial features, expression, hair and background unchanged. One square portrait.",
+    "sleeve-6": "Use case: precise-object-edit. Input 1 is the exact edit target; input 2 is ONLY the reference for the SIMPLE painted sleeve patch treatment, never for shirt color or person. In input 1 remove the current medical emblem/patch and restore plain white fabric at its old location. On the most visible OUTER UPPER ARM sleeve below the shoulder seam, suggest ONE SMALL fabric sleeve patch using ONLY a flat dark desaturated navy paint block supporting a crude WHITE medical asterisk made of THREE short broad intersecting brush dabs. This is an EMT: the medical symbol must be WHITE, not blue or gold. Match input 2's abbreviated patch simplicity, using WHITE in place of gold. The patch follows the existing sleeve angle and curvature. It can be partly or mostly cropped by the frame, like the reference; keep framing and pose unchanged. Paint patch as crudely and loosely as neighboring shirt folds: just 4 or 5 broad flat paint marks total, irregular broken edges, no extra rendering detail. No border, no outline, no stitching, no embroidery texture, no snake, no rod, no lettering, no fine internal symbol, no crisp geometrical icon or badge shine. No floating chest logo or duplicate patch. Do not enlarge or center the patch to show it. Preserve the target's WHITE captain's collared shirt, ENTIRE face, identity, skin, hair, gaze, expression, collar, pose, colored background, square crop and ALL other paint marks exactly. Do not borrow the second image's person or palette."
+  },
+  "assets": [
+    {
+      "source": "marcus-webb-v2.webp",
+      "file": "marcus-webb-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-1",
+      "sleeveStyleReference": null
+    },
+    {
+      "source": "destiny-okafor-v2.webp",
+      "file": "destiny-okafor-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-2",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "ray-kowalski-v2.webp",
+      "file": "ray-kowalski-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-2",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "priya-nair-v5.webp",
+      "file": "priya-nair-v5-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-2",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "darnell-hughes-v13.webp",
+      "file": "darnell-hughes-v13-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-2",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "brianna-solis-v2.webp",
+      "file": "brianna-solis-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-2",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "tyler-beaumont-v2.webp",
+      "file": "tyler-beaumont-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-3",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "amara-diallo-v2.webp",
+      "file": "amara-diallo-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-3",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "jorge-medina-v2.webp",
+      "file": "jorge-medina-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-3",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "quinn-abernathy-v2.webp",
+      "file": "quinn-abernathy-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-1",
+      "sleevePrompt": "sleeve-3",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "sandra-okonkwo-v15.webp",
+      "file": "sandra-okonkwo-v15-ems.webp",
+      "shirt": "white",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-2",
+      "sleevePrompt": "sleeve-4",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "frank-delucci-v2.webp",
+      "file": "frank-delucci-v2-ems.webp",
+      "shirt": "white",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-2",
+      "sleevePrompt": "sleeve-4",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "yolanda-ferris-v4.webp",
+      "file": "yolanda-ferris-v4-ems.webp",
+      "shirt": "white",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-2",
+      "sleevePrompt": "sleeve-4",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "dennis-holt-v2.webp",
+      "file": "dennis-holt-v2-ems.webp",
+      "shirt": "white",
+      "symbolColor": "gold",
+      "uniformPrompt": "uniform-2",
+      "sleevePrompt": "sleeve-4",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "danny-kowalczyk-v2.webp",
+      "file": "danny-kowalczyk-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "white",
+      "uniformPrompt": "uniform-3",
+      "sleevePrompt": "sleeve-5",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "keisha-tremblay-v2.webp",
+      "file": "keisha-tremblay-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "white",
+      "uniformPrompt": "uniform-3",
+      "sleevePrompt": "sleeve-5",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "walt-garside-v2.webp",
+      "file": "walt-garside-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "white",
+      "uniformPrompt": "uniform-3",
+      "sleevePrompt": "sleeve-5",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "fatima-al-rashid-v6.webp",
+      "file": "fatima-al-rashid-v6-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "white",
+      "uniformPrompt": "uniform-3",
+      "sleevePrompt": "sleeve-5",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "bo-hendricks-v2.webp",
+      "file": "bo-hendricks-v2-ems.webp",
+      "shirt": "navy",
+      "symbolColor": "white",
+      "uniformPrompt": "uniform-3",
+      "sleevePrompt": "sleeve-5",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "ruth-callahan-v2.webp",
+      "file": "ruth-callahan-v2-ems.webp",
+      "shirt": "white",
+      "symbolColor": "white",
+      "uniformPrompt": "uniform-4",
+      "sleevePrompt": "sleeve-6",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    },
+    {
+      "source": "gord-beaulieu-v2.webp",
+      "file": "gord-beaulieu-v2-ems.webp",
+      "shirt": "white",
+      "symbolColor": "white",
+      "uniformPrompt": "uniform-4",
+      "sleevePrompt": "sleeve-6",
+      "sleeveStyleReference": "marcus-webb-v2-ems.webp"
+    }
+  ]
+}
