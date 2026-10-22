@@ -11,10 +11,10 @@
     'Walt Garside', 'Fatima Al-Rashid', 'Bo Hendricks', 'Sandra Okonkwo',
     'Frank Delucci', 'Yolanda Ferris', 'Dennis Holt', 'Ruth Callahan', 'Gord Beaulieu',
   ];
-  // Keep the approved source revision in each EMS adaptation's filename.
+  // Selected editions include later EMS portrait revisions.
   const editions = {
     'Priya Nair': '-v5', 'Darnell Hughes': '-v13',
-    'Fatima Al-Rashid': '-v6', 'Sandra Okonkwo': '-v15',
+    'Fatima Al-Rashid': '-v6', 'Sandra Okonkwo': '-v16',
     'Yolanda Ferris': '-v4',
   };
   function find(member) {
