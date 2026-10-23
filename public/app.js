@@ -2522,6 +2522,7 @@ function animateTransportScene(id) {
   overlay.style.setProperty('--transport-fade', `${timing.fade}ms`);
   void overlay.offsetWidth;
   overlay.classList.add('visible');
+  const stopPrivacy = window.PatientPrivacy?.start(overlay);
   return new Promise(resolve => {
     setTimeout(() => {
       // Keep the final pose through the fade instead of snapping back to parked.
@@ -2529,6 +2530,7 @@ function animateTransportScene(id) {
       setTimeout(() => {
         overlay.classList.remove('visible');
         overlay.classList.remove('is-fading');
+        stopPrivacy?.();
         resolve();
       }, timing.fade);
     }, timing.hold);

@@ -26,11 +26,17 @@
       for (const id of ['loading', 'depart']) {
         document.body.append(document.importNode(source.getElementById(`${id}-overlay`), true));
       }
-      let timer;
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'patient-privacy.js?v=1'; script.onload = resolve; script.onerror = reject;
+        document.body.append(script);
+      });
+      let timer, stopPrivacy;
       document.querySelector('.preview-controls').addEventListener('click', event => {
         const { scene, mode } = event.target.dataset;
         if (!scene) return;
         clearTimeout(timer);
+        stopPrivacy?.();
         for (const id of ['loading', 'depart']) {
           document.getElementById(`${id}-overlay`).classList.remove('visible', 'is-fading');
         }
@@ -41,8 +47,12 @@
         overlay.style.setProperty('--transport-fade', scene === 'loading' ? '220ms' : '250ms');
         void overlay.offsetWidth;
         overlay.classList.add('visible');
+        stopPrivacy = window.PatientPrivacy.start(overlay, { held: mode !== 'play' });
         if (mode === 'play') {
-          timer = setTimeout(() => overlay.classList.add('is-fading'), scene === 'loading' ? 2600 : 1800);
+          timer = setTimeout(() => {
+            overlay.classList.add('is-fading');
+            timer = setTimeout(() => stopPrivacy?.(), scene === 'loading' ? 220 : 250);
+          }, scene === 'loading' ? 2600 : 1800);
         }
       });
       document.querySelector('[data-scene="loading"][data-mode="start"]').click();
