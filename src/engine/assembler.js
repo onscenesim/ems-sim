@@ -11,6 +11,7 @@ const { CREW_BEHAVIOR_CONTRACT } = require('./prompts/crew');
 const { ENCOUNTER_CONTRACT } = require('../data/scenarios/frequent-callers');
 const { DESTINATION_DIALOGUE_POLICY } = require('./prompts/transport');
 const { ARREST_TRANSPORT_DOCTRINE, buildArrestMedicationRules } = require('./prompts/arrest');
+const { sceneChallengeContract } = require('./prompts/scene-challenges');
 
 function crewRecord(name) {
   return CREW.find(c => c.name === name) || null;
@@ -76,6 +77,7 @@ function assembleSeedBlock(seed) {
   if (seed.special_flags) {
     lines.push(`Special flags: ${seed.special_flags}`);
   }
+  if (sceneChallengeContract(seed)) lines.push(sceneChallengeContract(seed));
   if (seed.frequent_caller) {
     lines.push('--- PAIRED FREQUENT CALLER (hidden from user) ---');
     lines.push(`Pair: ${seed.frequent_caller.pair_id}; variant (private): ${seed.frequent_caller.variant}`);
@@ -120,6 +122,8 @@ function assembleSeedBlock(seed) {
       lines.push(`VARIANCE RULE: Do not make death deterministic. Excellent, well-sequenced care meaningfully improves survival odds — a skilled provider should win more often than they lose, but not always. An unskilled provider should rarely save these patients. Use clinical judgment each turn.`);
       lines.push(`DEATH NARRATION: Let it unfold through observable findings — agonal breathing, loss of pulse, asystole or PEA on the monitor, no response to stimulation. Do not announce death in one sentence; let it happen over 2–3 narrative beats the way it does in real life. After confirmation, allow the student to continue resuscitation if they choose.`);
     }
+  } else if (seed.scene_challenge === 'occult_co_arrest') {
+    lines.push('Arrest is already present. Use the case-specific exposure timeline for people remaining inside, not a generic patient deterioration threshold.');
   } else {
     lines.push('Patient is stable. No decompensation clock active.');
   }
@@ -348,6 +352,8 @@ function assembleSeedBlock(seed) {
     lines.push(ruleNum + '. EASY MODE BEHAVIORAL RULES: This is a foundational, low-stakes learning scenario. The safety net in EASY is the OUTCOME, not the presentation — the patient almost never dies, deteriorates slowly with a forgiving window, and procedures nearly always succeed. So it is FINE for the student to be misled and to do the wrong thing; that is how they learn safely. Do NOT dumb the case down. (a) PARTNER SUPPORT: Your partner is engaged and attentive. If the student appears stuck — more than one full turn passes with no meaningful clinical action — the partner may offer a single non-directive prompt ("Want me to get vitals started?" or "Should I start setting up the airway bag?"). That default support is logistical; coaching precedence and event cues follow the CREW BEHAVIOR CONTRACT. A named crew card or custom description may explicitly permit additional clinical dialogue and routine initiative under the CREW BEHAVIOR CONTRACT; never reveal the hidden diagnosis. (b) PRESENTATION IS HONEST: The patient is cooperative and communicative (no dramatic behavioral resistance), but the underlying problem may still be atypical or a curveball — do NOT telegraph the diagnosis, do NOT sanitize an atypical presentation into a textbook one, and do NOT rescue the student from a reasonable-but-wrong assessment. Let the misdiagnosis play out; the forgiving mechanics keep the patient alive. (c) SCENE: Physical scene-safety hazards stay obvious (no surprise danger to the crew), but bystander history may be incomplete or simply wrong — the student must still piece the picture together.');
   } else if (seed.difficulty === 'HARD') {
     lines.push(ruleNum + '. HARD MODE BEHAVIORAL RULES: This is a high-acuity high-fidelity scenario. (a) DEFAULT PARTNER PASSIVITY: Outside the explicit event permissions in the CREW BEHAVIOR CONTRACT and their named-card/custom behavior, the partner responds to direct orders and does not offer clinical guidance. Explicit character initiative, challenges, and safety warnings remain active under the CREW BEHAVIOR CONTRACT, including on HARD. (b) ATYPICAL PRESENTATION: This patient may present atypically. Classic textbook features may be absent, masked by comorbidities, or partially obscured by environmental factors. Do not telegraph the diagnosis through the partner or environment. (c) SCENE PRESSURE: Pace the scene realistically — family is anxious and asking questions, bystanders may be interfering, environmental factors create cognitive load. Do not artificially pause the scene to give the student time to think.');
+  } else if (seed.difficulty === 'BLACK_CLOUD' && seed.scene_challenge === 'police_transport_pretext') {
+    lines.push(ruleNum + '. BLACK CLOUD STABLE SCENE: Escalate officer impatience and logistical friction while honoring the stable police-pretext case contract. Do not invent disease, incapacity or inevitable decline. Crew opinions follow the case-specific event and character cards; all actions still require provider decisions and applicable rolls.');
   } else if (seed.difficulty === 'BLACK_CLOUD') {
     lines.push(ruleNum + '. BLACK CLOUD MODE — THE UNIVERSE HAS DECIDED: This patient is not going to make it. The provider is cursed. Every intervention may momentarily hold the line but cannot reverse the tide — deterioration continues regardless of care quality. This is not a reflection of the provider\'s skill; it is the black cloud. MANDATORY BEHAVIORS: (a) INEVITABLE DECLINE: Vitals worsen on schedule. Interventions may produce brief, temporary improvement ("the rhythm converted for about 30 seconds") before the slide resumes. Never let good care save this patient — complications compound. (b) GALLOWS PARTNER: Your partner is a seasoned black-cloud survivor. Brief, deadpan acknowledgment of the chaos is acceptable — "Classic," "Of course it is," "That\'s a new one," "Yeah, that tracks" — delivered without breaking clinical focus. Never slapstick, never whining. Dark professionalism. (c) COMPOUNDING DISASTERS: Things go wrong in sequence. Equipment fails when most needed. A second problem emerges mid-treatment. The bystander\'s history was wrong. Layer them naturally — not all at once. (d) CLINICAL PLAUSIBILITY: Deterioration must be medically possible, not random. A cardiac patient refibs after ROSC. The airway swells despite correct technique. A tension pneumo develops from a rib fracture you didn\'t cause. Improbable but not impossible. (e) PARTNER FOCUS: Keep the partner clinically focused. Their named behavior still applies, and procedure execution follows the injected roll; never force success or failure from personality.');
   } else {
@@ -423,6 +429,10 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   if (seed.hint) lines.push(`  Case key (hidden educational context for "what this patient actually had", not a required diagnosis or treatment checklist; evaluate care against the revealed findings, scope, and available resources): ${seed.hint}`);
   if (seed.arrest_rhythm) lines.push(`  Arrest rhythm: ${seed.arrest_rhythm}`);
   if (seed.special_flags) lines.push(`  Special flags: ${seed.special_flags}`);
+  if (sceneChallengeContract(seed)) {
+    lines.push(sceneChallengeContract(seed));
+    lines.push('Review the recorded assessment, consent, officer/crew dialogue, searches, exposure locations and rescue decisions against findings actually available at that time. The hidden scenario does not prove an unrecorded action or missed finding. Do not require forced transport of a stable capable patient; do not penalize moving an arrest out of an unsafe atmosphere to resuscitate safely.');
+  }
   if (seed.frequent_caller) {
     lines.push(`  Paired frequent caller: ${seed.frequent_caller.pair_id}; variant: ${seed.frequent_caller.variant}`);
     lines.push(`  Chronic and behavioral history: ${seed.frequent_caller.history}`);

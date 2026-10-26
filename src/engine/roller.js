@@ -366,16 +366,23 @@ function rollScenario(opts = {}) {
   const patientName = rollPatientName(sex, random);
   const trajectory = instructor?.seed.trajectory || presentation.trajectory_override
     || (category === 'doa' ? 'stable' : rollTrajectory(difficulty));
-  const decompensationClock = category === 'doa' ? null : rollDecompensationClock(difficulty, trajectory);
+  // These scenes have a fixed clinical truth: either no medical emergency or
+  // arrest already present, with a separate location-dependent exposure story.
+  const sceneChallenge = presentation.scene_challenge || null;
+  const decompensationClock = category === 'doa' || sceneChallenge ? null : rollDecompensationClock(difficulty, trajectory);
   const complication = rollComplication(difficulty);
-  // A stable paired encounter must not secretly become its acute counterpart
-  // through the generic complication engine, even on BLACK_CLOUD.
-  if (presentation.frequent_caller?.variant === 'stable'
-    && ['clinical_curveball', 'all'].includes(complication.type)) {
+  // Preserve fixed case truths and honest exposure history, even on BLACK_CLOUD.
+  if ((presentation.frequent_caller?.variant === 'stable' || sceneChallenge)
+    && (['clinical_curveball', 'all'].includes(complication.type)
+      || (sceneChallenge && complication.type === 'unreliable_bystander'))) {
     complication.type = 'equipment_failure';
     delete complication.types;
   }
-  const callerBehavior = rollCallerBehavior(category);
+  const callerBehavior = sceneChallenge === 'police_transport_pretext'
+    ? 'Officers give conflicting medical pretexts and impatiently demand transport; the patient is an honest historian.'
+    : sceneChallenge === 'occult_co_arrest'
+      ? 'Family member recently returned home, is subtly confused from exposure, and answers honestly to the best of their ability.'
+      : rollCallerBehavior(category);
   const timeOfDay = rollTimeOfDay();
 
   const region = REGIONS.find(r => r.id === region_id);
@@ -383,10 +390,10 @@ function rollScenario(opts = {}) {
   const weatherEntry = rollWeather(difficulty, regionLabel, season, instructor ? {} : presentation);
   const weather = weatherEntry.text;
   if (!instructor && !validateCombination(presentation, { region: region_id, season, weather_id: weatherEntry.id })) throw new Error('Incompatible scenario setting');
-  const specialCircumstance = rollSpecialCircumstance(
+  const specialCircumstance = sceneChallenge ? null : rollSpecialCircumstance(
     difficulty, category, ageGroup, presentation, trajectory
   );
-  const comorbidityBundle = presentation.frequent_caller ? null : rollComorbidity(difficulty, category, ageGroup);
+  const comorbidityBundle = presentation.frequent_caller || sceneChallenge ? null : rollComorbidity(difficulty, category, ageGroup);
   let crew = pickCrew(region_id, history);
   if (partner_name) {
     const override = CREW.find(c => c.name === partner_name);
@@ -421,6 +428,7 @@ function rollScenario(opts = {}) {
     arrest_rhythm: presentation.rhythm || null,
     amiodarone_contraindicated: presentation.amiodarone_contraindicated === true,
     special_flags: presentation.special_flags || null,
+    ...(sceneChallenge ? { scene_challenge: sceneChallenge } : {}),
     ...(presentation.frequent_caller ? { frequent_caller: structuredClone(presentation.frequent_caller) } : {}),
     patient_name: patientName,
     patient_age: age,
