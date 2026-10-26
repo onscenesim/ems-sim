@@ -14,6 +14,7 @@ const { rollPatientName } = require('../data/patientNames');
 const { applyInstructor } = require('./instructor');
 const { randomUUID } = require('node:crypto');
 const { createRandom } = require('./random');
+const { selectPresentation } = require('./presentation-selection');
 
 function createRoller(random) {
 function weightedRandom(items, weightFn) {
@@ -96,8 +97,7 @@ function pickPresentation(category, difficulty, history, region, season) {
     return true;
   });
 
-  if (eligible.length === 0) return pickRandom(pool);
-  return pickRandom(eligible);
+  return selectPresentation(eligible.length ? eligible : pool, random);
 }
 
 function rollAgeGroup(category, presentationEntry) {
@@ -372,7 +372,7 @@ function rollScenario(opts = {}) {
   const decompensationClock = category === 'doa' || sceneChallenge ? null : rollDecompensationClock(difficulty, trajectory);
   const complication = rollComplication(difficulty);
   // Preserve fixed case truths and honest exposure history, even on BLACK_CLOUD.
-  if ((presentation.frequent_caller?.variant === 'stable' || sceneChallenge)
+  if ((presentation.frequent_caller?.variant === 'stable' || sceneChallenge || presentation.chemical_exposure)
     && (['clinical_curveball', 'all'].includes(complication.type)
       || (sceneChallenge && complication.type === 'unreliable_bystander'))) {
     complication.type = 'equipment_failure';
@@ -429,6 +429,7 @@ function rollScenario(opts = {}) {
     amiodarone_contraindicated: presentation.amiodarone_contraindicated === true,
     special_flags: presentation.special_flags || null,
     ...(sceneChallenge ? { scene_challenge: sceneChallenge } : {}),
+    ...(presentation.chemical_exposure ? { chemical_exposure: structuredClone(presentation.chemical_exposure) } : {}),
     ...(presentation.frequent_caller ? { frequent_caller: structuredClone(presentation.frequent_caller) } : {}),
     patient_name: patientName,
     patient_age: age,

@@ -13,6 +13,7 @@ const { ARREST }     = require('./arrest');
 const { DOA }        = require('./doa');
 const { CURVEBALLS } = require('./curveballs');
 const { FREQUENT_CALLERS } = require('./frequent-callers');
+const { applyToxicologyGroups } = require('./toxicology-groups');
 
 const SCENARIO_POOLS = {
   cardiac:     CARDIAC,
@@ -32,6 +33,8 @@ const SCENARIO_POOLS = {
 for (const [category, entries] of Object.entries(FREQUENT_CALLERS)) {
   SCENARIO_POOLS[category].push(...entries);
 }
+
+applyToxicologyGroups(SCENARIO_POOLS.toxicology);
 
 const { createHash } = require('node:crypto');
 for (const [category, entries] of Object.entries(SCENARIO_POOLS)) {

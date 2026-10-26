@@ -12,6 +12,7 @@ const { ENCOUNTER_CONTRACT } = require('../data/scenarios/frequent-callers');
 const { DESTINATION_DIALOGUE_POLICY } = require('./prompts/transport');
 const { ARREST_TRANSPORT_DOCTRINE, buildArrestMedicationRules } = require('./prompts/arrest');
 const { sceneChallengeContract } = require('./prompts/scene-challenges');
+const { chemicalExposureContract } = require('./prompts/chemical-exposures');
 
 function crewRecord(name) {
   return CREW.find(c => c.name === name) || null;
@@ -78,6 +79,7 @@ function assembleSeedBlock(seed) {
     lines.push(`Special flags: ${seed.special_flags}`);
   }
   if (sceneChallengeContract(seed)) lines.push(sceneChallengeContract(seed));
+  if (seed.chemical_exposure) lines.push(chemicalExposureContract(seed));
   if (seed.frequent_caller) {
     lines.push('--- PAIRED FREQUENT CALLER (hidden from user) ---');
     lines.push(`Pair: ${seed.frequent_caller.pair_id}; variant (private): ${seed.frequent_caller.variant}`);
@@ -352,6 +354,8 @@ function assembleSeedBlock(seed) {
     lines.push(ruleNum + '. EASY MODE BEHAVIORAL RULES: This is a foundational, low-stakes learning scenario. The safety net in EASY is the OUTCOME, not the presentation — the patient almost never dies, deteriorates slowly with a forgiving window, and procedures nearly always succeed. So it is FINE for the student to be misled and to do the wrong thing; that is how they learn safely. Do NOT dumb the case down. (a) PARTNER SUPPORT: Your partner is engaged and attentive. If the student appears stuck — more than one full turn passes with no meaningful clinical action — the partner may offer a single non-directive prompt ("Want me to get vitals started?" or "Should I start setting up the airway bag?"). That default support is logistical; coaching precedence and event cues follow the CREW BEHAVIOR CONTRACT. A named crew card or custom description may explicitly permit additional clinical dialogue and routine initiative under the CREW BEHAVIOR CONTRACT; never reveal the hidden diagnosis. (b) PRESENTATION IS HONEST: The patient is cooperative and communicative (no dramatic behavioral resistance), but the underlying problem may still be atypical or a curveball — do NOT telegraph the diagnosis, do NOT sanitize an atypical presentation into a textbook one, and do NOT rescue the student from a reasonable-but-wrong assessment. Let the misdiagnosis play out; the forgiving mechanics keep the patient alive. (c) SCENE: Physical scene-safety hazards stay obvious (no surprise danger to the crew), but bystander history may be incomplete or simply wrong — the student must still piece the picture together.');
   } else if (seed.difficulty === 'HARD') {
     lines.push(ruleNum + '. HARD MODE BEHAVIORAL RULES: This is a high-acuity high-fidelity scenario. (a) DEFAULT PARTNER PASSIVITY: Outside the explicit event permissions in the CREW BEHAVIOR CONTRACT and their named-card/custom behavior, the partner responds to direct orders and does not offer clinical guidance. Explicit character initiative, challenges, and safety warnings remain active under the CREW BEHAVIOR CONTRACT, including on HARD. (b) ATYPICAL PRESENTATION: This patient may present atypically. Classic textbook features may be absent, masked by comorbidities, or partially obscured by environmental factors. Do not telegraph the diagnosis through the partner or environment. (c) SCENE PRESSURE: Pace the scene realistically — family is anxious and asking questions, bystanders may be interfering, environmental factors create cognitive load. Do not artificially pause the scene to give the student time to think.');
+  } else if (seed.difficulty === 'BLACK_CLOUD' && ['local', 'chronic'].includes(seed.chemical_exposure?.course)) {
+    lines.push(ruleNum + '. BLACK CLOUD EXPOSURE SCENE: Preserve the local or chronic clinical course in the chemical exposure contract. Add logistical friction and character dialogue; local injury may progress where appropriate. Do not invent systemic collapse or inevitable death. Procedure outcomes still follow server rolls.');
   } else if (seed.difficulty === 'BLACK_CLOUD' && seed.scene_challenge === 'police_transport_pretext') {
     lines.push(ruleNum + '. BLACK CLOUD STABLE SCENE: Escalate officer impatience and logistical friction while honoring the stable police-pretext case contract. Do not invent disease, incapacity or inevitable decline. Crew opinions follow the case-specific event and character cards; all actions still require provider decisions and applicable rolls.');
   } else if (seed.difficulty === 'BLACK_CLOUD') {
@@ -429,6 +433,7 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   if (seed.hint) lines.push(`  Case key (hidden educational context for "what this patient actually had", not a required diagnosis or treatment checklist; evaluate care against the revealed findings, scope, and available resources): ${seed.hint}`);
   if (seed.arrest_rhythm) lines.push(`  Arrest rhythm: ${seed.arrest_rhythm}`);
   if (seed.special_flags) lines.push(`  Special flags: ${seed.special_flags}`);
+  if (seed.chemical_exposure) lines.push(chemicalExposureContract(seed));
   if (sceneChallengeContract(seed)) {
     lines.push(sceneChallengeContract(seed));
     lines.push('Review the recorded assessment, consent, officer/crew dialogue, searches, exposure locations and rescue decisions against findings actually available at that time. The hidden scenario does not prove an unrecorded action or missed finding. Do not require forced transport of a stable capable patient; do not penalize moving an arrest out of an unsafe atmosphere to resuscitate safely.');
