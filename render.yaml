@@ -3,10 +3,12 @@ services:
     name: ems-sim
     runtime: node
     plan: starter
-    buildCommand: npm install --include=dev
+    buildCommand: npm ci --include=dev --ignore-scripts
     startCommand: node bin/server.js
     healthCheckPath: /health
     envVars:
+      - key: NODE_VERSION
+        value: 24.22.1
       - key: NODE_ENV
         value: production
       - key: GEMINI_API_KEY

@@ -1,6 +1,6 @@
 'use strict';
 
-// Reviewed 2026-10-25. References support the clinical distinctions, not fixed
+// Reviewed 2026-10-26. References support the clinical distinctions, not fixed
 // patient outcomes or minute-by-minute toxicology predictions.
 const EXPOSURE_SOURCES = {
   eyes: 'https://www.poison.org/articles/help-for-poisons-splashed-in-the-eye',
@@ -19,6 +19,7 @@ const EXPOSURE_SOURCES = {
   kerosene: 'https://www.rch.org.au/clinicalguide/guideline_index/Hydrocarbon_poisoning/',
   acid: 'https://wwwn.cdc.gov/TSP/MMG/MMGDetails.aspx?mmgid=758&toxid=147',
   solvent: 'https://wwwn.cdc.gov/TSp/MMG/MMGDetails.aspx?mmgid=157&toxid=29',
+  inhalants: 'https://www.ncpoisoncontrol.org/types-of-poisons/substances-of-abuse/inhalants',
   methanol: 'https://www.cdc.gov/niosh/ershdb/emergencyresponsecard_29750029.html',
   lead: 'https://www.cdc.gov/niosh/lead/signs-symptoms/index.html',
   pediatric_lead: 'https://www.cdc.gov/lead-prevention/hcp/clinical-guidance/index.html',
@@ -126,6 +127,11 @@ const CHEMICAL_EXPOSURES = [
     'Kerosene hydrocarbon ingestion with aspiration risk', 'ingestion', 'respiratory',
     'The caregiver can identify the transferred lamp/heater fuel and provide the container information safely. Even a small swallowed amount with coughing can reflect aspiration. Assess respiratory effort, mentation and serial oxygenation; delayed lung injury is possible. Do not induce vomiting or routinely give charcoal. No forced oral fluids in a coughing child; seek poison-center guidance and transport based on findings. Use pediatric equipment and medication dosing.',
     ['kerosene'], ['pediatric — toddler and preschool']),
+  exposure('intentional_inhalant',
+    'Friend calls for a confused person repeatedly slumping over after intentionally inhaling spray-paint fumes — paint residue near the mouth and a used aerosol can nearby',
+    'Spray-paint solvent and aerosol propellant inhalation for intoxication', 'inhalation', 'systemic',
+    'Intentional inhalant poisoning is the actual exposure, not workplace use, ethanol intoxication or an assumed opioid overdose. The friend confirms deliberate use for intoxication when asked; the patient may minimize it. Paint residue and the can are scene clues; obtain product information safely without demonstrating how to use it. Initial assessment finds depressed mentation, shallow irregular breathing and a rapid irregular palpable pulse. ALS monitoring, when applied, shows frequent ventricular ectopy; BLS identifies irregular pulses and uses its available equipment, not an invented ECG. Dangerous ventricular dysrhythmia, seizure, hypoxia or respiratory arrest can develop; sudden collapse is possible even in a previously healthy person, but do not force inevitable death or skip the initial assessment. Reduce unnecessary agitation and exertion, assess other causes of altered mental status and co-exposures, support airway/ventilation and oxygenation, monitor continuously within scope, seek poison-center/medical-control input and transport urgently. Follow applicable resuscitation protocols if pulses are lost; do not invent a universal prohibition on standard arrest care. Improvement in fresh air does not establish safety. Ask about intent separately: recreational use alone does not establish a suicide attempt. No household product is an antidote; no field toxin or electrolyte assay is available.',
+    ['inhalants', 'kerosene', 'solvent'], ['pediatric — adolescent', 'young_adult'], 'HARD'),
   exposure('solvent_inhalation',
     'Worker using toluene-containing thinner in a poorly ventilated workshop becomes dizzy, unsteady and drowsy',
     'Toluene-rich solvent vapor inhalation', 'inhalation', 'systemic',

@@ -16,7 +16,7 @@ test('each requested exposure has a distinct catalog case, including separate ey
     'bleach_eye', 'ammonia_eye', 'drain_cleaner_eye', 'oven_cleaner_eye', 'battery_acid_eye',
     'cement_lime_eye', 'pool_acid_eye', 'pool_hypochlorite_eye', 'detergent_eye', 'detergent_pod_eye', 'solvent_eye', 'hf_eye',
     'bleach_acid_fumes', 'bleach_ammonia_fumes', 'ammonia_fumes', 'wet_cement_skin',
-    'gasoline_aspiration', 'kerosene_child', 'solvent_inhalation', 'solvent_skin', 'methanol_ingestion',
+    'gasoline_aspiration', 'kerosene_child', 'intentional_inhalant', 'solvent_inhalation', 'solvent_skin', 'methanol_ingestion',
     'lead_worker', 'lead_child', 'mercury_vapor', 'arsenic_ingestion', 'acid_ingestion', 'detergent_pod_ingestion',
   ];
   assert.deepEqual(new Set(entries.map(e => e.chemical_exposure.id)), new Set(expected));

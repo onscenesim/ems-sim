@@ -14,12 +14,12 @@
     "serve": "node bin/server.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": "^24.22.1"
   },
   "dependencies": {
-    "@google/genai": "^2.13.0",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.5.2"
+    "@google/genai": "2.31.0",
+    "dotenv": "17.4.2",
+    "express": "5.3.0",
+    "express-rate-limit": "8.7.1"
   }
 }

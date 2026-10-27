@@ -8,6 +8,7 @@ const TOXICOLOGY_GROUP_LABELS = {
   irritant_fumes: 'Irritant gas / cleaner fumes',
   hydrocarbon_ingestion: 'Fuel ingestion / aspiration',
   toxic_alcohol: 'Toxic alcohol ingestion',
+  solvent_inhalation: 'Inhalant / solvent poisoning',
   lead_exposure: 'Lead exposure',
   caustic_ingestion: 'Caustic ingestion',
   carbon_monoxide: 'Carbon monoxide exposure',
@@ -27,6 +28,7 @@ function toxicologyGroup(entry) {
   const exposure = entry.chemical_exposure;
   if (exposure?.route === 'ocular') return 'eye_exposure';
   if (exposure?.route === 'dermal') return 'chemical_skin';
+  if (['intentional_inhalant', 'solvent_inhalation'].includes(exposure?.id)) return 'solvent_inhalation';
   if (['bleach_acid_fumes', 'bleach_ammonia_fumes', 'ammonia_fumes'].includes(exposure?.id)) return 'irritant_fumes';
   if (['gasoline_aspiration', 'kerosene_child'].includes(exposure?.id)) return 'hydrocarbon_ingestion';
   if (exposure?.id === 'methanol_ingestion') return 'toxic_alcohol';

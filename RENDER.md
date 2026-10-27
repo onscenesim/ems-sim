@@ -24,3 +24,30 @@ The persistent files are:
 - `user_history.json` — per-player scenario variety history
 - `completed_runs.json` — the most recent completed run logs
 - `<session-id>.json` — resumable scenario snapshots (pruned after 30 days)
+
+## Node runtime and dependency updates
+
+Use Node.js **24.22.1** for development and deployment, as pinned in
+`.node-version` and the Blueprint's `NODE_VERSION`. This is the Node 24
+[October 21 security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases),
+including the Brotli, TLS/DNS, and eMudhra certificate-trust fixes. The
+`package.json` engine range permits subsequent Node 24 patches but excludes
+older vulnerable releases and untested major versions.
+
+Install with `npm ci --include=dev --ignore-scripts`. Direct dependencies are
+pinned to exact versions, and `package-lock.json` fixes the complete tree and
+package integrity hashes. The October 27 refresh includes `body-parser` 2.4.0
+([advisory](https://github.com/expressjs/body-parser/security/advisories/GHSA-27r3-jxmh-p828))
+and `ip-address` 10.7.5
+([advisory](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-rxp7-6hxx-x8q5)).
+Package lifecycle scripts are disabled during installation; the current
+dependencies do not require them to run the simulator.
+
+For an existing manually managed Render service, set `NODE_VERSION=24.22.1`
+and the build command above in the Dashboard, then redeploy. An existing
+`NODE_VERSION` setting takes precedence over `.node-version`
+([Render documentation](https://render.com/docs/node-version)). For a
+Blueprint-managed service, sync the updated Blueprint and redeploy. Confirm
+the new runtime in the deployment logs and check `/health` after startup.
+Repository changes alone do not update a running service or the system Node
+installation on a developer's computer.

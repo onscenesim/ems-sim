@@ -41,12 +41,13 @@ test('ungrouped categories preserve the existing single-roll selection and rando
 
 test('all toxicology variants retain independent catalog identities and instructor selection', () => {
   const entries = catalog().filter(e => e.category === 'toxicology');
-  assert.equal(entries.length, 74);
+  assert.equal(entries.length, 75);
   assert.equal(new Set(entries.map(e => e.case_id)).size, entries.length);
   const groups = presentationGroups(entries);
   assert.equal(groups.length, 37);
   assert.equal(groups.filter(g => g[0].selection_group === 'eye_exposure').length, 1);
   assert.equal(groups.find(g => g[0].selection_group === 'eye_exposure').length, 12);
+  assert.equal(groups.find(g => g[0].selection_group === 'solvent_inhalation').length, 2);
   for (const entry of entries) {
     const seed = rollScenario({ instructor: prepareInstructor({ case_id: entry.case_id }), random_seed: 'direct-variant' });
     assert.equal(seed.case_id, entry.case_id);
