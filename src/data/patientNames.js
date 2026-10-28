@@ -1,6 +1,6 @@
 'use strict';
 
-// Patient name pool — demographically varied, realistic EMS patient names.
+// Patient name pool — everyday names with occasional media references.
 // Separated by sex so names match the rolled patient sex.
 // Enough entries to make back-to-back repeats rare without history tracking.
 
@@ -20,6 +20,9 @@ const FIRST_NAMES_MALE = [
   'Bryan', 'Tony', 'Luis', 'Mike', 'Stanley', 'Leonard', 'Nathan', 'Dale',
   'Manuel', 'Rodney', 'Curtis', 'Norman', 'Marvin', 'Vincent', 'Glenn',
   'Jeffery', 'Travis', 'Jeff', 'Chad', 'Jacob', 'Melvin',
+  'Django', 'Flebe', 'Indiana', 'Rocky', 'Bugs', 'Optimus', 'Legolas',
+  'Inigo', 'Buzz', 'Samwise', 'King', 'Ace', 'Vito', 'Ferris', 'Atticus',
+  'Dude', 'Clint', 'Gandalf', 'Forrest', 'Hannibal', 'Morty', 'Rick', 'Roman',
 ];
 
 const FIRST_NAMES_FEMALE = [
@@ -38,6 +41,7 @@ const FIRST_NAMES_FEMALE = [
   'Beverly', 'Amber', 'Theresa', 'Marilyn', 'Danielle', 'Diana', 'Brittany',
   'Natalie', 'Sophia', 'Rose', 'Isabella', 'Alexis', 'Kayla', 'Charlotte',
   'Tiffany', 'Vanessa', 'Norma', 'Tammy', 'Irene', 'Connie', 'April',
+  'Flebe', 'Wednesday', 'Katniss', 'Amélie', 'Talia',
 ];
 
 const LAST_NAMES = [
@@ -64,6 +68,12 @@ const LAST_NAMES = [
   'Freeman', 'Webb', 'Tucker', 'Guzman', 'Burns', 'Crawford', 'Olson',
   'Simpson', 'Porter', 'Hunter', 'Gordon', 'Mendoza', 'Silva', 'Shaw',
   'Snyder', 'Warren', 'Dixon', 'Ramos', 'Ray', 'Hicks', 'Hawkins',
+  'Skywalker', 'Fett', 'Bond', 'Sparrow', 'Balboa', 'Wonka', 'Prime',
+  'Montoya', 'Lightyear', 'Gamgee', 'Drebin', 'Montana', 'Baggins',
+  'Ventura', 'Everdeen', 'Corleone', 'Kenobi', 'Deckhard', 'Bueller',
+  'Gosling', 'Sobchack', 'Finch', 'Eastwood', 'Gump', 'Bateman',
+  'Bickle', 'Lecter', 'Burgundy', 'McFly', 'Durden', 'Ripley', 'Solo',
+  'Croft', 'Kong', 'Pinkman', 'Heisenberg', 'Fring', 'Marston', 'Silverhand',
 ];
 
 /**
