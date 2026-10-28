@@ -17,6 +17,8 @@
     ['post_intubation_sedation', 'Post intubation sedation', true, true, false],
     ['agitation_sedation', 'Sedation of agitated patients', true, true, false],
     ['ketamine', 'Ketamine', true, true, false],
+    ['oral_antipsychotics', 'Oral antipsychotics (e.g. Zyprexa / olanzapine)', false, false, false],
+    ['buprenorphine', 'Buprenorphine (including Suboxone)', false, false, false],
     ['norepinephrine', 'Levophed / norepinephrine (pressor)', false, true, true],
     ['epinephrine_pressor', 'Epinephrine (pressor, not cardiac arrest doses)', true, true, false],
     ['lucas', 'LUCAS / mechanical CPR device', true, false, true],
@@ -68,6 +70,7 @@
       'Never criticize omission of a crossed-off item, even when a case hint recommends it. Assess available alternatives, basic care and appropriate escalation instead. Selecting an item only makes it eligible for ordinary clinical review when the revealed findings indicate it; it is never a requirement to use every option.',
       'No separate scope score, automatic failure, extra weighting, or repeated deductions across sections. Mention a relevant protocol issue once, proportionate to its actual clinical consequence. If a crossed-off action was performed, assess clinical safety normally; do not automatically fail or punish merely crossing the checklist boundary.',
       'These settings never block a player action, remove its supplies, cancel its roll, or make a crew member refuse it solely for protocol reasons. They do not override real contraindications, physiology, access patency, or procedural dice results.',
+      'Oral antipsychotics applies to oral/ODT use (including olanzapine, risperidone, quetiapine and oral haloperidol), separately from injectable agitation sedation. Buprenorphine includes buprenorphine/naloxone formulations; evaluate the ordered formulation and route, not the animation artwork. Neither optional drug group is required when crossed off.',
       'Distinguish epinephrine pressor use from arrest epinephrine and anaphylaxis auto-injectors; BiPAP from CPAP; paralytic RSI from medication facilitated intubation; and BLS SGA during arrest from SGA with a pulse. Drug permission does not imply permission for every use (ketamine and each sedation indication are separate). Post intubation sedation can apply to an already-intubated patient even if intubation is excluded.',
     ].join('\n');
   }

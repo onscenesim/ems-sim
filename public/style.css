@@ -5065,3 +5065,20 @@ body.light-mode #instructor-panel :is(input, textarea, select) { color-scheme: l
 .protocol-option:focus-within { outline: 2px solid #246788; outline-offset: 1px; }
 .protocol-footer { display: flex; align-items: center; gap: 16px; font-size: 15px; }
 @media (max-width: 560px) { #protocol-list { grid-template-columns: 1fr; } .protocol-footer { align-items: flex-start; flex-direction: column; } }
+
+/* Opt-in by default; disabling restores the existing line palette immediately. */
+body.detailed-colors .line .text-description { color: #f4f4f5; }
+body.detailed-colors .line .text-crew { color: #fbbf24; }
+body.detailed-colors .line .text-patient { color: #a5b4fc; }
+body.detailed-colors .line .text-bystander { color: #f87171; }
+body.detailed-colors .line .text-player { color: var(--green); }
+body.detailed-colors .line .text-care { color: #d8b4fe; }
+/* Deeper equivalents keep the categories readable on the light background. */
+body.light-mode.detailed-colors .line .text-description { color: #1a1a2a; }
+body.light-mode.detailed-colors .line .text-crew { color: #805800; }
+body.light-mode.detailed-colors .line .text-patient { color: #4338ca; }
+body.light-mode.detailed-colors .line .text-bystander { color: #bb1111; }
+body.light-mode.detailed-colors .line .text-player { color: #005c18; }
+body.light-mode.detailed-colors .line .text-care { color: #7930a8; }
+.color-key { max-width: 430px; margin: 2px 0 10px 24px; color: #c8d0cf; font: 14px/1.4 var(--font-xp); }
+body.light-mode .color-key { color: #394549; }

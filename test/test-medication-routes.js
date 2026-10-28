@@ -77,7 +77,7 @@ test('client selects explicit or default route scenes and retains outcomes and r
     showDrugPanel:drug=>calls.push(['card',drug]),
   });
   vm.runInContext(helper,context);
-  for(const [route,id] of [['PO','oralmed'],['SL','oralmed'],['IN','inmed'],['IM','immed'],['NEB','nebmed']]) {
+  for(const [route,id] of [['PO','oralmed'],['SL','oralmed'],['BUCCAL','oralmed'],['IN','inmed'],['IM','immed'],['NEB','nebmed']]) {
     calls.length=0;
     await context.animateMedicationAdministration({administration_route:route,outcome:'MARGINAL',matched_drug:'test-drug'});
     assert.equal(calls[0][0],'route'); assert.equal(calls[0][1],id); assert.equal(calls[0][2],'MARGINAL');
@@ -203,4 +203,25 @@ test('IO administration phrases do not roll placement, while separate placement 
     'Give epinephrine through the IO. Place another IO.']) {
     assert.equal(detectAllProcedures(text).filter(r=>r.proc.id==='io_access').length,1,text);
   }
+});
+
+test('optional oral antipsychotics and buprenorphine are detected with oral artwork and references', () => {
+  const { lookupDrug } = require('../public/drug-cards');
+  for (const [drug, name, route] of [
+    ['Zyprexa','Olanzapine','PO'], ['Zyprexa Zydis','Olanzapine','PO'],
+    ['olanzapine','Olanzapine','PO'], ['Risperdal','Risperidone','PO'], ['Seroquel','Quetiapine','PO'],
+    ['buprenorphine','Buprenorphine','SL'], ['Subutex','Buprenorphine','SL'],
+    ['Suboxone','Buprenorphine / Naloxone','SL'], ['buprenorphine/naloxone','Buprenorphine / Naloxone','SL'],
+  ]) {
+    const rolls = medications(`Give ${drug}.`);
+    assert.equal(rolls.length,1,drug);
+    assert.equal(rolls[0].medication_name,name,drug);
+    assert.equal(rolls[0].medication_animation_route,route,drug);
+    assert.equal(rolls[0].administration_route,undefined,drug);
+    assert.equal(lookupDrug(drug).name,name,drug);
+    assert.equal(medications(`Do not give ${drug}.`).length,0,drug);
+  }
+  assert.equal(medications('Give Suboxone buccally.')[0].medication_animation_route,'BUCCAL');
+  assert.equal(medications('Give Zyprexa IM.')[0].medication_animation_route,'IM');
+  assert.equal(medications('Give Haldol PO.')[0].medication_animation_route,'PO');
 });

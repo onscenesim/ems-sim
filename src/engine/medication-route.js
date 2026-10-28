@@ -24,9 +24,10 @@ function medicationRouteInfoAt(text, start, length) {
     ['IV', /\b(?:intravenous(?:ly)?|iv)\b/gi],
     ['IO', /\b(?:intraosseous|io)\b/gi],
     ['SL', /\b(?:sublingual(?:ly)?|sl)\b/gi],
+    ['BUCCAL', /\bbuccal(?:ly)?\b/gi],
     ['NEB', /\b(?:nebuliz(?:ed|er|ation|ing)|nebulis(?:ed|er|ation|ing)|nebs?|breathing\s+treatment)\b/gi],
     // Other explicit formulations prevent a drug default from overriding them.
-    ['OTHER', /\b(?:buccal(?:ly)?|subcutaneous(?:ly)?|sq|sc|rectal(?:ly)?|topical(?:ly)?|transdermal|paste|patch|inhaler|mdi|drip|infusion)\b/gi],
+    ['OTHER', /\b(?:subcutaneous(?:ly)?|sq|sc|rectal(?:ly)?|topical(?:ly)?|transdermal|paste|patch|inhaler|mdi|drip|infusion)\b/gi],
   ];
   for (const [route, pattern] of patterns) {
     for (const m of clause.matchAll(pattern)) {
@@ -62,6 +63,8 @@ const MEDICATION_ANIMATION_DEFAULTS = new Map([
   ['Albuterol / DuoNeb', 'NEB'], ['Levalbuterol', 'NEB'],
   ['Midazolam', 'IM'], ['Haloperidol', 'IM'], ['Ketamine', 'IM'],
   ['B52', 'IM'],
+  ['Olanzapine', 'PO'], ['Risperidone', 'PO'], ['Quetiapine', 'PO'],
+  ['Buprenorphine', 'SL'], ['Buprenorphine / Naloxone', 'SL'],
 ]);
 
 function medicationPresentationAt(text, start, length, medication, matchedKey) {

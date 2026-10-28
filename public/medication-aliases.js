@@ -21,6 +21,12 @@ const MEDICATION_ALIASES = {
   "Granulocytes": ["granulocyte transfusion", "granulocytes", "granulocyte concentrate", "white blood cell transfusion", "white cell transfusion"],
   "Blood Products (specify component)": ["blood", "unit of blood", "units of blood", "blood transfusion", "blood products", "blood product", "transfuse blood", "give blood", "administer blood", "hang blood", "infuse blood", "blood components", "blood component"],
 
+  "Olanzapine": ["olanzapine", "Zyprexa", "Zyprexa Zydis", "Zydis"],
+  "Risperidone": ["risperidone", "Risperdal", "Risperdal M-Tab"],
+  "Quetiapine": ["quetiapine", "Seroquel"],
+  "Buprenorphine": ["buprenorphine", "Subutex"],
+  "Buprenorphine / Naloxone": ["buprenorphine/naloxone", "buprenorphine / naloxone", "buprenorphine-naloxone", "buprenorphine naloxone", "Suboxone", "Zubsolv", "Bunavail"],
+
   "Epinephrine": [
     "push the epi",
     "give epi",

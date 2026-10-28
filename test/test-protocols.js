@@ -22,7 +22,7 @@ after(() => fs.rmSync(temp, { recursive: true, force: true }));
 
 test('ALS and BLS defaults match requested capabilities and stay separate', () => {
   const als = Protocols.resolve('ALS', 'SUBURBAN');
-  assert.deepEqual(Object.keys(als).filter(id => !als[id]).sort(), ['rsi', 'blood', 'finger_thoracostomy', 'norepinephrine', 'ventilator', 'bipap'].sort());
+  assert.deepEqual(Object.keys(als).filter(id => !als[id]).sort(), ['rsi', 'blood', 'finger_thoracostomy', 'norepinephrine', 'ventilator', 'bipap', 'oral_antipsychotics', 'buprenorphine'].sort());
   const bls = Protocols.resolve('BLS', 'SUBURBAN');
   assert.equal(bls.iv_fluids, false);
   assert.equal(bls.ecg_transmit, false);
@@ -105,4 +105,17 @@ test('International epinephrine and California BLS training options are selectab
   const seed = rollScenario({ provider_level: 'BLS', protocols: { lucas: true } });
   assert.doesNotMatch(assembleSeedBlock(seed), /NO LUCAS/);
   assert.match(assembleSeedBlock(seed), /LUCAS \/ mechanical CPR device available/);
+});
+
+test('oral antipsychotics and buprenorphine are independent ALS opt-ins, defaulting off', () => {
+  for (const region of ['SUBURBAN', 'CALIFORNIA_Urban', 'INTERNATIONAL_DEVELOPING']) {
+    const defaults = Protocols.resolve('ALS',region);
+    for (const id of ['oral_antipsychotics','buprenorphine']) {
+      assert.equal(defaults[id],false);
+      assert.equal(Protocols.resolve('ALS',region,{[id]:true})[id],true);
+      assert.equal(Protocols.resolve('BLS',region,{[id]:true})[id],undefined);
+    }
+  }
+  const enabled = Protocols.describe({provider_level:'ALS',region:'SUBURBAN',protocols:{oral_antipsychotics:true,buprenorphine:true}});
+  assert.match(enabled,/Selected \/ in protocols:.*Oral antipsychotics.*Buprenorphine/);
 });

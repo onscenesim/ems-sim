@@ -360,8 +360,10 @@ const output       = document.getElementById('output');
 const userInput    = document.getElementById('user-input');
 const sendBtn      = document.getElementById('send-btn');
 const startBtn      = document.getElementById('start-btn');
+let dialogueColorContext = {};
 // Apply saved theme immediately — before any rendering
 if (localStorage.getItem('ems_theme') === 'light') document.body.classList.add('light-mode');
+document.body.classList.toggle('detailed-colors', localStorage.getItem('ems_detailed_colors') !== 'off');
 
 const soundToggleHdr = document.getElementById('sound-toggle-hdr');
 const soundToggleBtn = document.getElementById('sound-toggle');
@@ -453,7 +455,9 @@ function print(text, cls = 'narrative') {
 function appendLine(text, cls) {
   const el = document.createElement('div');
   el.className = 'line ' + cls;
-  el.textContent = text;
+  if (['narrative', 'dialogue', 'user'].includes(cls)) {
+    EMSDialogueColors.render(el, text, dialogueColorContext, cls === 'user');
+  } else el.textContent = text;
   output.appendChild(el);
 }
 
@@ -503,6 +507,7 @@ function printBriefing() {
 const DIALOGUE_RE = /^[A-Z][A-Za-z\s\-']{0,28}:\s*"/;
 
 function printReply(text) {
+  dialogueColorContext = EMSDialogueColors.withSpeakers(text, dialogueColorContext);
   const lines = String(text).split('\n');
   for (const line of lines) {
     let cls = 'narrative';
@@ -654,6 +659,24 @@ const PLAYER_CATEGORY_LABELS = {
   behavioral: 'Behavioral', neuro: 'Neuro', toxicology: 'Toxicology', arrest: 'Arrest',
   curveballs: 'Curveballs', pediatric: 'Pediatric', doa: 'DOA', ob: 'OB',
 };
+
+const detailedColorsToggle = document.getElementById('detailed-colors-toggle');
+detailedColorsToggle.checked = document.body.classList.contains('detailed-colors');
+detailedColorsToggle.addEventListener('change', () => {
+  document.body.classList.toggle('detailed-colors', detailedColorsToggle.checked);
+  localStorage.setItem('ems_detailed_colors', detailedColorsToggle.checked ? 'on' : 'off');
+});
+
+function updateDialogueColors(data, reset = false) {
+  if (reset) dialogueColorContext = {};
+  if (data.crew) dialogueColorContext.crew = data.crew;
+  if (data.patients) dialogueColorContext.patients = data.patients;
+  else if (data.patient) dialogueColorContext.patients = [data.patient];
+  // Reclassify existing lines when a second patient's name becomes available.
+  for (const line of output.querySelectorAll('.narrative, .dialogue, .user')) {
+    EMSDialogueColors.render(line, line.textContent, dialogueColorContext, line.classList.contains('user'));
+  }
+}
 
 const optionsDialog = document.getElementById('options-dialog');
 document.getElementById('options-open').addEventListener('click', () => optionsDialog.showModal());
@@ -1206,6 +1229,7 @@ async function startScenario(replayOf = null) {
       learningReview: null,
     };
     output.innerHTML = '';
+    updateDialogueColors(data, true);
 
     skipBtn.disabled = false;
     updateSkipBtn();
@@ -1391,6 +1415,7 @@ async function sendTurn(msg, opts = {}) {
     }
 
     hideLoadingDots();
+    updateDialogueColors(data);
     // Radio crackle when the reply mentions the radio
     if (/\bradio\b/i.test(data.reply)) playSound('radio');
     printReply(data.reply);
@@ -2777,7 +2802,7 @@ function animateMedPush(outcome, route = 'IV', name = 'MEDICATION') {
 // Legacy rolls without either field retain the existing IV-push scene.
 async function animateMedicationAdministration(roll) {
   const outcome = roll.no_roll ? 'SUCCESS' : roll.outcome;
-  const routes = { PO: ['oralmed', 2600], SL: ['oralmed', 2600], IN: ['inmed', 2300], IM: ['immed', 2600], NEB: ['nebmed', 2800] };
+  const routes = { PO: ['oralmed', 2600], SL: ['oralmed', 2600], BUCCAL: ['oralmed', 2600], IN: ['inmed', 2300], IM: ['immed', 2600], NEB: ['nebmed', 2800] };
   const route = roll.administration_route || roll.medication_animation_route;
   const scene = Object.hasOwn(routes, route) ? routes[route] : null;
   if (roll.medication_kind === 'fluid' || roll.medication_kind === 'blood') {
@@ -3238,6 +3263,7 @@ async function resumeFromSnapshot(snap) {
   output.innerHTML = '';
 
   const m = snap.meta || {};
+  updateDialogueColors({ crew: snap.crew, patients: snap.patients, patient: m.patient }, true);
 
   skipBtn.disabled = isClosed;
   updateSkipBtn();
