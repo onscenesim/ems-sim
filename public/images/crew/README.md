@@ -1,8 +1,17 @@
 # EMS crew portraits
 
 All 21 stock crew identities have 512 × 512 WebP portraits, displayed at up
-to 240 CSS pixels in the production crew reference cards. Custom crew keep
-their own descriptions and do not borrow a stock person's appearance.
+to 240 CSS pixels in the production crew reference cards. Custom crew use
+anonymous shadowed portraits: `custom-partner-v4-ems.webp` wears navy blue,
+and `custom-captain-v4-ems.webp` wears white. Both use grey skin, vague facial
+features, a turned head, dark lighting and angular impressionist brushwork.
+They keep their own names and descriptions and do not borrow a stock person's
+appearance. Their background evokes late-night snacks at a gas station shop
+through broad abstract storefront planes and muted shelf-color dabs. Shirts
+use broad coherent navy/slate or subdued neutral grey-white cloth planes,
+without scattered warm light smears. Contrast stays subdued and the face stays
+shadowed. Earlier v1 through v3 portraits remain available.
+`custom-prompts.json` records their built-in imagegen prompts.
 
 The initial references are the selected portraits from
 `Cyberpunk-Branch/public/images/crew`, as identified by that project's

@@ -1,8 +1,9 @@
 'use strict';
 (async () => {
   const roster = await fetch('/__preview/crew-data').then(response => response.json());
-  const custom = { name: 'Custom crew member', role: 'partner', custom: true,
+  const custom = { name: 'Custom partner', role: 'partner', custom: true,
     personality_notes: 'A custom crew member keeps their own identity and behavior description.' };
+  const customCaptain = { ...custom, name: 'Custom captain', role: 'captain' };
   const controls = document.createElement('section');
   controls.style.cssText = 'padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #607680;flex-shrink:0;font:16px var(--font-xp);color:var(--reference-text);background:var(--reference-bg)';
   const label = document.createElement('label');
@@ -10,7 +11,7 @@
   const select = document.createElement('select');
   select.setAttribute('aria-label', 'Preview crew member');
   select.style.cssText = 'max-width:100%;padding:8px;font:inherit';
-  const members = [...roster, custom];
+  const members = [...roster, custom, customCaptain];
   for (const member of members) select.appendChild(new Option(member.name, member.name));
   label.appendChild(select);
   controls.appendChild(label);
@@ -31,6 +32,15 @@
     showCrewPanel();
   };
   controls.appendChild(shift);
+  const customShift = document.createElement('button');
+  customShift.textContent = 'Show custom shift';
+  customShift.style.cssText = 'padding:8px;font:inherit';
+  customShift.onclick = () => {
+    populateCrewPanel({ partner: custom, captain: customCaptain });
+    crewPanelBody.scrollTop = 0;
+    showCrewPanel();
+  };
+  controls.appendChild(customShift);
   const mobile = document.createElement('a');
   mobile.textContent = '390px mobile preview';
   mobile.href = '/mobile';

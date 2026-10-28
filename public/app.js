@@ -2278,7 +2278,9 @@ function buildCrewMemberCard(member) {
     const portrait = document.createElement('img');
     portrait.className = 'crew-portrait';
     portrait.src = portraitPath;
-    portrait.alt = member.name + ' in EMS uniform';
+    portrait.alt = member.custom
+      ? 'Anonymous custom ' + roleKey + ' in EMS uniform'
+      : member.name + ' in EMS uniform';
     portrait.width = 512;
     portrait.height = 512;
     portrait.decoding = 'async';

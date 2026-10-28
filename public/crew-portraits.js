@@ -18,7 +18,11 @@
     'Yolanda Ferris': '-v4',
   };
   function find(member) {
-    if (!member || member.custom) return null;
+    if (!member) return null;
+    if (member.custom) {
+      const role = String(member.role || '').startsWith('captain') ? 'captain' : 'partner';
+      return '/images/crew/custom-' + role + '-v4-ems.webp';
+    }
     const name = String(member.name || '').replace(/^Captain /, '');
     return names.includes(name)
       ? '/images/crew/' + name.toLowerCase().replaceAll(' ', '-') + (editions[name] ?? '-v2') + '-ems.webp'
