@@ -235,7 +235,8 @@ function parseVitalsTag(reply) {
     const eqIdx = tok.indexOf('=');
     if (eqIdx < 1) continue;
     const rawKey = tok.slice(0, eqIdx);
-    const key = /^(?:cap_?refill|capillary_?refill|crt)$/i.test(rawKey) ? 'CapRefill' : rawKey;
+    const key = /^etco[2₂]$/i.test(rawKey) ? 'ETCO2'
+      : /^(?:cap_?refill|capillary_?refill|crt)$/i.test(rawKey) ? 'CapRefill' : rawKey;
     let rawValue = tok.slice(eqIdx + 1);
 
     // Optional "@T+M:SS" or "@T=M:SS" timestamp suffix on episodic vitals (BP, Temp, Glucose)
@@ -569,10 +570,11 @@ class Session {
   }
 
   /**
-   * Update the access ledger from this turn's reconciled rolls (lines placed)
-   * and the reply narration (lines the model declared blown/infiltrated).
+   * Update the access ledger only from this turn's reconciled placement rolls.
+   * Narration is not authoritative: even "without infiltration" used to mark
+   * working lines blown, and invented failures must not change engine state.
    */
-  _updateAccess(rolls, reply) {
+  _updateAccess(rolls) {
     for (const r of rolls) {
       if (r.no_roll) continue;
       if (r.procedure_id === 'peripheral_iv') {
@@ -584,12 +586,6 @@ class Session {
         if (r.outcome === 'SUCCESS')       this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IO', status: 'patent' });
         else if (r.outcome === 'MARGINAL') this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IO', status: 'marginal' });
       }
-    }
-    // Narrated line failure ("IV's blown", "the catheter has infiltrated")
-    if (!rolls.some(r => r.target && ['peripheral_iv', 'io_access'].includes(r.procedure_id))
-        && /\b(?:iv|line|catheter)\b[^.!?]{0,80}\b(?:blown|blew|infiltrat\w*|extravasat\w*|no longer patent|lost)\b|\b(?:blown|infiltrat\w+)\b[^.!?]{0,40}\b(?:iv|line|catheter)\b/i.test(reply)) {
-      const last = [...this.access].reverse().find(a => a.kind === 'IV' && a.status !== 'blown');
-      if (last) last.status = 'blown';
     }
   }
 
@@ -804,6 +800,11 @@ class Session {
       if (rolls.some(r => r.target)) messageText += '\n[SYSTEM NOTE: Each labeled target is an independent attempt. Honor and describe each target’s own outcome; one successful side does not make a failed side successful. Only SUCCESS or MARGINAL IV/IO placements create usable access. Do not invent extra access sites.]';
     }
 
+    const glucagon = rolls.find(r => r.medication_name === 'Glucagon');
+    if (glucagon?.administration_route) {
+      messageText += `\n\n[SYSTEM NOTE: Glucagon administration route: ${glucagon.administration_route}. Honor this route regardless of available vascular access; IM is the default when no route is ordered.]`;
+    }
+
     // Mentions the player confirmed are NOT orders (or that context marked as
     // discussion/planning): tell the model explicitly, or it narrates them
     // being performed anyway ("...for intubation later" → an intubation).
@@ -843,7 +844,7 @@ class Session {
     // Authoritative vascular access state — the model must not resurrect blown
     // lines or invent routes the patient doesn't have.
     if (this.access.length > 0) {
-      messageText += `\n\n[ACCESS STATE (server-tracked, do NOT repeat this tag in your narration): ${this._accessSummary()}. These lines are RELIABLE — do NOT narrate any of them infiltrating, blowing, going marginal, or failing on your own; line status changes ONLY when the engine rolls it. A med pushed through a PATENT line always delivers cleanly. A line marked blown is permanently unusable. For a medication with no named route, use the best patent line (patent before marginal, never blown) and name it in your narration.]`;
+      messageText += `\n\n[ACCESS STATE (server-tracked, do NOT repeat this tag in your narration): ${this._accessSummary()}. These lines are RELIABLE — do NOT narrate any of them infiltrating, blowing, going marginal, or failing on your own; line status changes ONLY when the engine rolls it. A med pushed through a PATENT line always delivers cleanly. A line marked blown is permanently unusable. Honor explicit medication routes and the glucagon IM default. For other medications with no named route, use the best patent line (patent before marginal, never blown) and name it in your narration.]`;
     }
 
     // Deterministic backup: the provider asked for help but the model often omits
@@ -954,7 +955,7 @@ class Session {
     if (unavailable.length) {
       reply = ['ECG acquisition was not performed: no cardiac monitor is available.', reply].filter(Boolean).join('\n');
     }
-    this._updateAccess(reconciledRolls, reply);
+    this._updateAccess(reconciledRolls);
     applyAccessAnimationRoutes(reconciledRolls, this.access);
     for (const roll of reconciledRolls) {
       logEvent(this.seed, roll.no_roll

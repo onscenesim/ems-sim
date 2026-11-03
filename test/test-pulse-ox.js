@@ -229,6 +229,41 @@ require.cache[require.resolve('../src/engine/api')] = { exports: { sendTurn: asy
 require.cache[require.resolve('../src/server/adminLogger')] = { exports: { logRun() {}, updateRunDebrief() {} } };
 const { Session } = require('../src/engine/session');
 const { buildDebriefContext } = require('../src/engine/assembler');
+test('advanced-airway ETCO2 spelling variants reach the monitor as numeric readings', async () => {
+  const session = new Session({ scenario_id: 'airway-capnography-regression', difficulty: 'NORMAL',
+    provider_level: 'ALS', region: 'SUBURBAN', category: 'medical', patient_age: 45,
+    age_group: 'middle_aged', sex: 'male', patient_name: 'Test Patient', presentation: 'Respiratory failure',
+    trajectory: 'stable', decompensation_clock: null, complication_type: 'none', events: [] });
+  for (const [key, value] of [['EtCO2', 38], ['etco2', 52], ['ETCO₂', 18], ['ETCO2', 0]]) {
+    reply = `The inline capnography reading is ${value}. [PATIENT_FOCUS: patient_1 | Primary patient] [VITALS: ${key}=${value} RR=10 GCS=3] [TIME: 2:00]`;
+    const result = await session.send('Observe', true);
+    assert.equal(result.vitals.ETCO2, value, key);
+    assert.equal(typeof result.vitals.ETCO2, 'number');
+    assert.ok(!result.reply.includes('[VITALS:'));
+    assert.equal(session.patientVitals.patient_1.ETCO2, value);
+    assert.equal(session.turns.at(-1).vitals.ETCO2, value);
+  }
+  for (const value of ['pending', 'not_placed', 'unknown', 'garbage']) {
+    reply = `[VITALS: EtCO2=${value} GCS=3] [TIME: 3:00]`;
+    assert.equal((await session.send('Observe', true)).vitals.ETCO2, undefined, value);
+  }
+  reply = '[PATIENT_FOCUS: patient_2 | Second patient] [VITALS: GCS=15] [TIME: 4:00]';
+  assert.equal((await session.send('Observe', true)).vitals.ETCO2, undefined, 'a second patient does not inherit capnography');
+});
+
+test('ALS airway instructions start continuous capnography without adding it to BLS', () => {
+  const { assembleSeedBlock } = require('../src/engine/assembler');
+  const { rollScenario } = require('../src/engine/roller');
+  const seed = rollScenario({ random_seed: 'airway-capnography-prompt' });
+  const als = assembleSeedBlock({ ...seed, provider_level: 'ALS' });
+  assert.match(als, /ADVANCED AIRWAY CAPNOGRAPHY:.*endotracheal tube.*supraglottic airway.*surgical cric/);
+  assert.match(als, /measured numeric ETCO2.*SAME VITALS tag.*EVERY subsequent reply/);
+  assert.match(als, /measured zero for a flat trace/);
+  const bls = assembleSeedBlock({ ...seed, provider_level: 'BLS' });
+  assert.doesNotMatch(bls, /ADVANCED AIRWAY CAPNOGRAPHY/);
+  assert.match(bls, /Omit Rhythm, Ectopy and ETCO2/);
+});
+
 test('Session clears the stale saturation on the reported organized-rhythm arrest turn', async () => {
   const session = new Session({ scenario_id: 'organized-arrest-regression', difficulty: 'NORMAL',
     provider_level: 'ALS', region: 'SUBURBAN', category: 'medical', patient_age: 45,

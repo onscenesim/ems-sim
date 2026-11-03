@@ -225,3 +225,35 @@ test('optional oral antipsychotics and buprenorphine are detected with oral artw
   assert.equal(medications('Give Zyprexa IM.')[0].medication_animation_route,'IM');
   assert.equal(medications('Give Haldol PO.')[0].medication_animation_route,'PO');
 });
+
+
+test('glucagon orders use medication approval and default to IM while respecting routes', () => {
+  const { lookupDrug } = require('../public/drug-cards');
+  for (const text of ['Glucagon', 'Give glucagon', 'Give glucagon injection', 'Administer glucagon 1 mg']) {
+    for (const rolls of [detectWithConfirmation(text).rolls, detectAllAndRoll(text)]) {
+      assert.equal(rolls.length, 1, text);
+      assert.equal(rolls[0].procedure_id, 'medication_push', text);
+      assert.equal(rolls[0].medication_name, 'Glucagon', text);
+      assert.equal(rolls[0].administration_route, 'IM', text);
+      assert.equal(rolls[0].medication_animation_route, 'IM', text);
+      assert.equal(rolls[0].medication_route_explicit, undefined, text);
+      assert.equal(rolls[0].dc, 4, text);
+    }
+  }
+  assert.equal(lookupDrug('glucagon injection').name, 'Glucagon');
+  for (const route of ['IV', 'IO', 'IM', 'IN']) {
+    const [roll] = medications(`Give glucagon injection ${route}`);
+    assert.equal(roll.administration_route, route);
+    assert.equal(roll.medication_animation_route, route);
+    assert.equal(roll.medication_route_explicit, true);
+  }
+  const { applyAccessAnimationRoutes } = require('../src/engine/medication-route');
+  const rolls = medications('Give glucagon');
+  applyAccessAnimationRoutes(rolls, [{kind: 'IO', status: 'patent'}]);
+  assert.equal(rolls[0].medication_animation_route, 'IM');
+  assert.equal(medications('Give glucagon IV or IM')[0].administration_route, undefined);
+  assert.equal(medications('Do not give glucagon injection').length, 0);
+  assert.equal(detectWithConfirmation('Give glucagon injection', {}, 'NORMAL', {
+    deny: ['medication_push|glucagon injection'],
+  }).rolls.length, 0);
+});

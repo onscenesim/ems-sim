@@ -161,6 +161,7 @@ const MEDICATION_ALIASES = {
   "Sodium Bicarbonate": [
     "sodium bicarb",
     "sodium bicarbonate",
+    "bicarbonate",
     "bicarb"
   ],
   "Calcium (specify formulation)": [
@@ -315,6 +316,7 @@ const MEDICATION_ALIASES = {
     "solumedral"
   ],
   "Glucagon": [
+    "glucagon injection",
     "glucagon",
     "IM glucagon"
   ],

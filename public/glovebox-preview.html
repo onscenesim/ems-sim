@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glovebox · Item study</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="glovebox.css">
+<style>
+  html, body { height: auto; overflow: auto; }
+  body { box-sizing: border-box; min-height: 100dvh; margin: 0; padding: 32px 24px; background: #172023; color: #e4e2d5; font: 16px/1.5 Arial, sans-serif; }
+  main { max-width: 1050px; margin: auto; }
+  header.study-header { margin-bottom: 28px; border-bottom: 1px solid #465154; padding-bottom: 20px; }
+  h1 { margin: 0 0 8px; font-size: 28px; font-weight: 500; }
+  .study-header p { margin: 0; color: #b0bcb9; font-size: 14px; }
+  #study-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 12px; }
+  .study-item { padding: 18px 12px; border: 1px solid #465154; border-radius: 8px; background: #222d30; color: inherit; text-align: center; cursor: pointer; }
+  .study-item:hover { border-color: #d5be86; background: #2d3b3e; }
+  .study-item:focus-visible { outline: 2px solid #d5be86; outline-offset: 2px; }
+  .study-item svg { display: block; margin: 0 auto 14px; width: 144px; height: 120px; overflow: visible; filter: drop-shadow(2px 5px 3px #0007); }
+  .study-item span { display: block; min-height: 40px; font: 13px/1.5 Arial, sans-serif; }
+  #glovebox-btn { position: fixed; bottom: 16px; right: 16px; background: #d3c398; color: #172023; z-index: 2; }
+  @media (max-width: 460px) { body { padding: 20px 12px; } #study-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .study-item svg { width: 120px; height: 100px; } }
+</style>
+<main>
+  <header class="study-header"><h1>The glovebox</h1><p>58 small stories from the passenger seat. Select an item to inspect, move, pocket, or toss it in the glovebox.</p></header>
+  <div id="study-grid"></div>
+</main>
+<script src="glovebox-art.js?v=2"></script>
+<script src="glovebox-catalog.js?v=7"></script>
+<script src="glovebox-preview.js"></script>
+</html>

@@ -2,7 +2,8 @@
 const { FLUID_MEDICATIONS, BLOOD_PRODUCT_MEDICATIONS } = require('../../public/medication-aliases');
 
 // Explicit administration and animation defaults are separate metadata.
-// Selecting artwork must not prescribe a route or change the administration roll.
+// Artwork defaults do not prescribe routes. Glucagon has an IM administration
+// default by simulator policy; explicit route choices always take precedence.
 function medicationRouteInfoAt(text, start, length) {
   // Normalize dotted route abbreviations without moving the matched drug span.
   text = text.replace(/\b(?:p\.o\.|i\.[nmvo]\.)/gi, value =>
@@ -62,7 +63,7 @@ const MEDICATION_ANIMATION_DEFAULTS = new Map([
   ['Oral Glucose', 'PO'], ['Activated Charcoal', 'PO'], ['Acetaminophen', 'PO'],
   ['Albuterol / DuoNeb', 'NEB'], ['Levalbuterol', 'NEB'],
   ['Midazolam', 'IM'], ['Haloperidol', 'IM'], ['Ketamine', 'IM'],
-  ['B52', 'IM'],
+  ['B52', 'IM'], ['Glucagon', 'IM'],
   ['Olanzapine', 'PO'], ['Risperidone', 'PO'], ['Quetiapine', 'PO'],
   ['Buprenorphine', 'SL'], ['Buprenorphine / Naloxone', 'SL'],
 ]);
@@ -73,7 +74,7 @@ function medicationPresentationAt(text, start, length, medication, matchedKey) {
   return {
     medication_name: medication || null,
     medication_kind: BLOOD_PRODUCT_MEDICATIONS.has(medication) ? 'blood' : FLUID_MEDICATIONS.has(medication) ? 'fluid' : null,
-    administration_route: route,
+    administration_route: !explicit && medication === 'Glucagon' ? 'IM' : route,
     medication_route_explicit: explicit,
     medication_animation_route: explicit ? route
       : formulationDefault || MEDICATION_ANIMATION_DEFAULTS.get(medication) || null,

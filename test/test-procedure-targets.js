@@ -170,3 +170,29 @@ test('a real session sends separate outcome directives and persists each target'
     [['left side', 'SUCCESS'], ['right side', 'FAILURE']]);
   assert.equal(session.turns.at(-1).rolls.length, 2);
 });
+
+
+test('scalp IV orders trigger one IV roll and respect negation and confirmation', () => {
+  for (const text of ['Attempt a Scalp IV', 'Start a scalp IV', 'Place a scalp vein IV']) {
+    for (const rolls of [detectWithConfirmation(text).rolls, detectAllAndRoll(text)]) {
+      assert.equal(rolls.length, 1, text);
+      assert.equal(rolls[0].procedure_id, 'peripheral_iv', text);
+    }
+  }
+  const [entry] = detectAllProcedures('Attempt a Scalp IV');
+  assert.equal(detectWithConfirmation('Attempt a Scalp IV', {}, 'NORMAL', {deny: [entry.key]}).rolls.length, 0);
+  assert.equal(detectWithConfirmation('Do not attempt a scalp IV').rolls.length, 0);
+  assert.equal(detectWithConfirmation('Consider a scalp IV').rolls.length, 0);
+});
+
+test('session keeps the glucagon IM default in model instructions with patent access', async () => {
+  const s = new Session(rollScenario({ random_seed: 'glucagon-route-test' }));
+  s.access = [{kind: 'IO', status: 'patent'}];
+  const result = await s.send('Give glucagon injection');
+  assert.equal(result.rolls[0].medication_name, 'Glucagon');
+  assert.equal(result.rolls[0].administration_route, 'IM');
+  assert.match(sentOrder, /Glucagon administration route: IM/);
+  assert.match(sentOrder, /Honor explicit medication routes and the glucagon IM default/);
+  await s.send('Give glucagon IV');
+  assert.match(sentOrder, /Glucagon administration route: IV/);
+});

@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const { resolve } = GloveboxCatalog;
+  const { resolve, renderArt } = GloveboxCatalog;
   const button = document.getElementById('glovebox-btn');
   const dialog = document.getElementById('glovebox-dialog');
   const tray = document.getElementById('glovebox-tray');
@@ -111,7 +111,7 @@
     node.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown ArrowLeft ArrowRight');
     const tilt = [...item.id].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 21 - 10;
     node.style.setProperty('--tilt', `${tilt}deg`);
-    node.innerHTML = `<svg viewBox="0 0 96 80" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">${item.art}</svg>`;
+    node.innerHTML = `<svg viewBox="0 0 96 80" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">${renderArt(item.art, 'tray')}</svg>`;
     let drag = null;
     let dragged = false;
     let ghost = null;
@@ -145,7 +145,7 @@
         ghost = document.createElement('div');
         ghost.className = 'glovebox-drag-ghost';
         ghost.setAttribute('aria-hidden', 'true');
-        ghost.innerHTML = node.innerHTML;
+        ghost.innerHTML = `<svg viewBox="0 0 96 80" aria-hidden="true">${renderArt(item.art, 'drag')}</svg>`;
         dialog.appendChild(ghost);
         node.classList.add('is-dragging');
         node.classList.remove('is-jittering');
@@ -215,7 +215,7 @@
       const inspectButton = document.createElement('button');
       inspectButton.type = 'button';
       inspectButton.className = 'glovebox-kept';
-      inspectButton.innerHTML = `<svg viewBox="0 0 96 80" aria-hidden="true">${item.art}</svg>`;
+      inspectButton.innerHTML = `<svg viewBox="0 0 96 80" aria-hidden="true">${renderArt(item.art, 'pocket')}</svg>`;
       const name = document.createElement('span');
       name.textContent = item.name;
       inspectButton.appendChild(name);

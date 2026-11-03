@@ -145,6 +145,35 @@ test('needle decompression rolls once per ordered side', () => {
   }
 });
 
+test('plural NCD shorthand rolls independently for both sides and honors suppression', () => {
+  for (const phrase of ['Bilateral NCDs', 'Perform bilateral NCDs', 'Bilat. NCDs']) {
+    const { rolls } = detectWithConfirmation(phrase);
+    assert.deepEqual(rolls.map(r => [r.procedure_id, r.target]),
+      [['needle_decompression', 'left chest'], ['needle_decompression', 'right chest']], phrase);
+    assert.ok(rolls.every(r => !r.no_roll && Number.isInteger(r.roll)), phrase);
+  }
+  assert.equal(detectWithConfirmation('NCDs').rolls.length, 1);
+  for (const phrase of ['Do not perform bilateral NCDs', 'Consider bilateral NCDs', 'If needed, perform bilateral NCDs']) {
+    assert.equal(detectWithConfirmation(phrase).rolls.length, 0, phrase);
+  }
+  const entry = detectAllProcedures('Bilateral NCDs')[0];
+  assert.equal(detectWithConfirmation('Bilateral NCDs', {}, 'NORMAL', { deny: [entry.key] }).rolls.length, 0);
+});
+
+test('bicarbonate selects sodium bicarbonate for administration and the reference card', () => {
+  for (const phrase of ['Bicarbonate', 'Give bicarbonate', 'Push 50 mEq bicarbonate IV', 'Give sodium bicarbonate and bicarb']) {
+    const rolls = detectWithConfirmation(phrase).rolls;
+    assert.equal(rolls.length, 1, phrase);
+    assert.equal(rolls[0].procedure_id, 'medication_push', phrase);
+    assert.equal(rolls[0].medication_name, 'Sodium Bicarbonate', phrase);
+    assert.equal(rolls[0].no_roll, false, phrase);
+  }
+  assert.equal(lookupDrug('bicarbonate').name, 'Sodium Bicarbonate');
+  for (const phrase of ['Do not give bicarbonate', 'Consider bicarbonate', 'We gave bicarbonate']) {
+    assert.equal(detectWithConfirmation(phrase).rolls.length, 0, phrase);
+  }
+});
+
 test('typos still work and context survives consumption of longer matches', () => {
   assert.equal(normalizeForDetection('give epinephrin'), 'give epinephrine');
   for (const phrase of ['No wound packing.', 'If needed, give epi.', 'We gave epinephrine.', 'Stop CPR.']) {
