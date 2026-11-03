@@ -9,6 +9,7 @@ const { detectWithConfirmation, getProcedure, PRECHARGE_RE } = require('./dice')
 const { evaluateObjectives } = require('./learning');
 const { sendTurn, sendDebrief } = require('./api');
 const { operationError } = require('./operations');
+const { REQUEST_TIMEOUT_MS } = require('./modelRequest');
 const { parseDebriefResponse } = require('./prompts/debrief');
 const { logRun, updateRunDebrief } = require('../server/adminLogger');
 const { applyAccessAnimationRoutes } = require('./medication-route');
@@ -876,6 +877,7 @@ class Session {
 
     this.messages.push({ role: 'user', content: messageText });
 
+    const modelStarted = performance.now();
     let rawReply = await sendTurn(this.systemPrompt, this.messages, options);
     if (isUnframedSceneReply(rawReply)) {
       const mins = Math.floor(this.sceneMinute);
@@ -886,7 +888,8 @@ class Session {
         ...this.messages,
         { role: 'assistant', content: rawReply },
         { role: 'user', content: `[SYSTEM NOTE: Your last draft was out of scene and omitted the required scene tags. Regenerate your response to the provider's previous message as the patient/scene only. Do not speak as a trainer; named crew dialogue and initiative must follow the CREW BEHAVIOR CONTRACT. The official scene clock is T+${mins}:${secs}; use the canonical Rule 14 footer: [CREW_STATUS:], [PATIENT_FOCUS:], [VITALS:], then [TIME: M:SS], each once on its own line. Do not add any provider action.]` },
-      ], options);
+      ], { ...options, timeoutMs: Math.max(1,
+        (options.timeoutMs ?? REQUEST_TIMEOUT_MS) - (performance.now() - modelStarted)) });
       if (isUnframedSceneReply(rawReply)) {
         throw operationError('invalid_scene_reply', 'The scene reply was malformed. Please retry your message.', 502);
       }

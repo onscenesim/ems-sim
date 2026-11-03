@@ -539,8 +539,15 @@ function printRoll(roll) {
   }
 }
 
+let outputScrollFrame = null;
 function scrollBottom() {
-  output.scrollTop = output.scrollHeight;
+  // A batch of roll results or restored turns needs one layout, not one per
+  // printed line/card. Read the final height after all synchronous DOM writes.
+  if (outputScrollFrame !== null) return;
+  outputScrollFrame = requestAnimationFrame(() => {
+    outputScrollFrame = null;
+    output.scrollTop = output.scrollHeight;
+  });
 }
 
 // ── API helpers ──────────────────────────────────────────────────────────
@@ -2945,11 +2952,11 @@ function animateDiceRoll(procedureId, roll, dc, outcome, target) {
     void diceSvgEl.getBoundingClientRect();
     diceSvgEl.classList.add('rolling');
 
-    // Cycle through random numbers
-    let count = 0;
+    // Use elapsed time so a busy frame or backgrounded tab doesn't require
+    // replaying every missed interval before the real result can land.
+    const started = performance.now();
     const ticker = setInterval(() => {
-      count++;
-      if (count < CYCLES) {
+      if (performance.now() - started < CYCLE_MS * CYCLES) {
         diceNumberEl.textContent = Math.floor(Math.random() * 20) + 1;
       } else {
         clearInterval(ticker);
@@ -3355,6 +3362,7 @@ const STRIP_GAP   = 12;   // erase gap ahead of the pen
 const rhythmStrip = {
   canvas: document.getElementById('rhythm-strip'),
   ctx: null, dpr: 1, w: 0, h: 0,
+  sizeDirty: true,
   active: false, type: null, rate: 80,
   ectopy: 'none', ectopyCount: 0,
   clock: 0, x: 0, penY: null, lastTs: null, raf: null,
@@ -3362,6 +3370,11 @@ const rhythmStrip = {
   waveSeed: Math.random() * 10000,
 };
 if (rhythmStrip.canvas) rhythmStrip.ctx = rhythmStrip.canvas.getContext('2d');
+const stripResizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
+  rhythmStrip.sizeDirty = true;
+  if (!rhythmStrip.active) stripIdle();
+}) : null;
+if (rhythmStrip.canvas) stripResizeObserver?.observe(rhythmStrip.canvas);
 
 // Map whatever the model wrote into one of the generator keys. The prompt
 // specifies exact tokens (sinus_tach, AV_block_3, VF, ...) but be liberal.
@@ -3370,16 +3383,20 @@ function normalizeRhythm(raw) {
 }
 
 function stripSizeCanvas() {
-  const c = rhythmStrip.canvas;
+  const s = rhythmStrip, c = s.canvas;
   if (!c) return false;
-  const w = c.clientWidth, h = c.clientHeight;
-  if (!w || !h) return false;
   const dpr = window.devicePixelRatio || 1;
+  // Reading clientWidth/clientHeight on every frame can flush unrelated DOM
+  // updates. ResizeObserver invalidates this cache, including hide/show changes.
+  if (stripResizeObserver && !s.sizeDirty && s.dpr === dpr) return s.w > 0 && s.h > 0;
+  const w = c.clientWidth, h = c.clientHeight;
+  s.sizeDirty = false;
+  s.dpr = dpr; s.w = w; s.h = h;
+  if (!w || !h) return false;
   if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
     c.width = Math.round(w * dpr);
     c.height = Math.round(h * dpr);
   }
-  rhythmStrip.dpr = dpr; rhythmStrip.w = w; rhythmStrip.h = h;
   return true;
 }
 
@@ -3653,6 +3670,7 @@ function updateRhythmStrip(vitals) {
 }
 
 window.addEventListener('resize', () => {
+  rhythmStrip.sizeDirty = true;
   if (!rhythmStrip.active) stripIdle();
 });
 

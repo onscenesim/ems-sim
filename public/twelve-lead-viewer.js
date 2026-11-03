@@ -4,10 +4,19 @@
     const el=id=>doc.getElementById(id);
     const selector=el('ecg-select'), dialog=el('ecg-dialog');
     let all=[], patient='patient_1', current=null, displayed=null;
+    const rendered=new Map();
+    function drawPaper(id,record){
+      // Responses deserialize fresh objects for historical recordings. Compare
+      // their data, not object identity, and retain just the two visible papers.
+      const key=JSON.stringify([autoInterpret,record]);
+      if(rendered.get(id)===key)return;
+      el(id).innerHTML=record?TwelveLead.svg(record,{autoInterpret,idPrefix:id}):'';
+      rendered.set(id,key);
+    }
     function draw(){
       current=all.find(e=>e.patientId===patient&&e.id===selector.value)||null;
-      el('ecg-thumbnail').innerHTML=current?TwelveLead.svg(current,{autoInterpret,idPrefix:'ecg-thumbnail'}):'';
-      if(dialog.open)el('ecg-paper').innerHTML=displayed?TwelveLead.svg(displayed,{autoInterpret,idPrefix:'ecg-paper'}):'';
+      drawPaper('ecg-thumbnail',current);
+      if(dialog.open)drawPaper('ecg-paper',displayed);
     }
     function render(){
       const previous=selector.value;
@@ -28,7 +37,7 @@
       displayed=record;
       el('ecg-paper').classList.remove('ecg-actual');
       el('ecg-zoom').setAttribute('aria-pressed','false');el('ecg-zoom').textContent='Actual size';
-      el('ecg-paper').innerHTML=TwelveLead.svg(record,{autoInterpret,idPrefix:'ecg-paper'});
+      drawPaper('ecg-paper',record);
       if(!dialog.open)dialog.showModal();
     }
     selector.addEventListener('change',()=>{draw();if(dialog.open)open(current);});
@@ -40,7 +49,7 @@
       el('ecg-zoom').setAttribute('aria-pressed',String(zoom));el('ecg-zoom').textContent=zoom?'Fit paper':'Actual size';
     });
     return {
-      setAutoInterpret(enabled){autoInterpret=enabled;draw();},
+      setAutoInterpret(enabled){if(autoInterpret===enabled)return;autoInterpret=enabled;draw();},
       update(records,{openNew=false}={}){
         const known=new Set(all.map(e=>e.id)),last=all.at(-1)?.id;
         all=[...(records||[])];
@@ -51,7 +60,7 @@
         // responses and reopening More Vitals must not summon old printouts.
         if(openNew&&acquired)open(acquired);
       },
-      setPatient(id){patient=id;render();},
+      setPatient(id){if(patient===id)return;patient=id;render();},
       close(){if(dialog.open)dialog.close();}
     };
   }

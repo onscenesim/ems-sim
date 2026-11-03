@@ -118,6 +118,7 @@ test('scene completion never truncates an action; hidden scenes cancel unstarted
 
 test('dice feedback plays on the landing frame for all four outcomes', async () => {
   for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
+    for (const stalled of [false,true]) {
     let tick, now = 0; const timers = [], played = [];
     const el = () => ({ textContent: '', className: '', classList: { add() {}, remove() {} }, setAttribute() {}, getBoundingClientRect() {} });
     const context = vm.createContext({
@@ -125,18 +126,20 @@ test('dice feedback plays on the landing frame for all four outcomes', async () 
       getOutcomeSound: o => ['SUCCESS', 'MARGINAL'].includes(o) ? 'success' : 'fail',
       diceProcEl: el(), diceDCEl: el(), diceOutcomeEl: el(), diceNumberEl: el(), diceSvgEl: el(), diceOverlay: el(),
       playSound: name => played.push({ name, now }),
+      performance:{now:()=>now},
       setInterval: fn => { tick = fn; }, clearInterval() {},
       setTimeout: fn => timers.push(fn),
     });
     vm.runInContext(source.slice(source.indexOf('function animateDiceRoll('), source.indexOf('// ── Magic 8-ball')), context);
     const done = context.animateDiceRoll('medication_push', 18, 12, outcome);
-    for (let i = 1; i <= 12; i++) { now = i * 48; tick(); }
+    if(!stalled)for (let i = 1; i <= 12; i++) { now = i * 48; tick(); }
     assert.equal(played.length, 0);
-    now = 624; tick();
-    assert.deepEqual(played, [{ name: ['SUCCESS', 'MARGINAL'].includes(outcome) ? 'success' : 'fail', now: 624 }]);
+    now = stalled ? 1000 : 624; tick();
+    assert.deepEqual(played, [{ name: ['SUCCESS', 'MARGINAL'].includes(outcome) ? 'success' : 'fail', now }]);
     while (timers.length) timers.shift()();
     await done;
     assert.equal(played.length, 1);
+    }
   }
 });
 

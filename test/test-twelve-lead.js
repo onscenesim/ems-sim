@@ -249,14 +249,23 @@ test('new acquisitions pop up once; restore stays quiet and notebook patient doe
       showModal(){this.open=true;this.opens=(this.opens||0)+1;},close(){this.open=false;this.fire('close');}};
   }
   const doc={getElementById(id){if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);},createElement:element};
-  const context=vm.createContext({TwelveLead:{svg:e=>e.id}});
+  let renders=0;
+  const context=vm.createContext({TwelveLead:{svg:e=>{renders++;return e.id;}}});
   vm.runInContext(fs.readFileSync(require.resolve('../public/twelve-lead-viewer'),'utf8'),context);
   const viewer=context.TwelveLeadViewer.mount(doc),dialog=doc.getElementById('ecg-dialog'),paper=doc.getElementById('ecg-paper');
   const first={id:'first',patientId:'patient_1',minute:2,quality:'Standard'};
   viewer.update([first]);assert.equal(dialog.open,false,'restore must not open');
   const next={...first,id:'second'};
   viewer.update([first,next],{openNew:true});assert.equal(dialog.open,true);assert.equal(paper.innerHTML,'second');
+  const afterAcquisition=renders;
+  for(let i=0;i<30;i++){
+    viewer.update(JSON.parse(JSON.stringify([first,next])),{openNew:true});
+    viewer.setPatient('patient_1');
+  }
+  assert.equal(renders,afterAcquisition,'unchanged serialized responses and patient refreshes do not regenerate either SVG');
   viewer.close();viewer.update([first,next],{openNew:true});assert.equal(dialog.open,false,'duplicate response must not reopen');
+  viewer.update([first,{...next,quality:'Updated quality'}]);
+  assert.equal(renders,afterAcquisition+1,'changed data with the same recording ID invalidates the thumbnail');
   const other={...first,id:'other-patient',patientId:'patient_2'};
   viewer.update([first,next,other],{openNew:true});assert.equal(paper.innerHTML,'other-patient');
   viewer.setPatient('patient_1');viewer.setAutoInterpret(false);assert.equal(paper.innerHTML,'other-patient','notebook updates preserve acquired paper');
