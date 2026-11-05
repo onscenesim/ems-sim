@@ -1,7 +1,7 @@
 'use strict';
 
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
-const { DESTINATION_DIALOGUE_POLICY } = require('./prompts/transport');
+const { DESTINATION_DIALOGUE_POLICY, BACKUP_TRANSPORT_POLICY, captainPresent } = require('./prompts/transport');
 const { reviewText } = require('./instructor');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
@@ -727,8 +727,9 @@ class Session {
       const partnerDrives = !anonDriverActive && !seedSeparateDriver;
       const driverName = anonDriverActive ? 'the assigned driver'
         : (this.seed.crew_transport_driver || this.seed.crew_partner || 'your partner');
-      const captainStatus = (this.crewStatus && this.crewStatus.captain) || 'not_on_scene';
-      let crewTag = `partner=${partnerDrives ? 'driving' : 'in_back'} captain=${captainStatus}`;
+      const captainHere = captainPresent(this.seed, this.backupStatus, this.crewStatus);
+      const captainStatus = captainHere ? 'on_scene' : (this.crewStatus?.captain || 'not_on_scene');
+      let crewTag = `partner=${partnerDrives ? 'driving' : 'in_back'} captain=${captainHere ? 'in_back' : captainStatus}`;
       if (anonDriverActive) crewTag += ' driver=anonymous';
       const crewNote = ' CREW POSITIONS (unit is moving): ' + driverName + ' is driving; the provider '
         + '(you, the player) rides in the back with the patient and is NEVER named in the CREW_STATUS tag. '
@@ -876,6 +877,13 @@ class Session {
         + 'Do NOT report backup on scene without an actual named person present and available.]';
     }
 
+    if (captainPresent(this.seed, this.backupStatus, this.crewStatus)) {
+      messageText += '\n\n[SYSTEM NOTE: ARRIVED BACKUP — ' + _capName + ' is physically present and available. '
+        + BACKUP_TRANSPORT_POLICY + ' Keep captain=on_scene while parked; use captain=in_back once transport starts, '
+        + 'including transport time-skips. Narration and CREW_STATUS must agree. If the provider explicitly releases '
+        + 'this resource or assigns them elsewhere, acknowledge the instruction and emit [BACKUP: cancelled].]';
+    }
+
     this.messages.push({ role: 'user', content: messageText });
 
     const modelStarted = performance.now();
@@ -975,6 +983,7 @@ class Session {
         ? this.backupStatus : {};
       this.backupStatus = { ...priorResource, ...backup };
     }
+    const captainWasPresent = captainPresent(this.seed, this.backupStatus, this.crewStatus);
     if (crewStatus) this.crewStatus = crewStatus;
     // Older replies used a source-only tag for the seeded patient. Never apply it
     // to a secondary patient or overwrite a newer, partially discovered record.
@@ -1064,6 +1073,20 @@ class Session {
     if (wantsLoad) loading = true;
     if (loading) this.hasLoaded = true;
     if (enRoute) this.moving = true; // ambulance is rolling — CPR DC increases
+
+    // Arrived backup travels with the patient. Stale/missing crew tags must not
+    // strand the captain on scene, including normal departures and resumed runs.
+    // An acknowledged provider release uses BACKUP: cancelled and clears presence.
+    if (this.backupStatus?.status !== 'cancelled'
+        && (captainWasPresent || captainPresent(this.seed, this.backupStatus, this.crewStatus))) {
+      this.crewStatus = { partner: 'on_scene', driver: null, ...this.crewStatus,
+        captain: this.moving ? 'in_back' : 'on_scene' };
+      const tag = `[CREW_STATUS: partner=${this.crewStatus.partner} captain=${this.crewStatus.captain}${this.crewStatus.driver ? ' driver=' + this.crewStatus.driver : ''}]`;
+      const assistant = this.messages.at(-1);
+      assistant.content = /\[CREW_STATUS:[^\]]*\]/i.test(assistant.content)
+        ? assistant.content.replace(/\[CREW_STATUS:[^\]]*\]/gi, tag)
+        : assistant.content.replace(/(?=\[(?:PATIENT_FOCUS|VITALS|TIME):)/i, tag + '\n');
+    }
 
     // ORGANIC ARRIVAL: the provider can reach the ED without ever pressing the skip
     // button — by driving in through normal narration. The skip path sets

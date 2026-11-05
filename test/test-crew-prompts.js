@@ -275,3 +275,69 @@ test('the BP UI shortcut requests a manual measurement for BLS and an NIBP cycle
     }
   } finally { response = 'Test response.'; }
 });
+
+test('arrived backup joins normal and skipped transport despite stale or missing crew tags', async () => {
+  const { Session } = require('../src/engine/session');
+  const { BACKUP_TRANSPORT_POLICY } = require('../src/engine/prompts/transport');
+  const seed = { ...rollScenario({ random_seed: 'backup-transport' }), backup_present_on_arrival: false };
+  assert.ok(assembleSeedBlock(seed).includes(BACKUP_TRANSPORT_POLICY));
+  try {
+    for (const skip of [null, 'to_hospital', 'to_arrival']) {
+      for (const crewTag of ['', '[CREW_STATUS: partner=driving captain=on_scene]', '[CREW_STATUS: partner=driving captain=not_on_scene]']) {
+        const session = new Session(seed);
+        session.backupStatus = { status: 'on_scene', eta: 0 };
+        session.crewStatus = { partner: 'on_scene', captain: 'on_scene', driver: null };
+        response = `The ambulance heads to the hospital with the captain assisting in back.\n${crewTag}\n${skip ? '' : '[EN_ROUTE:nearest]'}\n[TIME: 4:00]`;
+        const result = await session.send('Depart for the nearest hospital.', false, skip);
+        assert.equal(result.crewStatus.captain, 'in_back');
+        assert.equal(session.hasLoaded, true);
+        assert.equal(session.moving, true);
+        assert.match(session.messages.at(-1).content, /captain=in_back/);
+        const instruction = request.contents.at(-1).parts[0].text;
+        assert.ok(instruction.includes(BACKUP_TRANSPORT_POLICY));
+        if (skip) assert.match(instruction, /Emit exactly \[CREW_STATUS: partner=driving captain=in_back\]/);
+
+        response = 'The captain continues assisting.\n[CREW_STATUS: partner=driving captain=not_on_scene]\n[TIME: 5:00]';
+        const next = await session.send('Continue monitoring.');
+        assert.equal(next.crewStatus.captain, 'in_back', 'backup remains available on subsequent turns');
+      }
+    }
+  } finally { response = 'Test response.'; }
+});
+
+test('loading keeps arrived backup on scene and honors separate transport drivers', async () => {
+  const { Session } = require('../src/engine/session');
+  try {
+    for (const driver of [null, 'anonymous', 'seed']) {
+      const seed = { ...rollScenario({ random_seed: 'backup-loading' }), backup_present_on_arrival: true };
+      if (driver === 'seed') seed.crew_transport_driver = 'Separate driver';
+      else seed.crew_transport_driver = seed.crew_partner;
+      const session = new Session(seed);
+      response = 'The crew loads the patient into the parked ambulance.\n[CREW_STATUS: partner=on_scene captain=not_on_scene]\n[TIME: 2:00]';
+      const loaded = await session.send('Load the patient into the ambulance.', false, 'to_ambulance');
+      assert.equal(loaded.crewStatus.captain, 'on_scene', 'seeded backup is physically present even if its tag was omitted');
+      assert.equal(session.moving, false);
+      if (driver === 'anonymous') session.crewStatus.driver = 'anonymous';
+      response = `The ambulance reaches the ED bay.\n[CREW_STATUS: partner=${driver ? 'in_back' : 'driving'} captain=on_scene${driver === 'anonymous' ? ' driver=anonymous' : ''}]\n[TIME: 20:00]`;
+      const result = await session.send('Transport to hospital.', false, 'to_hospital');
+      assert.equal(result.crewStatus.captain, 'in_back');
+      assert.equal(result.crewStatus.partner, driver ? 'in_back' : 'driving');
+      assert.equal(result.crewStatus.driver, driver === 'anonymous' ? 'anonymous' : null);
+    }
+  } finally { response = 'Test response.'; }
+});
+
+test('transport never summons absent backup and respects an explicit release', async () => {
+  const { Session } = require('../src/engine/session');
+  try {
+    for (const status of [null, 'en_route', 'cancelled', 'on_scene']) {
+      const seed = { ...rollScenario({ random_seed: 'absent-backup' }), backup_present_on_arrival: false };
+      const session = new Session(seed);
+      session.backupStatus = status ? { status, eta: status === 'en_route' ? 8 : 0 } : null;
+      session.crewStatus = { partner: 'on_scene', captain: status === 'on_scene' ? 'on_scene' : 'not_on_scene' };
+      response = `The ambulance departs.\n${status === 'on_scene' ? '[BACKUP: cancelled]' : ''}\n[CREW_STATUS: partner=driving captain=not_on_scene]\n[EN_ROUTE:nearest]\n[TIME: 3:00]`;
+      const result = await session.send(status === 'on_scene' ? 'Captain, you can clear. Depart for the nearest hospital.' : 'Depart for the nearest hospital.');
+      assert.equal(result.crewStatus.captain, 'not_on_scene');
+    }
+  } finally { response = 'Test response.'; }
+});
