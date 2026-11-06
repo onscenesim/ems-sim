@@ -83,6 +83,7 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     transportDest:       session.transportDest,
     departSceneMinute:   session.departSceneMinute,
     access:               session.access,
+    wounds:               session.wounds,
     contextFlags:         session.contextFlags,
     lastReplyHadTime:     session.lastReplyHadTime,
     demo_source:          session.demoSource,
@@ -240,7 +241,7 @@ function persistSession(id, session) {
     backupStatus: session.backupStatus, backupArrivalMinute: session.backupArrivalMinute,
     crewStatus: session.crewStatus, transportEtaMin: session.transportEtaMin,
     transportDest: session.transportDest, departSceneMinute: session.departSceneMinute,
-    access: session.access, contextFlags: session.contextFlags,
+    access: session.access, wounds: session.wounds, contextFlags: session.contextFlags,
     lastReplyHadTime: session.lastReplyHadTime,
     debriefText: session.debriefText || null,
     patientOutcome: session.patientOutcome || null,
@@ -529,11 +530,13 @@ router.post('/:id/turn', async (req, res) => {
   // ✓/✗ before the turn runs — a fixed structural beat, so nothing rolls that the
   // player didn't mean. Routine no-roll actions (pulse check, O2, vitals) pass
   // through, as do pre-charge suppressions (deterministically not a shock).
-  // No model call, no clock, no state change.
+  // No clock or clinical state change. Unfamiliar wound-care wording may use
+  // the constrained interpretation pass before presenting confirmation.
   if (!skipMode && report_mode !== true && procs_resolved !== true) {
     const msg = message.trim();
+    const managedWounds = session.wounds?.length > 0;
     const items = detectAllProcedures(msg)
-      .filter(e => !e.proc.no_roll && !e.precharge)
+      .filter(e => !e.proc.no_roll && !e.precharge && !(managedWounds && ['bleeding_control','tourniquet'].includes(e.proc.id)))
       .map(e => ({
         key:          e.key,
         procedure_id: e.proc.id,
@@ -545,6 +548,10 @@ router.post('/:id/turn', async (req, res) => {
           monitor_available: hasCardiacMonitor(session.seed, session.backupStatus),
         }),
       }));
+    if (managedWounds) for (const p of (await session.hemorrhagePlanFor(msg)).plan.filter(p => p.kind === 'attempt')) {
+      items.push({key:p.key,procedure_id:p.method === 'tourniquet' ? 'tourniquet' : 'bleeding_control',
+        matched:p.method,reason:null,sentence:p.action.source,targets:[p.wound.site]});
+    }
     // Loading the patient is a state-changing event worth the same ✓/✗ beat as a
     // dice skill: surface a LOAD PATIENT row whenever the wording orders the
     // patient into the rig and the unit isn't already loaded or moving. The key

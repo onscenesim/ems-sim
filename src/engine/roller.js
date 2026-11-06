@@ -428,6 +428,7 @@ function rollScenario(opts = {}) {
     arrest_rhythm: presentation.rhythm || null,
     amiodarone_contraindicated: presentation.amiodarone_contraindicated === true,
     special_flags: presentation.special_flags || null,
+    ...(presentation.hemorrhage_wounds ? { hemorrhage_wounds: structuredClone(presentation.hemorrhage_wounds) } : {}),
     ...(sceneChallenge ? { scene_challenge: sceneChallenge } : {}),
     ...(presentation.chemical_exposure ? { chemical_exposure: structuredClone(presentation.chemical_exposure) } : {}),
     ...(presentation.frequent_caller ? { frequent_caller: structuredClone(presentation.frequent_caller) } : {}),
@@ -458,6 +459,7 @@ function rollScenario(opts = {}) {
     crew_transport_driver: crew.partner,
     crew_in_back: [],
     backup_present_on_arrival:
+      /\bbackup_delayed\b/.test(presentation.special_flags || '') ? false :
       category === 'arrest' ? random() < 0.40 :
       isMultiPatientSeed(presentation) ? true :
       random() < 0.08,

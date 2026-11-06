@@ -5,9 +5,12 @@ const { DESTINATION_DIALOGUE_POLICY, BACKUP_TRANSPORT_POLICY, captainPresent } =
 const { reviewText } = require('./instructor');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
-const { detectWithConfirmation, getProcedure, PRECHARGE_RE } = require('./dice');
+const { detectWithConfirmation, getProcedure, rollProcedure, PRECHARGE_RE } = require('./dice');
+const hemorrhage = require('./hemorrhage');
 const { evaluateObjectives } = require('./learning');
-const { sendTurn, sendDebrief } = require('./api');
+const sceneAPI = require('./api');
+const { sendTurn, sendDebrief } = sceneAPI;
+const inferHemorrhageActions = Object.hasOwn(sceneAPI,'inferHemorrhageActions') ? sceneAPI.inferHemorrhageActions : null;
 const { operationError } = require('./operations');
 const { REQUEST_TIMEOUT_MS } = require('./modelRequest');
 const { parseDebriefResponse } = require('./prompts/debrief');
@@ -537,6 +540,7 @@ class Session {
     // Injected into each turn so the model can't push drugs through a dead line,
     // and into the debrief so route confusion can't be pinned on the provider.
     this.access = [];
+    this.wounds = hemorrhage.initialWounds(seed);
     this.lastReplyHadTime = true; // whether the previous reply carried a [TIME:] tag — drives a self-healing reminder
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
     this.arrivedAtHospital = false; // true once a transport skip reaches the bay — gates END server-side
@@ -587,6 +591,25 @@ class Session {
         else if (r.outcome === 'MARGINAL') this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IO', status: 'marginal' });
       }
     }
+  }
+
+  async hemorrhagePlanFor(text, deny = [], options = {}) {
+    let actions = hemorrhage.parseActions(text);
+    const notes = [];
+    if (typeof inferHemorrhageActions === 'function' && hemorrhage.needsInterpretation(text,actions,this.wounds)) {
+      try {
+        actions = hemorrhage.validateInterpretation(await inferHemorrhageActions(text,
+          this.wounds.filter(w => w.discovered).map(w => ({id:w.id,patientId:w.patientId,site:w.site})),options),text,this.wounds);
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        // Failure to classify is a clarification, never a free treatment.
+      }
+      if (!actions.length) notes.push('The possible bleeding-care order could not be safely interpreted. Ask what method and wound are intended. No new treatment or improvement occurred.');
+    }
+    const result = hemorrhage.planActions(this.wounds,actions,{focus:this.patientFocus?.id || 'patient_1',
+      records:this.patientRecords,seed:this.seed,deny,crewStatus:this.crewStatus || {},moving:this.moving});
+    result.notes.push(...notes);
+    return result;
   }
 
   /**
@@ -642,6 +665,10 @@ class Session {
     const rollContext = buildTurnContextFlags(
       this.seed, this.contextFlags, this.lastVitals, userText, this.moving
     );
+    rollContext.managed_hemorrhage = this.wounds.length > 0;
+    const woundStartMinute = this.sceneMinute;
+    const woundPlan = !reportMode && !skipMode && rollContext.managed_hemorrhage
+      ? await this.hemorrhagePlanFor(userText, procOverrides.deny || [], options) : {plan:[],notes:[]};
     // Freeze resource eligibility before this order. A crew arriving in the
     // response cannot retroactively authorize an acquisition already attempted.
     const monitorBackup = this.backupStatus ? { ...this.backupStatus } : null;
@@ -651,6 +678,8 @@ class Session {
       : detectWithConfirmation(userText, rollContext, this.seed.difficulty, procOverrides);
     const rolls = detection.rolls;
     const suppressed = detection.suppressed;
+    const woundResult = hemorrhage.resolvePlan(woundPlan.plan, rollProcedure, rollContext, this.seed.difficulty, this.sceneMinute);
+    rolls.push(...woundResult.rolls);
     // NOTE: rolls are logged AFTER the model narrates (see reconcileRolls below),
     // not here — so an order the model declines as wrong/impossible doesn't get
     // logged as if it happened. The full `rolls` set is still injected into the
@@ -659,6 +688,11 @@ class Session {
     // Inject all real roll results into the user message so Claude knows every outcome.
     // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
     let messageText = userText;
+    const departing = this.moving || skipMode === 'to_hospital' || skipMode === 'to_arrival';
+    if (departing && this.crewStatus?.driver !== 'anonymous' && this.seed.crew_transport_driver === this.seed.crew_partner) {
+      woundResult.events.push(...hemorrhage.pressureInterruptions(this.wounds, true));
+    }
+    messageText += hemorrhage.woundContext(this.wounds,woundPlan.notes,woundResult.events);
     if (rolls.some(r => r.procedure_id === 'capillary_refill')) {
       messageText += '\n\n[SYSTEM NOTE: Explicit capillary refill assessment requested. Perform it for the patient being assessed and state the measured duration numerically in seconds. Include CapRefill=<seconds>@T+M:SS in the VITALS tag, using this assessment time. Do not report only "brisk", "normal", or "delayed". If the assessment cannot be performed, state that and omit the reading.]';
     }
@@ -786,7 +820,9 @@ class Session {
     }
 
     const rollLines = rolls.filter(r => !r.no_roll).map(r => {
-      const guide = outcomeGuidance(r.procedure_id, r.outcome);
+      const guide = r.hemorrhage_managed && ['FAILURE','COMPLICATION'].includes(r.outcome)
+        ? `The ${r.hemorrhage_method} attempt does not establish the intended new control. Honor retained prior pressure if the state records it. Do not invent another attempt, a different method, injury from an unperformed method, or provider negligence.`
+        : outcomeGuidance(r.procedure_id, r.outcome);
       const guideStr = guide ? ` — narrate: ${guide}` : '';
       if (r.multi_roll) {
         const parts = r.rolls.map(x => `d20=${x.roll} vs DC ${x.dc} — ${x.outcome}`);
@@ -888,6 +924,17 @@ class Session {
 
     const modelStarted = performance.now();
     let rawReply = await sendTurn(this.systemPrompt, this.messages, options);
+    const woundIssues = hemorrhage.narrationIssues(rawReply,this.wounds);
+    if (woundIssues.length) {
+      rawReply = await sendTurn(this.systemPrompt,[...this.messages,
+        {role:'assistant',content:rawReply},
+        {role:'user',content:'[SYSTEM NOTE: Regenerate this scene reply. It contradicted authoritative wound state: '
+          + woundIssues.join(' ') + ' Honor the existing wound state and this turn\'s actual attempts/events. Do not grant unrolled control, release pressure, change the provider action, or invent another attempt. Retain canonical scene tags.]'}],
+      {...options,timeoutMs:Math.max(1,(options.timeoutMs ?? REQUEST_TIMEOUT_MS)-(performance.now()-modelStarted))});
+      if (hemorrhage.narrationIssues(rawReply,this.wounds).length) {
+        throw operationError('invalid_scene_reply','The scene contradicted the recorded wound treatment. No changes were saved; please retry.',502);
+      }
+    }
     if (isUnframedSceneReply(rawReply)) {
       const mins = Math.floor(this.sceneMinute);
       const secs = String(Math.round((this.sceneMinute - mins) * 60)).padStart(2, '0');
@@ -905,6 +952,12 @@ class Session {
     }
 
     options.signal?.throwIfAborted();
+    rawReply = hemorrhage.discoverWounds(this.wounds,rawReply,this.seed);
+    if (!rollContext.managed_hemorrhage && this.wounds.length) {
+      woundResult.events.push(...hemorrhage.adoptExistingRolls(this.wounds,hemorrhage.parseActions(userText),rolls,
+        {focus:this.patientFocus?.id || 'patient_1',records:this.patientRecords,seed:this.seed,
+          crewStatus:this.crewStatus || {},moving:this.moving},this.sceneMinute));
+    }
 
     // Keep the raw reply (with [VITALS:] tag) in Claude's message history so it
     // remembers what it last reported. Strip the tag from the user-facing copy.
@@ -957,7 +1010,8 @@ class Session {
 
     // Reconcile dice against the narration: drop any roll the model declined or
     // showed didn't happen, so the debrief/log and client only see real events.
-    const reconciledRolls = reconcileRolls(rolls, reply);
+    const reconciledRolls = reconcileRolls(rolls.filter(r => !r.hemorrhage_managed), reply)
+      .concat(rolls.filter(r => r.hemorrhage_managed));
     reply = stripTwelveLeadNarration(reply, reconciledRolls.some(r => isECGProcedure(r.procedure_id)),
       suppressed.some(s => s.unavailable && isECGProcedure(s.procedure_id)));
     if (unavailable.length) {
@@ -1088,6 +1142,17 @@ class Session {
         : assistant.content.replace(/(?=\[(?:PATIENT_FOCUS|VITALS|TIME):)/i, tag + '\n');
     }
 
+    if (this.moving && this.crewStatus?.partner === 'driving') {
+      const interruptions = hemorrhage.pressureInterruptions(this.wounds,true);
+      woundResult.events.push(...interruptions);
+      for (const event of interruptions) reply += `\nPressure on the ${event.site} wound is interrupted as the partner takes the wheel; active bleeding resumes.`;
+      if (interruptions.length) {
+        const observation = interruptions.map(e => `Pressure on ${e.patientId}'s ${e.site} wound was interrupted when the partner began driving; bleeding is uncontrolled.`).join('\n');
+        const last = this.messages.at(-1);
+        last.content = last.content.replace(/(?=\[(?:CREW_STATUS|PATIENT_FOCUS|VITALS|TIME):)/,observation+'\n');
+      }
+    }
+
     // ORGANIC ARRIVAL: the provider can reach the ED without ever pressing the skip
     // button — by driving in through normal narration. The skip path sets
     // arrivedAtHospital directly (see above); this covers the non-skip path so the
@@ -1126,6 +1191,12 @@ class Session {
       }
     }
 
+    if (woundResult.rolls.length && this.sceneMinute < woundStartMinute + 0.5) {
+      this.sceneMinute = woundStartMinute + 0.5;
+      const stamp = `[TIME: ${Math.floor(this.sceneMinute)}:${String(Math.round(this.sceneMinute % 1 * 60)).padStart(2,'0')}]`;
+      this.messages.at(-1).content = this.messages.at(-1).content.replace(/\[TIME:[^\]]*\]/g,stamp);
+    }
+
     // Record the on-scene → transport boundary the first time the unit departs
     // (after the clock advance, so it carries this turn's departure timestamp).
     if (enRoute && this.departSceneMinute === null) {
@@ -1145,6 +1216,7 @@ class Session {
       user: userText,
       assistant: reply,
       rolls: reconciledRolls,
+      woundEvents: woundResult.events,
       twelveLeads: acquireTwelveLeads({ seed: this.seed, vitals: this.lastVitals, rolls: reconciledRolls,
         patientId, ink:options.ecgInk, backup:monitorBackup, patientRecords: this.patientRecords, minute: this.sceneMinute, turn: this.turns.length, sessionId: this.sessionId || this.seed.scenario_id }),
       sceneMinute: this.sceneMinute,

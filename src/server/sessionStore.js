@@ -205,6 +205,7 @@ function restoreSession(snapshot) {
   session.transportDest       = snapshot.transportDest       ?? null;
   session.departSceneMinute   = snapshot.departSceneMinute   ?? null;
   session.access              = snapshot.access              || [];
+  session.wounds              = snapshot.wounds              || session.wounds;
   session.contextFlags        = snapshot.contextFlags        || session.contextFlags;
   session.demoSource          = snapshot.demo_source         || null;
   session.secondPatientFound  = snapshot.second_patient      || false;

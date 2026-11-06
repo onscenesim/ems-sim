@@ -1,6 +1,7 @@
 'use strict';
 
 const { INTERVENTIONS } = require('../data/interventions');
+const { parseActions: hemorrhageActions, nonWoundCare } = require('./hemorrhage');
 const { SITE_PROCEDURES, procedureTargets, rollEntry } = require('./procedure-targets');
 const { medicationPresentationAt } = require('./medication-route');
 const { unavailableProcedure } = require('./equipment');
@@ -666,6 +667,10 @@ function detectAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
  * Returns an array (may be empty).
  */
 function isTreatmentAssessment(text, start, length, proc, key) {
+  if (proc.id === 'decontamination') {
+    const [s] = sentenceBounds(text,start);
+    if (/\b(?:after|following)\s+(?:(?:the|successful|initial|adequate|completed)\s+)*$/i.test(text.slice(s,start))) return true;
+  }
   if (['twelve_lead', 'posterior_ecg', 'right_sided_ecg', 'v4r_ecg'].includes(proc.id)) {
     const [s,e] = sentenceBounds(text,start);
     const before = text.slice(s,start).split(/,|\b(?:and|then|but|also)\b/i).at(-1);
@@ -681,6 +686,11 @@ function isTreatmentAssessment(text, start, length, proc, key) {
   const before = text.slice(0, start).split(/[;.!?\n]|\b(?:and|then|but|also)\b/i).at(-1);
   const after = text.slice(start + length);
   if (oxygen && isSamplingCannula(text,start,length,key)) return true;
+  // Another vital-sign alias may already have consumed the BP acquisition in
+  // `remaining`. Classify the original compound noun so its leftover "blood"
+  // cannot become a transfusion in a multi-measurement order.
+  if (!oxygen && /(?:^|\s)blood$/i.test(key)
+      && /^\s*(?:pressures?|sugars?|glucose|gas(?:es)?|cultures?|samples?|counts?|urea|alcohol)\b/i.test(after)) return true;
   if (oxygen && /^\s*(?:levels?|sats?|saturations?|readings?|concentrations?|requirements?|tanks?|cylinders?|supply|situation|flow|flowing)\b/i.test(after)) return true;
   if (!oxygen && /^\s*(?:levels?|counts?|results?|tests?|studies|samples?)\b/i.test(after)) return true;
   return /\b(?:check(?:ing)?|recheck|assess(?:ing)?|measure|monitor|read|inspect|look at|what(?:\s+is|'s|\s+are)?|how(?:\s+is|'s|\s+are)?|draw|collect|order|send|request)\b[^;.!?]*$/i.test(before)
@@ -839,6 +849,18 @@ function detectAllProcedures(userText) {
     return found.filter(e => !(e.proc.id === 'defibrillation' && !e.precharge));
   }
 
+  const bleeding = hemorrhageActions(userText);
+  found = found.filter(e => !['bleeding_control','tourniquet'].includes(e.proc.id)
+    || !nonWoundCare(e.sentence || userText) && (!hemorrhageActions(e.sentence || userText).length
+    || hemorrhageActions(e.sentence || userText).some(a => a.kind !== 'assess' && a.kind !== 'release')));
+  for (const action of bleeding.filter(a => ['treat','maintain'].includes(a.kind) && a.method)) {
+    const id = action.method === 'tourniquet' ? 'tourniquet' : 'bleeding_control';
+    if (found.some(e => e.proc.id === id || ['epistaxis_control','chest_seal'].includes(e.proc.id))) continue;
+    if (found.length && !/\b(?:wound|bleed\w*|hemorrhag\w*|gauze|towel|laceration|armpit|axill\w*|(?:direct|manual|sustained) pressure)\b/i.test(action.source)) continue;
+    const proc = INTERVENTIONS.find(p => p.id === id);
+    found.push({ proc, matchedKey:action.source.toLowerCase(), sentence:action.source,
+      targets:procedureTargets(action.source,0,action.source.length,id), uncertain:false, reason:null, key:procEntryKey(id,action.source.toLowerCase()) });
+  }
   return found;
 }
 
@@ -886,6 +908,7 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
   const suppressed = [];
   for (const entry of entries) {
     const { proc, matchedKey, uncertain, reason, precharge, key } = entry;
+    if (contextFlags.managed_hemorrhage && ['bleeding_control','tourniquet'].includes(proc.id)) continue;
     // Pre-charge is a forced suppression — deterministic, not overridable by a
     // confirm click: the wording itself says "charge, don't shock."
     if (precharge) {

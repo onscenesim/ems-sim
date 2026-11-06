@@ -494,8 +494,32 @@ test('multi-patient detection covers ordinary two-patient and MCI seeds', () => 
   assert.equal(isMultiPatientSeed({special_flags:'two_large_bore_IVs'}),false);
 });
 
+test('delayed-backup knife fight starts without backup in ordinary draws; other two-patient cases retain backup', () => {
+  const { SCENARIO_POOLS } = require('../src/data/scenarios');
+  const { assembleSeedBlock } = require('../src/engine/assembler');
+  const original = SCENARIO_POOLS.trauma;
+  const knifeFight = original.find(e => e.presentation.startsWith('Knife fight with two injured adults'));
+  assert.ok(knifeFight);
+  try {
+    for (const delayed of [true, false]) {
+      SCENARIO_POOLS.trauma = [{ ...knifeFight, special_flags: delayed ? knifeFight.special_flags : 'two_patients' }];
+      for (let i = 0; i < 30; i++) {
+        const seed = rollScenario({ category: 'trauma', difficulty: 'HARD', random_seed: `knife-fight-${i}` });
+        assert.equal(seed.presentation, knifeFight.presentation);
+        assert.equal(seed.backup_present_on_arrival, !delayed);
+        assert.equal(isMultiPatientSeed(seed), true);
+        if (delayed) assert.doesNotMatch(assembleSeedBlock(seed), /Backup on arrival:/);
+      }
+    }
+  } finally { SCENARIO_POOLS.trauma = original; }
+});
+
 test('standalone arrest checks advance to the scheduled CPR checkpoint', async () => {
-  const seed = rollScenario({category:'arrest'});
+  const { catalog, prepareInstructor } = require('../src/engine/instructor');
+  // The arrest dispatch pool also includes stable frequent-caller variants.
+  // This check needs an actual arrest, rather than a random dispatch surface.
+  const entry = catalog().find(e => e.category === 'arrest' && !e.category_override);
+  const seed = rollScenario({instructor:prepareInstructor({case_id:entry.case_id})});
   assert.match(new Session(seed).systemPrompt,
     /standalone request for a pulse check, rhythm check, or combined pulse\/rhythm check[\s\S]+fast-forward the scene clock/);
 
