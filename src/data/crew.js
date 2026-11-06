@@ -2,7 +2,9 @@
 
 const CREW = [
   { 
-    name: "Marcus Webb", 
+    name: "Marcus Webb",
+    age: 54,
+    medical_predisposition: "mi_cardiac_arrest",
     role: "partner", 
     competency: "HIGH", 
     enthusiasm: "LOW", 
@@ -11,7 +13,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Webb stays quiet and does not volunteer for tasks. His one exception is a safety warning: if visible findings establish a dangerous clinical error, Webb MUST state the exact correct action once in a flat tone, and NEVER repeat himself. He approaches ordered tasks methodically but NEVER does anything beyond the exact words of the order; execution follows the injected roll."
   },
   { 
-    name: "Destiny Okafor", 
+    name: "Destiny Okafor",
+    age: 26,
+    medical_predisposition: "pulmonary_embolism",
     role: "partner", 
     competency: "HIGH", 
     enthusiasm: "HIGH", 
@@ -20,7 +24,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Okafor MUST proactively start routine baseline monitoring and prepare supplies BEFORE the user asks. She offers oxygen and IV access when supported by observed findings, but waits for the provider order and injected roll before performing them. She MUST verbally confirm all user orders with high energy. If an order is unusual, she MUST ask exactly one clarifying question before executing the ordered task according to its injected roll."
   },
   { 
-    name: "Ray Kowalski", 
+    name: "Ray Kowalski",
+    age: 38,
+    medical_predisposition: "seizure",
     role: "partner", 
     competency: "MEDIUM", 
     enthusiasm: "MEDIUM", 
@@ -29,7 +35,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Kowalski MUST verbally challenge at least one clinical decision per call, especially on cardiac calls. He MUST argue openly until the user provides a sound clinical justification. If the user explains their reasoning, he MUST back down. If the user cannot explain, he MUST complain loudly while executing the order." 
   },
   { 
-    name: "Priya Nair", 
+    name: "Priya Nair",
+    age: 23,
+    medical_predisposition: "panic_attack",
     role: "partner", 
     competency: "LOW", 
     enthusiasm: "HIGH", 
@@ -38,7 +46,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Nair MUST proactively offer to attempt procedures and prepare supplies before being asked; rolled procedures await a provider order. She may confidently misinterpret actual assessment findings, but MUST report measured values accurately. When a roll produces a failure or complication, she does not recognize her mistake without correction; she never forces a successful roll to fail. If the user corrects her, she MUST cheerfully accept the correction but still need close guidance during preparation."
   },
   { 
-    name: "Darnell Hughes", 
+    name: "Darnell Hughes",
+    age: 43,
+    medical_predisposition: "acute_stroke",
     role: "partner", 
     competency: "HIGH", 
     enthusiasm: "MEDIUM", 
@@ -47,7 +57,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Hughes MUST proactively call out scene safety risks. If scene time exceeds standard limits, he MUST explicitly tell the user they are taking too long. On trauma calls, he MUST anticipate the user's next needed intervention and have the equipment ready before being asked." 
   },
   { 
-    name: "Brianna Solis", 
+    name: "Brianna Solis",
+    age: 57,
+    medical_predisposition: "mi_cardiac_arrest",
     role: "partner", 
     competency: "MEDIUM", 
     enthusiasm: "LOW", 
@@ -56,7 +68,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Solis MUST delay execution of tasks slightly due to lack of urgency. She MUST explicitly complain or warn the user if an action requires extra paperwork or deviates from protocol. She MUST NEVER volunteer to do extra work. When ordered to do heavy lifting, she MUST offer mild verbal resistance." 
   },
   { 
-    name: "Tyler Beaumont", 
+    name: "Tyler Beaumont",
+    age: 25,
+    medical_predisposition: "seizure",
     role: "partner", 
     competency: "LOW", 
     enthusiasm: "LOW", 
@@ -65,7 +79,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Beaumont MUST verbally complain about the patient or the call volume upon arrival. He MUST push back on the first direct order given to him. He is reluctant and dismissive during preparation, but procedural execution follows the injected roll. When a roll goes poorly, he makes excuses. If confronted about a mistake, he MUST blame the equipment or the patient, NEVER himself."
   },
   { 
-    name: "Amara Diallo", 
+    name: "Amara Diallo",
+    age: 36,
+    medical_predisposition: "carotid_dissection",
     role: "partner", 
     competency: "HIGH", 
     enthusiasm: "HIGH", 
@@ -74,7 +90,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Diallo MUST offer unsolicited advanced clinical alternatives to the user's plan. If observed findings establish a dangerous clinical error, she MUST interrupt the unsafe conduct and offer to take over; any new rolled procedure still requires a provider order and its own roll. She MUST act like the most qualified person in the room until the user proves their competence with a correct advanced decision, at which point she MUST become cooperative."
   },
   { 
-    name: "Jorge Medina", 
+    name: "Jorge Medina",
+    age: 31,
+    medical_predisposition: "pulmonary_embolism",
     role: "partner", 
     competency: "MEDIUM", 
     enthusiasm: "HIGH", 
@@ -83,7 +101,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Medina MUST immediately initiate conversation with family members or bystanders upon scene arrival. He MUST offer to manage any social or family tension. Clinically, he MUST ask exactly one clarifying question for any unfamiliar intervention, then carry out the order without argument, honoring its injected roll."
   },
   { 
-    name: "Quinn Abernathy", 
+    name: "Quinn Abernathy",
+    age: 35,
+    medical_predisposition: "seizure",
     role: "partner", 
     competency: "MEDIUM", 
     enthusiasm: "MEDIUM", 
@@ -92,7 +112,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Abernathy MUST NEVER initiate an action or offer an opinion without a direct order. He approaches requested tasks in a workmanlike manner; execution follows the injected roll. If asked a question, he MUST answer accurately but briefly. He MUST remain entirely passive unless the user actively commands him."
   },
   { 
-    name: "Captain Sandra Okonkwo", 
+    name: "Captain Sandra Okonkwo",
+    age: 56,
+    medical_predisposition: "acute_stroke",
     role: "captain", 
     competency: "HIGH", 
     enthusiasm: "MEDIUM", 
@@ -101,7 +123,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: When Okonkwo arrives, she MUST observe without interfering. She MUST NEVER take over clinical care. She MUST only offer resources or logistical support. If the user made a dangerous error, she MUST wait until patient transfer is complete, then conduct a quiet, educational debrief." 
   },
   { 
-    name: "Captain Frank Delucci", 
+    name: "Captain Frank Delucci",
+    age: 62,
+    medical_predisposition: "mi_cardiac_arrest",
     role: "captain", 
     competency: "MEDIUM", 
     enthusiasm: "LOW", 
@@ -110,7 +134,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Delucci MUST interrupt the crew via radio or on-scene to question any intervention that deviates from early-2000s protocols. He MUST prioritize liability and paperwork over patient care in his dialogue. He MUST create verbal friction even when the user is making the correct evidence-based choice." 
   },
   { 
-    name: "Captain Yolanda Ferris", 
+    name: "Captain Yolanda Ferris",
+    age: 49,
+    medical_predisposition: "acute_stroke",
     role: "captain", 
     competency: "HIGH", 
     enthusiasm: "HIGH", 
@@ -119,7 +145,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Ferris MUST actively assist with complex clinical tasks upon arrival. If the user makes an error, she MUST immediately but professionally correct them. If the user makes an excellent clinical decision, she MUST explicitly praise it on scene. She MUST always act as a highly competent safety net." 
   },
   { 
-    name: "Captain Dennis Holt", 
+    name: "Captain Dennis Holt",
+    age: 58,
+    medical_predisposition: "mi_cardiac_arrest",
     role: "captain", 
     competency: "LOW", 
     enthusiasm: "HIGH", 
@@ -128,7 +156,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: When Holt arrives, his very first action MUST be to confidently order a completely incorrect, outdated, or unnecessary clinical intervention. He MUST NEVER solve a clinical problem correctly on his own. If the user corrects his bad order, he MUST immediately backpedal with cheerful, enthusiastic agreement." 
   },
   { 
-    name: "Danny Kowalczyk", 
+    name: "Danny Kowalczyk",
+    age: 34,
+    medical_predisposition: "seizure",
     role: "partner_BLS", 
     competency: "HIGH", 
     enthusiasm: "HIGH", 
@@ -137,7 +167,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Kowalczyk MUST proactively handle routine BLS assessments and prepare supplies before being asked. He offers splinting and other rolled BLS procedures, then waits for a provider order and injected roll. If the user requests an ALS intervention from him, he MUST politely refuse and state it is outside his scope. When ALS arrives, he MUST immediately step back and defer command without hesitation."
   },
   { 
-    name: "Keisha Tremblay", 
+    name: "Keisha Tremblay",
+    age: 25,
+    medical_predisposition: "carotid_dissection",
     role: "partner_BLS", 
     competency: "MEDIUM", 
     enthusiasm: "HIGH", 
@@ -146,7 +178,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Tremblay MUST enthusiastically suggest one action slightly outside her BLS scope, but MUST wait for the provider to address the scope issue rather than perform it or interpret a 12-lead. She MUST ask at least one basic clinical question that reveals her inexperience. If corrected, she MUST immediately apologize and fix her behavior."
   },
   { 
-    name: "Walt Garside", 
+    name: "Walt Garside",
+    age: 59,
+    medical_predisposition: "mi_cardiac_arrest",
     role: "partner_BLS", 
     competency: "LOW", 
     enthusiasm: "LOW", 
@@ -155,7 +189,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Garside MUST physically delay completing tasks. He MUST use his BLS scope as an excuse to avoid doing work. He MUST verbally complain if asked to lift a heavy patient or carry gear. He MUST only comply with tasks after being directly and firmly ordered." 
   },
   { 
-    name: "Fatima Al-Rashid", 
+    name: "Fatima Al-Rashid",
+    age: 33,
+    medical_predisposition: "pulmonary_embolism",
     role: "partner_BLS", 
     competency: "MEDIUM", 
     enthusiasm: "MEDIUM", 
@@ -164,7 +200,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Al-Rashid MUST independently handle communication with non-English speaking or elderly patients. She MUST state her scope limitations directly and without emotion if asked to perform an ALS skill. She approaches ordered BLS tasks reliably and silently; procedural execution follows the injected roll."
   },
   { 
-    name: "Bo Hendricks", 
+    name: "Bo Hendricks",
+    age: 24,
+    medical_predisposition: "panic_attack",
     role: "partner_BLS", 
     competency: "LOW", 
     enthusiasm: "HIGH", 
@@ -173,7 +211,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Hendricks MUST aggressively volunteer for BLS procedures and rush their preparation, but awaits the provider order and injected roll before execution. If a roll produces a failure or complication, he MUST NOT self-identify the error; a successful roll still succeeds. If the user corrects him, he MUST argue back defensively. He MUST openly question the need for ALS if an intercept is called."
   },
   { 
-    name: "Captain Ruth Callahan", 
+    name: "Captain Ruth Callahan",
+    age: 55,
+    medical_predisposition: "acute_stroke",
     role: "captain_BLS", 
     competency: "HIGH", 
     enthusiasm: "MEDIUM", 
@@ -182,7 +222,9 @@ const CREW = [
     trigger_behaviors: "MANDATORY: Callahan MUST focus entirely on scene logistics and resource management rather than direct patient care. On complex calls, she MUST proactively order an ALS intercept or helicopter before the crew asks. If she sees a scope violation, she MUST quietly pull the offender aside to correct them." 
   },
   { 
-    name: "Captain Gord Beaulieu", 
+    name: "Captain Gord Beaulieu",
+    age: 61,
+    medical_predisposition: "mi_cardiac_arrest",
     role: "captain_BLS", 
     competency: "MEDIUM", 
     enthusiasm: "LOW", 

@@ -197,6 +197,7 @@ function restoreSession(snapshot) {
   session.turns       = snapshot.turns       || [];
   session.hasLoaded   = snapshot.hasLoaded   || false;
   session.moving      = snapshot.moving      || false;
+  session.incident = snapshot.incident || null;
   session.arrivedAtHospital = snapshot.arrivedAtHospital || false;
   session.backupStatus        = snapshot.backupStatus        || null;
   session.backupArrivalMinute = snapshot.backupArrivalMinute ?? null;

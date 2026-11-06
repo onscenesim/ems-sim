@@ -3,6 +3,7 @@
 const { rhythms: ECG_RHYTHMS } = require('../../public/ecg-catalog');
 const ECG = require('../../public/twelve-lead');
 
+const { complicationContract } = require('./catastrophes');
 const { CREW }    = require('../data/crew');
 const { REGIONS } = require('../data/regions');
 const { describe: describeProtocols } = require('../../public/protocols');
@@ -135,6 +136,7 @@ function assembleSeedBlock(seed) {
 
   // --- Complications ---
   lines.push('--- COMPLICATION ENGINE ---');
+  lines.push(complicationContract(seed));
   if (seed.complication_type !== 'none' && seed.complication_roll !== null) {
     lines.push(`Complication type: ${seed.complication_type}`);
     switch (seed.complication_type) {
@@ -451,7 +453,10 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   }
   lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.frequent_caller ? 'case-specific chronic history' : seed.comorbidity_bundle || 'otherwise_healthy'}`);
   lines.push(`  Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
-  lines.push(`  Complication: ${seed.complication_type}`);
+  lines.push(`  Complication: ${seed.complication_type}${seed.catastrophe ? ' / ' + seed.catastrophe.id : ''}`);
+  const incidents = (seed.events || []).filter(e => e.event_type === 'complication');
+  for (const event of incidents) lines.push(`  Incident at T+${event.scene_minute}: ${event.detail}`);
+  if (seed.catastrophe || seed.routine_er_divert || seed.complication_type === 'er_divert') lines.push('  The seed is a possibility, not evidence it occurred: use only recorded triggered incidents and responses. Judge adaptation and ongoing care, not the ability to prevent an unavoidable failure, clear an indefinite roadblock, or obtain an unavailable ER bed.');
   lines.push(`  Region: ${seed.region} | Provider level: ${seed.provider_level}`);
   lines.push(describeProtocols(seed));
   const totalCall = seed.total_scene_minutes;

@@ -290,7 +290,7 @@ console.log('\n=== 7. rollScenario field completeness ===');
   assert(seed.patient_age >= 0 && seed.patient_age <= 90, `patient_age in range (got ${seed.patient_age})`);
   assert(['male', 'female'].includes(seed.sex), `sex is valid (got ${seed.sex})`);
   assert(['stable', 'slowly_deteriorating', 'rapidly_deteriorating'].includes(seed.trajectory), `trajectory valid (got ${seed.trajectory})`);
-  assert(['none', 'equipment_failure', 'unreliable_bystander', 'clinical_curveball'].includes(seed.complication_type), `complication_type valid (got ${seed.complication_type})`);
+  assert(['none', 'equipment_failure', 'unreliable_bystander', 'clinical_curveball', 'er_divert', 'catastrophic'].includes(seed.complication_type), `complication_type valid (got ${seed.complication_type})`);
 }
 
 // ── 8. EASY difficulty: no complications, always stable/slowly_det ───────────

@@ -17,7 +17,7 @@ const seedFields = {
   sex: ['female', 'male'], trajectory: ['stable', 'slowly_deteriorating', 'rapidly_deteriorating'],
   decompensation_clock: 'number', weather_id: ['clear', ...WEATHER.map(w => w.id)],
   time_of_day: 'text', caller_behavior: 'text', comorbidity_bundle: ['otherwise_healthy', ...COMORBIDITIES.map(c => c.id)],
-  complication_type: ['none', 'equipment_failure', 'unreliable_bystander', 'clinical_curveball', 'all'], special_circumstance: 'text', backup_present_on_arrival: 'boolean',
+  complication_type: ['none', 'equipment_failure', 'unreliable_bystander', 'clinical_curveball', 'er_divert', 'all'], special_circumstance: 'text', backup_present_on_arrival: 'boolean',
 };
 function catalog() {
   return Object.entries(SCENARIO_POOLS).flatMap(([category, entries]) => entries.map(entry => ({ category, ...structuredClone(entry) })));

@@ -5093,3 +5093,7 @@ body.light-mode.detailed-colors .line .text-player { color: #005c18; }
 body.light-mode.detailed-colors .line .text-care { color: #7930a8; }
 .color-key { max-width: 430px; margin: 2px 0 10px 24px; color: #c8d0cf; font: 14px/1.4 var(--font-xp); }
 body.light-mode .color-key { color: #394549; }
+
+/* Incident states remain visible on both the call header and crew cards. */
+.badge-crew-incapacitated, .badge-crew-unavailable, .badge-backup-unavailable { background: #3b1218; color: #ffb3b8; border: 1px solid #b85561; }
+.crew-status-incapacitated, .crew-status-unavailable { background: #3b1218; color: #ffb3b8; }

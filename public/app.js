@@ -1411,7 +1411,7 @@ async function sendTurn(msg, opts = {}) {
     // yet (handoff comes next), but the button should offer END from here on.
     // The server is authoritative (data.arrived) and persists across resume; the
     // skipMode check is a belt-and-suspenders fallback for the same turn.
-    if (data.arrived || skipMode === 'to_arrival') arrivedAtHospital = true;
+    applyAuthoritativeTransportState(data, skipMode);
     // Relabel the skip button to match the new transport phase.
     updateSkipBtn();
 
@@ -1868,6 +1868,19 @@ function showDebriefCTA() {
     showNewScenarioBtn();
     setInputEnabled(false);
   });
+}
+
+// Loading and departure animations may have already played before a crash or
+// obstruction. The server's current state also governs subsequent sounds and
+// phase; a requested skip must never override a rejected arrival.
+function applyAuthoritativeTransportState(data, skipMode = null) {
+  if (typeof data.arrived === 'boolean') arrivedAtHospital = data.arrived;
+  else if (skipMode === 'to_arrival') arrivedAtHospital = true;
+  if (typeof data.moving === 'boolean') {
+    hasPlayedDepart = data.moving;
+    window._isMoving = data.moving;
+  }
+  if (typeof data.hasLoaded === 'boolean') hasPlayedLoading = data.hasLoaded;
 }
 
 // ── END CALL button ─────────────────────────────────────────────────────────
@@ -3812,7 +3825,7 @@ function applyBackupStatus(backup) {
     playSound('backup_arrive');
   }
   prevBackupStatus = backup.status;
-  const labels = { called: 'BACKUP: CALLED', en_route: 'BACKUP: EN ROUTE', on_scene: 'BACKUP: ON SCENE', cancelled: 'BACKUP: CANCELLED', not_called: 'NO BACKUP EN ROUTE' };
+  const labels = { called: 'BACKUP: CALLED', en_route: 'BACKUP: EN ROUTE', on_scene: 'BACKUP: ON SCENE', cancelled: 'BACKUP: CANCELLED', unavailable: 'BACKUP: UNAVAILABLE', not_called: 'NO BACKUP EN ROUTE' };
   const label = labels[backup.status];
   if (!label) {
     badge.textContent = '';
@@ -3832,6 +3845,8 @@ const CREW_STATUS_LABELS = {
   not_on_scene: 'Not on Scene',
   en_route:     'En Route',
   anonymous:    'Non-Roster Driver',
+  incapacitated: 'Incapacitated',
+  unavailable:  'Unavailable',
 };
 let currentCrewStatus = { partner: null, captain: null, driver: null };
 

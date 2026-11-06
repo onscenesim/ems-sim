@@ -9,6 +9,7 @@ const { resolve: resolveProtocols } = require('../../public/protocols');
 const { COMORBIDITIES } = require('../data/comorbidities');
 const { AGE_GROUPS } = require('../data/ageGroups');
 const { SEASONS, compatibleWeather, caseCompatible, validateCombination } = require('./compatibility');
+const { rollCatastrophe } = require('./catastrophes');
 const { rollPatientName } = require('../data/patientNames');
 
 const { applyInstructor } = require('./instructor');
@@ -214,10 +215,12 @@ function rollComplication(difficulty) {
   // HARD — guaranteed complication every call (EMS on a bad day).
   if (difficulty === 'HARD') {
     if (roll >= 5) return { roll, type: 'clinical_curveball' };
+    if (roll === 4) return { roll, type: 'er_divert' };
     return { roll, type: random() < 0.5 ? 'equipment_failure' : 'unreliable_bystander' };
   }
   // NORMAL — complications fire at the baseline rate.
   if (roll === 6) return { roll, type: 'clinical_curveball' };
+  if (roll === 5 && random() < 0.25) return { roll, type: 'er_divert' };
   if (roll === 5) return { roll, type: random() < 0.5 ? 'equipment_failure' : 'unreliable_bystander' };
   return { roll, type: 'none' };
 }
@@ -374,7 +377,7 @@ function rollScenario(opts = {}) {
   // Preserve fixed case truths and honest exposure history, even on BLACK_CLOUD.
   if ((presentation.frequent_caller?.variant === 'stable' || sceneChallenge || presentation.chemical_exposure)
     && (['clinical_curveball', 'all'].includes(complication.type)
-      || (sceneChallenge && complication.type === 'unreliable_bystander'))) {
+      || (sceneChallenge && ['unreliable_bystander', 'er_divert'].includes(complication.type)))) {
     complication.type = 'equipment_failure';
     delete complication.types;
   }
@@ -474,7 +477,13 @@ function rollScenario(opts = {}) {
     unit_name,
     events: [],
   };
-  return instructor ? applyInstructor(seed, instructor) : seed;
+  const finalSeed = instructor ? applyInstructor(seed, instructor) : seed;
+  if (!instructor || !Object.hasOwn(instructor.seed, 'complication_type')) rollCatastrophe(finalSeed, random);
+  if (finalSeed.difficulty === 'BLACK_CLOUD' && finalSeed.complication_type === 'all'
+      && (!instructor || !Object.hasOwn(instructor.seed, 'complication_type'))) {
+    finalSeed.routine_er_divert = random() < 1 / 6;
+  }
+  return finalSeed;
 }
 
 return { rollScenario, PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed, specialCircumstanceEligible };

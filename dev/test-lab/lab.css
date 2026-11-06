@@ -1,0 +1,36 @@
+html { height: auto; overflow: auto; }
+body { display:block; height:auto; min-height:100vh; overflow:auto; margin:0; background:#121c21; color:#e7ece6; font:15px/1.5 system-ui,sans-serif; }
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+.lab-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:30px 4vw 24px; border-bottom:1px solid #3a4c51; background:#1b2a30; }
+.eyebrow { color:#a9c3b8; font-size:11px; letter-spacing:.14em; }
+h1 { font:600 38px/1.2 system-ui; margin:6px 0; letter-spacing:-.04em; }
+p { margin:8px 0; }.lab-header p,.hint { color:#a9bab8; }
+.live-dot { display:inline-block; background:#b3db8c; width:9px; height:9px; border-radius:50%; vertical-align:middle; margin-left:12px; }
+.lab-badge { color:#c7dcbe; border:1px solid #547360; border-radius:20px; padding:7px 12px; font-size:11px; letter-spacing:.08em; white-space:nowrap; }
+main { max-width:1600px; margin:auto; padding:24px 4vw; }
+#tabs { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:22px; }
+button,select,input { font:inherit; }button,select,input[type=search] { background:#22343a; color:inherit; border:1px solid #4b6165; border-radius:5px; padding:9px 12px; }
+button { cursor:pointer; }button:hover { background:#314b50; border-color:#a8c195; }button[aria-pressed=true],#play { background:#c7dca9; color:#18291c; border-color:#c7dca9; }
+button:disabled { opacity:.45; cursor:wait; }:focus-visible { outline:2px solid #e6c67e; outline-offset:3px; }
+.toolbar,.scene-controls,.playback { display:flex; align-items:end; gap:12px; flex-wrap:wrap; }
+.toolbar { padding-bottom:16px; border-bottom:1px solid #34484e; }label { display:flex; flex-direction:column; gap:5px; font-size:12px; color:#b9cbc6; }label.check { flex-direction:row; align-items:center; padding:10px 0; gap:7px; }input[type=checkbox] { accent-color:#b6d49d; }
+#search-label { flex:1; min-width:190px; }#status { color:#c5d9aa; min-height:23px; margin:16px 0; font-size:13px; }
+.animation-layout { display:grid; grid-template-columns:230px minmax(0,1fr); gap:18px; }.scene-list { display:flex; flex-direction:column; gap:5px; max-height:700px; overflow:auto; }.scene-list button { text-align:left; font-size:13px; padding:9px 10px; }.stage-column { min-width:0; }.playback { margin:12px 0; }.stage { background:#0c1117; border:1px solid #4b6165; border-radius:8px; overflow:hidden; }iframe { border:0; display:block; width:100%; }#runtime { height:650px; }#glovebox-frame { min-height:780px; border-radius:8px; }
+.collection { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; align-items:start; }.asset-card { min-width:0; border:1px solid #3d555a; border-radius:8px; padding:18px; background:#1c2b30; overflow:hidden; }.asset-card h2 { font:600 16px/1.4 system-ui; margin:6px 0; }.asset-card p { color:#b7c8c2; font-size:13px; }.asset-id { font:11px monospace; color:#a0b5ae; overflow-wrap:anywhere; }.asset-card .crew-member { margin:0; border:0; padding:0; }.asset-card .crew-portrait { max-width:100%; }.asset-card .pen-display { margin:20px -6px; }.ink-sample { font:italic 20px Georgia; background:#f5eed9; border-radius:4px; padding:8px 12px; margin-top:14px; }.sticker-art { display:grid; place-items:center; height:190px; border-radius:5px; background:repeating-linear-gradient(45deg,#e7e3d5 0 12px,#d8d5c8 12px 24px); margin-bottom:12px; }.sticker-art img { max-width:88%; max-height:165px; object-fit:contain; }.note-control { width:100%; background:#f6efd5; color:#293859; border:0; padding:9px; border-radius:4px; }.asset-card audio { width:100%; margin-top:12px; }.drug-dose-row { margin-top:12px; }.drug-notes { white-space:pre-wrap; }.empty { grid-column:1/-1; color:#c2c5ba; padding:25px; }footer { margin-top:32px; padding-top:15px; border-top:1px solid #34484e; color:#9cafaa; font-size:12px; }a { color:#c8dca9; }code { color:inherit; }
+body.light-mode { background:#e9e9df; color:#233638; }.light-mode .lab-header,.light-mode .asset-card { background:#f6f4e9; }.light-mode label,.light-mode .hint,.light-mode .asset-card p,.light-mode footer { color:#49625b; }.light-mode button,.light-mode select,.light-mode input[type=search] { background:#f8f7ed; color:#233638; }.light-mode button[aria-pressed=true],.light-mode #play { background:#385746; color:white; }.light-mode #status,.light-mode a,.light-mode .eyebrow { color:#35583d; }
+@media(max-width:750px) { .lab-header { padding:20px; }.lab-badge { display:none; }main { padding:18px; }.animation-layout { grid-template-columns:1fr; }.scene-list { max-height:170px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }.collection { grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }#runtime { height:470px; } }
+
+#monitors .scene-controls{margin-bottom:12px}#rate{width:90px;padding:9px;border:1px solid #4b6165;background:#22343a;color:inherit;border-radius:5px}#ecg-printout{overflow:auto;background:#fff8eb;margin-top:18px;border-radius:8px}#ecg-printout svg{display:block;min-width:750px;width:100%;height:auto}
+
+.monitor-mode #animations .scene-list,.monitor-mode #animations .scene-controls,.monitor-mode #animations .playback,.monitor-mode #animations .hint{display:none}.monitor-mode .animation-layout{display:block}.monitor-mode #runtime{height:230px}
+/* The game's pen hit targets normally inherit these rules from its notebook. */
+.asset-card .pen-display { background:#ece8d8; padding:12px 8px; margin:18px 0 10px; border-radius:5px; }
+.asset-card .pen-control { position:absolute; display:block; margin:0; padding:0; min-width:0; min-height:44px; background:transparent; border:0; border-radius:8px; box-shadow:none; cursor:pointer; touch-action:manipulation; top:20%; height:62%; }
+.asset-card .is-extended .pen-control-cap { top:56%; height:42%; }
+.asset-card .pen-control-release { top:57%; left:79%; width:10%; height:43%; z-index:2; }
+.asset-card .pen-control:hover { background:#ffffff35; }
+.asset-card .pen-control:focus-visible { outline:2px dashed #365c77; outline-offset:1px; }
+.asset-card .pen-caption strong { display:none; }
+
+.light-mode .asset-id,.light-mode .lab-header p{color:#53685c}.light-mode .lab-badge{color:#35583d}

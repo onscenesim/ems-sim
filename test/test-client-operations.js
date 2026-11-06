@@ -124,3 +124,21 @@ test('live strip schedules PVCs with early wide beats, no P, and compensatory pa
   assert.ok(stripY(b.t)<-.8);
   assert.ok(s.beats.filter(b=>b.pvc).length>=2);
 });
+
+
+test('server-rejected arrivals and interrupted transport override optimistic skip and sound state', () => {
+  const helper = source.slice(source.indexOf('function applyAuthoritativeTransportState('), source.indexOf('// ── END CALL button'));
+  const c = vm.createContext({ window: {} });
+  vm.runInContext('let arrivedAtHospital=true, hasPlayedDepart=true, hasPlayedLoading=true;\n' + helper
+    + '\nthis.state=()=>({arrived:arrivedAtHospital,moving:hasPlayedDepart,loaded:hasPlayedLoading,sound:window._isMoving});', c);
+  c.applyAuthoritativeTransportState({ arrived:false, moving:false, hasLoaded:false }, 'to_arrival');
+  assert.equal(c.state().arrived, false);
+  assert.equal(c.state().moving, false);
+  assert.equal(c.state().loaded, false);
+  assert.equal(c.state().sound, false);
+  c.applyAuthoritativeTransportState({ arrived:false, moving:true, hasLoaded:true });
+  assert.equal(c.state().moving, true);
+  assert.equal(c.state().sound, true);
+  c.applyAuthoritativeTransportState({ arrived:true, moving:false, hasLoaded:true });
+  assert.equal(c.state().arrived, true);
+});

@@ -2,6 +2,7 @@
 
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { DESTINATION_DIALOGUE_POLICY, BACKUP_TRANSPORT_POLICY, captainPresent } = require('./prompts/transport');
+const { prepareIncident, reconcileIncident, enforceIncidentState } = require('./catastrophes');
 const { reviewText } = require('./instructor');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
@@ -543,6 +544,7 @@ class Session {
     this.wounds = hemorrhage.initialWounds(seed);
     this.lastReplyHadTime = true; // whether the previous reply carried a [TIME:] tag — drives a self-healing reminder
     this.hasLoaded = false;    // true after [LOADING] fires — safety net for animation
+    this.incident = null; // persisted, server-staged complication and recovery
     this.arrivedAtHospital = false; // true once a transport skip reaches the bay — gates END server-side
     this.patientOutcome = null; // generated with the debrief, hidden from its visible text
   }
@@ -645,7 +647,9 @@ class Session {
     // canned sign-off and skip the model call entirely. (Report-mode handoffs are
     // NOT short-circuited here — they still get the ED's acknowledgment and close
     // via the post-reply check below.)
-    if (!reportMode && !skipMode && isDebriefTrigger(userText)) {
+    if (!reportMode && !skipMode && isDebriefTrigger(userText)
+        && !(this.incident?.bedAvailableMinute && !this.incident.resolved
+          && !/\b(?:end|stop) (?:the )?(?:call|scenario)\b/i.test(userText))) {
       const unit = this.seed.unit_name || 'Unit';
       this.turns.push({ user: userText, assistant: `${unit} is clear. — End of call —`, sceneMinute: this.sceneMinute, rolls: [], vitals: null, patientFocus: this.patientFocus });
       closeScenario(this.seed, this.sceneMinute);
@@ -733,6 +737,11 @@ class Session {
         + 'and confirm estimated time of arrival or transfer acceptance as appropriate. '
         + 'Reports consume scene time too: advance the mandatory TIME footer by the realistic duration of this exchange.]';
     }
+    const incidentTurnStart = this.sceneMinute;
+    const incidentContext = prepareIncident(this, userText, reportMode, skipMode, wantsLoad);
+    skipMode = incidentContext.skipMode;
+    const incidentBlocksLoad = () => this.incident && !this.incident.resolved
+      && ['cot_wont_load', 'patient_dropped'].includes(this.incident.id);
     // Time-skip directive — fast-forward an uneventful transport leg, assuming the
     // provider kept monitoring (not an abandonment of care), and pick up from the
     // patient's current state.
@@ -809,7 +818,7 @@ class Session {
     }
     // Deterministic load directive — force the model to resolve loading atomically
     // this turn instead of deferring it, so narration and the [LOADING] tag agree.
-    if (wantsLoad) {
+    if (wantsLoad && !incidentBlocksLoad()) {
       const _capStatus = (this.crewStatus && this.crewStatus.captain) || 'not_on_scene';
       messageText += '\n\n[SYSTEM NOTE: LOAD THE PATIENT NOW. The provider ordered the patient loaded into the ambulance. Resolve loading COMPLETELY this turn — narrate the crew packaging and moving the patient into the rig — and emit [LOADING]. Unless the provider ALSO explicitly named a destination to drive to in THIS same message, the unit is loaded but PARKED: do NOT emit [EN_ROUTE], do NOT narrate the rig pulling away or arriving anywhere, and keep the crew on scene ([CREW_STATUS: partner=on_scene captain=' + _capStatus + ']). ' + DESTINATION_DIALOGUE_POLICY + ']';
     }
@@ -920,6 +929,7 @@ class Session {
         + 'this resource or assigns them elsewhere, acknowledge the instruction and emit [BACKUP: cancelled].]';
     }
 
+    if (incidentContext.note) messageText += '\n\n' + incidentContext.note;
     this.messages.push({ role: 'user', content: messageText });
 
     const modelStarted = performance.now();
@@ -958,6 +968,8 @@ class Session {
         {focus:this.patientFocus?.id || 'patient_1',records:this.patientRecords,seed:this.seed,
           crewStatus:this.crewStatus || {},moving:this.moving},this.sceneMinute));
     }
+
+    rawReply = reconcileIncident(this, rawReply, incidentContext, parseEventTags(rawReply).transportDest, userText, parseTimeTag(rawReply).timeMinutes);
 
     // Keep the raw reply (with [VITALS:] tag) in Claude's message history so it
     // remembers what it last reported. Strip the tag from the user-facing copy.
@@ -1100,6 +1112,11 @@ class Session {
       if (_hospitalRe.test(reply)) enRoute = true;
       else if (_motionRe.test(reply) && !_otherUnitRe.test(reply)) enRoute = true;
     }
+    if (this.incident && !this.incident.resolved) {
+      enRoute = false;
+      this.arrivedAtHospital = false;
+      if (incidentBlocksLoad()) loading = false;
+    }
     // Safety net: if EN_ROUTE fires but LOADING was never emitted (Claude combined both into
     // one turn without tagging loading), auto-inject loading so the animation fires correctly.
     if (enRoute) {
@@ -1124,7 +1141,7 @@ class Session {
     // Deterministic load fallback: the provider unambiguously ordered the patient
     // into the rig this turn — fire loading even if the model narrated a deferral
     // or dropped [LOADING], so the load animation and destination panel appear.
-    if (wantsLoad) loading = true;
+    if (wantsLoad && !incidentBlocksLoad()) loading = true;
     if (loading) this.hasLoaded = true;
     if (enRoute) this.moving = true; // ambulance is rolling — CPR DC increases
 
@@ -1140,6 +1157,12 @@ class Session {
       assistant.content = /\[CREW_STATUS:[^\]]*\]/i.test(assistant.content)
         ? assistant.content.replace(/\[CREW_STATUS:[^\]]*\]/gi, tag)
         : assistant.content.replace(/(?=\[(?:PATIENT_FOCUS|VITALS|TIME):)/i, tag + '\n');
+    }
+
+    enforceIncidentState(this);
+    if (this.incident) {
+      const tag = `[CREW_STATUS: partner=${this.crewStatus.partner} captain=${this.crewStatus.captain}${this.crewStatus.driver ? ' driver=' + this.crewStatus.driver : ''}]`;
+      this.messages.at(-1).content = this.messages.at(-1).content.replace(/\[CREW_STATUS:[^\]]*\]/gi, tag);
     }
 
     if (this.moving && this.crewStatus?.partner === 'driving') {
@@ -1160,7 +1183,7 @@ class Session {
     // at the hospital" cues — the ambulance bay / ED entrance, or a bedside transfer of
     // care. Gated on this.moving so nothing on scene (or an en-route ETA mention like
     // "arriving in 18 minutes") can trip it, and only matters until it's set once.
-    if (this.moving && !this.arrivedAtHospital && !reportMode) {
+    if (this.moving && !this.arrivedAtHospital && !reportMode && !(this.incident && !this.incident.resolved)) {
       const _arrivalRe = /\b(?:ambulance bay|ed bay|hospital bay|bay doors?|ambulance entrance|ed entrance|hospital entrance|emergency (?:department|room) entrance|we have it from here|we'?ve got (?:it|him|her|them) from here|(?:resus|trauma|ed|the) team takes over|transfer(?:s|red|ring)? (?:of )?care|releas\w+ the stretcher|hand(?:s|ed|ing)? (?:off )?(?:the )?(?:patient|care) (?:off )?to the (?:resus|trauma|ed|hospital|receiving) team)\b/i;
       if (_arrivalRe.test(reply)) this.arrivedAtHospital = true;
     }
@@ -1197,6 +1220,16 @@ class Session {
       this.messages.at(-1).content = this.messages.at(-1).content.replace(/\[TIME:[^\]]*\]/g,stamp);
     }
 
+    if (this.incident?.bedAvailableMinute) {
+      this.sceneMinute = incidentContext.wasActive
+        ? Math.min(this.sceneMinute, incidentTurnStart + incidentContext.advanceLimit)
+        : this.incident.startedMinute;
+      if (this.sceneMinute >= this.incident.bedAvailableMinute) this.incident.resolved = true;
+      enforceIncidentState(this);
+      const stamp = `[TIME: ${Math.floor(this.sceneMinute)}:${String(Math.round(this.sceneMinute % 1 * 60)).padStart(2, '0')}]`;
+      this.messages.at(-1).content = this.messages.at(-1).content.replace(/\[TIME:[^\]]*\]/gi, stamp);
+    }
+
     // Record the on-scene → transport boundary the first time the unit departs
     // (after the clock advance, so it carries this turn's departure timestamp).
     if (enRoute && this.departSceneMinute === null) {
@@ -1229,7 +1262,7 @@ class Session {
     // Close only on an explicit user signal (transfer of care, end scenario, etc.).
     // Time-skips — including skip-to-hospital — arrive but leave the scenario OPEN so
     // the provider still gets to give their handoff report before the call ends.
-    if (isDebriefTrigger(userText)) {
+    if (isDebriefTrigger(userText) && !(this.incident?.bedAvailableMinute && !this.incident.resolved)) {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);

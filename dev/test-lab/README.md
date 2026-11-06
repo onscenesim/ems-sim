@@ -1,0 +1,32 @@
+# EMS Test Lab
+
+From the project folder, run `npm run lab`, then open http://127.0.0.1:3140.
+Keep the terminal running; Ctrl+C stops the server. Restart with the same command any time.
+If that port is occupied, run `PORT=3141 npm run lab` and use the printed URL.
+
+The server binds only to this computer. It does not load .env, the simulation engine,
+accounts, saved calls, or model clients. Gameplay API requests are blocked. The animation
+frame uses in-memory preferences; the lab does not equip cosmetics or change player progress.
+
+- Animations: every production overlay, plus procedure and medication variants. Choose an
+  outcome, hold the start/end pose, replay at normal or quarter speed, or loop. Choose ALS/BLS,
+  parked/transport for sound variants, and adult male/female, child or baby for patient loading.
+  Still poses are silent. Stop cancels pending scene timers and audio.
+- Character cards: every crew member and both custom portrait examples, rendered by the game.
+- Pens: all eight real mechanisms. Click their controls to retract, uncap, or shake them.
+- Stickers: the entire shared catalog, with editable sample Post-it text.
+- Glovebox: every item with the existing production drag/sort fixture. Reopening resets the tray.
+- Medication cards: all cards through the game's actual renderer.
+- Monitors & ECG: live ECG/pleth, all rhythm and ECG pattern presets, lead views and signal quality fixtures.
+- Sound library: all game cue mappings at the configured levels. Audio is off by default.
+
+Search each collection; use Appearance to compare light and dark. Bookmark the page to keep
+its collection and animation, e.g. /#tab=animations&scene=laryngoscope.
+
+## For future changes
+
+The lab reads public/index.html and runs the current public/app.js inside its preview frame.
+Artwork and catalogs are shared. No copies of animation SVGs or character data are maintained.
+Add an adapter to frame.js for a new animation or a new meaningful variant. The overlay coverage
+check reports unregistered overlays, and `npm run test:lab` checks coverage and
+server isolation. Preview changed visuals and transitions here before handing work back.
