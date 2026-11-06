@@ -3,9 +3,32 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const ECG = require('../public/twelve-lead');
-const { buildDebriefContext } = require('../src/engine/assembler');
+const { buildDebriefContext, assembleSeedBlock } = require('../src/engine/assembler');
 const { buildDebriefPrompt } = require('../src/engine/prompts/debrief');
 const { evidenceFixture } = require('./fixtures/debrief-evidence');
+const { hemorrhageCases } = require('./fixtures/debrief-hemorrhage');
+const { rollScenario } = require('../src/engine/roller');
+
+test('scene and review protect noncompressible hemorrhage care across levels and mixed bleeding', () => {
+  for (const level of ['BLS', 'ALS']) for (const fixture of hemorrhageCases()) {
+    const seed = { ...rollScenario({ category: 'trauma', random_seed: 'internal-hemorrhage-contract' }), ...fixture.seed, provider_level: level };
+    const scene = assembleSeedBlock(seed);
+    const review = buildDebriefPrompt(level);
+    for (const prompt of [scene, review]) {
+      assert.match(prompt, /Do not create an external wound record, demand a pressure\/packing\/tourniquet attempt/);
+      assert.match(prompt, /Do not withhold loading or departure until internal bleeding is "controlled"/);
+      assert.match(prompt, /persistent internal bleeding does not erase successful external control/);
+      assert.match(prompt, /Specialized invasive hemorrhage procedures are not routine requirements/);
+    }
+    assert.match(review, /Do not penalize the provider for not trying to mechanically "control" noncompressible internal hemorrhage/);
+    assert.match(review, /does not excuse an untreated revealed accessible external wound/);
+    assert.match(review, /avoidable delay to definitive care/);
+    const context = buildDebriefContext(seed, fixture.turns, fixture.departSceneMinute);
+    for (const turn of fixture.turns) assert.ok(context.includes(turn.assistant), fixture.label);
+    if (fixture.turns.some(t => t.woundEvents)) assert.match(context, /controlled_pressure/);
+    assert.doesNotMatch(context, /(?:MISSING|NOT_PERFORMED).*bleeding_control/i);
+  }
+});
 
 test('evidence guard detects downstream guarantees but permits qualified benefits and likely disposition', () => {
   const { debriefEvidenceIssues } = require('../src/engine/prompts/debrief');

@@ -11,13 +11,18 @@
   <h1>Care-first debrief evaluation</h1>
   <p>Actual model responses to synthetic calls. Compare diagnostic uncertainty, incorrect and correct impressions, and a consequential care delay.</p>
   <label>Evaluation case <select id="case"></select></label>
+  <p id="expectation"></p>
   <main id="preview"></main>
   <script src="/public/practice.js"></script>
   <script>
     fetch('/reviews.json').then(response => response.json()).then(cases => {
       const select = document.querySelector('#case');
       cases.forEach((item, index) => select.add(new Option(item.label, index)));
-      const render = () => document.querySelector('#preview').replaceChildren(PracticeUI.learning(cases[select.value].review));
+      const render = () => {
+        const item = cases[select.value];
+        document.querySelector('#expectation').textContent = item.expectation ? 'Expected review: ' + item.expectation : '';
+        document.querySelector('#preview').replaceChildren(PracticeUI.learning(item.review));
+      };
       select.addEventListener('change', render);
       render();
     }).catch(error => { document.querySelector('#preview').textContent = error.message; });

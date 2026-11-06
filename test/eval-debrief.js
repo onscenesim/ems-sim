@@ -20,7 +20,9 @@ const { parseDebriefResponse } = require('../src/engine/prompts/debrief');
 const { evaluateObjectives } = require('../src/engine/learning');
 const { crewFrictionCases } = require('./fixtures/debrief-crew-friction');
 const { protocolCases } = require('./fixtures/debrief-protocols');
+const { hemorrhageCases } = require('./fixtures/debrief-hemorrhage');
 // node test/eval-debrief.js --protocols compares ECG omission with the checkbox off/on.
+// node test/eval-debrief.js --hemorrhage checks internal-only and mixed-source care.
 
 const seed = {
   scenario_id: 'debrief-care-first-evaluation', timestamp_start: '2026-10-05T12:00:00Z',
@@ -68,22 +70,27 @@ async function main() {
   if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is required for the live evaluation.');
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-debrief-eval-'));
   const reviews = [];
-  const evaluations = process.argv.includes('--protocols') ? protocolCases()
+  const evaluations = process.argv.includes('--hemorrhage') ? hemorrhageCases()
+    : process.argv.includes('--protocols') ? protocolCases()
     : process.argv.includes('--crew-friction') ? crewFrictionCases()
     : cases.map(([label, impression, delayed]) => ({ label, turns: caseTurns(impression, delayed),
       seed: { ...seed, total_scene_minutes: delayed ? 38 : 18 }, departSceneMinute: delayed ? 24 : 4 }));
-  for (const { label, turns, seed: caseSeed, departSceneMinute } of evaluations) {
+  for (const { label, turns, seed: caseSeed, departSceneMinute, expectation } of evaluations) {
     const context = buildDebriefContext(caseSeed, turns, departSceneMinute);
     const raw = await sendDebrief(context, caseSeed.provider_level);
     const { debrief, patientOutcome } = parseDebriefResponse(raw, caseSeed.timestamp_start);
-    reviews.push({ label, review: { ...evaluateObjectives(caseSeed, turns), debriefText: debrief }, patientOutcome });
+    reviews.push({ label, expectation, review: { ...evaluateObjectives(caseSeed, turns), debriefText: debrief }, patientOutcome });
     fs.writeFileSync(path.join(directory, 'reviews.json'), JSON.stringify(reviews, null, 2));
     console.log(`Generated: ${label}`);
   }
   const app = express();
   app.get('/', (_req, res) => {
     const html = fs.readFileSync(path.join(__dirname, 'preview-debrief.html'), 'utf8');
-    res.send(process.argv.includes('--protocols') ? html
+    res.send(process.argv.includes('--hemorrhage') ? html
+      .replaceAll('Care-first debrief evaluation', 'Internal hemorrhage debrief evaluation')
+      .replace('Compare diagnostic uncertainty, incorrect and correct impressions, and a consequential care delay.',
+        'Compare internal-only and mixed-source bleeding, deterioration despite sound care, an untreated external wound, avoidable delay, and pelvic stabilization.')
+      : process.argv.includes('--protocols') ? html
       .replaceAll('Care-first debrief evaluation', 'Protocol checklist debrief evaluation')
       .replace('Compare diagnostic uncertainty, incorrect and correct impressions, and a consequential care delay.',
         'Compare identical BLS care with 12-lead acquisition crossed off versus included.')

@@ -45,6 +45,24 @@ the model contract; it is not a general natural-language proof of every scene
 sentence. Patient physiology, accumulated blood loss and shock remain narrated,
 not a new quantitative hemorrhage model.
 
+Scene narration and post-call review share an explicit noncompressible internal
+hemorrhage policy in `src/engine/prompts/hemorrhage.js`. Internal blood loss does
+not require an external pressure/packing/tourniquet attempt or a bleeding-control
+roll, and departure must not wait for impossible field hemostasis. Review credits
+recognition, scope-appropriate support, reassessment and timely definitive-care
+access, even if bleeding or deterioration continues. An indicated pelvic binder
+or fracture stabilization can still matter; neither promises definitive control.
+Concurrent accessible external bleeding remains a separate treatment obligation.
+An untreated revealed external wound or avoidable transport delay can still be
+criticized. These are model instructions, not a deterministic clinical-content
+validator or a quantitative simulation of internal blood loss.
+
+`node test/eval-debrief.js --hemorrhage` runs six live-model reviews and opens a
+local review server: internal-only sound care, deterioration despite sound care,
+mixed bleeding with external control, mixed bleeding with neglected external
+control, harmful scene delay, and appropriate pelvic stabilization. Inspect the
+generated reviews against each fixture's expectation; model output can vary.
+
 Run `node --test test/test-hemorrhage.js` for focused regression checks, or
 `npm test` for the suite. Run `node test/preview-hemorrhage.js` and open
 `http://127.0.0.1:3134/hemorrhage-preview` for live case checks. The separately

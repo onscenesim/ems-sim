@@ -1,6 +1,7 @@
 'use strict';
 
 const { ARREST_TRANSPORT_REVIEW, ARREST_MEDICATION_PRINCIPLES } = require('./arrest');
+const { NONCOMPRESSIBLE_HEMORRHAGE_REVIEW } = require('./hemorrhage');
 
 /**
  * Returns the system prompt for the post-call debrief API call.
@@ -19,6 +20,8 @@ PREHOSPITAL SUCCESS — CARE FIRST:
 - Credit appropriate urgency, destination capability, pre-notification, and handoff of findings and uncertainty. Do not expect diagnostic certainty before transport or reward unnecessary scene delay to solve the case. Respect the arrest doctrine and other documented reasons for on-scene care.
 - Account for resource limits, misleading presentations, and random hurdles. Evaluate the provider's response and adaptation, not their ability to prevent an unavoidable complication or guarantee a good outcome. Supportive care and timely transport can be excellent prehospital management even when the cause remains unknown or the patient deteriorates.
 - Use respectful, specific coaching. Distinguish an actual care gap from optional diagnostic enrichment; never turn the latter into a failure, a backhanded compliment, or a criticism repeated across sections. Do not manufacture deficiencies to fill a section.
+
+${NONCOMPRESSIBLE_HEMORRHAGE_REVIEW}
 
 CREW FRICTION — DISTRACTION, NOT A TRICK TEST:
 - Holt's obviously bad suggestions, other crew members' rambling, outdated advice, dismissive comments, and interpersonal friction are stressors: they can distract, frustrate, or upset the player. They are not traps the player is expected to fall for. Merely ignoring, rejecting, or correcting this dialogue is baseline practice, not an achievement. Do not award extra credit or praise clinical judgment, leadership, assertiveness, resilience, or resistance to authority bias solely for not following it. Do not elevate it into a key takeaway or repeat it across sections.

@@ -1,0 +1,13 @@
+'use strict';
+
+// Shared by scene narration and post-call review so ongoing internal blood loss
+// cannot become an invented external-wound task or an omission penalty.
+const NONCOMPRESSIBLE_HEMORRHAGE_POLICY = `NONCOMPRESSIBLE INTERNAL HEMORRHAGE:
+Internal bleeding into the chest, abdomen, retroperitoneum, pelvis or skull is distinct from an accessible external bleeding wound. Do not create an external wound record, demand a pressure/packing/tourniquet attempt, or require a bleeding-control roll solely because internal hemorrhage is suspected or ongoing. Ordinary external pressure, packing and limb tourniquets cannot establish control of a noncompressible internal source; even a successful external-wound roll cannot stop concurrent internal bleeding.
+Recognizing possible internal blood loss, supporting ABCs and perfusion within scope and protocol, preventing heat loss, reassessing, and arranging timely transport to appropriate definitive care can constitute sound management while internal bleeding continues. Describe ongoing blood loss or deterioration as physiology, not proof of neglect or a failed decision. Do not withhold loading or departure until internal bleeding is "controlled" or until the player repeats a bleeding-control phrase.
+Credit indicated, available measures such as pelvic stabilization or appropriate fracture splinting without promising definitive hemostasis. Specialized invasive hemorrhage procedures are not routine requirements; respect the actual provider scope, equipment and protocol. When internal and external bleeding coexist, keep their sources and treatment responses separate: accessible external bleeding still warrants appropriate control, while persistent internal bleeding does not erase successful external control. Never invent an intervention or a diagnosis on the player's behalf.`;
+
+const NONCOMPRESSIBLE_HEMORRHAGE_REVIEW = `${NONCOMPRESSIBLE_HEMORRHAGE_POLICY}
+REVIEW APPLICATION: Do not penalize the provider for not trying to mechanically "control" noncompressible internal hemorrhage, for omitting an impossible bleeding-control attempt or roll, or for failing to achieve field hemostasis that the available care cannot provide. This protection does not excuse an untreated revealed accessible external wound, an omitted clinically indicated stabilization measure within scope, or avoidable delay to definitive care. Identify any such gap from the recorded findings and decisions; continued internal blood loss or a poor outcome alone is not evidence of a care error.`;
+
+module.exports = { NONCOMPRESSIBLE_HEMORRHAGE_POLICY, NONCOMPRESSIBLE_HEMORRHAGE_REVIEW };
