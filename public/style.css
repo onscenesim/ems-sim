@@ -1312,6 +1312,17 @@ body.light-mode .brief-options-note { color: #536159; }
   overflow: hidden;
 }
 #depart-svg-wrap { width: 100%; display: flex; justify-content: center; }
+/* All silhouettes share one cart and one privacy mosaic. */
+#loading-overlay .loading-female-detail,
+#loading-overlay .loading-pediatric,
+#loading-overlay .loading-child,
+#loading-overlay .loading-baby { display: none; }
+#loading-overlay[data-patient-variant="female"] .loading-male-detail,
+#loading-overlay:is([data-patient-variant="child"], [data-patient-variant="baby"]) .loading-adult { display: none; }
+#loading-overlay[data-patient-variant="female"] .loading-female-detail,
+#loading-overlay:is([data-patient-variant="child"], [data-patient-variant="baby"]) .loading-pediatric,
+#loading-overlay[data-patient-variant="child"] .loading-child,
+#loading-overlay[data-patient-variant="baby"] .loading-baby { display: inline; }
 .loading-wheel, .depart-wheel { transform-box: view-box; transform-origin: 0 0; }
 /* The cart travels 36 units while the ground passes 144: 180 / radius 10
    radians of wheel rotation. All three use the same linear clock. */

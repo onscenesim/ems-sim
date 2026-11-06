@@ -26,7 +26,8 @@ const root = path.resolve(__dirname, '../public');
     assert.ok(await mosaic.locator('rect').count() > 40, 'opaque blocks are ready before loading');
     const face = () => page.evaluate(() => {
       const mosaic = document.querySelector('.city-face-mosaic');
-      const head = document.querySelector('#loading-patient use[href="#procedure-patient-head"]').getBoundingClientRect();
+      const head = [...document.querySelectorAll('#loading-patient .loading-head')]
+        .map(node => node.getBoundingClientRect()).find(rect => rect.width > 0);
       const point = new DOMPoint(44, 70).matrixTransform(mosaic.getScreenCTM());
       return { x: point.x, y: point.y, left: head.left, right: head.right, top: head.top, bottom: head.bottom };
     });
@@ -40,7 +41,8 @@ const root = path.resolve(__dirname, '../public');
       const before = await face();
       const initial = await mosaic.getAttribute('data-frame');
       await page.waitForFunction(frame => document.querySelector('.city-face-mosaic').dataset.frame !== frame, initial);
-      await page.waitForFunction(left => document.querySelector('#loading-patient use[href="#procedure-patient-head"]').getBoundingClientRect().left > left + 4, before.left);
+      await page.waitForFunction(left => [...document.querySelectorAll('#loading-patient .loading-head')]
+        .some(node => { const rect = node.getBoundingClientRect(); return rect.width > 0 && rect.left > left + 4; }), before.left);
       const after = await face();
       assert.ok(after.x >= after.left && after.x <= after.right && after.y >= after.top && after.y <= after.bottom, 'mosaic covers the face');
       assert.ok(Math.abs((after.x - before.x) - (after.left - before.left)) < 2, 'mosaic moves with the head');

@@ -1394,7 +1394,11 @@ async function sendTurn(msg, opts = {}) {
       hasPlayedLoading = true;
       const _isALS = localTranscript?.meta?.provider_level !== 'BLS';
       playSound(_isALS ? 'sfx_loading_als' : 'sfx_loading_bls');
-      await animateLoading();
+      await animateLoading(window.TransportPatient?.patientFor(data, {
+        patients: notebookPatients,
+        patient_focus: { id: focusedPatientId },
+        patient: localTranscript?.meta?.patient,
+      }));
     }
     if (!hasPlayedDepart && data.departing) {
       hasPlayedDepart = true;
@@ -2570,7 +2574,8 @@ function animateTransportScene(id) {
     }, timing.hold);
   });
 }
-function animateLoading() {
+function animateLoading(patient) {
+  window.TransportPatient?.apply(document.getElementById('loading-overlay'), patient);
   return animateTransportScene('loading');
 }
 

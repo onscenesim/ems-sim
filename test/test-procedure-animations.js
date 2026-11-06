@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync(require.resolve('../public/app.js'), 'utf8');
 const html = fs.readFileSync(require.resolve('../public/index.html'), 'utf8');
+const transportPatient = require('../public/transport-patient');
 const sounds = source.slice(source.indexOf('const SURGICAL_PROCS'), source.indexOf('// ── Mobile audio unlock'));
 const scenes = source.slice(source.indexOf('const PROCEDURE_TIMING'), source.indexOf('function animateDefib'));
 function fixture({ reduced = false, missing = false } = {}) {
@@ -41,6 +42,28 @@ function fixture({ reduced = false, missing = false } = {}) {
   }
   return { context, elements, played, timers, advance };
 }
+
+test('transport patient variants honor the under-4 and under-14 boundaries, including newborn age zero', () => {
+  for (const sex of ['male', 'female']) {
+    for (const age of [0, 0.5, 3, 3.99]) assert.equal(transportPatient.variantFor({ age, sex }), 'baby');
+    for (const age of [4, 6, 13, 13.99]) assert.equal(transportPatient.variantFor({ age, sex }), 'child');
+    assert.equal(transportPatient.variantFor({ age: 14, sex }), sex === 'female' ? 'female' : 'adult');
+  }
+  for (const age of [undefined, null, '', NaN, Infinity, -1]) {
+    assert.equal(transportPatient.variantFor({ age }), 'adult');
+  }
+  assert.equal(transportPatient.variantFor(null), 'adult');
+});
+
+test('transport uses the latest focused patient, retains saved demographics, and does not borrow another patient\'s age', () => {
+  const previous = { patient: { age: 30, sex: 'female' }, patient_focus: { id: 'patient_1' },
+    patients: [{ id: 'patient_2', age: 8, sex: 'male' }] };
+  assert.equal(transportPatient.variantFor(transportPatient.patientFor({}, previous)), 'female');
+  assert.equal(transportPatient.variantFor(transportPatient.patientFor({ patient_focus: { id: 'patient_2' } }, previous)), 'child');
+  assert.equal(transportPatient.variantFor(transportPatient.patientFor({ patient_focus: { id: 'patient_2' },
+    patients: [{ id: 'patient_2', age: 2 }] }, previous)), 'baby');
+  assert.equal(transportPatient.variantFor(transportPatient.patientFor({ patient_focus: { id: 'patient_3' } }, previous)), 'adult');
+});
 
 test('12-lead EKG reuses the CPR torso model with all six precordial leads', () => {
   const ekg = html.slice(html.indexOf('<div id="ekg-overlay"'), html.indexOf('<!-- OPA', html.indexOf('<div id="ekg-overlay"')));
