@@ -402,6 +402,10 @@
           <div class="vital-label">SpO₂ PLETH</div>
           <canvas id="pleth-strip" role="img" aria-label="SpO₂ pleth: probe not placed"></canvas>
         </div>
+        <div id="capno-waveform" hidden>
+          <div class="capno-heading"><span>CO₂ · 12 s</span><span id="capno-source"></span></div>
+          <canvas id="capno-strip" role="img" aria-label="CO₂ waveform: not connected"></canvas>
+        </div>
       </div>
       <div class="vital-cell vital-hr">
         <div class="vital-label">HR</div>
@@ -422,6 +426,8 @@
       <div class="vital-cell vital-etco2">
         <div class="vital-label">EtCO<sub>2</sub></div>
         <div class="vital-value" data-vital="ETCO2">&mdash;&mdash;</div>
+        <div class="capno-rate">RR <span id="capno-rr">—</span><small>/min</small></div>
+        <div id="capno-status" aria-live="polite"></div>
       </div>
       <button id="vitals-expand" type="button" aria-expanded="false" aria-controls="vitals-panel">
         <svg class="notepad-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 3h20v26H4z" fill="#d8d4b7" stroke="#293746" stroke-width="2"/><path d="M8 1v5m5-5v5m5-5v5M8 11h12M8 16h10M8 21h8" fill="none" stroke="#637887" stroke-width="2"/><path d="m17 23 3-7L28 5l3 3-8 11z" fill="#b59b52" stroke="#293746" stroke-width="1.5"/></svg>
@@ -2190,6 +2196,7 @@
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
   <script src="pleth.js?v=3"></script>
+  <script src="capnography.js?v=1"></script>
   <script src="practice.js?v=10"></script>
   <script src="instructor.js?v=1"></script>
   <dialog id="ecg-dialog" aria-labelledby="ecg-dialog-title">
@@ -2197,14 +2204,14 @@
     <p>Captured at acquisition. Select an earlier recording in More Vitals to compare.</p>
     <div id="ecg-paper" tabindex="0" aria-label="ECG paper; scroll horizontally at actual size"></div>
   </dialog>
-  <script src="ecg-catalog.js?v=3"></script>
-  <script src="twelve-lead.js?v=6"></script>
+  <script src="ecg-catalog.js?v=4"></script>
+  <script src="twelve-lead.js?v=7"></script>
   <script src="twelve-lead-viewer.js?v=5"></script>
   <script src="crew-portraits.js?v=6"></script>
   <script src="patient-privacy.js?v=1"></script>
   <script src="transport-patient.js?v=1"></script>
   <script src="dialogue-colors.js?v=1"></script>
-  <script src="app.js?v=106"></script>
+  <script src="app.js?v=111"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

@@ -8,7 +8,7 @@ const app = require('../dev/test-lab/server');
 const { CREW } = require('../src/data/crew');
 const html = fs.readFileSync(path.join(__dirname,'../public/index.html'),'utf8');
 const source = fs.readFileSync(path.join(__dirname,'../public/app.js'),'utf8');
-function fixture() {
+function fixture(overrides={}) {
   const node = () => ({style:{},setAttribute(){},append(){}});
   const context = vm.createContext({
     window:{setTimeout,setInterval,parent:{dispatchEvent(){}}},
@@ -17,7 +17,7 @@ function fixture() {
     eightball:node(),eightballResponse:node(),terminal:node(),
     SCALPEL_PROCS:new Set(['cricothyrotomy','finger_thoracostomy','resuscitative_thoracotomy','perimortem_csection']),
     soundEnabled:false,DRUG_CARDS:[],TwelveLead:require('../public/twelve-lead'),Event:class {},
-    clearTimeout,clearInterval,
+    clearTimeout,clearInterval,...overrides,
   });
   vm.runInContext(source.slice(source.indexOf('const SOUNDS ='),source.indexOf('// One gesture-unlocked')),context);
   vm.runInContext(source.slice(source.indexOf('const TRANSPORT_TIMING ='),source.indexOf('function animateTransportScene')),context);
@@ -33,6 +33,19 @@ test('lab registers every production animation overlay, with unique IDs and real
   for(const scene of api.scenes)assert.ok(scene.duration>0,scene.id);
   for(const id of ['cardioversion','rsi','medpush_io','blood_IO','fluid_IV'])assert.ok(api.scenes.some(s=>s.id===id));
   for(const cue of api.sounds)assert.ok(fs.existsSync(path.join(__dirname,'../public',cue.src)),cue.src);
+});
+test('lab quality control reaches the production paper independently of pleth quality',()=>{
+  let vitals;
+  const api=fixture({
+    document:{createElement:()=>({style:{},setAttribute(){},append(){}}),head:{append(){}},body:{classList:{add(){},remove(){}}},getAnimations:()=>[],querySelectorAll:()=>[]},
+    stopAllSounds(){},stopRhythmStrip(){},updateCapnography(){},plethStrip:{update(){}},applyVitals(v){vitals=v;},
+  });
+  for(const [ecgQuality,definition] of Object.entries(api.catalog.qualities)) {
+    const paper=api.monitor({rhythm:'sinus',rate:80,pattern:'brugada',view:'standard',quality:'good',ecgQuality});
+    assert.ok(paper.includes(definition.label));
+    assert.equal(vitals.PulseOx.quality,'good');assert.equal(vitals.HR,80);
+    assert.equal(paper.includes('quality prevents further interpretation'),ecgQuality!=='SUCCESS');
+  }
 });
 test('frame preferences stay in memory, independent of existing player storage',()=>{
   const window={localStorage:{getItem:()=> 'real saved progress'}};

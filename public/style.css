@@ -5097,3 +5097,14 @@ body.light-mode .color-key { color: #394549; }
 /* Incident states remain visible on both the call header and crew cards. */
 .badge-crew-incapacitated, .badge-crew-unavailable, .badge-backup-unavailable { background: #3b1218; color: #ffb3b8; border: 1px solid #b85561; }
 .crew-status-incapacitated, .crew-status-unavailable { background: #3b1218; color: #ffb3b8; }
+
+/* Capnography stays visible beside either compact ECG/pleth selection. */
+#capno-waveform { margin-top:6px; padding-top:4px; border-top:1px solid #3f3a2355; }
+#capno-waveform[hidden] { display:none; }
+.capno-heading { display:flex; justify-content:space-between; gap:5px; font:8px/1.3 var(--font-mono); color:#f4cd55; }
+#capno-strip { display:block; width:100%; height:40px; }
+.capno-rate { font:11px/1.4 var(--font-mono); color:#f4cd55; white-space:nowrap; margin-top:3px; }
+.capno-rate small { font-size:8px; margin-left:3px; }
+#capno-status { max-width:116px; font:8px/1.3 var(--font-mono); margin-top:3px; color:#b9a86c; }
+#capno-status[data-uncertain="true"] { color:#ffd54a; }
+@media(max-width:600px) { #capno-strip { height:32px; }.capno-heading { font-size:7px; flex-wrap:wrap; }#capno-status { max-width:76px; font-size:7px; } }

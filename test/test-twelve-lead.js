@@ -18,18 +18,18 @@ test('regional injury distributions and reciprocal depression follow case identi
   // Module exports are a roster; check the actual shipped location descriptions.
   const list=Array.isArray(cases)?cases:Object.values(cases).find(Array.isArray);
   for(const [prefix,lead,reciprocal] of [['Anteroseptal','V3','III'],['Inferior','III','aVL'],['Lateral','V5','III']]){
-    const seed=list.find(s=>s.presentation.startsWith(prefix+' STEMI'));const e=ECG.create({seed,vitals:{HR:80,Rhythm:'sinus'}});
+    const seed=list.find(s=>s.presentation.startsWith(prefix+' STEMI'));const e=ECG.create({seed:{...seed,ecg_pattern:prefix==='Anteroseptal'?'anterior':prefix.toLowerCase()},vitals:{HR:80,Rhythm:'sinus'}});
     assert.ok(e.leads[lead].st>=.1,prefix);assert.ok(e.leads[reciprocal].st<0,prefix);
   }
   const post=make('Posterior STEMI');assert.ok(post.leads.V2.st<0&&post.leads.V2.r>post.leads.V2.s);
   assert.equal(ECG.selectPattern({presentation:'Myocarditis, no STEMI pattern',hint:'Consider anterior STEMI'},.2),'normal');
   assert.equal(ECG.selectPattern({presentation:'Panic attack',hint:'Exclude STEMI, Brugada and long QT'},.2),'normal');
 });
-test('tachyarrhythmia and pacing supersede primary injury, bradycardia preserves it',()=>{
-  for(const rhythm of ['vt','torsades','vf','asystole','svt','paced','afib','aflutter']){
+test('ventricular rhythms and pacing supersede primary injury, atrial rhythms preserve it',()=>{
+  for(const rhythm of ['vt','torsades','vf','asystole','svt','paced']){
     const e=make('Anteroseptal STEMI',rhythm,ECG.rates[rhythm]);assert.ok(e.leads.V3.st<.1,rhythm);
   }
-  for(const rhythm of ['sinus_brad','av_block_1','av_block_2_i','av_block_2_ii','av_block_3','junctional'])assert.ok(make('Inferior STEMI',rhythm,45).leads.III.st>.2,rhythm);
+  for(const rhythm of ['sinus_brad','av_block_1','av_block_2_i','av_block_2_ii','av_block_3','junctional','afib','aflutter'])assert.ok(make('Inferior STEMI',rhythm,45).leads.III.st>.2,rhythm);
   assert.ok(make('Inferior STEMI','afib',45).leads.III.st>.2);
   const wpw=make('Pre-excited atrial fibrillation (WPW with AFib)','vt',230);
   assert.ok(wpw.preexcited);assert.notEqual(wpw.beats[2].width,wpw.beats[3].width);
@@ -115,7 +115,7 @@ test('cardiac comorbidities generate stable non-infarct LVH and LBBB mimics',()=
   const seed={presentation:'Lightheadedness after standing',comorbidity_bundle:'compensated_cardiac_history'};
   assert.equal(ECG.selectPattern(seed,.1),'lbbb');assert.equal(ECG.selectPattern(seed,.8),'lvh');
   assert.equal(ECG.selectPattern({...seed,comorbidity_bundle:'metabolic_syndrome'},.8),'lvh');
-  assert.equal(ECG.selectPattern({...seed,presentation:'Inferior STEMI'},.1),'inferior');
+  assert.equal(ECG.selectPattern({...seed,presentation:'Inferior STEMI'},.3),'inferior');
   assert.equal(ECG.selectPattern({...seed,comorbidity_bundle:'otherwise_healthy'},.1),'normal');
   const lvh=make('LVH'),lbbb=make('LBBB');
   assert.ok(lvh.leads.V1.s+lvh.leads.V5.r>=3.5);
@@ -133,6 +133,86 @@ test('HCM dagger Q waves, Brugada coved ST and long QT are actual waveform featu
   // T wave peak shifts right in the drawn waveform, not just in metadata.
   const peak=e=>{const b=e.beats.find(b=>b.t>1);let at=0,max=-Infinity;for(let d=.18;d<.55;d+=.002){const y=ECG.sample(e,'II',b.t+d);if(y>max){max=y;at=d;}}return at;};
   assert.ok(peak(long)-peak(normal)>.06);
+});
+
+test('Osborn hump joins terminal QRS and Brugada cove extends through V3',()=>{
+  const cold=make('Hypothermia','sinus_brad',45);
+  const b=cold.beats.find(b=>b.t>1);
+  const isolated={...cold,noise:0,beats:[b]};
+  const withoutJ={...isolated,leads:{...cold.leads,V4:{...cold.leads.V4,j:0}}};
+  const hump=d=>ECG.sample(isolated,'V4',b.t+d)-ECG.sample(withoutJ,'V4',b.t+d);
+  assert.ok(hump(.04)>.08,'hump begins on terminal S upslope');
+  assert.ok(hump(.065)>hump(.04));
+  assert.ok(hump(.11)<.05,'hump blends back into ST');
+  const brugada=make('Brugada syndrome');
+  const beat=brugada.beats.find(b=>b.t>1),e={...brugada,noise:0,beats:[beat]};
+  for(const lead of ['V1','V2','V3']) {
+    assert.ok(e.leads[lead].coved);
+    assert.ok(ECG.sample(e,lead,beat.t+.09)>.20,lead+' elevated J/cove');
+    assert.ok(ECG.sample(e,lead,beat.t+.15)<ECG.sample(e,lead,beat.t+.10),lead+' descending cove');
+    assert.ok(ECG.sample(e,lead,beat.t+.30)<-.10,lead+' inverted T');
+  }
+});
+
+test('terminal hyperkalemia fuses QRS–T while sodium blocker poisoning has separate broad terminal forces',()=>{
+  const sine=make('Terminal hyperkalemia with sine-wave ECG','hyperk_sine',90);
+  assert.equal(sine.waveform,'hyperk_sine');assert.equal(sine.pWaves,false);
+  assert.equal(ECG.measurements(sine).qt,'—');
+  let nearBaseline=0,maxStep=0,previous;
+  for(let t=0;t<4;t+=.001){const y=ECG.sample({...sine,noise:0},'II',t);if(Math.abs(y)<.05)nearBaseline++;if(previous!=null)maxStep=Math.max(maxStep,Math.abs(y-previous));previous=y;}
+  assert.ok(nearBaseline<250,'no prolonged isoelectric ST intervals');assert.ok(maxStep<.015,'broad fused complexes without sharp R spikes');
+  assert.equal(make('Symptomatic hyperkalemia').waveform,'sinus','ordinary hyperkalemia stays peaked-T, not sine');
+  for(const presentation of ['Tricyclic antidepressant overdose','TCA poisoning','Severe cocaine cardiotoxicity with wide-complex tachycardia','Sodium channel blocker toxicity from flecainide overdose']) {
+    const e=make(presentation,'sinus_tach',120);
+    assert.equal(e.waveform,'sodium_blockade',presentation);assert.ok(e.beats.every(b=>b.width>=.18));
+    const b=e.beats.find(b=>b.t>1),clean={...e,noise:0,beats:[b]};
+    assert.ok(ECG.sample(clean,'aVR',b.t+.12)>.25,'terminal rightward R in aVR');
+    assert.ok(ECG.sample(clean,'I',b.t+.12)<-.3,'terminal S in I');
+    assert.notEqual(e.leads.II.t,.8,'not hyperkalemic tented T');
+  }
+  assert.equal(ECG.selectPattern({presentation:'Anxiety',hint:'Consider TCA or cocaine toxicity'},.5),'normal');
+});
+
+test('flutter has two or three continuous atrial cycles per regular QRS near 150 or 100',()=>{
+  for(const [Rhythm,HR,ratio] of [['aflutter',150,2],['aflutter_3_1',100,3]]) {
+    const e=make('Atrial flutter',Rhythm,HR),rr=60/HR;
+    assert.equal(e.pWaves,false);assert.equal(ECG.flutterRatio(HR),ratio);
+    assert.ok(e.beats.slice(1).every((b,i)=>Math.abs(b.t-e.beats[i].t-rr)<1e-9));
+    let peaks=0;
+    for(let t=.001;t<rr;t+=.001)if(ECG.flutterSignal(t,HR)>ECG.flutterSignal(t-.001,HR)&&ECG.flutterSignal(t,HR)>=ECG.flutterSignal(t+.001,HR))peaks++;
+    assert.equal(peaks,ratio);
+    assert.ok(Math.abs(ECG.flutterSignal(.2-1e-6,HR)-ECG.flutterSignal(.2+1e-6,HR))<.001,'no ramp-reset discontinuity');
+  }
+});
+
+test('anterior/inferior MI has 20% stable LBBB variants with actual Sgarbossa concordance',()=>{
+  for(const [presentation,key] of [['Anteroseptal STEMI','lbbb_anterior_mi'],['Inferior STEMI','lbbb_inferior_mi']]) {
+    let count=0;
+    for(let n=0;n<1000;n++)if(ECG.selectPattern({presentation},(n+.5)/1000)===key)count++;
+    assert.equal(count,200);
+    assert.notEqual(ECG.selectPattern({presentation},.2),key);
+    const seed={ecg_pattern:key},e=ECG.create({seed,vitals:{Rhythm:'sinus',HR:75}});
+    assert.ok(e.beats.every(b=>b.width>=.12));
+    const lead=key.includes('inferior')?'III':'V5',b=e.beats.find(b=>b.t>1),clean={...e,noise:0,beats:[b]};
+    assert.ok(ECG.sample(clean,lead,b.t+.05)>.5,'positive broad QRS');
+    assert.ok(ECG.sample(clean,lead,b.t+.15)>.1,'concordant STE >=1 mm');
+    assert.ok(ECG.sample(clean,'V2',b.t+.04)<-1,'negative anterior QRS');
+    assert.ok(ECG.sample(clean,'V2',b.t+.15)<-.1,'concordant STD >=1 mm');
+    for(const view of ['standard','posterior','right'])for(const id of ['first','repeat']) {
+      const repeat=ECG.create({seed:{presentation,scenario_id:'stable-mi'},vitals:{HR:75},view,id});
+      assert.deepEqual(repeat.leads.II,ECG.create({seed:{presentation,scenario_id:'stable-mi'},vitals:{HR:75},id:'baseline'}).leads.II);
+    }
+  }
+});
+
+test('AFib preserves regional pathology on paper and remains irregular without P waves',()=>{
+  for(const ecg_pattern of ['anterior','inferior','brugada','hypothermia','lbbb_anterior_mi']) {
+    const seed={ecg_pattern},vitals={Rhythm:'afib',HR:130};
+    const e=ECG.create({seed,vitals}),sinus=ECG.create({seed,vitals:{Rhythm:'sinus',HR:130}});
+    assert.deepEqual(e.leads,sinus.leads);assert.equal(e.waveform,'afib');assert.equal(e.pWaves,false);
+    const rr=e.beats.slice(1).map((b,i)=>b.t-e.beats[i].t);
+    assert.ok(Math.max(...rr)-Math.min(...rr)>.1);
+  }
 });
 test('auto interpretation is stable, optional, and intentionally misleading with quality/pacing exceptions',()=>{
   const normal=make('Normal');assert.ok(normal.machine.lines.some(l=>/infarct/.test(l)));

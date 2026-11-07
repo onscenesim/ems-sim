@@ -19,6 +19,7 @@ const { logRun, updateRunDebrief } = require('../server/adminLogger');
 const { applyAccessAnimationRoutes } = require('./medication-route');
 const { applyCapillaryRefill } = require('./capillary-refill');
 const { applyPulseOx } = require('./pulse-ox');
+const { applyCapnography } = require('./capnography');
 const { hasCardiacMonitor } = require('./equipment');
 const { acquireTwelveLeads, isECGProcedure, stripTwelveLeadNarration, applyEctopy } = require('./twelve-lead');
 const { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords } = require('./patient-records');
@@ -990,7 +991,8 @@ class Session {
     const assessedVitals = applyCapillaryRefill(rhythmVitals, this.patientVitals[patientId],
       reconcileRolls(rolls, focusClean).some(r => r.procedure_id === 'capillary_refill'),
       parseTimeTag(rawReply).timeMinutes ?? this.sceneMinute, vitalsClean);
-    const vitals = applyPulseOx(assessedVitals, this.patientVitals[patientId] || null,
+    const capnoVitals = applyCapnography(assessedVitals, this.patientVitals[patientId], `${this.seed.scenario_id}|${patientId}`);
+    const vitals = applyPulseOx(capnoVitals, this.patientVitals[patientId] || null,
       patientId === 'patient_1' ? this.seed : { complication_type: this.seed.complication_type }, vitalsClean);
     if (vitals) this.lastVitals = vitals;
     if (vitals) this.patientVitals[patientId] = vitals;

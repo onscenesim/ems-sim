@@ -34,3 +34,9 @@ body.light-mode { background:#e9e9df; color:#233638; }.light-mode .lab-header,.l
 .asset-card .pen-caption strong { display:none; }
 
 .light-mode .asset-id,.light-mode .lab-header p{color:#53685c}.light-mode .lab-badge{color:#35583d}
+#capno-lab { margin:20px 0; padding:18px; border:1px solid #695c32; border-radius:8px; }
+#capno-lab h2 { font-size:18px; margin:0 0 12px; }#capno-lab input { width:95px; padding:9px; background:#22343a; color:inherit; border:1px solid #4b6165; border-radius:5px; }
+.capno-lab-screen { background:#080d0e; color:#f4cd55; padding:15px; border-radius:6px; margin-top:15px; }.capno-lab-screen>div:first-child { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; font:12px/1.5 monospace; }
+#capno-detail { display:block; width:100%; height:130px; }.capno-scale { display:flex; justify-content:space-between; font:10px monospace; color:#8d8154; }
+.light-mode #capno-lab input { background:#f8f7ed; color:#233638; }
+.monitor-mode #runtime { height:290px; }

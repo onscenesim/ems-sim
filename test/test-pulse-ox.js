@@ -245,7 +245,7 @@ test('advanced-airway ETCO2 spelling variants reach the monitor as numeric readi
   }
   for (const value of ['pending', 'not_placed', 'unknown', 'garbage']) {
     reply = `[VITALS: EtCO2=${value} GCS=3] [TIME: 3:00]`;
-    assert.equal((await session.send('Observe', true)).vitals.ETCO2, undefined, value);
+    assert.equal((await session.send('Observe', true)).vitals.ETCO2, 0, value+' is discarded; connected capnography retains the last measured zero');
   }
   reply = '[PATIENT_FOCUS: patient_2 | Second patient] [VITALS: GCS=15] [TIME: 4:00]';
   assert.equal((await session.send('Observe', true)).vitals.ETCO2, undefined, 'a second patient does not inherit capnography');

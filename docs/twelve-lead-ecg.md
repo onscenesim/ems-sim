@@ -35,8 +35,38 @@ message. Canned suggestions are frozen with each acquisition.
 
 Cardiac comorbidity profiles can generate LVH strain or LBBB when no acute
 pathology pattern has already been selected. HCM produces deep narrow
-inferolateral Q waves; Brugada produces coved V1–V2 ST elevation and T inversion;
-long QT cases delay the T wave. Active tachyarrhythmia/pacing still takes priority.
+inferolateral Q waves; Brugada produces deep anterior S waves flowing into a
+continuous elevated J/ST cove and inverted T in V1–V3. Hypothermic Osborn humps
+blend into the terminal QRS. Long QT cases delay the T wave. Ventricular rhythms,
+SVT and pacing take priority; AFib and flutter retain the underlying regional
+12-lead morphology and their own atrial rhythm timing.
+
+Standard anterior/anteroseptal and inferior infarct patterns have a 20% per-case
+LBBB variant, stable across repeat recordings and lead views. These use broad
+LBBB complexes with concordant ST elevation in positive leads and concordant
+V1–V3 depression; the lab exposes `lbbb_anterior_mi` and `lbbb_inferior_mi`
+directly. Explicit named patterns such as de Winter and RV infarction stay pinned.
+
+`hyperk_sine` is terminal hyperkalemia with absent P waves and fused QRS–T,
+distinct from ordinary peaked-T `hyperk`. `sodium_blockade` models broad toxic
+complexes with terminal R in aVR and terminal S in I/aVL for TCA, severe cocaine,
+flecainide and other established sodium channel blocker cardiotoxicity. These
+families use shared signal helpers on the monitor and paper. Flutter presets
+default to 150 (2:1) and 100 (3:1), with continuous rounded sawtooth atrial waves
+near 300/min; ventricular beats remain phase locked to atrial cycles.
+
+In the local lab's **Monitors & ECG** tab, **12-lead quality** independently
+selects SUCCESS, MARGINAL, FAILURE or COMPLICATION acquisition artifact. **Pleth
+signal** remains independent. Choosing a rhythm loads its default heart rate;
+the rate remains editable.
+
+Additional morphology references:
+
+- [Osborn waves at the QRS/ST junction](https://pmc.ncbi.nlm.nih.gov/articles/PMC2937849/)
+- [Brugada type 1 consensus morphology](https://doi.org/10.1093/europace/euaf067)
+- [Original Sgarbossa criteria](https://pubmed.ncbi.nlm.nih.gov/8559200/)
+- [Atrial flutter guideline morphology and rates](https://academic.oup.com/eurheartj/article/24/20/1857/559145)
+- [AHA poisoning guidance, including sodium channel blockade and cocaine](https://cpr.heart.org/en/resuscitation-science/cpr-and-ecc-guidelines/adult-and-pediatric-special-circumstances-of-resuscitation/)
 
 Reference patterns consulted:
 
@@ -221,3 +251,39 @@ pathology, placement, ectopy mode and acquisition quality, plus session
 acquisition, resolution, patient isolation and restoration.
 
 Morphology reference: [Premature ventricular complex (LITFL)](https://litfl.com/premature-ventricular-complex-pvc-ecg-library/).
+
+## Live 3-lead motion texture
+
+The live monitor adds a low-amplitude, aperiodic contact/motion grain after the
+underlying ECG signal is generated. This is cosmetic ambient texture: it does
+not modify rhythm timing, ectopy, vital values, procedure outcomes or filed
+12-leads, and it creates no event, equipment fault or corrective action.
+
+About 60% of calls are eligible for on-scene texture; the rest stay clean on
+scene. In eligible calls, texture occurs in roughly 32% of 28-second windows, fading in and out
+for short episodes with clean stretches between them. Each call gets a fresh
+texture seed. Moving transport uses a slightly stronger, continuously varying
+grain; the existing authoritative movement flag fades its contribution in or
+out over about a second without restarting the trace. Asystole gets a much
+smaller contribution so subtle texture cannot resemble VF.
+
+The lab's **3-lead texture** selector can hold a clean comparison, hold scene or
+transport texture, or exercise natural scene/transport behavior. These overrides
+exist only in the local lab; there is no player-facing repair or extra setting.
+
+## Continuous monitor HR readout
+
+The numeric monitor HR refreshes every 5 seconds while the strip runs. AFib
+uses the latest completed ventricular R–R intervals (85% latest interval, 15%
+previous interval), giving substantial variation between readings without reading
+beats scheduled ahead of the pen. A small readout fluctuation of up to 2 bpm
+applies to other organized rhythms. VF, asystole and zero-rate inputs stay at
+zero; an unplaced monitor never makes a manually obtained HR fluctuate.
+
+This changes only the displayed live number. The clinical HR snapshot, beat
+scheduling, transcript and captured 12-lead rate remain independent. Subsequent
+vitals updates of the same rhythm preserve the live estimate rather than
+pinning it to the snapshot. Rhythm/rate changes and patient switches clear the
+short R–R history. Completed beats are still tracked continuously while the
+numeric value is held between refreshes. No extra timer is created; the existing
+strip animation owns the readout cadence and stops it when monitoring stops.

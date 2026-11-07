@@ -17,7 +17,23 @@ frame uses in-memory preferences; the lab does not equip cosmetics or change pla
 - Stickers: the entire shared catalog, with editable sample Post-it text.
 - Glovebox: every item with the existing production drag/sort fixture. Reopening resets the tray.
 - Medication cards: all cards through the game's actual renderer.
-- Monitors & ECG: live ECG/pleth, all rhythm and ECG pattern presets, lead views and signal quality fixtures.
+- Monitors & ECG: live ECG/pleth, all rhythm and ECG pattern presets, and lead views.
+  The 12-lead quality selector previews all four acquisition outcomes independently
+  of pleth signal quality. Rhythm presets load a suggested, editable heart rate,
+  including 2:1 flutter at 150 and 3:1 at 100. Try hypothermia, Brugada, terminal
+  hyperkalemic sine wave, sodium channel blockade, and either LBBB MI pattern;
+  select AFib with a regional pattern to check both together.
+- Live HR: the numeric monitor reading updates between turns. Select AFib to
+  see larger R–R-driven swings, or a regular rhythm to see small (up to 2 bpm)
+  fluctuations. The heart-rate input remains the underlying clinical rate.
+- 3-lead texture: compare a clean trace, forced scene/transport texture, or natural
+  intermittent on-scene and transport modes during the live sweep. This fine
+  motion/contact grain is cosmetic, has no failure event or corrective action,
+  and never changes beat scheduling, vitals or paper acquisition quality.
+- Capnography: change inline/nasal/mask sampling, respiratory rate, EtCO₂, waveform
+  feature, capture quality and connection while the 12-second sweep runs. New
+  variation changes breath contours and nasal artifact. Both sources show RR in
+  the production monitor. See [capnography notes](../../docs/capnography.md).
 - Sound library: all game cue mappings at the configured levels. Audio is off by default.
 
 Search each collection; use Appearance to compare light and dark. Bookmark the page to keep

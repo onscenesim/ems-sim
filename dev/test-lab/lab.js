@@ -1,13 +1,16 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const collections = [['animations','Animations'],['crew','Character cards'],['pens','Pens'],['stickers','Stickers'],['glovebox','Glovebox'],['drugs','Medication cards'],['sounds','Sound library'],['monitors','Monitors & ECG']];
+let capnoSeed=17;
+const capnoDetail=Capnography.createStrip($('capno-detail'));
+for(const [id,entries] of [['capno-shape',Capnography.shapes],['capno-quality',Capnography.qualities]])for(const [key,label] of Object.entries(entries))$(id).add(new Option(label,key));
 let api, crew=[], tab='animations', scene='loading', sequence=0, initialized=false;
 const params = new URLSearchParams(location.hash.slice(1));
 if(collections.some(([id])=>id===params.get('tab')))tab=params.get('tab');
 scene=params.get('scene')||scene;
 function status(text) { $('status').textContent=text; }
 function bookmark() { history.replaceState(null,'','#'+new URLSearchParams({tab,scene})); }
-function stop() { sequence++; api?.stop(); document.querySelectorAll('audio').forEach(a=>{a.pause();a.currentTime=0;}); }
+function stop() { capnoDetail.update(null);sequence++; api?.stop(); document.querySelectorAll('audio').forEach(a=>{a.pause();a.currentTime=0;}); }
 function card(name,id) {
   const node=document.createElement('article'); node.className='asset-card';
   const heading=document.createElement('h2'); heading.textContent=name;
@@ -92,6 +95,7 @@ function render() {
   $('animations').hidden=!['animations','monitors'].includes(tab);
   document.body.classList.toggle('monitor-mode',tab==='monitors');
   $('ecg-output').hidden=tab!=='monitors';
+  $('capno-lab').hidden=tab!=='monitors';
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===tab)));
   if(tab==='animations') {renderScenes();play('start');}
   else if(tab==='glovebox') { $('glovebox').hidden=false;const frame=$('glovebox-frame');if(!frame.src)frame.src=frame.dataset.src;status(`${GloveboxCatalog.items.length} glovebox objects · Inspect and sort with disposable data`); }
@@ -105,15 +109,18 @@ $('search').oninput=()=>{if(!api)return;if(tab==='animations')renderScenes();els
 for(const id of ['outcome','patient','provider','moving','speed'])$(id).onchange=()=>play('start');
 $('theme').onchange=()=>{const light=$('theme').value==='light';document.body.classList.toggle('light-mode',light);api?.theme(light);};
 $('sound').onchange=()=>{if(!$('sound').checked)stop();document.querySelectorAll('audio').forEach(a=>a.muted=!$('sound').checked);};
-$('reset').onclick=()=>{stop();scene='loading';$('rhythm').value='sinus';$('rate').value='80';$('pattern').value='normal';$('lead-view').value='standard';$('signal').value='good';$('search').value='';$('loop').checked=false;$('sound').checked=false;$('outcome').value='SUCCESS';$('speed').value='1';$('patient').value='adult';$('provider').value='ALS';$('moving').checked=false;$('theme').value='dark';$('theme').onchange();if(tab==='glovebox')$('glovebox-frame').src=$('glovebox-frame').dataset.src;render();};
+$('reset').onclick=()=>{stop();scene='loading';$('rhythm').value='sinus';$('rate').value='80';$('pattern').value='normal';$('lead-view').value='standard';$('signal').value='good';$('ecg-quality').value='SUCCESS';$('ecg-motion').value='auto';$('capno-input').value='airway';$('capno-rate').value=12;$('capno-value').value=38;$('capno-shape').value='normal';$('capno-quality').value='clean';$('capno-connection').value='connected';capnoSeed=17;$('search').value='';$('loop').checked=false;$('sound').checked=false;$('outcome').value='SUCCESS';$('speed').value='1';$('patient').value='adult';$('provider').value='ALS';$('moving').checked=false;$('theme').value='dark';$('theme').onchange();if(tab==='glovebox')$('glovebox-frame').src=$('glovebox-frame').dataset.src;render();};
 window.addEventListener('hashchange',()=>{const p=new URLSearchParams(location.hash.slice(1));if(collections.some(([id])=>id===p.get('tab')))tab=p.get('tab');if(api?.scenes.some(s=>s.id===p.get('scene')))scene=p.get('scene');render();});
 function renderMonitor() {
   if(!api)return;
-  $('ecg-printout').innerHTML=api.monitor({rhythm:$('rhythm').value,rate:Math.max(0,Math.min(300,Number($('rate').value)||0)),pattern:$('pattern').value,view:$('lead-view').value,quality:$('signal').value});
+  $('ecg-printout').innerHTML=api.monitor({rhythm:$('rhythm').value,rate:Math.max(0,Math.min(300,Number($('rate').value)||0)),pattern:$('pattern').value,view:$('lead-view').value,quality:$('signal').value,ecgQuality:$('ecg-quality').value,capnography:capnoOptions()});
+  renderCapno();
+  api.motion($('ecg-motion').value);
   status(`${Object.keys(api.catalog.rhythms).length} rhythms · ${Object.keys(api.catalog.patterns).length} ECG patterns · Production waveforms and printouts`);
 }
 $('monitor-refresh').onclick=renderMonitor;
-for(const id of ['rhythm','rate','pattern','lead-view','signal'])$(id).onchange=renderMonitor;
+for(const id of ['rate','pattern','lead-view','signal','ecg-quality'])$(id).onchange=renderMonitor;
+$('rhythm').onchange=()=>{$('rate').value=api.catalog.rhythms[$('rhythm').value].rate;renderMonitor();};
 async function initialize() {
   if(initialized)return;
   try {api=$('runtime').contentWindow.EMSTestLab;if(!api)return;initialized=true;crew=await(await fetch('/lab/crew')).json();for(const [id,entries] of [['rhythm',api.catalog.rhythms],['pattern',api.catalog.patterns],['lead-view',api.catalog.views]]) { for(const [value,entry] of Object.entries(entries))$(id).add(new Option(entry.label||value.replaceAll('_',' '),value)); }$('rhythm').value='sinus';if(!api.scenes.some(s=>s.id===scene))scene='loading';render();const missing=api.coverage();if(missing.length)status('New scenes need lab controls: '+missing.join(', '));}
@@ -123,3 +130,12 @@ window.addEventListener('lab-ready',initialize);
 $('runtime').addEventListener('load',()=>{initialize();if(!api)status('The production preview could not initialize. Check the browser console and reload the lab.');});
 initialize();
 window.addEventListener('pagehide',stop);
+
+function capnoOptions(){return Capnography.normalize({source:$('capno-input').value,status:$('capno-connection').value,rate:Number($('capno-rate').value),etco2:Number($('capno-value').value),shape:$('capno-shape').value,quality:$('capno-quality').value,seed:capnoSeed});}
+function renderCapno(){if(!api)return;const signal=capnoOptions();api.capnography(signal);capnoDetail.update(signal);$('capno-lab-label').textContent=Capnography.description(signal);$('capno-lab-numbers').textContent=signal.status==='connected'?`EtCO₂ ${signal.etco2??'—'} mmHg · RR ${signal.rate??'—'}/min`:'EtCO₂ — · RR —';}
+for(const id of ['capno-rate','capno-value','capno-shape','capno-quality','capno-connection'])$(id).onchange=renderCapno;
+$('capno-shape').onchange=()=>{const shape=$('capno-shape').value;if(shape==='apnea'){$('capno-rate').value=0;$('capno-value').value=0;}else if(shape==='low_flow'){$('capno-value').value=12;}else if(Number($('capno-rate').value)===0){$('capno-rate').value=12;$('capno-value').value=38;}renderCapno();};
+$('capno-input').onchange=()=>{$('capno-quality').value=$('capno-input').value==='airway'?'clean':'variable';renderCapno();};
+$('capno-variant').onclick=()=>{capnoSeed++;renderCapno();};
+
+$('ecg-motion').onchange=()=>api?.motion($('ecg-motion').value);

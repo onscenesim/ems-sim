@@ -3386,6 +3386,8 @@ const rhythmStrip = {
   clock: 0, x: 0, penY: null, lastTs: null, raf: null,
   beats: [], horizon: 0, beatCount: 0,
   waveSeed: Math.random() * 10000,
+  motionSeed: Math.random() * 10000, motionMix: 0, artifactPreview: 'auto',
+  hrBeats: [], hrLastBeat: -Infinity, hrNextUpdate: 0, hrDisplayed: null,
 };
 if (rhythmStrip.canvas) rhythmStrip.ctx = rhythmStrip.canvas.getContext('2d');
 const stripResizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
@@ -3455,6 +3457,12 @@ function stripSchedule(until) {
       case 'hyperk':
         beat.hyperk = true;   // flattened P, widened QRS, tall tented T
         break;
+      case 'sodium_blockade':
+        beat.sodiumBlockade = true;
+        break;
+      case 'aflutter':
+        beat.flutter = true;
+        break;
       case 'sinus': case 'sinus_tach': case 'sinus_brad': case 'pea':
         beat.p = true;
         break;
@@ -3489,6 +3497,7 @@ function stripNoise(t, frequency, seed) {
 /* One beat's contribution at time offset dt from its QRS. */
 function stripBeatY(dt, b) {
   if (b.pvc) return TwelveLead.pvcSignal('II', dt);
+  if (b.sodiumBlockade) return TwelveLead.sodiumBlockSignal('II',dt);
   let y = 0;
   if (b.p) y += 0.14 * gaus(dt + b.pr, 0.022);            // P wave
   if (b.dropped) return y;                                 // blocked — P only
@@ -3515,9 +3524,30 @@ function stripBeatY(dt, b) {
     y += -0.08 * gaus(dt + 0.028, 0.008);                  // q
     y += 1.0  * gaus(dt, 0.011);                           // R
     y += -0.28 * gaus(dt - 0.030, 0.012);                  // S
-    y += 0.24 * gaus(dt - 0.30, 0.045);                    // T
+    y += (b.flutter ? .03 : .24) * gaus(dt - 0.30, 0.045); // T is largely obscured by flutter
   }
   return y;
+}
+
+// Cosmetic contact/motion texture, independent of physiology and procedure
+// outcomes. Scene episodes are uncommon; transport adds a fine, varying grain.
+// Only the lab overrides artifactPreview. Players have nothing to fix here.
+function stripArtifactY(t, mode = rhythmStrip.artifactPreview, mix = rhythmStrip.motionMix) {
+  if (mode === 'clean') return 0;
+  const seed=rhythmStrip.motionSeed;
+  const hash=n=>{const v=Math.sin(n*127.1+seed)*43758.5453;return v-Math.floor(v);};
+  const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
+  const block=Math.floor(t/28),within=t-block*28;
+  const start=2+hash(block+3)*6,duration=7+hash(block+7)*8;
+  const episode=smooth((within-start)/1.4)*(1-smooth((within-start-duration)/1.8));
+  const scene=(hash(401)<.60&&hash(block+31)<.32?episode:0)*(.065+.035*hash(block+15));
+  const travel=(.09+.035*stripNoise(t,.31,seed+71))*(.7+.3*Math.sin(t*.47+seed)**2);
+  const level=mode==='scene'?.085:mode==='transport'?travel:scene*(1-mix)+travel*mix;
+  const grain=.50*stripNoise(t,12.7,seed+40)+.32*stripNoise(t,25.3,seed+51)+.18*stripNoise(t,4.1,seed+60);
+  const drift=.18*stripNoise(t,.63,seed+83);
+  // Keep a near-flat arrest trace near-flat; texture must not imitate VF.
+  const scale=rhythmStrip.type==='asystole'?.18:['vf','torsades'].includes(rhythmStrip.type)?.5:1;
+  return scale*level*(grain+drift);
 }
 
 /* Trace amplitude (−1..1.3) at strip time t. */
@@ -3549,7 +3579,8 @@ function stripY(t) {
                      + 0.14 * stripNoise(warpedT, 22.9, seed + 37));
   }
   let y = 0;
-  if (type === 'aflutter') y += 0.13 - 0.26 * ((t * 5) % 1);              // sawtooth F waves
+  if (type === 'hyperk_sine') return TwelveLead.sineSignal('II',t,s.rate,s.flutterOrigin);
+  if (type === 'aflutter') y += TwelveLead.flutterSignal(t,s.rate,s.flutterOrigin);
   if (type === 'afib')     y += 0.05 * Math.sin(2 * Math.PI * 7.7 * t)
                               + 0.035 * Math.sin(2 * Math.PI * 12.3 * t + 1.2);
   if (type === 'av_block_3') {                                            // independent Ps at ~90
@@ -3565,6 +3596,52 @@ function stripY(t) {
   return y;
 }
 
+// Display-only electrical rate. AFib follows recently completed R–R intervals,
+// not the future beats scheduled ahead of the pen. Other rhythms have a small
+// acquisition/readout fluctuation around the current clinical rate.
+const HR_READOUT_INTERVAL = 5;
+function trackStripHeartBeats(s, t = s.clock) {
+  for (const b of s.beats) {
+    if (b.dropped || b.t > t || b.t <= s.hrLastBeat) continue;
+    s.hrBeats.push(b.t); s.hrLastBeat=b.t;
+  }
+  s.hrBeats=s.hrBeats.slice(-4);
+}
+function stripHeartRateReadout(s, t = s.clock) {
+  if (!s.type) return null;
+  if (s.rate === 0 || ['vf','asystole'].includes(s.type)) return 0;
+  trackStripHeartBeats(s,t);
+  if (t < .9) return Math.round(s.rate);
+  const jitter=stripNoise(Math.floor(t/HR_READOUT_INTERVAL),1.7,s.waveSeed+211);
+  let estimate=s.rate;
+  if (s.type==='afib' && s.hrBeats.length>=2) {
+    const last=s.hrBeats.length-1;
+    const rr=s.hrBeats[last]-s.hrBeats[last-1];
+    const previous=last>=2?s.hrBeats[last-1]-s.hrBeats[last-2]:rr;
+    estimate=60/(.85*rr+.15*previous);
+  }
+  return Math.max(1,Math.min(300,Math.round(estimate+(s.type==='afib'?1:2)*jitter)));
+}
+
+function refreshStripHeartRate(force = false) {
+  const s=rhythmStrip;
+  if (!s.active) return;
+  // Keep collecting R–R intervals while the slower numeric display is held.
+  trackStripHeartBeats(s);
+  const held=s.hrDisplayed!==null && s.clock<s.hrNextUpdate;
+  if (held && !force) return;
+  const reading=held?s.hrDisplayed:stripHeartRateReadout(s);
+  if (reading===null) return;
+  const text=String(reading);
+  if (force || text!==s.hrDisplayed) {
+    for (const el of document.querySelectorAll('[data-vital="HR"]')) {
+      if (el.textContent!==text) el.textContent=text;
+    }
+    s.hrDisplayed=text;
+  }
+  if (!held) s.hrNextUpdate=s.clock+HR_READOUT_INTERVAL;
+}
+
 function stripFrame(ts) {
   const s = rhythmStrip;
   if (!s.active) return;
@@ -3575,6 +3652,7 @@ function stripFrame(ts) {
   s.lastTs = ts;
   if (dt <= 0) return;
   if (dt > 0.25) dt = 0.25;               // tab was backgrounded — don't lurch
+  s.motionMix += ((window._isMoving ? 1 : 0) - s.motionMix) * (1-Math.exp(-dt/1.2));
 
   stripSchedule(s.clock + dt + 2);
 
@@ -3600,7 +3678,7 @@ function stripFrame(ts) {
     if (x > targetX) x = targetX;
     const t = s.clock + (x - s.x) / STRIP_SPEED;
     const drawX = x % s.w;
-    const y = baseline - amp * Math.max(-1.05, Math.min(1.35, stripY(t)));
+    const y = baseline - amp * Math.max(-1.05, Math.min(1.35, stripY(t)+stripArtifactY(t)));
     if (drawX < prevDraw) ctx.moveTo(drawX, y);   // wrapped past the right edge
     else ctx.lineTo(drawX, y);
     prevDraw = drawX;
@@ -3616,6 +3694,7 @@ function stripFrame(ts) {
 
   s.clock += dt;
   s.x = targetX % s.w;
+  refreshStripHeartRate();
 }
 
 /* Dim dashed baseline when no rhythm is on the monitor. */
@@ -3655,6 +3734,7 @@ function setRhythmStrip(rhythmRaw, hr, ectopyRaw) {
     s.waveSeed = Math.random() * 10000;
   }
   s.beats = [];
+  s.hrBeats=[]; s.hrLastBeat=-Infinity; s.hrNextUpdate=0; s.hrDisplayed=null;
   s.beatCount = 0;
   s.horizon = s.clock + 0.2;   // new rhythm picks up just ahead of the pen
   if (!wasActive) {
@@ -3666,6 +3746,7 @@ function setRhythmStrip(rhythmRaw, hr, ectopyRaw) {
     }
     s.raf = requestAnimationFrame(stripFrame);
   }
+  s.flutterOrigin = s.horizon + 60 / Math.max(rate,15);
 }
 
 function stopRhythmStrip() {
@@ -3673,6 +3754,7 @@ function stopRhythmStrip() {
   if (!s.canvas) return;
   s.active = false;
   s.type = null;
+  s.hrBeats=[]; s.hrLastBeat=-Infinity; s.hrDisplayed=null;
   if (s.raf) { cancelAnimationFrame(s.raf); s.raf = null; }
   stripIdle();
 }
@@ -3685,6 +3767,7 @@ function updateRhythmStrip(vitals) {
   const hrRaw = vitals.HR;
   const hrVal = Number((hrRaw && typeof hrRaw === 'object') ? hrRaw.value : hrRaw);
   setRhythmStrip(val, Number.isFinite(hrVal) ? hrVal : null, vitals.Ectopy);
+  refreshStripHeartRate(true);
 }
 
 window.addEventListener('resize', () => {
@@ -3693,6 +3776,18 @@ window.addEventListener('resize', () => {
 });
 
 // ── Pulse ox pleth and compact monitor selection ────────────────────────────
+const capnoStrip = Capnography.createStrip(document.getElementById('capno-strip'));
+function updateCapnography(vitals) {
+  const signal=Capnography.fromVitals(vitals);
+  capnoStrip.update(signal);
+  document.getElementById('capno-waveform').hidden=!signal||signal.status==='unplaced';
+  const status=document.getElementById('capno-status');
+  status.textContent=signal?Capnography.description(signal):'';
+  status.dataset.uncertain=String(!!signal&&(signal.source!=='airway'||signal.quality!=='clean'));
+  document.getElementById('capno-rr').textContent=signal?.status==='connected'&&signal.rate!=null?String(signal.rate):'—';
+  document.getElementById('capno-source').textContent=signal?Capnography.sources[signal.source]:'';
+}
+window.addEventListener('resize',()=>capnoStrip.resize());
 const plethStrip = PlethWaveform.createStrip(document.getElementById('pleth-strip'));
 const pulseOxReadout = PlethWaveform.createReadout({
   pi: document.getElementById('spo2-signal-badge'),
@@ -3788,6 +3883,7 @@ function applyVitals(vitals) {
   // Drive the ECG strip from the same snapshot
   updateRhythmStrip(currentVitals);
   updatePlethStrip(currentVitals);
+  updateCapnography(currentVitals);
 }
 
 /**
@@ -3913,7 +4009,10 @@ function resetVitals() {
   currentVitals = null;
   currentSceneMinute = 0;
   stopRhythmStrip();
+  rhythmStrip.motionSeed=Math.random()*10000;
+  rhythmStrip.motionMix=0;
   updatePlethStrip(null);
+  updateCapnography(null);
   selectMonitorWaveform('ecg');
   for (const name of VITAL_FIELDS) {
     for (const el of document.querySelectorAll(`[data-vital="${name}"]`)) {

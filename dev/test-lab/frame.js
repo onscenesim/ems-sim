@@ -73,7 +73,7 @@
     generation++; tracking = false; cancelTimers(); stopAllSounds(); privacyStops.forEach(fn => fn()); privacyStops.clear();
     document.getAnimations().forEach(a => a.cancel());
     document.querySelectorAll('[id$="-overlay"]').forEach(el => { el.classList.remove('visible','is-fading','fade-out'); el.style.removeProperty('opacity'); el.style.removeProperty('transition'); el.setAttribute('aria-hidden','true'); });
-    activeOverlay = null; document.body.classList.remove('lab-monitor'); stopRhythmStrip(); plethStrip.update(null);
+    activeOverlay = null; document.body.classList.remove('lab-monitor'); stopRhythmStrip(); plethStrip.update(null); updateCapnography(null);
   }
   function freeze(scene, mode, o) {
     cancelTimers(); tracking = false; stopAllSounds();
@@ -95,12 +95,17 @@
   window.EMSTestLab = {
     scenes: scenes.map(({run,...scene})=>scene),
     catalog: TwelveLead.catalog,
-    monitor({rhythm,rate,pattern,view,quality}) {
+    monitor({rhythm,rate,pattern,view,quality,ecgQuality='SUCCESS',capnography=null}) {
       stop(); document.body.classList.add('lab-monitor');
       const pulse={quality,reliable:quality==='good',reason:quality==='good'?'reliable':quality==='poor'?'low_perfusion':quality==='absent'?'no_pulse':'motion',pulseRate:rate,perfusionIndex:quality==='good'?4.2:0.2};
-      applyVitals({Rhythm:rhythm,HR:rate,BP:'120/80',SpO2:98,PulseOx:pulse});
-      return TwelveLead.svg(TwelveLead.create({seed:{ecg_pattern:pattern},vitals:{Rhythm:rhythm,HR:rate},view,entropy:0.42,patient:{age:35,sex:'male'}}));
+      applyVitals({Rhythm:rhythm,HR:rate,BP:'120/80',SpO2:98,PulseOx:pulse,Capnography:capnography,ETCO2:capnography?.status==='connected'?capnography.etco2:undefined,RR:capnography?.rate});
+      return TwelveLead.svg(TwelveLead.create({seed:{ecg_pattern:pattern},vitals:{Rhythm:rhythm,HR:rate},view,outcome:ecgQuality,entropy:42,patient:{age:35,sex:'male'}}));
     },
+    motion(mode) {
+      rhythmStrip.artifactPreview=['clean','scene','transport'].includes(mode)?mode:'auto';
+      window._isMoving=mode==='transport'||mode==='auto_transport';
+    },
+    capnography(signal) { applyVitals({...currentVitals,Capnography:signal,ETCO2:signal?.status==='connected'?signal.etco2:undefined,RR:signal?.rate}); },
     sounds: Object.entries(SOUNDS).filter(([,src])=>src).map(([id,src])=>({id,src,level:SOUND_LEVELS[id]??1})),
     drugs: DRUG_CARDS,
     noteImage(message) {
