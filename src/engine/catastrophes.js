@@ -41,6 +41,7 @@ function rollCatastrophe(seed, random) {
   if (!CATASTROPHE_RATES[seed.difficulty] || seed.complication_type === 'none') return;
   // Fixed-truth scenes retain their clinical and scene contracts.
   if (seed.scene_challenge || seed.chemical_exposure || seed.frequent_caller?.variant === 'stable') return;
+  if (seed.low_acuity_call && seed.difficulty !== 'BLACK_CLOUD') return;
   if (random() >= CATASTROPHE_RATES[seed.difficulty]) return;
   const event = CATASTROPHES[Math.floor(random() * CATASTROPHES.length)];
   seed.complication_type = 'catastrophic';

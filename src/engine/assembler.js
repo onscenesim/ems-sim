@@ -10,6 +10,7 @@ const { describe: describeProtocols } = require('../../public/protocols');
 const { COMORBIDITIES } = require('../data/comorbidities');
 const { CREW_BEHAVIOR_CONTRACT } = require('./prompts/crew');
 const { ENCOUNTER_CONTRACT } = require('../data/scenarios/frequent-callers');
+const { LOW_ACUITY_CONTRACT } = require('../data/scenarios/low-acuity');
 const { DESTINATION_DIALOGUE_POLICY, BACKUP_TRANSPORT_POLICY } = require('./prompts/transport');
 const { ARREST_TRANSPORT_DOCTRINE, buildArrestMedicationRules } = require('./prompts/arrest');
 const { sceneChallengeContract } = require('./prompts/scene-challenges');
@@ -83,6 +84,13 @@ function assembleSeedBlock(seed) {
   }
   if (sceneChallengeContract(seed)) lines.push(sceneChallengeContract(seed));
   if (seed.chemical_exposure) lines.push(chemicalExposureContract(seed));
+  if (seed.low_acuity_call) {
+    lines.push('--- LOW-ACUITY CALL (hidden from user) ---');
+    lines.push(`Dispatch information: ${seed.low_acuity_call.dispatch}`);
+    lines.push(`First impression on arrival: ${seed.low_acuity_call.opening}`);
+    lines.push(`Interpersonal events: ${seed.low_acuity_call.behavior}`);
+    lines.push(LOW_ACUITY_CONTRACT);
+  }
   if (seed.frequent_caller) {
     lines.push('--- PAIRED FREQUENT CALLER (hidden from user) ---');
     lines.push(`Pair: ${seed.frequent_caller.pair_id}; variant (private): ${seed.frequent_caller.variant}`);
@@ -95,7 +103,11 @@ function assembleSeedBlock(seed) {
 
   // --- Comorbidities ---
   lines.push('--- COMORBIDITY BUNDLE ---');
-  if (seed.frequent_caller) {
+  if (seed.low_acuity_call) {
+    lines.push('Bundle: case-specific history (authoritative)');
+    lines.push(`Components: ${seed.low_acuity_call.history}`);
+    lines.push('Reveal history when elicited; do not invent extra diagnoses or replace chronic illness with an otherwise-healthy history.');
+  } else if (seed.frequent_caller) {
     lines.push('Bundle: case-specific chronic and behavioral history (authoritative in both variants)');
     lines.push(`Components: ${seed.frequent_caller.history}`);
     lines.push('Reveal through elicited history, available care plans and collateral; do not substitute an otherwise-healthy history or invent extra comorbidities.');
@@ -452,7 +464,13 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
     lines.push(`  Chronic and behavioral history: ${seed.frequent_caller.history}`);
     lines.push('  Evaluate assessment and proportional care in the face of crew skepticism. Rudeness does not establish fabrication or incapacity. A stable variant does not require finding an invented emergency; an acute variant does not require guessing the hidden diagnosis. Credit redirection of crew bias only when recorded.');
   }
-  lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.frequent_caller ? 'case-specific chronic history' : seed.comorbidity_bundle || 'otherwise_healthy'}`);
+  if (seed.low_acuity_call) {
+    lines.push(`  Low-acuity call: ${seed.low_acuity_call.id}`);
+    lines.push(`  Case-specific history: ${seed.low_acuity_call.history}`);
+    lines.push(`  Authored scene events: ${seed.low_acuity_call.behavior}`);
+    lines.push('  Outside BLACK_CLOUD no hidden emergency or deterioration was present. Do not invent harm from omitted workup or require emergency treatment/transport solely for the dispatch label. Evaluate recorded proportionate assessment, scene safety, capacity/risk and policy-supported disposition, honest communication and crew-bias management. Distinguish an unassessed risk from an actual adverse outcome; benign outcome alone does not prove good care. Provider-initiated refusal is conditional on service policy, never a universal authority. In BLACK_CLOUD judge against findings actually revealed, not the original benign course.');
+  }
+  lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.frequent_caller || seed.low_acuity_call ? 'case-specific chronic history' : seed.comorbidity_bundle || 'otherwise_healthy'}`);
   lines.push(`  Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
   lines.push(`  Complication: ${seed.complication_type}${seed.catastrophe ? ' / ' + seed.catastrophe.id : ''}`);
   const incidents = (seed.events || []).filter(e => e.event_type === 'complication');

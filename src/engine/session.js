@@ -21,7 +21,7 @@ const { applyCapillaryRefill } = require('./capillary-refill');
 const { applyPulseOx } = require('./pulse-ox');
 const { applyCapnography } = require('./capnography');
 const { hasCardiacMonitor } = require('./equipment');
-const { acquireTwelveLeads, isECGProcedure, stripTwelveLeadNarration, applyEctopy } = require('./twelve-lead');
+const { acquireTwelveLeads, referredTwelveLeads, isECGProcedure, stripTwelveLeadNarration, applyEctopy } = require('./twelve-lead');
 const { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords } = require('./patient-records');
 
 // Phrases that close the scenario and trigger debrief offer
@@ -1252,8 +1252,12 @@ class Session {
       assistant: reply,
       rolls: reconciledRolls,
       woundEvents: woundResult.events,
-      twelveLeads: acquireTwelveLeads({ seed: this.seed, vitals: this.lastVitals, rolls: reconciledRolls,
-        patientId, ink:options.ecgInk, backup:monitorBackup, patientRecords: this.patientRecords, minute: this.sceneMinute, turn: this.turns.length, sessionId: this.sessionId || this.seed.scenario_id }),
+      twelveLeads: [
+        ...referredTwelveLeads({ seed:this.seed, userText:reportMode ? '' : userText, reply:reportMode ? '' : reply,
+          turns:this.turns, minute:this.sceneMinute, patientRecords:this.patientRecords, sessionId:this.sessionId || this.seed.scenario_id }),
+        ...acquireTwelveLeads({ seed: this.seed, vitals: this.lastVitals, rolls: reconciledRolls,
+          patientId, ink:options.ecgInk, backup:monitorBackup, patientRecords: this.patientRecords, minute: this.sceneMinute, turn: this.turns.length, sessionId: this.sessionId || this.seed.scenario_id }),
+      ],
       sceneMinute: this.sceneMinute,
       vitals: vitals || null,
       patientFocus: this.patientFocus,

@@ -13,6 +13,7 @@ const { ARREST }     = require('./arrest');
 const { DOA }        = require('./doa');
 const { CURVEBALLS } = require('./curveballs');
 const { FREQUENT_CALLERS } = require('./frequent-callers');
+const { LOW_ACUITY_CALLS } = require('./low-acuity');
 const { applyToxicologyGroups } = require('./toxicology-groups');
 
 const SCENARIO_POOLS = {
@@ -33,6 +34,7 @@ const SCENARIO_POOLS = {
 for (const [category, entries] of Object.entries(FREQUENT_CALLERS)) {
   SCENARIO_POOLS[category].push(...entries);
 }
+for (const entry of LOW_ACUITY_CALLS) SCENARIO_POOLS[entry.category].push(entry);
 
 applyToxicologyGroups(SCENARIO_POOLS.toxicology);
 

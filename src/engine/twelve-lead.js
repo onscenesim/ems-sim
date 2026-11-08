@@ -13,6 +13,24 @@ function acquireTwelveLeads({seed, vitals, rolls, patientId='patient_1', minute=
 const isECGProcedure=id=>Object.hasOwn(ECG.catalog.procedureViews,id);
 module.exports = {acquireTwelveLeads,isECGProcedure};
 
+// Reviewing paper supplied by a referring facility is not an EMS acquisition:
+// it needs neither a monitor nor a procedure roll, including on a BLS unit.
+function referredTwelveLeads({seed, userText, reply, turns=[], minute=0, patientRecords=[], sessionId=''}) {
+  if (seed.low_acuity_call?.id !== 'urgent-care-stemi'
+      || turns.some(t => t.twelveLeads?.some(e => e.source === 'urgent_care'))) return [];
+  const review = /\b(?:review|inspect|read|see|look at|accept|take|hand\w*)\b.{0,60}\b(?:ecg|ekg|tracing|printout|12[ -]?lead)\b/i;
+  const handoff = /\b(?:hand\w*|offer\w*|give\w*|holds?|holding|thrust\w*|pass\w*|slid\w*)\b.{0,80}\b(?:ecg|ekg|tracing|printout|12[ -]?lead)\b|\b(?:ecg|ekg|tracing|printout)\b.{0,50}\b(?:handed|given|offered)\b/i;
+  if (!review.test(userText || '') && !handoff.test(reply || '')) return [];
+  // This is the existing referral paper. BLACK_CLOUD can change the patient's
+  // subsequent course, but cannot retroactively alter a previously taken ECG.
+  return [{...ECG.create({seed:{ecg_pattern:'normal'}, vitals:{HR:76,Rhythm:'sinus'}, outcome:'SUCCESS',
+    patientId:'patient_1', patient:patientRecords.find(p=>p.id==='patient_1')||{}, minute,
+    // Keep repolarization normal too: the default synthetic template's tangent
+    // estimate otherwise prints a QTc near 490 ms even with normal ST segments.
+    id:`${sessionId}:urgent-care-referral`}), qtScale:0.8, machine:null, source:'urgent_care'}];
+}
+module.exports.referredTwelveLeads = referredTwelveLeads;
+
 // Bridge omitted model metadata only from current affirmative observations.
 // Do not turn historical/differential mentions into an electrical finding.
 function applyEctopy(vitals, previous, narration='', seed={}) {

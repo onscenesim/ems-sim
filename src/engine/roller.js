@@ -367,7 +367,9 @@ function rollScenario(opts = {}) {
   const ageDisplay = formatAgeDisplay(ageGroup, age);
   const sex = instructor?.seed.sex || rollSex(presentation, category);
   const patientName = rollPatientName(sex, random);
-  const trajectory = instructor?.seed.trajectory || presentation.trajectory_override
+  const lowAcuity = presentation.low_acuity_call || null;
+  const stableLowAcuity = lowAcuity && difficulty !== 'BLACK_CLOUD';
+  const trajectory = instructor?.seed.trajectory || (stableLowAcuity ? 'stable' : null) || presentation.trajectory_override
     || (category === 'doa' ? 'stable' : rollTrajectory(difficulty));
   // These scenes have a fixed clinical truth: either no medical emergency or
   // arrest already present, with a separate location-dependent exposure story.
@@ -375,7 +377,7 @@ function rollScenario(opts = {}) {
   const decompensationClock = category === 'doa' || sceneChallenge ? null : rollDecompensationClock(difficulty, trajectory);
   const complication = rollComplication(difficulty);
   // Preserve fixed case truths and honest exposure history, even on BLACK_CLOUD.
-  if ((presentation.frequent_caller?.variant === 'stable' || sceneChallenge || presentation.chemical_exposure)
+  if ((presentation.frequent_caller?.variant === 'stable' || sceneChallenge || presentation.chemical_exposure || stableLowAcuity)
     && (['clinical_curveball', 'all'].includes(complication.type)
       || (sceneChallenge && ['unreliable_bystander', 'er_divert'].includes(complication.type)))) {
     complication.type = 'equipment_failure';
@@ -385,7 +387,8 @@ function rollScenario(opts = {}) {
     ? 'Officers give conflicting medical pretexts and impatiently demand transport; the patient is an honest historian.'
     : sceneChallenge === 'occult_co_arrest'
       ? 'Family member recently returned home, is subtly confused from exposure, and answers honestly to the best of their ability.'
-      : rollCallerBehavior(category);
+      : lowAcuity ? 'Use only the case-specific caller account, communication and interpersonal behavior supplied in the low-acuity contract.'
+        : rollCallerBehavior(category);
   const timeOfDay = rollTimeOfDay();
 
   const region = REGIONS.find(r => r.id === region_id);
@@ -393,10 +396,10 @@ function rollScenario(opts = {}) {
   const weatherEntry = rollWeather(difficulty, regionLabel, season, instructor ? {} : presentation);
   const weather = weatherEntry.text;
   if (!instructor && !validateCombination(presentation, { region: region_id, season, weather_id: weatherEntry.id })) throw new Error('Incompatible scenario setting');
-  const specialCircumstance = sceneChallenge ? null : rollSpecialCircumstance(
+  const specialCircumstance = sceneChallenge || lowAcuity ? null : rollSpecialCircumstance(
     difficulty, category, ageGroup, presentation, trajectory
   );
-  const comorbidityBundle = presentation.frequent_caller || sceneChallenge ? null : rollComorbidity(difficulty, category, ageGroup);
+  const comorbidityBundle = presentation.frequent_caller || sceneChallenge || lowAcuity ? null : rollComorbidity(difficulty, category, ageGroup);
   let crew = pickCrew(region_id, history);
   if (partner_name) {
     const override = CREW.find(c => c.name === partner_name);
@@ -435,6 +438,7 @@ function rollScenario(opts = {}) {
     ...(sceneChallenge ? { scene_challenge: sceneChallenge } : {}),
     ...(presentation.chemical_exposure ? { chemical_exposure: structuredClone(presentation.chemical_exposure) } : {}),
     ...(presentation.frequent_caller ? { frequent_caller: structuredClone(presentation.frequent_caller) } : {}),
+    ...(lowAcuity ? { low_acuity_call: structuredClone(lowAcuity) } : {}),
     patient_name: patientName,
     patient_age: age,
     patient_age_display: ageDisplay,
