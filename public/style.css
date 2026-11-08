@@ -1012,6 +1012,10 @@ body.light-mode .brief-options-note { color: #536159; }
 }
 
 #user-input:focus { outline: 2px solid #2879b9; outline-offset: 1px; }
+/* Landscape phones and tablets also need 16px to avoid iOS focus zoom. */
+@media (any-pointer: coarse) {
+  #user-input { font-size: 16px; }
+}
 #user-input::placeholder { color: #aaa; }
 #user-input:disabled {
   background: #e8e8e8;

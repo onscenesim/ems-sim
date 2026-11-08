@@ -203,7 +203,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
       showCrewPanel();
       showDrugPanel('epinephrine');
       setVitalsPanelOpen(true);
-      userInput.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, isPrimary: true }));
+      userInput.focus();
       adjustForViewport();
       if (crewPanel.classList.contains('open') || drugPanel.classList.contains('open') || !vitalsPanel.hidden) throw Error('Text entry left an auxiliary surface open');
       if (getComputedStyle(crewPanel).display !== 'none' || getComputedStyle(drugPanel).display !== 'none') throw Error('Closed mobile panel remained paintable');

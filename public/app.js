@@ -2136,16 +2136,14 @@ sendBtn.addEventListener('click', () => {
   sendTurn(msg);
 });
 
-userInput.addEventListener('pointerdown', () => {
-  // A text entry gesture should have one result: the keyboard and composer.
-  // Remove auxiliary surfaces before the browser starts changing viewports.
+userInput.addEventListener('focus', () => {
+  // Let the browser finish the tap and focus natively. Opening the keyboard on
+  // pointerdown can move the field out from under the finger before pointerup,
+  // cancelling text entry on mobile Chrome.
   hideCrewPanel();
   hideDrugPanel();
   setVitalsPanelOpen(false);
   monitorView.closePicker();
-  // Establish real input focus even when the browser has a caret in page text.
-  // Keep the default pointer action so selecting/editing existing text still works.
-  focusActionInput(true);
 });
 
 userInput.addEventListener('keydown', e => {
@@ -4189,7 +4187,9 @@ function adjustForViewport() {
     resetTerminalHeight();
     return;
   }
-  const height = viewport.height;
+  // Safari can update innerHeight before its VisualViewport measurement catches
+  // up. Use the smaller usable height rather than leaving the composer covered.
+  const height = Math.min(viewport.height, window.innerHeight || viewport.height);
   const top = viewport.offsetTop;
   if (Number.isFinite(height) && height > 0 && Number.isFinite(top)) {
     // Native focus, scroll and resize can all report the same frame. Avoid
@@ -4230,19 +4230,29 @@ function keepLatestOutputVisible() {
 output.addEventListener('scroll', rememberOutputScroll, { passive: true });
 if (typeof ResizeObserver === 'function') new ResizeObserver(keepLatestOutputVisible).observe(output);
 let viewportFrame = null;
+let viewportSettleUntil = 0;
 function scheduleViewportUpdate() {
   if (viewportFrame !== null) return;
   viewportFrame = requestAnimationFrame(() => {
     viewportFrame = null;
     adjustForViewport();
+    // WebKit may publish the final keyboard geometry after the focus/resize
+    // event. Sample through the animation, including dismissal, without forcing
+    // focus or scrolling the document. Stop after this short settling window.
+    if (performance.now() < viewportSettleUntil) scheduleViewportUpdate();
   });
+}
+function settleActionViewport() {
+  viewportSettleUntil = performance.now() + 1200;
+  scheduleViewportUpdate();
 }
 window.visualViewport?.addEventListener('resize', scheduleViewportUpdate);
 window.visualViewport?.addEventListener('scroll', scheduleViewportUpdate);
 window.addEventListener('resize', scheduleViewportUpdate);
-window.addEventListener('pageshow', scheduleViewportUpdate);
-userInput.addEventListener('focus', scheduleViewportUpdate);
-userInput.addEventListener('blur', scheduleViewportUpdate);
+window.addEventListener('pageshow', settleActionViewport);
+window.addEventListener('orientationchange', settleActionViewport);
+userInput.addEventListener('focus', settleActionViewport);
+userInput.addEventListener('blur', settleActionViewport);
 userInput.addEventListener('input', scheduleViewportUpdate);
 
 document.addEventListener('click', e => {
