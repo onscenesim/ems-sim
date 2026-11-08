@@ -678,7 +678,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     }
     assert.equal((await chestScene('pacing', 'SUCCESS', 2200)).rate, '0.6s');
     assert.equal((await chestScene('pacing', 'MARGINAL', 2200)).rate, '1.2s');
-    assert.equal((await chestScene('pacing', 'FAILURE', 2200)).rate, '1.8s');
+    assert.equal((await chestScene('pacing', 'FAILURE', 2200)).rate, '3s');
     for (const time of [650, 1250, 1850, 2450]) assert.ok((await chestScene('pacing', 'SUCCESS', time)).energy > .5, 'repeated pacing pulses');
     assert.notEqual((await chestScene('chest_seal', 'COMPLICATION', 1800)).hand, (await chestScene('chest_seal', 'COMPLICATION', 2400)).hand);
     assert.ok((await chestScene('chest_seal', 'FAILURE', 1700)).clog < (await chestScene('chest_seal', 'FAILURE', 3200)).clog);

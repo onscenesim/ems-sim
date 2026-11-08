@@ -73,7 +73,7 @@ test('12-lead EKG reuses the CPR torso model with all six precordial leads', () 
   assert.doesNotMatch(ekg, /Bare torso|trapezius|costal margin hint/);
 });
 
-for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
+for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'defib']) {
   test(`${id}: action sound fires once, result timing is shared with CSS, and cleanup resolves after fade`, async () => {
     const f = fixture();
     const procedure = id === 'scalpel' ? 'cricothyrotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id === 'npa' ? 'nasopharyngeal_airway' : id === 'obstruction' ? 'foreign_body_removal' : id === 'defib' ? 'defibrillation' : id;
@@ -107,7 +107,7 @@ for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction
 }
 
 test('replaying scenes clears previous outcomes and preserves all sound mappings', async () => {
-  for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
+  for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'defib']) {
     const f = fixture();
     const proc = id === 'scalpel' ? 'finger_thoracostomy' : id === 'laryngoscope' ? 'rsi' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id === 'npa' ? 'nasopharyngeal_airway' : id === 'obstruction' ? 'foreign_body_removal' : id === 'defib' ? 'defibrillation' : id;
     for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION', 'SUCCESS']) {
@@ -125,7 +125,7 @@ test('replaying scenes clears previous outcomes and preserves all sound mappings
 });
 
 test('reduced motion and missing scenes retain sounds and always release the turn', async () => {
-  for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
+  for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'defib']) {
     const procedure = id === 'scalpel' ? 'resuscitative_thoracotomy' : id === 'laryngoscope' ? 'intubation' : id === 'sga' ? 'supraglottic_airway' : id === 'opa' ? 'oropharyngeal_airway' : id === 'ncd' ? 'needle_decompression' : id === 'npa' ? 'nasopharyngeal_airway' : id === 'obstruction' ? 'foreign_body_removal' : id === 'defib' ? 'defibrillation' : id;
     for (const options of [{ reduced: true }, { missing: true }]) {
       const f = fixture(options);
@@ -430,7 +430,7 @@ test('procedure sound audit keeps explicit recordings for every outcome and ambu
     intubation: 'intubation', rsi: 'intubation', suction: 'suction',
     oropharyngeal_airway: 'airway_gulp', supraglottic_airway: 'airway_gulp', nasopharyngeal_airway: 'airway_gulp',
     foreign_body_removal: 'airway_gulp', abdominal_thrusts: 'airway_gulp',
-    oxygen: 'oxygen_flow', cpap: 'oxygen_flow', pacing: 'lifepak', twelve_lead: 'lifepak',
+    oxygen: 'oxygen_flow', cpap: 'oxygen_flow', pacing: 'pacing_beep', twelve_lead: 'lifepak',
   };
   for (const [id, sound] of Object.entries(expected)) {
     for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
@@ -515,4 +515,39 @@ test('a delayed oral pickup finishes before the scene releases the next action',
   assert.equal(f.elements.get('oralmed-overlay').classList.contains('visible'), false);
   f.advance(220); await done;
   assert.equal(complete, true);
+});
+
+
+test('pacing tones follow capture or slow intrinsic failure beats, with silent complications', async () => {
+  for (const [outcome, expected] of [
+    ['SUCCESS', [1800, 2400, 3000, 3600, 4200, 4800]],
+    ['MARGINAL', [1800, 3000, 4200]], ['FAILURE', [1800, 4800]], ['COMPLICATION', []],
+  ]) {
+    for (const reduced of [false, true]) {
+      const f = fixture({ reduced });
+      const done = f.context.animateProcedureScene('pacing', 'pacing', outcome);
+      f.advance(1799);
+      assert.equal(f.played.length, 0, 'no monitor tone before capture');
+      f.advance(3621); await done;
+      assert.deepEqual(f.played, expected.map(time => ({ sound: 'pacing_beep', time })));
+      const overlay = f.elements.get('pacing-overlay');
+      assert.equal(overlay.properties['--pacing-captures'], expected.length);
+      assert.equal(overlay.classList.contains('visible'), false);
+      assert.equal(f.timers.length, 0);
+    }
+  }
+});
+
+test('backgrounding pacing cancels future capture tones', () => {
+  const f = fixture();
+  let onVisibility;
+  f.context.document.addEventListener = (_name, listener) => { onVisibility = listener; };
+  f.context.document.removeEventListener = () => {};
+  f.context.animateProcedureScene('pacing', 'pacing', 'SUCCESS');
+  f.advance(1800);
+  f.context.document.hidden = true;
+  onVisibility();
+  f.context.document.hidden = false;
+  f.advance(4000);
+  assert.deepEqual(f.played, [{ sound: 'pacing_beep', time: 1800 }]);
 });

@@ -21,6 +21,7 @@ const SOUNDS = {
   paper: '/sounds/Notebook.mp3',
   monitor_open: '/sounds/MonitorOpen.wav',
   monitor_reopen: '/sounds/interface-dialogpanel-out-02-03.wav',
+  pacing_beep: '/sounds/PacingMonitorBeep.wav',
   defib_outside: '/sounds/Defiboutsideambulance.m4a',
   defib_amb:     '/sounds/Defibinambulance.m4a',
   fail:     '/sounds/interface-diceroll-fail-02-01.wav',
@@ -59,7 +60,7 @@ const SOUNDS = {
 };
 // Match active audio (excluding quiet tails) near -27 dBFS for the new cues.
 // Keep their original dynamics; do not peak-normalize the quiet dialog texture.
-const SOUND_LEVELS = { glovebox: .65, paper: .8, monitor_open: .2, monitor_reopen: 1, success: .42, fail: .56, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .62, med_im_action: .55, med_in_action: .48, squelch: .65, signoff: .65 };
+const SOUND_LEVELS = { pacing_beep: .4, glovebox: .65, paper: .8, monitor_open: .2, monitor_reopen: 1, success: .42, fail: .56, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .62, med_im_action: .55, med_in_action: .48, squelch: .65, signoff: .65 };
 // The recordings share a rising roll, with the first result impact at these
 // media times. Feedback outside the dice scene starts directly at that impact.
 const DICE_DROP_SECONDS = { success: .85, fail: .87 };
@@ -303,7 +304,7 @@ function getProcedureSound(id, outcome) {
   const actionSounds = {
     medication_push: 'healing', peripheral_iv: 'healing',
     nasopharyngeal_airway: 'airway_gulp', foreign_body_removal: 'airway_gulp', abdominal_thrusts: 'airway_gulp',
-    pacing: 'lifepak', oxygen: 'oxygen_flow', cpap: 'oxygen_flow',
+    pacing: 'pacing_beep', oxygen: 'oxygen_flow', cpap: 'oxygen_flow',
     chest_seal: 'chest_slap', bleeding_control: 'squelch', tourniquet: 'squelch',
     intubation: 'intubation', rsi: 'intubation', suction: 'suction',
     supraglottic_airway: 'airway_gulp', oropharyngeal_airway: 'airway_gulp',
@@ -2659,7 +2660,7 @@ const PROCEDURE_TIMING = Object.freeze({
   // The supplied slap has a 1.1s lead-in; starting it with the scene lands
   // its single impact as the dressing meets the chest at roughly 1s.
   chest_seal: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3000, sound: 3000, action: 'chest_slap', actionAt: 0 }),
-  pacing: Object.freeze({ hold: 5200, start: 0, cycle: 5200, result: 2800, sound: 2800 }),
+  pacing: Object.freeze({ hold: 5200, start: 0, cycle: 5200, result: 1800, sound: 1800 }),
   // Discharge lands at 4.8s; keep the flash and outcome on that impact.
   defib: Object.freeze({ hold: 9426, start: 0, cycle: 9426, result: 4800, sound: 0 }),
   bleeding_control: Object.freeze({ hold: 4200, start: 0, cycle: 4200, result: 3100, sound: 3100, action: 'squelch' }),
@@ -2696,13 +2697,38 @@ function scheduleSceneAudio({ action, actionAt = 100, resultSound, resultAt, red
   return cancel;
 }
 
+// Share the heartbeat and tone clock; failed capture retains slow intrinsic beats.
+function pacingHeartbeatTiming(outcome) {
+  return { start: PROCEDURE_TIMING.pacing.result,
+    cycle: outcome === 'FAILURE' ? 3000 : outcome === 'MARGINAL' ? 1200 : 600,
+    count: ({ SUCCESS: 6, MARGINAL: 3, FAILURE: 2 })[outcome] || 0 };
+}
+function schedulePacingAudio(outcome) {
+  const capture = pacingHeartbeatTiming(outcome);
+  let cancelled = false;
+  const onVisibility = () => { if (document.hidden) cancel(); };
+  const timers = Array.from({ length: capture.count }, (_, i) => setTimeout(() => {
+    if (!cancelled && !document.hidden) playSound('pacing_beep');
+  }, capture.start + i * capture.cycle));
+  const cancel = () => {
+    cancelled = true;
+    timers.forEach(clearTimeout);
+    document.removeEventListener?.('visibilitychange', onVisibility);
+  };
+  document.addEventListener?.('visibilitychange', onVisibility);
+  return cancel;
+}
+
 function animateProcedureScene(id, procedureId, outcome) {
   const timing = PROCEDURE_TIMING[id];
   const overlay = document.getElementById(`${id}-overlay`);
   const label = document.getElementById(`${id}-label`);
   const sound = getProcedureSound(procedureId, outcome);
   // A missing optional scene must never stall the turn or swallow its sound.
-  if (!overlay || !label) { playSound(timing.action || sound); return Promise.resolve(); }
+  if (!overlay || !label) {
+    if (id !== 'pacing' || pacingHeartbeatTiming(outcome).count) playSound(timing.action || sound);
+    return Promise.resolve();
+  }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const labels = {
     npa: { SUCCESS: 'SUCCESS · AIRWAY SEATED', MARGINAL: 'MARGINAL · SHALLOW PLACEMENT', FAILURE: 'FAILURE · UNABLE TO ADVANCE', COMPLICATION: 'COMPLICATION · AIRWAY EXPELLED' },
@@ -2724,6 +2750,11 @@ function animateProcedureScene(id, procedureId, outcome) {
   if (id === 'defib' && header) header.textContent = procedureId === 'cardioversion' ? 'SYNCHRONIZED CARDIOVERSION' : 'DEFIBRILLATION';
   if ((id === 'scalpel' || id === 'laryngoscope') && header) header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
   overlay.className = '';
+  if (id === 'pacing') {
+    const capture = pacingHeartbeatTiming(outcome);
+    overlay.style.setProperty('--pacing-cycle', `${capture.cycle}ms`);
+    overlay.style.setProperty('--pacing-captures', capture.count);
+  }
   overlay.style.setProperty('--procedure-start', `${timing.start}ms`);
   overlay.style.setProperty('--procedure-cycle', `${timing.cycle}ms`);
   overlay.style.setProperty('--procedure-duration', `${timing.hold}ms`);
@@ -2735,7 +2766,8 @@ function animateProcedureScene(id, procedureId, outcome) {
   overlay.classList.add('visible');
   return new Promise(resolve => {
     // Reduced motion shows a still result, keeping the same bounded turn lifecycle.
-    const cancelAudio = scheduleSceneAudio({ action: timing.action, actionAt: timing.actionAt, resultSound: sound, resultAt: timing.sound, reduced });
+    const cancelAudio = id === 'pacing' ? schedulePacingAudio(outcome)
+      : scheduleSceneAudio({ action: timing.action, actionAt: timing.actionAt, resultSound: sound, resultAt: timing.sound, reduced });
     setTimeout(() => {
       cancelAudio();
       // Keep the finished CSS pose during the fade. Removing `visible` here
@@ -2990,6 +3022,7 @@ function animateDepart() {
 async function animateDiceRoll(procedureId, roll, dc, outcome, target) {
   // Decode the longer charge recording during the dice roll, before its scene.
   if (procedureId === 'defibrillation' || procedureId === 'cardioversion') loadSoundBuffer(getProcedureSound(procedureId, outcome));
+  if (procedureId === 'pacing') loadSoundBuffer('pacing_beep');
   const sound = getOutcomeSound(outcome);
   const dropAt = DICE_DROP_SECONDS[sound] * 1000;
   // Start the full recording once. Wait for actual playback so a cold decode or
