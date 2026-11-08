@@ -561,7 +561,9 @@ function printRoll(roll) {
 }
 
 let outputScrollFrame = null;
+const outputViewport = { height: 0, followsLatest: true };
 function scrollBottom() {
+  outputViewport.followsLatest = true;
   // A batch of roll results or restored turns needs one layout, not one per
   // printed line/card. Read the final height after all synchronous DOM writes.
   if (outputScrollFrame !== null) return;
@@ -4179,25 +4181,54 @@ for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 }
 document.getElementById('scratch-clear').addEventListener('click', clearVitalsScratch);
 
-// Safari's keyboard shrinks the visual viewport without resizing dvh. Fit the
-// terminal's bottom to that visible area, including any native viewport pan.
-// Keep its top fixed: moving the whole terminal fights Safari's focus scrolling.
+// Use the actual visible rectangle. A focus pan changes its origin, not its
+// usable height; adding offsetTop to the height leaves content above the screen.
 function adjustForViewport() {
   const viewport = window.visualViewport;
   if (terminal.style.display !== 'flex' || !viewport || Math.abs(viewport.scale - 1) > 0.01) {
     resetTerminalHeight();
     return;
   }
-  const bottom = viewport.height + viewport.offsetTop;
-  if (Number.isFinite(bottom) && bottom > 0) {
-    terminal.style.setProperty('--terminal-height', `${bottom}px`);
+  const height = viewport.height;
+  const top = viewport.offsetTop;
+  if (Number.isFinite(height) && height > 0 && Number.isFinite(top)) {
+    // Native focus, scroll and resize can all report the same frame. Avoid
+    // extra style writes while the browser is settling the focused input.
+    const nextTop = `${Math.max(0, top)}px`, nextHeight = `${height}px`;
+    if (terminal.style.getPropertyValue('--terminal-top') !== nextTop) terminal.style.setProperty('--terminal-top', nextTop);
+    if (terminal.style.getPropertyValue('--terminal-height') !== nextHeight) terminal.style.setProperty('--terminal-height', nextHeight);
+    keepLatestOutputVisible();
+    keepActionCaretVisible();
   } else {
     resetTerminalHeight();
   }
 }
 function resetTerminalHeight() {
   terminal.style.removeProperty('--terminal-height');
+  terminal.style.removeProperty('--terminal-top');
 }
+function keepActionCaretVisible() {
+  if (document.activeElement !== userInput || userInput.selectionStart !== userInput.selectionEnd) return;
+  // WebKit can retain the old horizontal offset after its keyboard changes
+  // the field's bounds. Scroll the field, never the page or the text selection.
+  if (userInput.selectionEnd === userInput.value.length) userInput.scrollLeft = userInput.scrollWidth;
+  else if (userInput.selectionEnd === 0) userInput.scrollLeft = 0;
+}
+// The keyboard can remove hundreds of pixels from the transcript without a
+// new message. Keep the latest line in view, but preserve a player's deliberate
+// scroll into earlier messages. Ignore scroll events caused by a pending resize.
+function rememberOutputScroll() {
+  if (output.clientHeight !== outputViewport.height) return;
+  outputViewport.followsLatest = output.scrollHeight - output.scrollTop - output.clientHeight <= 4;
+}
+function keepLatestOutputVisible() {
+  const height = output.clientHeight;
+  if (height === outputViewport.height) return;
+  outputViewport.height = height;
+  if (height > 0 && outputViewport.followsLatest) output.scrollTop = output.scrollHeight;
+}
+output.addEventListener('scroll', rememberOutputScroll, { passive: true });
+if (typeof ResizeObserver === 'function') new ResizeObserver(keepLatestOutputVisible).observe(output);
 let viewportFrame = null;
 function scheduleViewportUpdate() {
   if (viewportFrame !== null) return;
@@ -4209,7 +4240,10 @@ function scheduleViewportUpdate() {
 window.visualViewport?.addEventListener('resize', scheduleViewportUpdate);
 window.visualViewport?.addEventListener('scroll', scheduleViewportUpdate);
 window.addEventListener('resize', scheduleViewportUpdate);
+window.addEventListener('pageshow', scheduleViewportUpdate);
 userInput.addEventListener('focus', scheduleViewportUpdate);
+userInput.addEventListener('blur', scheduleViewportUpdate);
+userInput.addEventListener('input', scheduleViewportUpdate);
 
 document.addEventListener('click', e => {
   const cell = e.target && e.target.closest('#nibp-cell');
