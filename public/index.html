@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=92">
+  <link rel="stylesheet" href="style.css?v=94">
+  <link rel="stylesheet" href="monitor.css?v=9">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
   <link rel="stylesheet" href="practice.css?v=9">
@@ -371,6 +372,10 @@
         </svg>
         <span>CREW</span>
       </button>
+      <button id="monitor-btn" type="button" title="Open monitor" aria-label="Open monitor" aria-haspopup="dialog" aria-controls="monitor-dialog">
+        <svg viewBox="0 0 20 18" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 1h18v13H1zM7 16h6M10 14v2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 8h3l2-4 3 7 2-3h4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+        <span>MONITOR</span>
+      </button>
       <button id="glovebox-btn" type="button" title="Open the glovebox" aria-label="Open the glovebox" aria-haspopup="dialog" aria-controls="glovebox-dialog">
         <svg viewBox="0 0 20 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 2h18v12H1z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2 5h16M7 8h6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
         <span>GLOVEBOX</span>
@@ -393,7 +398,12 @@
     <div id="patient-focus" hidden aria-live="polite"></div>
     <div id="vitals-bar" aria-label="Patient vitals monitor">
       <div class="vital-cell" id="rhythm-cell" data-waveform="ecg" aria-label="Monitor waveforms">
-        <button id="waveform-toggle" type="button" aria-label="Show SpO₂ pleth waveform" aria-pressed="false" aria-controls="ecg-waveform pleth-waveform">ECG ⇄</button>
+        <button id="waveform-toggle" type="button" aria-label="Choose waveform: ECG" aria-haspopup="true" aria-expanded="false" aria-controls="waveform-picker"><small>WAVEFORM</small><span>ECG ▾</span></button>
+        <div id="waveform-picker" role="group" aria-label="Choose waveform" hidden>
+          <button type="button" data-waveform-select="ecg" aria-pressed="true">ECG</button>
+          <button type="button" data-waveform-select="pleth" aria-pressed="false">SpO₂</button>
+          <button type="button" data-waveform-select="capno" aria-pressed="false">CO₂</button>
+        </div>
         <div id="ecg-waveform">
           <div class="vital-label">ECG</div>
           <canvas id="rhythm-strip" role="img" aria-label="ECG rhythm strip"></canvas>
@@ -407,7 +417,7 @@
           <canvas id="capno-strip" role="img" aria-label="CO₂ waveform: not connected"></canvas>
         </div>
       </div>
-      <div class="vital-cell vital-hr">
+      <div class="vital-cell vital-hr" role="button" tabindex="0" data-waveform-select="ecg" aria-label="Show ECG waveform" title="Show ECG waveform">
         <div class="vital-label">HR</div>
         <div class="vital-value" data-vital="HR">&mdash;&mdash;</div>
       </div>
@@ -417,13 +427,13 @@
         <div class="vital-stamp" data-vital-stamp="BP"></div>
         <div id="nibp-cycle-hint">&#x21BA; CYCLE</div>
       </div>
-      <div class="vital-cell vital-spo2">
+      <div class="vital-cell vital-spo2" role="button" tabindex="0" data-waveform-select="pleth" aria-label="Show SpO₂ waveform" title="Show SpO₂ waveform">
         <div class="vital-label">SpO<sub>2</sub></div>
-        <div class="vital-value" data-vital="SpO2">&mdash;&mdash;</div>
+        <div class="spo2-reading"><span class="spo2-pulse-bar" aria-hidden="true"><span class="spo2-pulse-fill"></span></span><div class="vital-value" data-vital="SpO2">&mdash;&mdash;</div></div>
         <div id="spo2-signal-badge" aria-label="Perfusion index unavailable">PI —</div>
         <div id="spo2-signal-status" aria-live="polite"></div>
       </div>
-      <div class="vital-cell vital-etco2">
+      <div class="vital-cell vital-etco2" role="button" tabindex="0" data-waveform-select="capno" aria-label="Show CO₂ waveform" title="Show CO₂ waveform">
         <div class="vital-label">EtCO<sub>2</sub></div>
         <div class="vital-value" data-vital="ETCO2">&mdash;&mdash;</div>
         <div class="capno-rate">RR <span id="capno-rr">—</span><small>/min</small></div>
@@ -449,7 +459,6 @@
       </div>
       <div class="notepad-readings" id="notepad-personalization">
       <div class="notepad-readings-heading"><div id="notepad-focus">Readings for: Current patient</div><button id="notepad-stickers-edit" type="button" aria-haspopup="dialog" aria-controls="cosmetics-dialog" title="Choose up to two notebook stickers">STICKERS ＋</button></div>
-      <div class="vital-row"><span class="vital-row-label">Pulse ox</span><span class="vital-row-value" id="pulse-ox-status">PI —</span></div>
       <section class="ecg-notebook" aria-label="12-lead recordings">
         <div class="ecg-notebook-heading"><strong>12-LEAD PRINTOUTS</strong><span id="ecg-count">0 recordings</span></div>
         <p id="ecg-empty">Obtain a 12-lead ECG to file a printout here.</p>
@@ -2195,8 +2204,8 @@
   <script src="medication-aliases.js?v=3"></script>
   <script src="drug-cards.js"></script>
   <script src="splashes.js?v=2"></script>
-  <script src="pleth.js?v=3"></script>
-  <script src="capnography.js?v=1"></script>
+  <script src="pleth.js?v=4"></script>
+  <script src="capnography.js?v=2"></script>
   <script src="practice.js?v=10"></script>
   <script src="instructor.js?v=1"></script>
   <dialog id="ecg-dialog" aria-labelledby="ecg-dialog-title">
@@ -2211,7 +2220,39 @@
   <script src="patient-privacy.js?v=1"></script>
   <script src="transport-patient.js?v=1"></script>
   <script src="dialogue-colors.js?v=1"></script>
-  <script src="app.js?v=111"></script>
+  <dialog id="monitor-dialog" aria-labelledby="monitor-title">
+    <div class="monitor-titlebar"><strong id="monitor-title">MONITOR</strong><button id="monitor-close" class="xp-close" type="button" aria-label="Close monitor" autofocus></button></div>
+    <div class="monitor-body">
+      <p id="monitor-patient">Current patient</p>
+      <div class="monitor-live">
+        <section class="monitor-channel monitor-ecg" aria-label="ECG">
+          <div class="monitor-trace" data-monitor-trace="ecg-waveform"></div>
+          <div class="monitor-number"><span>HR</span><strong data-vital="HR">——</strong><small>bpm</small></div>
+        </section>
+        <section class="monitor-channel monitor-pleth" aria-label="SpO₂">
+          <div class="monitor-trace" data-monitor-trace="pleth-waveform"></div>
+          <div class="monitor-number"><span>SpO₂</span><div class="monitor-spo2-reading"><span class="spo2-pulse-bar" aria-hidden="true"><span class="spo2-pulse-fill"></span></span><strong data-vital="SpO2">——</strong></div><small>%</small></div>
+        </section>
+        <section class="monitor-channel monitor-capno" aria-label="CO₂">
+          <div class="monitor-trace" data-monitor-trace="capno-waveform"></div>
+          <div class="monitor-number"><span>EtCO₂</span><strong data-vital="ETCO2">——</strong><small><span>mmHg</span> <span>RR <b id="monitor-capno-rr">—</b>/min</span></small></div>
+        </section>
+      </div>
+      <div class="monitor-measurements">
+        <div><span>BP · mmHg</span><strong data-vital="BP">——</strong><small data-vital-stamp="BP"></small></div>
+      </div>
+      <section class="monitor-bp" aria-labelledby="monitor-bp-title">
+        <div class="monitor-bp-heading"><h2 id="monitor-bp-title">BP TREND <small>mmHg</small></h2><div class="monitor-bp-controls"><button id="monitor-cycle-bp" type="button">Cycle NIBP</button><button id="monitor-bp-schedule-toggle" type="button" aria-label="Set BP schedule" title="Set BP schedule" aria-haspopup="menu" aria-expanded="false" aria-controls="monitor-bp-schedule"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 4v6l4 2" fill="none" stroke="currentColor" stroke-width="2"/></svg></button></div></div>
+        <div id="monitor-bp-schedule" role="menu" aria-label="BP schedule intervals" hidden><button type="button" role="menuitemradio" data-bp-interval="0" aria-checked="true">Off</button><button type="button" role="menuitemradio" data-bp-interval="1" aria-checked="false">Every 1 min</button><button type="button" role="menuitemradio" data-bp-interval="2" aria-checked="false">Every 2 min</button><button type="button" role="menuitemradio" data-bp-interval="3" aria-checked="false">Every 3 min</button><button type="button" role="menuitemradio" data-bp-interval="5" aria-checked="false">Every 5 min</button><button type="button" role="menuitemradio" data-bp-interval="10" aria-checked="false">Every 10 min</button><button type="button" role="menuitemradio" data-bp-interval="15" aria-checked="false">Every 15 min</button></div>
+        <p id="monitor-bp-schedule-status" role="status">Manual cycles only.</p>
+        <p id="monitor-bp-empty">No BP readings for this patient yet.</p>
+        <div id="monitor-bp-chart"></div>
+        <div class="monitor-bp-table"><table id="monitor-bp-table" hidden><thead><tr><th scope="col">Scene time</th><th scope="col">Systolic</th><th scope="col">Diastolic</th></tr></thead><tbody id="monitor-bp-readings"></tbody></table></div>
+      </section>
+    </div>
+  </dialog>
+  <script src="monitor.js?v=5"></script>
+  <script src="app.js?v=116"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

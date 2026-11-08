@@ -103,7 +103,9 @@
       if(reset){clock=0;phase=0;x=0;pen=null;lastTs=null;if(ctx)ctx.clearRect(0,0,canvas.width,canvas.height);}
       if(signal&&signal.status==='connected') {if(raf===null)raf=requestAnimationFrame(frame);}
       else {if(raf!==null)cancelAnimationFrame(raf);raf=null;lastTs=null;idle();}
-      canvas?.setAttribute('aria-label','CO₂ waveform: '+description(signal));
+      const label=!signal||signal.status==='unplaced'?'not connected':
+        signal.status==='disconnected'?'disconnected':({nasal:'Nasal',airway:'Inline',mask:'Mask',unknown:''})[signal.source];
+      canvas?.setAttribute('aria-label','CO₂ waveform'+(label?': '+label:''));
     }
     return {update,resize(){dirty=true;if(raf===null)idle();},dispose(){if(raf!==null)cancelAnimationFrame(raf);raf=null;observer?.disconnect();}};
   }

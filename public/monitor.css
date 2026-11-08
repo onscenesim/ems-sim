@@ -1,0 +1,114 @@
+@font-face { font-family:MonitorNumerals; src:url('fonts/InterVariable.woff2') format('woff2'); font-style:normal; font-weight:100 900; font-display:swap; }
+/* Explicit outlines avoid feature-dependent alternates reverting to a footed 1. */
+@font-face { font-family:MonitorReferenceDigits; src:url('fonts/EMSMonitorDigits.woff2') format('woff2'); font-style:normal; font-weight:600 700; font-display:swap; unicode-range:U+0031,U+0036,U+0039; }
+:root { --font-monitor:MonitorReferenceDigits, MonitorNumerals, 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+/* Helvetica-like proportions, real slashed-zero glyphs, and a light LCD edge. */
+.vital-value { font-family:var(--font-monitor); font-size:21px; font-weight:700; font-variant-numeric:lining-nums tabular-nums slashed-zero; letter-spacing:0; }
+#capno-rr, #monitor-capno-rr { font-family:var(--font-monitor); font-weight:700; font-variant-numeric:tabular-nums slashed-zero; }
+#monitor-capno-rr { font-size:14px; }
+.spo2-reading, .monitor-spo2-reading { display:flex; align-items:center; }
+.spo2-reading { gap:3px; }
+.monitor-spo2-reading { gap:6px; }
+.spo2-pulse-bar { position:relative; display:block; flex:0 0 auto; width:5px; height:18px; border:1px solid #4ab8ff; background:#020a10; overflow:hidden; }
+.spo2-pulse-fill { position:absolute; inset:0; background:#4ab8ff; transform:scaleY(0); transform-origin:center bottom; will-change:transform; }
+.monitor-spo2-reading .spo2-pulse-bar { width:8px; height:34px; }
+/* Monitor controls share the terminal's chunky, monochrome toolbar chrome. */
+#monitor-btn { display:flex; align-items:center; gap:6px; flex-shrink:0; min-height:36px; padding:4px 10px; background:var(--chrome-bg); color:#333; border:2px solid; border-color:var(--hi) var(--lo) var(--lo) var(--hi); font:10px var(--font-block); cursor:pointer; }
+#monitor-btn svg { width:20px; height:18px; }
+#monitor-btn:hover { color:#1a4870; }
+#monitor-btn:active { border-color:var(--lo) var(--hi) var(--hi) var(--lo); }
+#monitor-btn:focus-visible { outline:2px solid #2879b9; outline-offset:1px; }
+#waveform-picker { position:absolute; top:42px; left:0; z-index:60; width:142px; padding:4px; background:var(--chrome-bg); border:2px solid; border-color:var(--hi) var(--lo) var(--lo) var(--hi); box-shadow:3px 4px 0 #0007; }
+#waveform-picker[hidden] { display:none; }
+#waveform-picker button { display:block; width:100%; min-height:44px; padding:8px; color:#17242b; background:var(--chrome-bg); border:1px solid transparent; text-align:left; font:bold 14px var(--font-mono); cursor:pointer; }
+#waveform-picker button[aria-pressed="true"]::after { content:' ✓'; }
+#waveform-picker button:hover, #waveform-picker button:focus-visible { background:#dfe5dc; border-color:#647e89; outline:0; }
+#waveform-picker button:disabled { opacity:.4; cursor:default; }
+.vital-cell[data-waveform-select] { cursor:pointer; touch-action:manipulation; }
+.vital-cell[data-waveform-select]:focus-visible { outline:2px solid currentColor; outline-offset:-2px; }
+.vital-cell[data-waveform-select]:hover { background:#07100e; }
+
+#monitor-dialog { width:min(860px, calc(100vw - 20px)); max-width:none; max-height:calc(100dvh - 20px); padding:0; margin:auto; color:#edf0e9; background:#040908; border:3px solid; border-color:#e1e0d3 #50575a #50575a #e1e0d3; font:16px/1.2 var(--font-xp); box-shadow:6px 8px 0 #0005; }
+#monitor-dialog[open] { display:flex; flex-direction:column; }
+#monitor-dialog::backdrop { background:#071014b8; }
+.monitor-titlebar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-shrink:0; padding:6px 8px 6px 12px; color:#25343b; background:linear-gradient(#dedad4, var(--chrome-mid)); border-bottom:2px solid #545b5a; }
+#monitor-title { font:12px var(--font-block); letter-spacing:.08em; }
+#monitor-close { width:32px; height:32px; }
+.monitor-body { min-height:0; overflow:auto; overscroll-behavior:contain; padding:12px; }
+#monitor-patient { margin:0 0 10px; color:#c7d1ce; font-size:16px; }
+.monitor-channel { display:grid; grid-template-columns:minmax(0, 1fr) 112px; gap:14px; align-items:center; min-height:108px; padding:9px 0; border-bottom:1px solid #28332e; }
+.monitor-ecg { color:#2ee76a; }
+.monitor-pleth { color:#4ab8ff; }
+.monitor-capno { color:#ff9530; }
+.monitor-trace { min-width:0; }
+#monitor-dialog :is(#ecg-waveform, #pleth-waveform, #capno-waveform) { display:block!important; margin:0; padding:0; border:0; }
+#monitor-dialog .vital-label, #monitor-dialog .capno-heading { display:flex; font:11px var(--font-mono); color:inherit; margin:0 0 4px; }
+#monitor-dialog :is(#rhythm-strip, #pleth-strip, #capno-strip) { width:100%; height:76px; }
+.monitor-number { display:flex; flex-direction:column; align-items:flex-start; gap:4px; font-family:var(--font-mono); }
+.monitor-number>span { font-size:12px; }
+.monitor-number strong { font:700 46px/1 var(--font-monitor); font-variant-numeric:lining-nums tabular-nums slashed-zero; }
+.monitor-number small { display:flex; flex-wrap:wrap; gap:3px 6px; font-size:10px; white-space:nowrap; }
+.monitor-measurements { display:grid; grid-template-columns:minmax(0, 1fr); gap:8px; padding:10px 0; border-bottom:1px solid #28332e; }
+.monitor-measurements>div { display:flex; flex-direction:column; gap:4px; min-width:0; padding:5px; }
+.monitor-measurements span { font:11px var(--font-mono); color:#b2c1bc; }
+.monitor-measurements strong { font:700 46px/1 var(--font-monitor); font-variant-numeric:lining-nums tabular-nums slashed-zero; }
+.monitor-measurements small { color:#8a9b94; font:10px var(--font-mono); }
+.monitor-bp { padding:14px 0 0; }
+.monitor-bp-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+#monitor-bp-title { font:12px var(--font-block); }
+#monitor-bp-title small { font:11px var(--font-mono); color:#b2c1bc; }
+#monitor-cycle-bp { min-height:36px; padding:4px 10px; background:var(--chrome-bg); color:#243339; border:2px solid; border-color:var(--hi) var(--lo) var(--lo) var(--hi); font:16px var(--font-xp); cursor:pointer; }
+#monitor-cycle-bp:disabled { opacity:.4; cursor:default; }
+.monitor-bp-controls { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+#monitor-bp-schedule-toggle { display:flex; align-items:center; justify-content:center; width:36px; height:36px; padding:6px; color:#243339; background:var(--chrome-bg); border:2px solid; border-color:var(--hi) var(--lo) var(--lo) var(--hi); cursor:pointer; }
+#monitor-bp-schedule-toggle svg { width:20px; height:20px; }
+#monitor-bp-schedule-toggle[data-active="true"] { color:#12602c; }
+#monitor-bp-schedule-toggle[aria-expanded="true"] { border-color:var(--lo) var(--hi) var(--hi) var(--lo); }
+#monitor-bp-schedule-toggle:focus-visible { outline:2px solid #77c9e3; outline-offset:1px; }
+#monitor-bp-schedule-toggle:disabled { opacity:.5; cursor:default; }
+#monitor-bp-schedule { position:fixed; z-index:2; width:170px; overflow:auto; padding:4px; color:#243339; background:var(--chrome-bg); border:2px solid; border-color:var(--hi) var(--lo) var(--lo) var(--hi); box-shadow:3px 4px 0 #0007; }
+#monitor-bp-schedule[hidden] { display:none; }
+#monitor-bp-schedule button { display:block; width:100%; min-height:36px; padding:6px 8px; color:inherit; background:transparent; border:0; font:16px var(--font-xp); text-align:left; cursor:pointer; }
+#monitor-bp-schedule button[aria-checked="true"]::after { content:' ✓'; }
+#monitor-bp-schedule button:hover, #monitor-bp-schedule button:focus-visible { background:#e4e8de; outline:1px solid #647e89; outline-offset:-1px; }
+#monitor-bp-schedule-status { margin:6px 0 10px; color:#a6b4b0; font:13px var(--font-xp); }
+#monitor-bp-empty { margin:12px 0; color:#9ba9ad; }
+#monitor-bp-chart svg { display:block; width:100%; margin:10px 0; }
+.monitor-bp-table { max-height:160px; overflow:auto; }
+#monitor-bp-table { width:100%; border-collapse:collapse; font:600 14px var(--font-monitor); font-variant-numeric:tabular-nums slashed-zero; font-feature-settings:'zero' 1, 'tnum' 1, 'cv01' 1; text-align:right; }
+#monitor-bp-chart svg { font-feature-settings:'zero' 1, 'tnum' 1, 'cv01' 1; }
+#monitor-bp-table[hidden] { display:none; }
+#monitor-bp-table :is(th,td) { padding:7px 4px; border-bottom:1px solid #28332e; }
+#monitor-bp-table th { color:#a6b4b0; font:11px var(--font-mono); }
+#monitor-bp-table :is(th,td):first-child { text-align:left; }
+#monitor-bp-table td:nth-child(3) { color:#77c9e3; }
+@media(max-width:900px) {
+  #waveform-toggle { height:36px; min-height:36px; padding:2px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:2px; }
+  #waveform-toggle small { font:7px var(--font-mono); }
+  #waveform-toggle span { font:bold 10px var(--font-mono); }
+  #rhythm-cell[data-waveform="ecg"] #waveform-toggle { color:#2ee76a; border-color:#2c7344; }
+  #rhythm-cell[data-waveform="pleth"] #waveform-toggle { color:#4ab8ff; border-color:#4ab8ff; }
+  #rhythm-cell[data-waveform="capno"] #waveform-toggle { color:#ff9530; border-color:#ff9530; background:#201307; }
+}
+@media(max-width:600px) {
+  .spo2-reading .spo2-pulse-bar { width:4px; height:13px; }
+  .monitor-spo2-reading { gap:4px; }
+  .monitor-spo2-reading .spo2-pulse-bar { width:7px; height:28px; }
+  .vital-value { font-size:16px; }
+  #rhythm-cell { flex-grow:1.4; }
+  .vital-hr { flex-grow:.9; }
+  .vital-bp { flex-grow:1.9; }
+  .vital-etco2 { flex-grow:1.15; }
+  #monitor-btn { width:32px; height:30px; min-height:30px; padding:4px; justify-content:center; }
+  #monitor-btn span { display:none; }
+  #monitor-btn svg { width:18px; height:16px; }
+  .monitor-body { padding:8px; }
+  .monitor-channel { grid-template-columns:minmax(0, 1fr) 86px; gap:8px; min-height:92px; }
+  #monitor-dialog :is(#rhythm-strip, #pleth-strip, #capno-strip) { height:60px; }
+  .monitor-number strong, .monitor-measurements strong { font-size:38px; }
+  .monitor-number small { font-size:9px; }
+}
+
+.vital-value, .monitor-number strong, .monitor-measurements strong, #capno-rr, #monitor-capno-rr { font-optical-sizing:none; font-variation-settings:'opsz' 14; font-feature-settings:'zero' 1, 'tnum' 1, 'cv01' 1; text-shadow:0 0 .55px currentColor; transform:scaleX(.95); }
+.monitor-number strong, .monitor-measurements strong { transform-origin:left center; }
+#capno-rr, #monitor-capno-rr { display:inline-block; transform-origin:left center; }

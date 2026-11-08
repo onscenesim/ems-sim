@@ -159,7 +159,7 @@ test('retracted and capped pens do not mark the scratchpad; extending resumes dr
     window: { EMSCosmetics: { canWrite: () => ready, ink: () => '#a52c37' } },
   });
   const app = fs.readFileSync(require.resolve('../public/app.js'), 'utf8');
-  vm.runInContext(app.slice(app.indexOf('const vitalsScratch ='), app.indexOf('// The terminal uses 100dvh')), scope);
+  vm.runInContext(app.slice(app.indexOf('const vitalsScratch ='), app.indexOf('function adjustForViewport()')), scope);
   const event = { isPrimary: true, button: 0, pointerId: 1, clientX: 10, clientY: 10, preventDefault() {} };
   listeners.pointerdown(event); listeners.pointermove(event);
   assert.equal(marks, 0);

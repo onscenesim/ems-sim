@@ -26,7 +26,8 @@ function fixture({ reduced = false, missing = false } = {}) {
     TwelveLead:require('../public/twelve-lead'),
     window: { matchMedia: () => ({ matches: reduced }) }, localTranscript: null,
     document: { getElementById: id => missing ? null : elements.get(id) },
-    playSound: sound => played.push({ sound, time: now }),
+    playSound: sound => { played.push({ sound, time: now }); },
+    waitForSound: async () => {},
     setTimeout: (fn, ms) => { const timer = { fn, at: now + ms }; timers.push(timer); return timer; },
     clearTimeout: timer => { const i = timers.indexOf(timer); if (i >= 0) timers.splice(i, 1); },
   });
@@ -141,6 +142,7 @@ test('the real roll loop defers only scene-owned sounds and waits for animations
   Object.assign(c, {
     console: { log() {} },
     playSound: sound => events.push(sound),
+    waitForSound: async () => {},
     animateDiceRoll: async id => events.push(`dice:${id}`),
     animateBVM: async () => { events.push('bvm'); entered(); await new Promise(r => { release = r; }); },
     animateLUCAS: async () => events.push('lucas'),
@@ -255,6 +257,7 @@ test('server transport flags still gate one-time loading/departure sounds, desti
       hasPlayedLoading: false, hasPlayedDepart: false,
       localTranscript: { meta: { provider_level: provider } },
       playSound: sound => events.push(sound),
+    waitForSound: async () => {},
       lockDestinationPanel: dest => events.push(`lock:${dest}`),
       animateLoading: () => { events.push('loading'); return new Promise(r => releases.push(r)); },
       animateDepart: () => { events.push('depart'); enteredDepart(); return new Promise(r => releases.push(r)); },
@@ -472,17 +475,40 @@ test('CPR, LUCAS, shock and thump recordings survive their shorter overlays', as
   }
 });
 
-test('multi-roll pacing still reaches its scene after immediate outcome feedback', async () => {
+test('multi-roll pacing waits for the outcome tail before starting its scene', async () => {
   const f = fixture(), events = [];
+  let finishFeedback;
   Object.assign(f.context, {
     console: { log() {} },
     playSound: sound => events.push(sound),
+    waitForSound: () => new Promise(resolve => { finishFeedback = resolve; }),
     animateDiceRoll: async () => events.push('unexpected dice'),
     animateProcedureScene: async (scene, id, outcome) => events.push([scene, id, outcome]),
   });
   const start = source.indexOf('    for (const r of (data.rolls || [])) {');
   const end = source.indexOf('    for (const r of (data.rolls || [])) printRoll', start);
   vm.runInContext('async function runOrders(data) {\n' + source.slice(start, end) + '\n}', f.context);
-  await f.context.runOrders({ rolls: [{ procedure_id: 'pacing', outcome: 'FAILURE', multi_roll: true, dc: [10, 12] }] });
+  const done = f.context.runOrders({ rolls: [{ procedure_id: 'pacing', outcome: 'FAILURE', multi_roll: true, dc: [10, 12] }] });
+  assert.deepEqual(events, ['fail'], 'no physical cue during the result tail');
+  finishFeedback(); await done;
   assert.deepEqual(events, ['fail', ['pacing', 'pacing', 'FAILURE']]);
+});
+
+
+test('a delayed oral pickup finishes before the scene releases the next action', async () => {
+  const f = fixture();
+  for (const suffix of ['overlay', 'label']) f.elements.set(`oralmed-${suffix}`, f.elements.get(`sga-${suffix}`));
+  const voice = {}, finished = new Promise(resolve => { voice.finish = resolve; });
+  f.context.playSound = () => voice;
+  f.context.waitForSound = played => { assert.equal(played, voice); return finished; };
+  vm.runInContext(source.slice(source.indexOf('function animateRouteMedication('), source.indexOf('function animateNIV(')), f.context);
+  let complete = false;
+  const done = f.context.animateRouteMedication('oralmed', 'SUCCESS', 2600).then(() => { complete = true; });
+  f.advance(3000);
+  assert.equal(complete, false);
+  assert.equal(f.elements.get('oralmed-overlay').classList.contains('visible'), true);
+  voice.finish(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.elements.get('oralmed-overlay').classList.contains('visible'), false);
+  f.advance(220); await done;
+  assert.equal(complete, true);
 });

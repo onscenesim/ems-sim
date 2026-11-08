@@ -5,18 +5,18 @@
   }
   const panel = document.createElement('section');
   panel.style.cssText='position:fixed;z-index:20000;inset:8px 8px auto;background:#17222c;color:#d9e6f0;padding:12px;font:18px monospace;border:1px solid #91b7d3;max-height:28vh;overflow:auto';
-  panel.innerHTML='<label>Preview scene <select id="qa-scene"><option value="chest_seal">Chest seal</option><option value="sga">i-gel</option><option value="opa">OPA</option><option value="laryngoscope">Intubation</option><option value="oxygen">Oxygen</option><option value="nebmed">Nebulizer</option><option value="niv">CPAP</option><option value="iv">IV start</option><option value="medpush">IV medication</option><option value="iomed">IO medication</option><option value="iofluid">IO fluid</option><option value="ioblood">IO blood</option><option value="oralmed">Oral / sublingual medication</option><option value="immed">IM medication</option><option value="defib">Defibrillation</option><option value="cardioversion">Cardioversion</option><option value="thump">Precordial thump</option><option value="lucas">LUCAS</option><option value="ncd">Needle decompression</option><option value="ncric">Needle cric</option><option value="cpr">CPR</option><option value="bvm">BVM</option><option value="pacing">Pacing</option><option value="npa">NPA</option><option value="obstruction">Obstruction removal</option><option value="scalpel">Surgical cric</option><option value="ekg">12-lead ECG</option><option value="io">IO access</option><option value="infusion">IV fluid</option><option value="blood">Blood product</option><option value="suction">Suction</option><option value="bleeding_control">Bleeding control</option><option value="tourniquet">Tourniquet</option><option value="inmed">Intranasal medication</option></select></label> <label>Outcome <select id="qa-outcome"><option>SUCCESS</option><option>FAILURE</option><option>COMPLICATION</option></select></label> <button id="qa-play">Play scene</button> <button data-push-frame="0">Start frame</button> <button data-push-frame="1150">Flow frame</button> <button data-push-frame="2800">End frame</button> <button id="qa-all">Play medication sequence</button> <button id="qa-procedures">Audit procedure sounds</button> <button id="qa-cpr">Audit CPR variants</button> <label>Provider <select id="qa-provider"><option>ALS</option><option>BLS</option></select></label> <label><input id="qa-moving" type="checkbox"> In ambulance</label> <button id="qa-levels">Inspect audio levels</button> <a href="/" style="color:#a5deee">Simulator</a><div><label>Tracked access <select id="qa-access"><option>IO</option><option>IV</option></select></label> <input id="qa-order" aria-label="Medication order" value="Give epinephrine"> <button id="qa-order-play">Test tracked access order</button></div><pre id="qa-log" style="white-space:pre-wrap;margin:8px 0 0;font:12px monospace" aria-live="polite">Ready. Uses the production animation and sound player.</pre>';
+  panel.innerHTML='<label>Preview scene <select id="qa-scene"><option value="dice">Dice only</option><option value="chest_seal">Chest seal</option><option value="sga">i-gel</option><option value="opa">OPA</option><option value="laryngoscope">Intubation</option><option value="oxygen">Oxygen</option><option value="nebmed">Nebulizer</option><option value="niv">CPAP</option><option value="iv">IV start</option><option value="medpush">IV medication</option><option value="iomed">IO medication</option><option value="iofluid">IO fluid</option><option value="ioblood">IO blood</option><option value="oralmed">Oral / sublingual medication</option><option value="immed">IM medication</option><option value="defib">Defibrillation</option><option value="cardioversion">Cardioversion</option><option value="thump">Precordial thump</option><option value="lucas">LUCAS</option><option value="ncd">Needle decompression</option><option value="ncric">Needle cric</option><option value="cpr">CPR</option><option value="bvm">BVM</option><option value="pacing">Pacing</option><option value="npa">NPA</option><option value="obstruction">Obstruction removal</option><option value="scalpel">Surgical cric</option><option value="ekg">12-lead ECG</option><option value="io">IO access</option><option value="infusion">IV fluid</option><option value="blood">Blood product</option><option value="suction">Suction</option><option value="bleeding_control">Bleeding control</option><option value="tourniquet">Tourniquet</option><option value="inmed">Intranasal medication</option></select></label> <label>Outcome <select id="qa-outcome"><option>SUCCESS</option><option>FAILURE</option><option>COMPLICATION</option></select></label> <button id="qa-play">Play scene</button> <button data-push-frame="0">Start frame</button> <button data-push-frame="1150">Flow frame</button> <button data-push-frame="2800">End frame</button> <button id="qa-monitor">Open monitor</button> <button id="qa-stop">Stop audio</button> <button id="qa-all">Play medication sequence</button> <button id="qa-procedures">Audit procedure sounds</button> <button id="qa-cpr">Audit CPR variants</button> <label>Provider <select id="qa-provider"><option>ALS</option><option>BLS</option></select></label> <label><input id="qa-moving" type="checkbox"> In ambulance</label> <button id="qa-levels">Inspect audio levels</button> <a href="/" style="color:#a5deee">Simulator</a><div><label>Tracked access <select id="qa-access"><option>IO</option><option>IV</option></select></label> <input id="qa-order" aria-label="Medication order" value="Give epinephrine"> <button id="qa-order-play">Test tracked access order</button></div><pre id="qa-log" style="white-space:pre-wrap;margin:8px 0 0;font:12px monospace" aria-live="polite">Ready. Uses the production animation and sound player.</pre>';
   document.body.append(panel);
   const output=panel.querySelector('#qa-log');
   let epoch=performance.now(), busy=false;
   const log=text=>{output.textContent+='\n'+((performance.now()-epoch)/1000).toFixed(2)+'s '+text;panel.scrollTop=panel.scrollHeight;};
   let runVoices = [];
   const original=playSound;
-  playSound=function(name){
-    const voice=original(name);
+  playSound=function(name,options){
+    const voice=original(name,options);
     if(voice){
       runVoices.push(voice);
-      const playing=()=>log(name+' PLAYING · gain '+voice.volume+' · duration '+voice.duration.toFixed(3)+'s');
+      const playing=()=>{log(name+' PLAYING · gain '+voice.volume+' · duration '+voice.duration.toFixed(3)+'s');if(runVoices.some(other=>other!==voice&&!other.paused&&!other.ended&&other.currentTime>0))log('OVERLAP with another active cue');};
       const ended=()=>{log(name+' ENDED');cleanup();};
       const paused=()=>{log(name+' STOPPED at '+voice.currentTime.toFixed(3)+'s');cleanup();};
       const error=()=>{log(name+' ERROR');cleanup();};
@@ -31,7 +31,7 @@
     localTranscript = {meta:{provider_level:panel.querySelector('#qa-provider').value}};
     window._isMoving = panel.querySelector('#qa-moving').checked;
     log(id+' DICE · '+localTranscript.meta.provider_level+' · '+(window._isMoving?'ambulance':'outside'));
-    if(id==='defib'||id==='cardioversion') playSound(getOutcomeSound(outcome));
+    if(id==='defib'||id==='cardioversion') await waitForSound(playSound(getOutcomeSound(outcome)));
     else await animateDiceRoll(id,outcome==='SUCCESS'?18:3,12,outcome);
     log(id+' ANIMATION');
     if(id==='iv') await animateIV(outcome);
@@ -50,7 +50,7 @@
     else if(id==='medpush') await animateMedPush(outcome);
     else if(id==='nebmed') await animateRouteMedication(id,outcome,2800);
     else if(id==='niv') await animateRouteMedication(id,outcome,3200);
-    else await animateProcedureScene(id,({laryngoscope:'intubation',npa:'nasopharyngeal_airway',obstruction:'foreign_body_removal',scalpel:'cricothyrotomy',sga:'supraglottic_airway',opa:'oropharyngeal_airway'})[id]||id,outcome);
+    else if(id!=='dice') await animateProcedureScene(id,({laryngoscope:'intubation',npa:'nasopharyngeal_airway',obstruction:'foreign_body_removal',scalpel:'cricothyrotomy',sga:'supraglottic_airway',opa:'oropharyngeal_airway'})[id]||id,outcome);
     log(id+' OVERLAY FINISHED');
     // Audit mode waits for natural endings so one recording cannot mask the next.
     await Promise.all(runVoices.map(voice=>new Promise(resolve=>{
@@ -80,6 +80,9 @@
     output.textContent='Production delivery frame at '+button.dataset.pushFrame+'ms (silent). Play scene to resume normal playback.';
   };
   panel.querySelector('#qa-play').onclick=()=>{['medpush','infusion'].forEach(id=>document.getElementById(id+'-overlay').style.transition='');play([panel.querySelector('#qa-scene').value]);};
+  panel.querySelector('#qa-monitor').onclick=()=>monitorView.open();
+  panel.querySelector('#qa-stop').onclick=()=>stopAllSounds();
+  new MutationObserver(()=>{if(diceOutcomeEl.className.includes('visible')){const voice=runVoices.findLast(v=>v.name==='success'||v.name==='fail');log('RESULT '+diceOutcomeEl.textContent+' · audio '+(voice?.currentTime??0).toFixed(3)+'s');}}).observe(diceOutcomeEl,{attributes:true,attributeFilter:['class']});
   panel.querySelector('#qa-all').onclick=()=>play(['oralmed','immed','medpush','inmed','nebmed','infusion','blood','defib','io','chest_seal','sga','opa','laryngoscope','oxygen','niv']);
   panel.querySelector('#qa-procedures').onclick=()=>play(['cpr','lucas','thump','defib','cardioversion','chest_seal','bleeding_control','tourniquet','ncd','ncric','bvm','pacing','npa','obstruction','scalpel','ekg']);
   panel.querySelector('#qa-cpr').onclick=()=>play([{id:'cpr',provider:'ALS',moving:false},{id:'cpr',provider:'ALS',moving:true},{id:'cpr',provider:'BLS',moving:false},{id:'cpr',provider:'BLS',moving:true},{id:'defib',provider:'ALS',moving:true},{id:'cardioversion',provider:'ALS',moving:true}]);
@@ -106,7 +109,7 @@
     const ctx=new AudioContext();await ctx.resume();
     let decoded=0,failed=0;
     for(const [name,url] of Object.entries(SOUNDS)){
-      try{const response=await fetch(url);const audio=await ctx.decodeAudioData(await response.arrayBuffer());decoded++;const data=audio.getChannelData(0);let sum=0,peak=0,first=-1,last=0;for(let i=0;i<data.length;i++){const a=Math.abs(data[i]);sum+=a*a;peak=Math.max(peak,a);if(a>.015){if(first<0)first=i;last=i;}}log(name+': duration '+audio.duration.toFixed(3)+'s, RMS '+(20*Math.log10(Math.sqrt(sum/data.length))).toFixed(1)+' dBFS, peak '+(20*Math.log10(peak)).toFixed(1)+' dBFS, active '+(first/audio.sampleRate).toFixed(2)+'–'+(last/audio.sampleRate).toFixed(2)+'s');}catch(e){failed++;log(name+' DECODE ERROR '+e.message);}
+      try{const response=await fetch(url);const audio=await ctx.decodeAudioData(await response.arrayBuffer());decoded++;const data=audio.getChannelData(0);let sum=0,peak=0,first=-1,last=0;for(let i=0;i<data.length;i++){const a=Math.abs(data[i]);sum+=a*a;peak=Math.max(peak,a);if(a>.015){if(first<0)first=i;last=i;}}const gain=SOUND_LEVELS[name]??1;const blocks=[];for(let i=0;i<data.length;i+=Math.round(audio.sampleRate*.05)){const end=Math.min(data.length,i+Math.round(audio.sampleRate*.05));let power=0;for(let j=i;j<end;j++)power+=data[j]*data[j];blocks.push(power/(end-i));}const gate=Math.max(...blocks)/100;const active=blocks.filter(x=>x>gate);const gated=10*Math.log10(active.reduce((a,b)=>a+b,0)/active.length)+20*Math.log10(gain);log(name+': effective active RMS '+gated.toFixed(1)+' dBFS, gain '+gain+' · duration '+audio.duration.toFixed(3)+'s, RMS '+(20*Math.log10(Math.sqrt(sum/data.length))).toFixed(1)+' dBFS, peak '+(20*Math.log10(peak)).toFixed(1)+' dBFS, active '+(first/audio.sampleRate).toFixed(2)+'–'+(last/audio.sampleRate).toFixed(2)+'s');}catch(e){failed++;log(name+' DECODE ERROR '+e.message);}
     }log('Audio inventory: '+decoded+' decoded; '+failed+' failed');await ctx.close();
   };
 })();

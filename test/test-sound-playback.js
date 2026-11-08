@@ -15,7 +15,7 @@ function soundFixture({ delayed = false } = {}) {
     createBuffer: () => ({ duration: 1 / 44100, silent: true }),
     decodeAudioData: async () => ({ duration: 4 }),
     createBufferSource() {
-      const node = { connect() { return gains.at(-1); }, disconnect() {}, start() { this.started = true; }, stop() { this.stopped = true; } };
+      const node = { connect() { return gains.at(-1); }, disconnect() {}, start(...args) { this.started = true; this.startArgs = args; }, stop() { this.stopped = true; } };
       nodes.push(node); return node;
     },
     createGain() {
@@ -116,36 +116,87 @@ test('scene completion never truncates an action; hidden scenes cancel unstarted
   assert.equal(timers.length, 0); assert.equal(listeners.size, 0);
 });
 
-test('dice feedback plays on the landing frame for all four outcomes', async () => {
+test('dice buildup follows actual playback, reveals at the drop, and waits for the tail', async () => {
   for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
-    for (const stalled of [false,true]) {
-    let tick, now = 0; const timers = [], played = [];
-    const el = () => ({ textContent: '', className: '', classList: { add() {}, remove() {} }, setAttribute() {}, getBoundingClientRect() {} });
-    const context = vm.createContext({
-      OBSTRUCTION_PROCS: new Set(), loadSoundBuffer: async () => {},
+    const f = soundFixture(), c = f.context;
+    let tick, now = 0, complete = false;
+    const timers = [], played = [];
+    const el = () => ({ textContent: '', className: '', style: { setProperty() {} }, classList: { add() {}, remove() {} }, setAttribute() {}, getBoundingClientRect() {} });
+    const voice = new EventTarget();
+    Object.assign(voice, { paused: false, ended: false, currentTime: 0 });
+    Object.assign(c, {
+      OBSTRUCTION_PROCS: new Set(),
       getOutcomeSound: o => ['SUCCESS', 'MARGINAL'].includes(o) ? 'success' : 'fail',
       diceProcEl: el(), diceDCEl: el(), diceOutcomeEl: el(), diceNumberEl: el(), diceSvgEl: el(), diceOverlay: el(),
-      playSound: name => played.push({ name, now }),
-      performance:{now:()=>now},
+      playSound: (name, options) => { played.push({ name, offset: options.offset }); return voice; },
+      performance: { now: () => now },
       setInterval: fn => { tick = fn; }, clearInterval() {},
       setTimeout: fn => timers.push(fn),
     });
-    vm.runInContext(source.slice(source.indexOf('function animateDiceRoll('), source.indexOf('// ── Magic 8-ball')), context);
-    const done = context.animateDiceRoll('medication_push', 18, 12, outcome);
-    if(!stalled)for (let i = 1; i <= 12; i++) { now = i * 48; tick(); }
-    assert.equal(played.length, 0);
-    now = stalled ? 1000 : 624; tick();
-    assert.deepEqual(played, [{ name: ['SUCCESS', 'MARGINAL'].includes(outcome) ? 'success' : 'fail', now }]);
-    while (timers.length) timers.shift()();
-    await done;
+    vm.runInContext(source.slice(source.indexOf('async function animateDiceRoll('), source.indexOf('// ── Magic 8-ball')), c);
+    const done = c.animateDiceRoll('medication_push', 18, 12, outcome).then(() => { complete = true; });
+    await flush();
+    assert.equal(tick, undefined, 'cold decode cannot start the animation early');
+    voice.dispatchEvent(new Event('playing')); await flush();
+    const name = ['SUCCESS', 'MARGINAL'].includes(outcome) ? 'success' : 'fail';
+    const drop = name === 'success' ? .85 : .87;
+    assert.deepEqual(played, [{ name, offset: 0 }], 'one full recording begins with the roll');
+    now = 5000; voice.currentTime = drop - .001; tick();
+    assert.equal(c.diceOutcomeEl.textContent, '', 'a busy frame still follows media time');
+    voice.currentTime = drop; tick();
+    assert.equal(c.diceNumberEl.textContent, 18);
+    assert.equal(c.diceOutcomeEl.textContent, outcome, 'number and label reveal together at the impact');
+    timers.shift()(); await flush();
+    assert.equal(complete, false, 'the next procedure cannot mask the result tail');
+    assert.equal(timers.length, 0, 'fade waits for natural audio completion');
+    voice.ended = true; voice.dispatchEvent(new Event('ended')); await flush();
+    timers.shift()(); await done;
+    assert.equal(complete, true);
     assert.equal(played.length, 1);
-    }
   }
+});
+
+test('muted dice still reveal and complete without waiting for an audio event', async () => {
+  const f = soundFixture(), c = f.context;
+  let tick, now = 0; const timers = [];
+  const el = () => ({ textContent: '', className: '', style: { setProperty() {} }, classList: { add() {}, remove() {} }, setAttribute() {}, getBoundingClientRect() {} });
+  Object.assign(c, {
+    OBSTRUCTION_PROCS: new Set(), getOutcomeSound: () => 'fail', soundEnabled: false,
+    diceProcEl: el(), diceDCEl: el(), diceOutcomeEl: el(), diceNumberEl: el(), diceSvgEl: el(), diceOverlay: el(),
+    performance: { now: () => now }, setInterval: fn => { tick = fn; }, clearInterval() {}, setTimeout: fn => timers.push(fn),
+  });
+  vm.runInContext(source.slice(source.indexOf('async function animateDiceRoll('), source.indexOf('// ── Magic 8-ball')), c);
+  const done = c.animateDiceRoll('peripheral_iv', 2, 12, 'FAILURE'); await flush();
+  now = 1000; tick(); assert.equal(c.diceOutcomeEl.textContent, 'FAILURE');
+  timers.shift()(); await flush(); timers.shift()(); await done;
+  assert.equal(f.requests.length, 0);
+});
+
+test('outcome-only cues skip the roll while dice playback retains the whole recording', async () => {
+  const f = soundFixture();
+  f.context.playSound('success'); await flush();
+  f.context.playSound('fail'); await flush();
+  f.context.playSound('success', { offset: 0 }); await flush();
+  assert.deepEqual(f.nodes.map(n => n.startArgs), [[0, .85], [0, .87], [0, 0]]);
 });
 
 test('every registered recording exists, including restored medication foley', () => {
   const paths = [...audioSource.matchAll(/: '(\/sounds\/[^']+)'/g)].map(match => match[1]);
   for (const path of paths) assert.ok(fs.statSync(require('node:path').join(__dirname, '../public', path)).size > 44, path);
+});
+
+test('Monitor opening plays the isolated short beep at a controlled gain', async () => {
+  const recording = fs.readFileSync(require('node:path').join(__dirname, '../public/sounds/MonitorOpen.wav'));
+  assert.equal(recording.toString('ascii', 0, 4), 'RIFF');
+  assert.equal(recording.toString('ascii', 8, 12), 'WAVE');
+  const duration = recording.readUInt32LE(40) / recording.readUInt32LE(28);
+  assert.ok(duration > 0.5 && duration < 0.8, 'only the ending beeps, without charge or shock audio');
+  const f = soundFixture();
+  f.context.playSound('monitor_open'); await flush();
+  assert.deepEqual(f.requests, ['/sounds/MonitorOpen.wav']);
+  assert.equal(f.nodes.length, 1);
+  assert.equal(f.nodes[0].started, true);
+  assert.equal(f.gains[0].gain.value, 0.2);
 });
 
 test('failed downloads release voices and retry instead of caching a permanent silence', async () => {

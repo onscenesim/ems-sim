@@ -10,7 +10,7 @@ const SOUNDS = {
   chest_slap: '/sounds/SlapReverb.mp3',
   airway_gulp: '/sounds/GULP.mp3',
   healing: '/sounds/health-healed-01.wav',
-  med_oral_action: '/sounds/MedicationBottleRattle.wav',
+  med_oral_action: '/sounds/pyrholidon-pickup-01.wav',
   med_im_action: '/sounds/MedicationWetStab.wav',
   med_in_action: '/sounds/MedicationSpritz.wav',
   squelch: '/sounds/WoundCompression.wav',
@@ -19,10 +19,12 @@ const SOUNDS = {
   pocket: '/sounds/PocketRustle.wav',
   trash: '/sounds/TrashCrinkle.wav',
   paper: '/sounds/Notebook.mp3',
+  monitor_open: '/sounds/MonitorOpen.wav',
+  monitor_reopen: '/sounds/interface-dialogpanel-out-02-03.wav',
   defib_outside: '/sounds/Defiboutsideambulance.m4a',
   defib_amb:     '/sounds/Defibinambulance.m4a',
-  fail:     '/sounds/Diceroll_fail.m4a',
-  success:  '/sounds/Diceroll_success.m4a',
+  fail:     '/sounds/interface-diceroll-fail-02-01.wav',
+  success:  '/sounds/interface-diceroll-success-02-01.wav',
   io:       '/sounds/IODrillSoundEffect.m4a',
   kitopen:  '/sounds/KitOpen.m4a',
   lucas:    '/sounds/LUCAS.m4a',
@@ -55,8 +57,12 @@ const SOUNDS = {
   sfx_loading_bls:  '/sounds/BLSStretcher.m4a',
   sfx_depart:       '/sounds/AmbulanceDeparting.m4a',
 };
-// Match these close-up interface recordings to the established effect bed.
-const SOUND_LEVELS = { glovebox: .65, paper: .8, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .5, med_im_action: .55, med_in_action: .48, squelch: .65, signoff: .65 };
+// Match active audio (excluding quiet tails) near -27 dBFS for the new cues.
+// Keep their original dynamics; do not peak-normalize the quiet dialog texture.
+const SOUND_LEVELS = { glovebox: .65, paper: .8, monitor_open: .2, monitor_reopen: 1, success: .42, fail: .56, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .62, med_im_action: .55, med_in_action: .48, squelch: .65, signoff: .65 };
+// The recordings share a rising roll, with the first result impact at these
+// media times. Feedback outside the dice scene starts directly at that impact.
+const DICE_DROP_SECONDS = { success: .85, fail: .87 };
 // One gesture-unlocked Web Audio context mixes short effects without competing
 // HTML media decoders. Buffers are decoded once; finished voices are released.
 let soundContext;
@@ -118,7 +124,7 @@ function loadSoundBuffer(name) {
   }
   return SOUND_BUFFERS.get(name);
 }
-function playBufferedSound(name, ctx) {
+function playBufferedSound(name, ctx, offset) {
   const voice = new EventTarget();
   let node, gain, startedAt = 0;
   voice.name = name;
@@ -126,7 +132,7 @@ function playBufferedSound(name, ctx) {
   voice.ended = false;
   voice.volume = SOUND_LEVELS[name] ?? 1;
   voice.duration = 0;
-  Object.defineProperty(voice, 'currentTime', { get: () => node ? Math.min(ctx.currentTime - startedAt, voice.duration) : 0 });
+  Object.defineProperty(voice, 'currentTime', { get: () => node ? Math.min(offset + ctx.currentTime - startedAt, voice.duration) : 0 });
   const release = () => { ACTIVE_SOUND_VOICES.delete(voice); node?.disconnect(); gain?.disconnect(); };
   voice.pause = () => {
     if (voice.paused || voice.ended) return;
@@ -155,7 +161,7 @@ function playBufferedSound(name, ctx) {
       voice.dispatchEvent(new Event('ended'));
     };
     startedAt = ctx.currentTime;
-    node.start();
+    node.start(0, offset);
     voice.dispatchEvent(new Event('playing'));
   }).catch(error => {
     voice.pause();
@@ -231,24 +237,37 @@ function getDispatchSound(regionId) {
   return map[regionId] || 'dispatch';
 }
 
-function playSound(name) {
+function playSound(name, { offset = DICE_DROP_SECONDS[name] || 0 } = {}) {
   if (!soundEnabled) return;
   if (document.hidden) return;   // don't queue sounds while backgrounded — iOS flushes on return
   const s = SOUNDS[name];
   if (s === undefined) { console.warn('[sound] unknown:', name); return; }
   if (s === null) return;  // known slot — file not yet assigned
   const ctx = getSoundContext();
-  if (ctx) return playBufferedSound(name, ctx);
+  if (ctx) return playBufferedSound(name, ctx, offset);
   const voice = soundVoice(name, s);
   if (!voice) return null;
   console.log('[sound] playing:', name);
   voice.muted = false;  // ensure not silenced from unlock phase
   voice.volume = SOUND_LEVELS[name] ?? 1;
-  voice.currentTime = 0;
+  voice.currentTime = offset;
   voice.play().catch(err => {
     console.warn('[sound] play error:', name, err.message);
+    voice.dispatchEvent(new Event('error'));
   });
   return voice;
+}
+
+function waitForSound(voice, event = 'ended') {
+  if (!voice || voice.paused || voice.ended || document.hidden) return Promise.resolve();
+  return new Promise(resolve => {
+    const events = new Set([event, 'ended', 'pause', 'error']);
+    const done = () => {
+      for (const name of events) voice.removeEventListener(name, done);
+      resolve();
+    };
+    for (const name of events) voice.addEventListener(name, done);
+  });
 }
 const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression',
   'finger_thoracostomy', 'resuscitative_thoracotomy', 'perimortem_csection']);
@@ -436,6 +455,8 @@ userInput.addEventListener('keydown', e => {
     moveCursorToEnd();
   }
 });
+userInput.addEventListener('input', () => monitorView.tick());
+userInput.addEventListener('blur', () => monitorView.tick());
 
 function moveCursorToEnd() {
   const len = userInput.value.length;
@@ -1279,6 +1300,7 @@ async function startScenario(replayOf = null) {
     // Initial vitals (likely empty/sparse until equipment is placed)
     if (typeof data.scene_minute === 'number') {
       currentSceneMinute = data.scene_minute;
+      monitorSceneMinute = data.scene_minute;
     }
     applyPatientFocus(data.patient_focus, data.multi_patient);
     applyVitals(data.vitals || null);
@@ -1309,6 +1331,7 @@ async function sendTurn(msg, opts = {}) {
   if (!sessionId || sendingTurn || document.getElementById('proc-confirm')) return;
   if (retryTurn) { msg = retryTurn.msg; opts = retryTurn.opts; }
   sendingTurn = true;
+  let completed = false;
   const operationId = opts.operationId || newOperationId();
   const skipMode = opts.skipMode || null;
   const isReport = opts.isReport !== undefined ? opts.isReport : (reportMode && !skipMode);
@@ -1358,9 +1381,9 @@ async function sendTurn(msg, opts = {}) {
       console.log('[roll]', r.procedure_id, r.outcome, '→ sound:', procSound);
       // Dice own outcome feedback; every procedure scene owns its physical cue.
       // Shocks use the heart scene in place of the generic dice overlay.
-      if (DEFIB_PROCS.has(r.procedure_id)) { playSound(getOutcomeSound(r.outcome)); await animateDefib(r.procedure_id, r.outcome); continue; }
+      if (DEFIB_PROCS.has(r.procedure_id)) { await waitForSound(playSound(getOutcomeSound(r.outcome))); await animateDefib(r.procedure_id, r.outcome); continue; }
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
-      if (r.multi_roll) playSound(getOutcomeSound(r.outcome));
+      if (r.multi_roll) await waitForSound(playSound(getOutcomeSound(r.outcome)));
       else await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome, r.target);
       if (procSound && !hasProcedureAnimationSound(r.procedure_id)) playSound(procSound);
       if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id, r.outcome);
@@ -1448,6 +1471,7 @@ async function sendTurn(msg, opts = {}) {
     // Vitals update on every turn
     if (typeof data.scene_minute === 'number') {
       currentSceneMinute = data.scene_minute;
+      monitorSceneMinute = data.scene_minute;
     }
     applyPatientFocus(data.patient_focus, data.second_patient);
     applyVitals(data.vitals || null);
@@ -1493,6 +1517,7 @@ async function sendTurn(msg, opts = {}) {
       setInputEnabled(false);
       return;
     }
+    completed = true;
   } catch (err) {
     hideLoadingDots();
     if (err.code === 'operation_cancelled') {
@@ -1511,6 +1536,7 @@ async function sendTurn(msg, opts = {}) {
   }
 
   setLoading(false);
+  return completed;
 }
 
 // ── Confirm panel — every dice-rolling skill gets a ✓/✗ before the turn runs.
@@ -2082,6 +2108,7 @@ function setLoading(loading) {
     sendBtn.classList.remove('stop-mode');
   }
   if (!loading) focusActionInput();
+  monitorView.refresh();
 }
 
 function setInputEnabled(enabled) {
@@ -2113,6 +2140,7 @@ userInput.addEventListener('pointerdown', () => {
   hideCrewPanel();
   hideDrugPanel();
   setVitalsPanelOpen(false);
+  monitorView.closePicker();
   // Establish real input focus even when the browser has a caret in page text.
   // Keep the default pointer action so selecting/editing existing text still works.
   focusActionInput(true);
@@ -2647,7 +2675,7 @@ function scheduleSceneAudio({ action, actionAt = 100, resultSound, resultAt, red
   const sound = action || resultSound;
   const onVisibility = () => { if (document.hidden) cancel(); };
   const timer = setTimeout(() => {
-    if (!cancelled && !document.hidden && sound) playSound(sound);
+    if (!cancelled && !document.hidden && sound) cancel.voice = playSound(sound);
   }, reduced ? 0 : action ? actionAt : resultAt);
   const cancel = () => {
     cancelled = true;
@@ -2868,8 +2896,13 @@ function animateRouteMedication(id, outcome, holdMs) {
       reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
       cancelAudio();
-      overlay.classList.remove('visible');
-      setTimeout(resolve, 220);
+      const fade = () => {
+        overlay.classList.remove('visible');
+        setTimeout(resolve, 220);
+      };
+      // A slow cold decode must not let this longer pickup overlap the next roll.
+      if (id === 'oralmed' && cancelAudio.voice) waitForSound(cancelAudio.voice).then(fade);
+      else fade();
     }, holdMs);
   });
 }
@@ -2944,63 +2977,58 @@ function animateDepart() {
  * @param {number|number[]} dc   DC value(s)
  * @param {string} outcome       'SUCCESS' | 'MARGINAL' | 'FAILURE' | 'COMPLICATION'
  */
-function animateDiceRoll(procedureId, roll, dc, outcome, target) {
-  // Warm the outcome while the die spins, before the landing beat.
-  loadSoundBuffer(getOutcomeSound(outcome)).catch(() => {});
+async function animateDiceRoll(procedureId, roll, dc, outcome, target) {
+  const sound = getOutcomeSound(outcome);
+  const dropAt = DICE_DROP_SECONDS[sound] * 1000;
+  // Start the full recording once. Wait for actual playback so a cold decode or
+  // mobile audio activation cannot leave the animation ahead of the buildup.
+  const voice = playSound(sound, { offset: 0 });
+  const started = waitForSound(voice, 'playing');
+  const finished = waitForSound(voice);
+  await started;
   return new Promise(resolve => {
-    const CYCLE_MS   = 48;   // time per random number during cycling
-    const CYCLES     = 13;   // how many random numbers flash before landing
-    const HOLD_MS    = 550;  // how long to show the result before fading
-    const FADE_MS    = 200;  // CSS transition duration (matches --transition in CSS)
-
-    // Populate static labels
-    diceProcEl.textContent    = OBSTRUCTION_PROCS.has(procedureId) ? 'REMOVE OBSTRUCTION' : procedureId.replace(/_/g, ' ').toUpperCase();
+    const HOLD_MS = 550;
+    const FADE_MS = 200;
+    diceProcEl.textContent = OBSTRUCTION_PROCS.has(procedureId) ? 'REMOVE OBSTRUCTION' : procedureId.replace(/_/g, ' ').toUpperCase();
     if (target) diceProcEl.textContent += ` · ${target.toUpperCase()}`;
     const dcLabel = Array.isArray(dc) ? dc.join(' / ') : dc;
-    diceDCEl.textContent      = `DC ${dcLabel}`;
+    diceDCEl.textContent = `DC ${dcLabel}`;
     diceOutcomeEl.textContent = '';
-    diceOutcomeEl.className   = '';
-    diceNumberEl.textContent  = '?';
+    diceOutcomeEl.className = '';
+    diceNumberEl.textContent = '?';
     diceSvgEl.setAttribute('class', '');
-
-    // Show overlay + trigger spin animation
+    diceSvgEl.style.setProperty('--dice-roll-duration', `${dropAt}ms`);
     diceOverlay.classList.add('visible');
-    // Force reflow so animation restarts cleanly — offsetWidth is HTMLElement-only;
-    // getBoundingClientRect() is defined on SVGElement and triggers layout.
     void diceSvgEl.getBoundingClientRect();
     diceSvgEl.classList.add('rolling');
 
-    // Use elapsed time so a busy frame or backgrounded tab doesn't require
-    // replaying every missed interval before the real result can land.
-    const started = performance.now();
+    const startedAt = performance.now();
     const ticker = setInterval(() => {
-      if (performance.now() - started < CYCLE_MS * CYCLES) {
+      // Follow the audio clock when audible; keep a timed visual fallback when
+      // muted, interrupted, unavailable, or returning from the background.
+      const elapsed = voice && !voice.paused && !voice.ended
+        ? voice.currentTime * 1000 : performance.now() - startedAt;
+      if (elapsed < dropAt) {
         diceNumberEl.textContent = Math.floor(Math.random() * 20) + 1;
       } else {
         clearInterval(ticker);
-        // Land on the real result
         diceNumberEl.textContent = roll;
-        playSound(getOutcomeSound(outcome));
-        diceSvgEl.setAttribute('class', outcome);   // colours the number via CSS
-
-        // Reveal outcome label
-        setTimeout(() => {
-          diceOutcomeEl.textContent = outcome;
-          diceOutcomeEl.className   = `visible ${outcome}`;
-
-          // Hold, then fade out
+        diceSvgEl.setAttribute('class', outcome);
+        diceOutcomeEl.textContent = outcome;
+        diceOutcomeEl.className = `visible ${outcome}`;
+        setTimeout(async () => {
+          // The next procedure may start only after the entire result tail.
+          await finished;
+          diceOverlay.classList.remove('visible');
           setTimeout(() => {
-            diceOverlay.classList.remove('visible');
-            setTimeout(() => {
-              diceOutcomeEl.className   = '';
-              diceSvgEl.setAttribute('class', '');
-              diceNumberEl.textContent  = '?';
-              resolve();
-            }, FADE_MS);
-          }, HOLD_MS);
-        }, 80);
+            diceOutcomeEl.className = '';
+            diceSvgEl.setAttribute('class', '');
+            diceNumberEl.textContent = '?';
+            resolve();
+          }, FADE_MS);
+        }, HOLD_MS);
       }
-    }, CYCLE_MS);
+    }, 16);
   });
 }
 
@@ -3265,6 +3293,7 @@ async function resumeFromSnapshot(snap) {
   notebookPatients = [];
   notebookPatientId = null;
   sessionId       = snap.session_id;
+  monitorView.restore(snap.turns);
   if (snap.closed && snap.progressScope === 'guest') recordGuestProgress(sessionId, { completed: true, completionXP: snap.completionXP || 0, category: snap.meta?.category });
   isClosed        = snap.closed || false;
   waitingDebrief  = false;
@@ -3296,6 +3325,7 @@ async function resumeFromSnapshot(snap) {
   updateSkipBtn();
 
   currentSceneMinute = snap.sceneMinute || 0;
+  monitorSceneMinute = currentSceneMinute;
   scenarioStartTime = Date.now() - currentSceneMinute * 60 * 1000;
 
   startScreen.style.display = 'none';
@@ -3364,6 +3394,7 @@ const VITAL_EPISODIC = new Set(['BP', 'Temp', 'Glucose', 'CapRefill']);
 
 let currentVitals      = null;   // last parsed vitals object from server
 let currentSceneMinute = 0;      // most recent server scene_minute
+let monitorSceneMinute = 0;      // authoritative in-game time; never advances with wall-clock staleness
 let stalenessInterval  = null;
 
 // ── ECG rhythm strip ─────────────────────────────────────────────────────────
@@ -3782,33 +3813,44 @@ function updateCapnography(vitals) {
   capnoStrip.update(signal);
   document.getElementById('capno-waveform').hidden=!signal||signal.status==='unplaced';
   const status=document.getElementById('capno-status');
-  status.textContent=signal?Capnography.description(signal):'';
-  status.dataset.uncertain=String(!!signal&&(signal.source!=='airway'||signal.quality!=='clean'));
+  const source=signal&&signal.status!=='unplaced'?({nasal:'Nasal',airway:'Inline',mask:'Mask',unknown:''})[signal.source]:'';
+  status.textContent=source;
+  status.title=source;
+  status.setAttribute('aria-label',source);
   document.getElementById('capno-rr').textContent=signal?.status==='connected'&&signal.rate!=null?String(signal.rate):'—';
-  document.getElementById('capno-source').textContent=signal?Capnography.sources[signal.source]:'';
+  document.getElementById('monitor-capno-rr').textContent=document.getElementById('capno-rr').textContent;
+  document.getElementById('capno-source').textContent=source;
+  const cell=document.getElementById('rhythm-cell');
+  const available=!!signal&&signal.status!=='unplaced';
+  const newlyPlaced=available&&cell.dataset.capnoAvailable!=='true';
+  cell.dataset.capnoAvailable=String(available);
+  selectMonitorWaveform(newlyPlaced&&window.matchMedia('(max-width: 900px)').matches?'capno':cell.dataset.waveform);
 }
 window.addEventListener('resize',()=>capnoStrip.resize());
-const plethStrip = PlethWaveform.createStrip(document.getElementById('pleth-strip'));
+const plethStrip = PlethWaveform.createStrip(document.getElementById('pleth-strip'), {
+  meters: document.querySelectorAll('.spo2-pulse-fill'),
+});
 const pulseOxReadout = PlethWaveform.createReadout({
   pi: document.getElementById('spo2-signal-badge'),
   status: document.getElementById('spo2-signal-status'),
-  detail: document.getElementById('pulse-ox-status'),
 });
 const waveformToggle = document.getElementById('waveform-toggle');
 
 function selectMonitorWaveform(value) {
-  const state = PlethWaveform.selection(value);
-  document.getElementById('rhythm-cell').dataset.waveform = state.selected;
-  waveformToggle.textContent = state.text;
-  waveformToggle.setAttribute('aria-label', state.label);
-  waveformToggle.setAttribute('aria-pressed', state.pressed);
+  const cell = document.getElementById('rhythm-cell');
+  const available = cell.dataset.capnoAvailable === 'true';
+  const state = value === 'capno' && available ? {
+    selected: 'capno', text: 'CO₂ ⇄', label: 'Show ECG waveform', pressed: 'true',
+  } : PlethWaveform.selection(value);
+  cell.dataset.waveform = state.selected;
+  const name = { ecg: 'ECG', pleth: 'SpO₂', capno: 'CO₂' }[state.selected];
+  waveformToggle.innerHTML = `<small>WAVEFORM</small><span>${name} ▾</span>`;
+  waveformToggle.setAttribute('aria-label', `Choose waveform: ${name}`);
   // A previously hidden idle canvas had no dimensions until this selection.
   if (!rhythmStrip.active) stripIdle();
   plethStrip.resize();
+  capnoStrip.resize();
 }
-waveformToggle.addEventListener('click', () => {
-  selectMonitorWaveform(waveformToggle.getAttribute('aria-pressed') === 'true' ? 'ecg' : 'pleth');
-});
 window.addEventListener('resize', () => plethStrip.resize());
 
 function updatePlethStrip(vitals) {
@@ -3848,6 +3890,39 @@ function stalenessClass(ageMin) {
   return '';
 }
 
+const monitorView = MonitorUI.mount(document, {
+  getPatient: () => ({ id: focusedPatientId || 'patient_1', label: focusedPatientLabel || 'Current patient' }),
+  getSelection: () => document.getElementById('rhythm-cell').dataset.waveform,
+  canSelectCapno: () => document.getElementById('rhythm-cell').dataset.capnoAvailable === 'true',
+  selectWaveform(value) {
+    selectMonitorWaveform(value);
+    if (window.matchMedia('(min-width: 901px)').matches) monitorView.open();
+  },
+  beforeOpen() {
+    userInput.blur(); hideCrewPanel(); hideDrugPanel(); setVitalsPanelOpen(false);
+  },
+  onOpen(firstOpen) {
+    stopSound('monitor_open'); stopSound('monitor_reopen');
+    playSound(firstOpen ? 'monitor_open' : 'monitor_reopen');
+  },
+  resize() {
+    requestAnimationFrame(() => {
+      rhythmStrip.sizeDirty = true;
+      if (!rhythmStrip.active) stripIdle();
+      plethStrip.resize(); capnoStrip.resize();
+    });
+  },
+  cycleBP: () => sendTurn('Cycle NIBP', { isReport: false }),
+  canCycleBP: () => !!sessionId && !isClosed && !sendingTurn && currentVitals?.BP != null,
+  getMinute: () => monitorSceneMinute,
+  getSessionId: () => sessionId,
+  canScheduleBP: () => !!sessionId && !isClosed && localTranscript?.meta?.provider_level !== 'BLS',
+  canAutoCycleBP: () => !!sessionId && !isClosed && !sendingTurn && !currentOperation && !retryTurn && !reportMode &&
+    !waitingDebrief && currentVitals?.BP != null && localTranscript?.meta?.provider_level !== 'BLS' &&
+    !userInput.value.trim() && !(document.activeElement === userInput && window.matchMedia('(any-pointer: coarse)').matches) &&
+    !document.getElementById('proc-confirm') && !window.EMSTutorial?.active,
+});
+
 /**
  * Update the bar + panel from a vitals object (or clear if null).
  */
@@ -3884,6 +3959,7 @@ function applyVitals(vitals) {
   updateRhythmStrip(currentVitals);
   updatePlethStrip(currentVitals);
   updateCapnography(currentVitals);
+  monitorView.update(currentVitals, monitorSceneMinute);
 }
 
 /**
@@ -3910,6 +3986,7 @@ function tickStaleness() {
       if (cls) el.classList.add(cls);
     }
   }
+  monitorView.tick();
 }
 
 function applyBackupStatus(backup) {
@@ -4001,6 +4078,7 @@ function resetCrewStatus() {
 }
 
 function resetVitals() {
+  monitorView.reset();
   ecgViewer.update([]);
   ecgViewer.close();
   focusedPatientId = null;
@@ -4008,6 +4086,7 @@ function resetVitals() {
   applyPatientFocus(null, false);
   currentVitals = null;
   currentSceneMinute = 0;
+  monitorSceneMinute = 0;
   stopRhythmStrip();
   rhythmStrip.motionSeed=Math.random()*10000;
   rhythmStrip.motionMix=0;
@@ -4100,17 +4179,37 @@ for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 }
 document.getElementById('scratch-clear').addEventListener('click', clearVitalsScratch);
 
-// The terminal uses 100dvh and interactive-widget=resizes-content. Avoid
-// rewriting its position during keyboard animation: that made iOS pan the page
-// while the app simultaneously moved itself, producing the visible jump.
+// Safari's keyboard shrinks the visual viewport without resizing dvh. Fit the
+// terminal's bottom to that visible area, including any native viewport pan.
+// Keep its top fixed: moving the whole terminal fights Safari's focus scrolling.
 function adjustForViewport() {
-  terminal.style.height = '';
-  terminal.style.top = '';
+  const viewport = window.visualViewport;
+  if (terminal.style.display !== 'flex' || !viewport || Math.abs(viewport.scale - 1) > 0.01) {
+    resetTerminalHeight();
+    return;
+  }
+  const bottom = viewport.height + viewport.offsetTop;
+  if (Number.isFinite(bottom) && bottom > 0) {
+    terminal.style.setProperty('--terminal-height', `${bottom}px`);
+  } else {
+    resetTerminalHeight();
+  }
 }
 function resetTerminalHeight() {
-  terminal.style.height = '';
-  terminal.style.top = '';
+  terminal.style.removeProperty('--terminal-height');
 }
+let viewportFrame = null;
+function scheduleViewportUpdate() {
+  if (viewportFrame !== null) return;
+  viewportFrame = requestAnimationFrame(() => {
+    viewportFrame = null;
+    adjustForViewport();
+  });
+}
+window.visualViewport?.addEventListener('resize', scheduleViewportUpdate);
+window.visualViewport?.addEventListener('scroll', scheduleViewportUpdate);
+window.addEventListener('resize', scheduleViewportUpdate);
+userInput.addEventListener('focus', scheduleViewportUpdate);
 
 document.addEventListener('click', e => {
   const cell = e.target && e.target.closest('#nibp-cell');

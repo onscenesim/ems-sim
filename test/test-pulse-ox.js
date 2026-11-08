@@ -198,24 +198,56 @@ test('pleth samples are deterministic, rounded, weakened/noisy and absent as app
   assert.notDeepEqual(bad.slice(0, 150), bad.slice(150, 300), 'irregular beats do not repeat every pulse');
 });
 
-test('compact monitor selection updates the actual button state and defaults to ECG', () => {
+test('SpO₂ pulse bars follow the pleth clock while its trace is hidden and empty after signal loss', () => {
+  let tick;
+  const meter = { style: {} };
+  const canvas = { clientWidth: 0, clientHeight: 0, width: 200, height: 30,
+    getContext: () => new Proxy({}, { get: () => () => {} }) };
+  const browser = vm.createContext({
+    window: { devicePixelRatio: 1 }, requestAnimationFrame(fn) { tick = fn; return 1; },
+    cancelAnimationFrame() {}, canvas, meter,
+  });
+  vm.runInContext(fs.readFileSync(require.resolve('../public/pleth'), 'utf8'), browser);
+  vm.runInContext('this.strip = PlethWaveform.createStrip(canvas, { meters: [meter] })', browser);
+  const level = () => Number(meter.style.transform.match(/scaleY\(([^)]+)\)/)[1]);
+  const signal = { quality: 'good', pulseRate: 60 };
+  browser.strip.update(signal);
+  tick(0); tick(100); tick(180);
+  assert.ok(level() > 0.8, 'pulse peaks even when the waveform canvas is hidden');
+  assert.ok(Math.abs(level() - PlethWaveform.sample(0.18, signal)) < 0.001, 'bar and trace use the same sample');
+  tick(400);
+  assert.ok(level() < 0.5, 'the bar falls after the systolic peak');
+  browser.strip.update({ quality: 'absent', pulseRate: 0 });
+  assert.equal(level(), 0);
+  browser.strip.update({ quality: 'poor', pulseRate: 60 });
+  tick(500); tick(680);
+  assert.ok(level() >= 0 && level() < 0.5, 'poor perfusion retains the smaller pleth amplitude');
+  browser.strip.update(null);
+  assert.equal(level(), 0, 'removing the probe clears the bar immediately');
+});
+
+test('compact monitor selection names the displayed trace in the chooser and defaults to ECG', () => {
   const source = fs.readFileSync(require.resolve('../public/app'), 'utf8');
   const attrs = { 'aria-pressed': 'false' }, listeners = {};
   const button = { setAttribute(k, v) { attrs[k] = v; }, getAttribute(k) { return attrs[k]; }, addEventListener(k, fn) { listeners[k] = fn; } };
   const cell = { dataset: {} };
   const c = vm.createContext({
     PlethWaveform: { ...PlethWaveform, createStrip: () => ({ resize() {} }) },
-    document: { getElementById: id => id === 'waveform-toggle' ? button : cell },
-    window: { addEventListener() {} }, rhythmStrip: { active: true }, stripIdle() {},
+    document: { getElementById: id => id === 'waveform-toggle' ? button : cell, querySelectorAll: () => [] },
+    window: { addEventListener() {} }, rhythmStrip: { active: true }, stripIdle() {}, capnoStrip: { resize() {} },
   });
   vm.runInContext(source.slice(source.indexOf('const plethStrip ='), source.indexOf('function updatePlethStrip(')), c);
   c.selectMonitorWaveform('invalid');
-  assert.equal(cell.dataset.waveform, 'ecg'); assert.equal(attrs['aria-pressed'], 'false');
-  listeners.click();
-  assert.equal(cell.dataset.waveform, 'pleth'); assert.equal(attrs['aria-pressed'], 'true');
-  assert.equal(attrs['aria-label'], 'Show ECG waveform');
-  listeners.click();
-  assert.equal(cell.dataset.waveform, 'ecg'); assert.equal(attrs['aria-label'], 'Show SpO₂ pleth waveform');
+  assert.equal(cell.dataset.waveform, 'ecg'); assert.equal(attrs['aria-label'], 'Choose waveform: ECG');
+  c.selectMonitorWaveform('pleth');
+  assert.equal(cell.dataset.waveform, 'pleth'); assert.equal(attrs['aria-label'], 'Choose waveform: SpO₂');
+  cell.dataset.capnoAvailable = 'true';
+  c.selectMonitorWaveform('capno');
+  assert.equal(cell.dataset.waveform, 'capno'); assert.match(button.innerHTML, /WAVEFORM.*CO₂ ▾/);
+  assert.equal(attrs['aria-label'], 'Choose waveform: CO₂');
+  cell.dataset.capnoAvailable = 'false';
+  c.selectMonitorWaveform('capno');
+  assert.equal(cell.dataset.waveform, 'ecg', 'removing capnography falls back to a visible trace');
   const html = fs.readFileSync(require.resolve('../public/index.html'), 'utf8');
   assert.ok(html.indexOf('src="pleth.js') < html.indexOf('src="app.js'));
   const browser = vm.createContext({});

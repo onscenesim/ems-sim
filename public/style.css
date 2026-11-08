@@ -577,6 +577,7 @@ body.light-mode .brief-options-note { color: #536159; }
   display: none;
   flex-direction: column;
   height: 100vh;
+  height: var(--terminal-height, 100dvh);
   position: fixed;
   top: 0;
   left: 0;
@@ -1236,11 +1237,9 @@ body.light-mode .brief-options-note { color: #536159; }
   .access-row input { font-size: 16px; }
   .cfg-tile select  { font-size: 16px; }
 
-  /* Use dynamic viewport height so the layout reflows when the iOS keyboard
-     appears — prevents the terminal from overflowing the visible area */
+  /* VisualViewport supplies the keyboard inset on browsers that keep dvh tall. */
   #terminal {
-    height: 100svh; /* small viewport = most conservative, never clipped by browser UI */
-    height: 100dvh; /* dynamic = best, updates when keyboard shows/hides */
+    height: var(--terminal-height, 100dvh);
   }
 }
 
@@ -1578,7 +1577,7 @@ body.light-mode .brief-options-note { color: #536159; }
 
 /* Spin animation during number cycling */
 #dice-svg.rolling {
-  animation: dice-spin 0.6s linear;
+  animation: dice-spin var(--dice-roll-duration, 0.6s) linear infinite;
 }
 
 @keyframes dice-spin {
@@ -2263,7 +2262,10 @@ body.light-mode .brief-options-note { color: #536159; }
   #ecg-waveform .vital-label, #pleth-waveform .vital-label { display: none; }
   #pleth-waveform { margin-top: 0; }
   #rhythm-cell[data-waveform="ecg"] #pleth-waveform,
-  #rhythm-cell[data-waveform="pleth"] #ecg-waveform { display: none; }
+  #rhythm-cell[data-waveform="pleth"] #ecg-waveform,
+  #rhythm-cell[data-waveform="capno"] #ecg-waveform,
+  #rhythm-cell[data-waveform="capno"] #pleth-waveform,
+  #rhythm-cell:not([data-waveform="capno"]) #capno-waveform { display: none; }
 }
 
 .vital-label {
@@ -4830,6 +4832,10 @@ body.light-mode {
   }
   #rhythm-strip, #pleth-strip { height: 18px; }
   #rhythm-cell { padding: 2px 3px; }
+  .vital-hr { flex-grow: 0.85; }
+  .vital-bp { flex-grow: 1.55; }
+  .vital-etco2 { flex-grow: 1.1; }
+  #spo2-signal-badge { font-size: 9px; white-space: nowrap; }
   #vitals-expand {
     flex: 0 0 38px;
     width: 38px;
@@ -5105,6 +5111,16 @@ body.light-mode .color-key { color: #394549; }
 #capno-strip { display:block; width:100%; height:40px; }
 .capno-rate { font:11px/1.4 var(--font-mono); color:#f4cd55; white-space:nowrap; margin-top:3px; }
 .capno-rate small { font-size:8px; margin-left:3px; }
-#capno-status { max-width:116px; font:8px/1.3 var(--font-mono); margin-top:3px; color:#b9a86c; }
-#capno-status[data-uncertain="true"] { color:#ffd54a; }
-@media(max-width:600px) { #capno-strip { height:32px; }.capno-heading { font-size:7px; flex-wrap:wrap; }#capno-status { max-width:76px; font-size:7px; } }
+#capno-status { font:8px/1.3 var(--font-mono); white-space:pre-line; text-align:center; margin-top:3px; color:#b9a86c; }
+#capno-status:empty { display:none; }
+@media(max-width:900px) {
+  #capno-waveform { margin-top:0; padding-top:0; border-top:0; }
+  .capno-heading { display:none; }
+  #capno-strip { height:30px; }
+}
+@media(max-width:600px) {
+  #capno-strip { height:18px; }
+  #capno-status { font-size:7px; line-height:1.2; margin-top:2px; }
+  .capno-rate { font-size:9px; }
+  .capno-rate small { font-size:7px; margin-left:1px; }
+}

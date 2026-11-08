@@ -93,11 +93,15 @@ const PlethWaveform = (() => {
     return { update, dispose() { if (timer !== null) clearInterval(timer); timer = null; } };
   }
 
-  function createStrip(canvas) {
+  function createStrip(canvas, { meters = [] } = {}) {
     const ctx = canvas?.getContext('2d');
     let signal = null, raf = null, lastTs = null, clock = 0, x = 0, penY = null;
     let width = 0, height = 0, dpr = 1;
     const speed = 46, gap = 12; // same monitor sweep convention as ECG
+    function setMeterLevel(value) {
+      const transform = `scaleY(${Math.max(0, Math.min(1, value))})`;
+      for (const meter of meters) meter.style.transform = transform;
+    }
     function size() {
       if (!canvas || !ctx) return false;
       width = canvas.clientWidth; height = canvas.clientHeight;
@@ -110,6 +114,7 @@ const PlethWaveform = (() => {
       return true;
     }
     function idle() {
+      setMeterLevel(0);
       if (!size()) return;
       ctx.save(); ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
@@ -119,10 +124,13 @@ const PlethWaveform = (() => {
     }
     function frame(ts) {
       raf = requestAnimationFrame(frame);
-      if (!size()) { lastTs = null; return; }
       if (lastTs === null) lastTs = ts;
       const dt = Math.min(0.25, (ts - lastTs) / 1000); lastTs = ts;
       if (dt <= 0) return;
+      const nextClock = clock + dt;
+      setMeterLevel(sample(nextClock, signal));
+      // Numeric pulse bars stay live even when a different compact trace is selected.
+      if (!size()) { clock = nextClock; penY = null; return; }
       ctx.save(); ctx.scale(dpr, dpr);
       ctx.strokeStyle = '#4ab8ff'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       const baseline = height * 0.82, amplitude = height * 0.7;
@@ -141,7 +149,7 @@ const PlethWaveform = (() => {
       const gapX = target % width;
       ctx.clearRect(gapX + 1, 0, gap, height);
       if (gapX + gap + 1 > width) ctx.clearRect(0, 0, gapX + gap + 1 - width, height);
-      ctx.restore(); clock += dt; x = target % width;
+      ctx.restore(); clock = nextClock; x = target % width;
     }
     function update(next) {
       // Saturation and probe metadata do not affect morphology or restart the

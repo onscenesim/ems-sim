@@ -109,19 +109,23 @@ test('real session carries nasal/airway source, RR, transitions and patient isol
 
 test('monitor displays source and RR for nasal and inline sampling and clears them after loss/reset',()=>{
   const nodes=new Map(),updates=[];
-  const node=id=>{if(!nodes.has(id))nodes.set(id,{dataset:{},textContent:'',hidden:false});return nodes.get(id);};
+  const node=id=>{if(!nodes.has(id))nodes.set(id,{dataset:{},textContent:'',hidden:false,setAttribute(){}});return nodes.get(id);};
   const context=vm.createContext({Capnography:{...Capno,createStrip:()=>({update:s=>updates.push(s),resize(){}})},
-    document:{getElementById:node},window:{addEventListener(){}}});
+    document:{getElementById:node},window:{addEventListener(){},matchMedia:()=>({matches:true})},selectMonitorWaveform(){}});
   const source=fs.readFileSync(require.resolve('../public/app'),'utf8');
   vm.runInContext(source.slice(source.indexOf('const capnoStrip ='),source.indexOf('const plethStrip =')),context);
   for(const sampling of ['nasal','airway']) {
     context.updateCapnography({Capnography:signal({source:sampling,rate:18})});
-    assert.equal(node('capno-rr').textContent,'18');assert.equal(node('capno-source').textContent,Capno.sources[sampling]);
+    assert.equal(node('capno-rr').textContent,'18');assert.equal(node('capno-source').textContent,sampling==='nasal'?'Nasal':'Inline');
     assert.equal(node('capno-waveform').hidden,false);
-    assert.equal(node('capno-status').dataset.uncertain,String(sampling==='nasal'));
+    assert.equal(node('capno-status').textContent,sampling==='nasal'?'Nasal':'Inline');
+    assert.equal(node('monitor-capno-rr').textContent,'18');
   }
   context.updateCapnography({Capnography:signal({status:'disconnected'})});
-  assert.equal(node('capno-rr').textContent,'—');assert.match(node('capno-status').textContent,/disconnected/);
+  assert.equal(node('capno-rr').textContent,'—');assert.equal(node('capno-status').textContent,'Inline');
+  context.updateCapnography({Capnography:signal({source:'mask',quality:'poor'})});
+  assert.equal(node('capno-status').textContent,'Mask','source only, without signal-quality coaching');
   context.updateCapnography({RR:18});assert.equal(node('capno-waveform').hidden,true);assert.equal(node('capno-source').textContent,'');
+  assert.equal(node('monitor-capno-rr').textContent,'—','a manual respiratory rate never becomes a capnography reading');
   context.updateCapnography(null);assert.equal(updates.at(-1),null);
 });
