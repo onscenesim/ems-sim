@@ -1382,8 +1382,12 @@ async function sendTurn(msg, opts = {}) {
       const procSound = getProcedureSound(r.procedure_id, r.outcome);
       console.log('[roll]', r.procedure_id, r.outcome, '→ sound:', procSound);
       // Dice own outcome feedback; every procedure scene owns its physical cue.
-      // Shocks use the heart scene in place of the generic dice overlay.
-      if (DEFIB_PROCS.has(r.procedure_id)) { await waitForSound(playSound(getOutcomeSound(r.outcome))); await animateDefib(r.procedure_id, r.outcome); continue; }
+      // Shocks roll visibly before the charging and discharge scene.
+      if (DEFIB_PROCS.has(r.procedure_id)) {
+        await animateDiceRoll(r.procedure_id, r.roll, r.dc, r.outcome, r.target);
+        await animateDefib(r.procedure_id, r.outcome);
+        continue;
+      }
       const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
       if (r.multi_roll) await waitForSound(playSound(getOutcomeSound(r.outcome)));
       else await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome, r.target);
@@ -1531,7 +1535,12 @@ async function sendTurn(msg, opts = {}) {
         retryTurn = { msg, opts: retryOpts };
         userInput.value = msg;
         print('[Press RETRY to recover this turn before sending another action.]', 'system');
-      } else retryTurn = null;
+      } else {
+        retryTurn = null;
+        if (['model_content_filtered', 'model_empty_response'].includes(err.code)) {
+          userInput.value = msg;
+        }
+      }
     }
   } finally {
     sendingTurn = false;
@@ -2651,7 +2660,8 @@ const PROCEDURE_TIMING = Object.freeze({
   // its single impact as the dressing meets the chest at roughly 1s.
   chest_seal: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3000, sound: 3000, action: 'chest_slap', actionAt: 0 }),
   pacing: Object.freeze({ hold: 5200, start: 0, cycle: 5200, result: 2800, sound: 2800 }),
-  defib: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 2600, sound: 1400 }),
+  // Discharge lands at 4.8s; keep the flash and outcome on that impact.
+  defib: Object.freeze({ hold: 9426, start: 0, cycle: 9426, result: 4800, sound: 0 }),
   bleeding_control: Object.freeze({ hold: 4200, start: 0, cycle: 4200, result: 3100, sound: 3100, action: 'squelch' }),
   tourniquet: Object.freeze({ hold: 4400, start: 0, cycle: 4400, result: 3100, sound: 3100, action: 'squelch' }),
   bvm: Object.freeze({ hold: 2500, start: 350, cycle: 1500, result: 1900, sound: 350 }),
@@ -2978,6 +2988,8 @@ function animateDepart() {
  * @param {string} outcome       'SUCCESS' | 'MARGINAL' | 'FAILURE' | 'COMPLICATION'
  */
 async function animateDiceRoll(procedureId, roll, dc, outcome, target) {
+  // Decode the longer charge recording during the dice roll, before its scene.
+  if (procedureId === 'defibrillation' || procedureId === 'cardioversion') loadSoundBuffer(getProcedureSound(procedureId, outcome));
   const sound = getOutcomeSound(outcome);
   const dropAt = DICE_DROP_SECONDS[sound] * 1000;
   // Start the full recording once. Wait for actual playback so a cold decode or

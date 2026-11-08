@@ -28,21 +28,7 @@ const EMS_SYSTEM_RULES = `For EMS Scenarios, in addition to provided instruction
 3: Serious dispatches get an automatic engine backup, and benign sounding dispatches get just an ambulance.
 4: Keep narrative updates brief, concise, and focused strictly on the immediate clinical scene.`;
 
-/**
-* Pull the text out of a Gemini response defensively and log finish reason.
-*/
-function extractText(response) {
-    const candidate = response?.candidates?.[0];
-    
-    // Warn in console if output was cut short by API safety or token caps
-    if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
-        console.warn(`[API Warning] Generation stopped early. finishReason: ${candidate.finishReason}`);
-    }
-    if (response && response.text) {
-        return response.text;
-    }
-    throw new Error('The model returned an empty response please retry your last action.');
-}
+const { extractText } = require('./modelResponse');
 
 /**
 * Send a turn in an active scenario.
@@ -66,7 +52,7 @@ async function sendTurn(systemPrompt, messages, options = {}) {
         }, options);
         return extractText(response);
     } catch (error) {
-        if (options.signal?.aborted || error.code === 'model_timeout') throw error;
+        if (options.signal?.aborted || ['model_timeout', 'model_content_filtered', 'model_empty_response'].includes(error.code)) throw error;
         console.error("Gemini API Error (Turn):", error);
         throw new Error("Failed to connect to the Gemini API during turn.");
     }
@@ -106,7 +92,7 @@ async function sendDebrief(debriefContext, providerLevel, options = {}) {
         }
         return draft;
     } catch (error) {
-        if (options.signal?.aborted || error.code === 'model_timeout' || error.code === 'invalid_debrief_evidence') throw error;
+        if (options.signal?.aborted || ['model_timeout', 'model_content_filtered', 'model_empty_response'].includes(error.code) || error.code === 'invalid_debrief_evidence') throw error;
         console.error("Gemini API Error (Debrief):", error);
         throw new Error("Failed to connect to the Gemini API during debrief.");
     }

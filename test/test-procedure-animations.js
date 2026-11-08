@@ -86,10 +86,15 @@ for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction
     assert.equal(overlay.properties['--procedure-cycle'], `${t.cycle}ms`);
     assert.equal(overlay.properties['--procedure-result'], `${t.result}ms`);
     assert.ok(t.result + 180 <= t.hold, 'result is readable before fade');
+    if (t.sound === 0) {
+      f.advance(0);
+      assert.deepEqual(f.played, [{ sound: f.context.getProcedureSound(procedure, 'SUCCESS'), time: 0 }]);
+    } else {
     f.advance(99); assert.equal(f.played.length, t.action && t.actionAt === 0 ? 1 : 0);
     f.advance(t.sound - 100);
     assert.deepEqual(f.played, t.action ? [{ sound: t.action, time: t.actionAt ?? 100 }] : []);
     f.advance(1); assert.deepEqual(f.played, [{ sound: t.action || f.context.getProcedureSound(procedure, 'SUCCESS'), time: t.action ? t.actionAt ?? 100 : t.sound }]);
+    }
     f.advance(t.hold - t.sound);
     assert.equal(overlay.classList.contains('visible'), true, 'keep final CSS pose throughout the fade');
     assert.equal(overlay.classList.contains('is-fading'), true);
@@ -163,7 +168,7 @@ test('the real roll loop defers only scene-owned sounds and waits for animations
   await started;
   assert.deepEqual(events, ['dice:bvm', 'bvm']);
   release(); await p;
-  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'dice:cpr', 'cpr', 'success', 'defib']);
+  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'dice:cpr', 'cpr', 'dice:defibrillation', 'defib']);
   events.length = 0;
   await c.rolls({ rolls: [{ procedure_id: 'lucas', outcome: 'FAILURE', multi_roll: true }, { procedure_id: 'bvm', no_roll: true }] });
   assert.deepEqual(events, ['fail', 'lucas'], 'legacy multi-roll keeps feedback and action; no-roll has no dice cue');
@@ -307,9 +312,8 @@ test('electrical shock modes preserve headers, sync state, and one timed sound',
       const overlay = f.elements.get('defib-overlay');
       assert.equal(overlay.classList.contains('is-cardioversion'), procedure === 'cardioversion');
       assert.equal(f.elements.get('defib-header').textContent, procedure === 'cardioversion' ? 'SYNCHRONIZED CARDIOVERSION' : 'DEFIBRILLATION');
-      f.advance(1399); assert.equal(f.played.length, before);
-      f.advance(1); assert.equal(f.played.at(-1).sound, 'defib_outside');
-      f.advance(3220); await p;
+      f.advance(0); assert.equal(f.played.at(-1).sound, 'defib_outside');
+      f.advance(9646); await p;
       assert.equal(f.played.length, before + 1);
     }
   }
@@ -464,7 +468,7 @@ test('CPR, LUCAS, shock and thump recordings survive their shorter overlays', as
     vm.runInContext(source.slice(0, source.indexOf('const SURGICAL_PROCS')), f.context);
     vm.runInContext(source.slice(source.indexOf('function animateDefib('), source.indexOf('function animateIV(')), f.context);
     const done = f.context[fn](...args);
-    f.advance(5000); await new Promise(resolve => setImmediate(resolve)); await done;
+    f.advance(10000); await new Promise(resolve => setImmediate(resolve)); await done;
     assert.equal(f.context.getProcedureSound(scene === 'thump' ? 'precordial_thump' : scene === 'defib' ? args[0] : scene, args.at(-1)), sound);
     assert.equal(nodes.length, 1, `${fn}: one physical recording`);
     assert.equal(nodes[0].buffer.duration, duration);

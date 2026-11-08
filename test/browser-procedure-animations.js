@@ -670,11 +670,11 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     }
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const initialShock = await chestScene('defib', 'SUCCESS', 800, 'defibrillation');
-    const shock = await chestScene('defib', 'SUCCESS', 1500, 'defibrillation');
+    const shock = await chestScene('defib', 'SUCCESS', 4900, 'defibrillation');
     assert.equal(initialShock.before, 1); assert.equal(initialShock.after, 0);
     assert.ok(shock.energy > .8); assert.equal(shock.before, 0);
     for (const [outcome, expected] of [['SUCCESS', 'heartBeat'], ['MARGINAL', 'heartTentative'], ['FAILURE', 'heartQuiver'], ['COMPLICATION', 'heartLost']]) {
-      assert.equal((await chestScene('defib', outcome, 3000, 'defibrillation')).beat, expected);
+      assert.equal((await chestScene('defib', outcome, 6400, 'defibrillation')).beat, expected);
     }
     assert.equal((await chestScene('pacing', 'SUCCESS', 2200)).rate, '0.6s');
     assert.equal((await chestScene('pacing', 'MARGINAL', 2200)).rate, '1.2s');

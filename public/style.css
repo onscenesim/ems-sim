@@ -4569,17 +4569,25 @@ body.light-mode .proc-confirm-edit textarea { color: #302c21; background: #fffdf
 .heart-before, .shock-energy, .sync-cue { opacity: 0; }
 .heart-after { opacity: 1; }
 .heart-after .heart-motion { filter: drop-shadow(0 0 5px #73cde566); }
-#defib-overlay.visible .heart-before { animation: heartBefore 1400ms step-end both; }
-#defib-overlay.visible .heart-before .heart-motion { animation: heartQuiver 100ms linear 14 both; }
-#defib-overlay.visible .heart-after { animation: heartAfter 1400ms step-end both; }
-#defib-overlay.visible .shock-energy { animation: cardiacFlash 400ms ease 1400ms both; }
-#defib-overlay.visible .electrical-patient { transform-origin: 110px 110px; animation: cardiacJolt 400ms ease 1400ms both; }
+/* One whole-scene impact at discharge; leave the charge and recovery untouched. */
+#defib-overlay.visible { animation: defibImpact 100ms steps(1, end) var(--procedure-result); }
+@keyframes defibImpact {
+  0% { filter: invert(1); transform: translate(-5px, 2px) scale(1.025); }
+  50% { filter: invert(1); transform: translate(3px, -2px) scale(1.025); }
+  70% { filter: invert(0); transform: translate(-1px, 1px) scale(1.01); }
+  100% { filter: none; transform: none; }
+}
+#defib-overlay.visible .heart-before { animation: heartBefore var(--procedure-result) step-end both; }
+#defib-overlay.visible .heart-before .heart-motion { animation: heartQuiver 100ms linear 48 both; }
+#defib-overlay.visible .heart-after { animation: heartAfter var(--procedure-result) step-end both; }
+#defib-overlay.visible .shock-energy { animation: cardiacFlash 400ms ease var(--procedure-result) both; }
+#defib-overlay.visible .electrical-patient { transform-origin: 110px 110px; animation: cardiacJolt 400ms ease var(--procedure-result) both; }
 #defib-overlay.is-cardioversion .sync-cue { opacity: 1; }
-#defib-overlay.is-cardioversion.visible .sync-cue { animation: syncLock 1400ms steps(1) both; }
-#defib-overlay.outcome-SUCCESS.visible .heart-after .heart-motion { animation: heartBeat 750ms ease 1800ms 3 both; }
-#defib-overlay.outcome-MARGINAL.visible .heart-after .heart-motion { animation: heartTentative 1050ms ease 1800ms 2 both; }
-#defib-overlay.outcome-FAILURE.visible .heart-after .heart-motion { animation: heartQuiver 100ms linear 1800ms 26 both; }
-#defib-overlay.outcome-COMPLICATION.visible .heart-after .heart-motion { animation: heartLost 2600ms linear 1800ms both; }
+#defib-overlay.is-cardioversion.visible .sync-cue { animation: syncLock var(--procedure-result) steps(1) both; }
+#defib-overlay.outcome-SUCCESS.visible .heart-after .heart-motion { animation: heartBeat 750ms ease calc(var(--procedure-result) + 400ms) 3 both; }
+#defib-overlay.outcome-MARGINAL.visible .heart-after .heart-motion { animation: heartTentative 1050ms ease calc(var(--procedure-result) + 400ms) 2 both; }
+#defib-overlay.outcome-FAILURE.visible .heart-after .heart-motion { animation: heartQuiver 100ms linear calc(var(--procedure-result) + 400ms) 26 both; }
+#defib-overlay.outcome-COMPLICATION.visible .heart-after .heart-motion { animation: heartLost 2600ms linear calc(var(--procedure-result) + 400ms) both; }
 #pacing-overlay.visible .heart-before { animation: heartBefore 1800ms step-end both; }
 #pacing-overlay.visible .heart-before .heart-motion { animation: heartBeat 1800ms ease 1 both; }
 #pacing-overlay.visible .heart-after { animation: heartAfter 1800ms step-end both; }
@@ -4602,6 +4610,7 @@ body.light-mode .proc-confirm-edit textarea { color: #302c21; background: #fffdf
 @keyframes syncLock { 0%, 35%, 70% { opacity: 0; } 15%, 50%, 85%, 100% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   #chest_seal-overlay, #pacing-overlay, #defib-overlay { transition: none; }
+  #defib-overlay.visible { animation: none; }
   :is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).visible * { animation: none !important; }
 }
 
