@@ -1374,6 +1374,11 @@ async function sendTurn(msg, opts = {}) {
 
     // decompensating flag intentionally not shown to student — Claude fires it internally
 
+    configureAirwayPatient(window.TransportPatient?.patientFor(data, {
+      patients: notebookPatients,
+      patient_focus: { id: focusedPatientId },
+      patient: localTranscript?.meta?.patient,
+    }));
     // Animate each real single roll in sequence, then print all to the log
     for (const r of (data.rolls || [])) {
       if (r.no_roll) {
@@ -2719,6 +2724,29 @@ function schedulePacingAudio(outcome) {
   return cancel;
 }
 
+function configureAirwayPatient(patient) {
+  const variant = window.TransportPatient?.variantFor(patient) || 'adult';
+  const sex = patient?.sex === 'female' ? 'female' : 'male';
+  const profile = variant === 'baby' ? 'baby' : variant === 'child' ? `child-${sex}` : sex;
+  for (const id of ['laryngoscope', 'sga', 'opa', 'suction', 'npa', 'obstruction']) {
+    document.getElementById(`${id}-overlay`)?.setAttribute('data-airway-profile', profile);
+  }
+  configureResuscitationPatient(patient);
+}
+
+function configureResuscitationPatient(patient) {
+  const variant = window.TransportPatient?.variantFor(patient) || 'adult';
+  const sex = patient?.sex === 'female' ? 'female' : 'male';
+  const profile = variant === 'baby' ? 'baby' : variant === 'child' ? `child-${sex}` : sex;
+  for (const id of ['cpr', 'bvm', 'lucas', 'chest_seal', 'defib', 'pacing']) {
+    const overlay = document.getElementById(`${id}-overlay`);
+    // No infant LUCAS art: the presentation fallback is the existing child model.
+    const selected = id === 'lucas' && profile === 'baby' ? 'child-male' : profile;
+    overlay?.setAttribute('data-patient-profile', selected);
+    overlay?.setAttribute('data-airway-profile', selected);
+  }
+}
+
 function animateProcedureScene(id, procedureId, outcome) {
   const timing = PROCEDURE_TIMING[id];
   const overlay = document.getElementById(`${id}-overlay`);
@@ -2762,7 +2790,6 @@ function animateProcedureScene(id, procedureId, outcome) {
   overlay.style.setProperty('--procedure-fade', `${PROCEDURE_FADE_MS}ms`);
   void overlay.offsetWidth; // Restart every layer, including consecutive identical rolls.
   if (outcome) overlay.classList.add(`outcome-${outcome}`);
-  if (id === 'defib' && procedureId === 'cardioversion') overlay.classList.add('is-cardioversion');
   overlay.classList.add('visible');
   return new Promise(resolve => {
     // Reduced motion shows a still result, keeping the same bounded turn lifecycle.

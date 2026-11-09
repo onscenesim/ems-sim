@@ -9,8 +9,11 @@ accounts, saved calls, or model clients. Gameplay API requests are blocked. The 
 frame uses in-memory preferences; the lab does not equip cosmetics or change player progress.
 
 - Animations: every production overlay, plus procedure and medication variants. Choose an
-  outcome, hold the start/end pose, replay at normal or quarter speed, or loop. Choose ALS/BLS,
+  outcome, hold the start/action/end pose, replay at normal or quarter speed, or loop. Choose ALS/BLS,
   parked/transport for sound variants, and adult male/female, child or baby for patient loading.
+  Airway and resuscitation scenes have adult male/female, child male/female, and one shared baby profile.
+  Baby LUCAS uses the child artwork. Infant CPR uses encircling thumbs; infant BVM uses the neonatal bag.
+  Action pose holds peak BVM ventilation, LUCAS/CPR compression, or the midpoint of other scenes.
   Still poses are silent. Stop cancels pending scene timers and audio.
 - Character cards: every crew member and both custom portrait examples, rendered by the game.
 - Pens: all eight real mechanisms. Click their controls to retract, uncap, or shake them.

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=96">
+  <link rel="stylesheet" href="style.css?v=101">
   <link rel="stylesheet" href="monitor.css?v=9">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
@@ -54,47 +54,165 @@
         <path d="M177 125 Q183 132 181 139 M189 122 Q197 129 194 138 M204 124 Q213 130 210 137" stroke-width="1.3" opacity="0.3"/>
       </g>
 
-      <!-- Shared supine cutaway; movable tissue stays independently addressable per scene. -->
-      <mask id="airway-open-mouth" maskUnits="userSpaceOnUse" x="0" y="0" width="360" height="310">
-        <rect width="360" height="310" fill="white"/>
-        <rect x="150" y="132" width="92" height="100" fill="black"/>
-      </mask>
-      <g id="airway-head" transform="matrix(0 0.8 0.8 0 40 -10)">
-        <g mask="url(#airway-open-mouth)"><use href="#patient-face-profile" transform="translate(-75 0)"/></g>
-        <use href="#patient-cranium" transform="translate(-75 0)"/>
-        <path d="M266 186 Q263 204 266 218 L290 275" opacity="0.65"/>
-        <!-- Upper lip, palate, posterior pharyngeal wall, upper incisor. -->
-        <path d="M158 133 L175 136 M167 131 Q188 125 210 136 Q230 142 237 152 M237 145 Q253 145 259 163 L268 198" opacity="0.7"/>
-        <path d="M169 133 L168 142 L176 143 L178 136" fill="#b9c7d1" fill-opacity="0.12" stroke-width="1.5"/>
+      <!-- Supine sagittal cutaway. The profile is separate from the shared internal
+           anatomy so patient variants retain every instrument/tissue contact point. -->
+      <g id="airway-head" stroke="currentColor" stroke-width="1.6">
+        <!-- Forehead → bridge → rounded nose → philtrum and upper lip.
+             The lower lip, chin and submental curve continue into the neck. -->
+        <path class="airway-profile-male" d="M151 123
+          Q149 119 145 118 L140 119 Q134 119 133 116
+          Q132 113 136 110 Q141 108 140 105 Q139 101 135 103
+          L126 110 Q121 117 116 115 L109 112
+          C96 105 78 112 65 126 C47 144 41 165 46 189
+          C50 216 72 234 103 238 C139 243 177 234 208 218
+          Q229 216 260 222 L386 222
+          M174 123 Q174 119 177 119 Q181 119 181 124
+          C182 133 190 142 201 148 Q209 155 219 151
+          L260 136 C283 126 304 131 324 138 Q357 153 386 153"
+          fill="none"/>
+        <path class="airway-profile-female" d="M151 123
+          Q148 119 145 120 Q138 123 135 119 Q133 116 137 113
+          Q141 112 141 108 Q140 105 137 106
+          Q126 119 118 117 L111 114
+          C97 109 80 113 67 127 C49 144 43 165 48 188
+          C52 213 74 232 104 236 C139 242 176 233 208 218
+          Q229 216 260 222 L386 222
+          M174 123 Q175 120 178 121 Q181 122 181 127
+          Q184 141 202 150 Q210 155 220 151 L260 136
+          C283 126 304 131 324 138 Q357 153 386 153"
+          fill="none"/>
+        <!-- Pediatric faces keep the oral entrance in the same local coordinates;
+             the entire patient/device scene is scaled together for age. -->
+        <path class="airway-profile-child" d="M151 123 Q148 121 145 122
+          Q137 125 135 121 Q134 118 138 116 Q141 114 139 111
+          Q137 109 134 113 Q126 118 120 114
+          C109 103 92 100 77 109 C50 122 37 148 40 179
+          C42 209 65 232 98 237 Q155 246 206 217
+          Q229 215 260 222 L386 222
+          M174 123 Q176 120 179 123 Q181 133 193 144
+          Q206 156 220 151 L260 138 Q286 129 310 136
+          Q348 153 386 153" fill="none"/>
+        <path class="airway-profile-baby" d="M151 123 Q147 122 144 124
+          Q139 126 137 123 Q136 120 140 119 Q143 117 141 115
+          Q139 114 137 116 Q132 120 127 115
+          C115 101 98 94 80 101 C49 111 32 139 34 172
+          C34 205 57 231 91 237 Q153 249 205 216
+          Q229 214 260 222 L386 222
+          M174 123 Q177 121 179 125 Q180 136 190 145
+          Q202 156 219 152 L260 141 Q284 134 308 139
+          Q347 154 386 154" fill="none"/>
+        <!-- Restrained scalp and facial landmarks remain outside the section. -->
+        <g fill="none" stroke-width="1.1">
+          <path class="airway-profile-male" d="M68 125 Q53 144 51 163
+            C46 191 65 219 91 227 Q113 235 136 230
+            M62 143 Q55 166 60 185 M58 191 Q68 214 90 222"
+            opacity="0.35"/>
+          <path class="airway-profile-female" d="M73 123 C49 138 38 160 38 185
+            C38 216 58 237 90 243 Q137 254 180 240 L202 233
+            M64 141 C45 164 47 191 63 213 Q88 241 132 240 L165 235
+            M48 183 Q51 215 80 231 Q109 246 147 240
+            M65 220 Q89 243 123 244 M140 245 L174 239"
+            opacity="0.4"/>
+          <path class="airway-profile-child-male" d="M77 112 Q49 130 46 155
+            C41 182 53 207 76 222 M56 138 Q48 151 49 164
+            M48 176 Q50 199 66 213" opacity="0.35"/>
+          <path class="airway-profile-child-female" d="M77 110 C47 122 32 151 34 181
+            C34 215 57 239 94 244 Q132 252 168 241
+            C201 230 231 229 259 235 Q279 241 298 235
+            M64 124 C42 145 39 174 48 197 Q61 230 101 239
+            Q138 248 175 236 Q211 225 248 232
+            M41 180 Q43 210 69 229 M65 232 Q103 253 150 243
+            Q182 233 215 234 Q243 230 273 238 M257 232 Q280 232 290 236"
+            opacity="0.4"/>
+          <path class="airway-profile-child" d="M112 124 Q117 123 121 127
+            M116 132 Q113 137 116 141 M139 122 L143 121" opacity="0.6"/>
+          <path class="airway-profile-baby" d="M116 128 Q121 127 125 131
+            M121 136 Q119 140 122 143 M143 124 L146 123
+            M79 108 Q85 103 92 104 M86 109 Q92 105 97 107"
+            opacity="0.55"/>
+          <path class="airway-adult-detail" d="M107 124 Q112 121 116 125 M112 130 Q109 135 112 140
+            M112 137 L114 139 M137 118 Q139 115 142 117" opacity="0.7"/>
+          <path class="airway-adult-detail" d="M117 146 Q109 162 115 175" opacity="0.17"/>
+        </g>
+        <!-- Nasal cavity and turbinates. The palate separates this from the mouth;
+             the open pharynx curves behind the tongue into the larynx. -->
+        <path d="M137 123 C126 133 123 150 129 168
+          Q135 186 157 195 Q174 208 197 211 L220 212 L290 211"
+          fill="none" stroke-width="1.4" opacity="0.75"/>
+        <path d="M140 127 Q133 137 134 149 Q136 166 151 175
+          M133 138 Q145 139 140 148 M137 153 Q150 154 148 164
+          M145 170 Q159 169 158 178" fill="none" stroke-width="1" opacity="0.45"/>
+        <!-- Hard palate with a fine cortical edge, then the hanging soft palate. -->
+        <path d="M150 128 C148 144 154 160 167 170
+          Q174 175 177 181 Q179 185 176 186 Q171 184 170 180
+          Q151 169 146 148 Q143 136 146 128 Z"
+          fill="currentColor" fill-opacity="0.09" stroke-width="1.2"/>
+        <path d="M149 132 C148 147 154 161 166 170" fill="none" stroke-width="0.7" opacity="0.5"/>
+        <!-- Maxillary and mandibular incisors stay at the existing oral entrance. -->
+        <path class="airway-teeth" d="M150 126 L150 133 Q154 135 157 132 L157 128
+          M177 126 L180 133 L184 131 L182 126"
+          fill="currentColor" fill-opacity="0.22" stroke-width="1.2"/>
+        <!-- Cranial base / posterior soft tissue, without a filled cartoon face. -->
+        <path class="airway-adult-detail" d="M84 138 C67 154 63 175 72 194 Q84 215 110 218
+          M112 219 Q136 229 161 220 Q182 216 195 217"
+          fill="none" stroke-width="0.8" opacity="0.18"/>
       </g>
-      <g id="airway-tongue">
-        <path d="M165 123 C158 134 162 148 174 158 Q184 168 193 170 Q197 158 181 148 C173 139 178 130 172 126 Z" fill="#526b7d" fill-opacity="0.28" stroke="#a8bccb"/>
-        <path d="M169 132 Q168 149 185 160" stroke-width="1.3" opacity="0.45"/>
+      <g id="airway-tongue" stroke="currentColor" stroke-width="1.4">
+        <!-- Anterior tip lies in the mouth; the broad muscular root meets the
+             vallecula. Its original anchor (165,123) and blade contact are fixed. -->
+        <path d="M165 123 C158 134 162 148 174 158 Q184 168 193 170
+          Q203 172 205 166 C206 157 192 151 184 140
+          Q179 128 172 126 Z" fill="currentColor" fill-opacity="0.1"/>
+        <path d="M166 130 C163 143 174 157 189 164
+          M173 134 Q178 149 196 160 M169 144 L175 146
+          M176 154 L184 155" fill="none" stroke-width="0.8" opacity="0.45"/>
       </g>
-      <path id="airway-epiglottis" d="M207 184 Q195 179 190 165 Q200 163 207 184 Z" fill="#d7bc75" fill-opacity="0.2" stroke="#d7bc75" stroke-width="1.8"/>
-      <g id="airway-trachea" stroke="#8caec1">
+      <path id="airway-epiglottis" d="M207 184 Q195 179 190 165 Q200 163 207 184 Z"
+        fill="currentColor" fill-opacity="0.16" stroke="currentColor" stroke-width="1.3"/>
+      <g id="airway-trachea" stroke="currentColor" stroke-width="1.4" fill="none">
         <path d="M201 161 Q217 158 232 160 L290 160 M202 181 L290 181"/>
-        <path d="M229 161 L229 165 M229 175 L229 180 M244 161 L244 165 M244 175 L244 180 M259 161 L259 165 M259 175 L259 180 M274 161 L274 180" stroke-width="1.5" opacity="0.6"/>
+        <path d="M224 161 Q222 164 224 166 M224 175 Q222 178 224 180
+          M237 161 Q235 164 237 166 M237 175 Q235 178 237 180
+          M250 161 Q248 164 250 166 M250 175 Q248 178 250 180
+          M263 161 Q261 164 263 166 M263 175 Q261 178 263 180
+          M276 161 Q274 164 276 166 M276 175 Q274 178 276 180"
+          stroke-width="2.4" opacity="0.55"/>
       </g>
-      <g id="airway-esophagus" stroke="#89949f">
+      <g id="airway-esophagus" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.65">
         <path d="M195 193 Q220 189 240 191 L290 191 M198 205 L290 205"/>
-        <path d="M235 201 Q244 196 253 201 M266 201 Q275 196 282 201" opacity="0.3" stroke-width="1.2"/>
+        <path d="M212 198 Q230 195 248 198 T290 198" stroke-width="0.7" opacity="0.45"/>
       </g>
-      <g id="airway-cords">
-        <path d="M201 161 L209 166 M201 180 L209 174" stroke="#e6f4fc" stroke-width="3"/>
-        <ellipse cx="209" cy="170" rx="5" ry="8" stroke="#7fd0ff" stroke-width="1.3" opacity="0.65"/>
+      <g id="airway-cords" stroke="currentColor" fill="none">
+        <path d="M201 161 Q207 161 210 166 M201 180 Q207 180 210 174" stroke-width="2.8"/>
+        <path d="M208 166 Q212 170 208 174" stroke-width="1" opacity="0.7"/>
       </g>
-      <g id="airway-body">
-        <!-- Open mandible and neck; a stretcher plane anchors the horizontal view. -->
-        <path d="M178 116 L180 127 Q190 147 205 151 L216 150 L260 132 C298 119 321 143 357 153 L382 153" opacity="0.85"/>
-        <path d="M260 222 L386 222 M49 243 L390 243" opacity="0.3"/>
-        <path d="M62 235 Q100 231 139 236 L143 242 L59 242 Z" fill="currentColor" fill-opacity="0.04" stroke-width="1.3" opacity="0.45"/>
+      <g id="airway-body" stroke="currentColor" fill="none">
+        <!-- Mandible and hyoid follow the underside of the tongue. -->
+        <path d="M182 133 Q192 151 207 155 L236 145
+          Q225 161 209 165 Q193 161 186 148" stroke-width="1.3" opacity="0.8"/>
+        <path d="M187 137 Q196 153 209 159 L224 153" stroke-width="0.7" opacity="0.35"/>
+        <path d="M207 150 Q215 146 222 149 M213 148 L212 144" stroke-width="1.7"/>
+        <!-- Posterior neck and a short run of cervical vertebrae. -->
+        <g stroke-width="0.9" opacity="0.3">
+          <path d="M219 219 L229 217 L232 226 L221 228 Z
+            M237 218 L247 217 L249 226 L238 228 Z
+            M255 218 L265 218 L266 227 L255 228 Z
+            M273 219 L283 219 L284 228 L273 228 Z"/>
+          <path d="M226 229 L224 234 M244 230 L243 234 M261 230 L261 234 M279 230 L280 234"/>
+        </g>
+        <path d="M243 145 Q269 136 291 139 M298 138 Q329 142 353 153"
+          stroke-width="0.9" opacity="0.25"/>
+        <path d="M59 241 Q96 236 133 240 L143 245 L56 245 Z"
+          fill="currentColor" fill-opacity="0.035" stroke-width="0.9" opacity="0.45"/>
+        <path d="M48 247 L390 247" stroke-width="0.8" opacity="0.3"/>
       </g>
-      <g id="airway-labels">
-        <!-- Readable labels stay horizontal with the patient. -->
-        <g stroke-width="1" opacity="0.45"><path d="M291 170 L308 157 L321 157 M291 198 L306 219 L313 219"/></g>
-        <g fill="currentColor" stroke="none" font-family="monospace" font-size="12" letter-spacing="0.5" opacity="0.85">
-          <text x="325" y="161">TRACHEA</text><text x="317" y="223">ESOPHAGUS</text>
+      <g id="airway-labels" fill="none" stroke="currentColor">
+        <g stroke-width="0.8" opacity="0.45">
+          <path d="M291 170 L311 139 L321 139 M291 198 L310 234 L315 234"/>
+          <circle cx="291" cy="170" r="1.3"/><circle cx="291" cy="198" r="1.3"/>
+        </g>
+        <g fill="currentColor" stroke="none" font-family="monospace" font-size="10" letter-spacing="0.6" opacity="0.85">
+          <text x="325" y="143">TRACHEA</text><text x="319" y="238">ESOPHAGUS</text>
         </g>
       </g>
       <g id="access-catheter-hub">
@@ -109,36 +227,218 @@
                 <path d="M29 -8 L29 8 M34 -8 L34 8 M39 -8 L39 8" stroke-width="1.2" opacity="0.6"/>
                 <path d="M88 -11 L89 -16 L99 -16 L100 -7" fill="#28333f" stroke-width="1.2"/>
       </g>
-      <g id="torso-outline">            <!-- Neck, shoulders and upper arms anchor the overhead perspective. -->
-            <path d="M89 12 L88 25 C81 33 61 31 47 42 C33 54 31 74 28 92 L24 117
-              M131 12 L132 25 C139 33 159 31 173 42 C187 54 189 74 192 92 L196 117"/>
-            <path d="M57 57 C52 75 53 94 57 111 M163 57 C168 75 167 94 163 111" opacity="0.6" stroke-width="1.5"/>
-            </g>
+      <!-- Shared foreshortened hand silhouettes. -->
+      <path id="cpr-lower-hand" d="M85 113 L94 108 C100 103 105 101 112 102
+            L129 103 C136 103 140 105 140 108 C140 111 137 112 133 112
+            L143 113 C150 114 150 121 143 122 L138 122
+            C145 123 145 130 138 131 L130 131 C136 133 133 139 128 139
+            L108 138 C100 137 95 132 92 127 L83 130 Q80 122 85 113 Z"/>
+      <path id="cpr-upper-hand" d="M85 91 L96 96 C100 96 100 91 105 89
+            L114 85 C119 84 122 88 118 92 L111 98
+            L135 100 C142 101 143 108 136 109 L117 107
+            L144 111 C151 112 151 119 144 119 L116 115
+            L142 121 C149 123 147 129 141 129 L113 123
+            L133 130 C139 132 136 138 131 137 L108 129
+            C99 127 96 117 92 113 L80 109 Q79 99 85 91 Z"/>
+      <!-- Shared front-view patient. Garments are outlines, with the sternum clear. -->
+      <g id="torso-outline">
+        <path class="torso-adult-male" d="M89 12 L88 25 C81 33 61 31 47 42 C33 54 31 74 28 92 L24 117
+          M131 12 L132 25 C139 33 159 31 173 42 C187 54 189 74 192 92 L196 117
+          M57 57 C52 75 53 94 57 111 M163 57 C168 75 167 94 163 111"/>
+        <path class="torso-adult-female" d="M93 12 L91 27 C80 34 61 34 49 44 Q35 57 30 92 L26 117
+          M127 12 L129 27 C140 34 159 34 171 44 Q185 57 190 92 L194 117
+          M59 57 Q53 82 58 111 M161 57 Q167 82 162 111"/>
+        <path class="torso-child" d="M95 18 L94 30 C81 36 64 35 52 46 Q39 61 35 86 L30 113
+          M125 18 L126 30 C139 36 156 35 168 46 Q181 61 185 86 L190 113
+          M62 59 Q56 83 61 111 M158 59 Q164 83 159 111"/>
+        <path class="torso-baby" d="M98 25 L96 35 Q71 35 56 49 C43 62 42 83 37 102 L33 119
+          M122 25 L124 35 Q149 35 164 49 C177 62 178 83 183 102 L187 119
+          M64 64 Q57 87 62 113 M156 64 Q163 87 158 113"/>
+      </g>
       <g id="torso-chest">
-              <!-- Clavicles, sternum, pectorals and lower rib margins. -->
-              <path d="M65 43 Q86 37 103 48 M155 43 Q134 37 117 48" stroke-width="1.6" opacity="0.65"/>
-              <path d="M106 52 Q110 49 114 52 L116 104 Q116 114 110 120 Q104 114 104 104 Z" stroke-width="1.4" opacity="0.4"/>
-              <path d="M62 62 C72 55 93 59 101 69 M158 62 C148 55 127 59 119 69
-                M59 91 C68 106 88 108 101 97 M161 91 C152 106 132 108 119 97" stroke-width="1.7" opacity="0.75"/>
-              <path d="M57 112 C61 132 77 140 89 143 Q99 129 104 126
-                M163 112 C159 132 143 140 131 143 Q121 129 116 126" stroke-width="1.6" opacity="0.5"/>
-            </g>
+        <path d="M67 45 Q87 40 103 49 M153 45 Q133 40 117 49" stroke-width="1.5" opacity="0.65"/>
+        <path d="M110 54 L110 110" stroke-width="1.2" opacity="0.35"/>
+        <g class="torso-adult-male" stroke-width="1.6" opacity="0.65">
+          <path d="M62 62 C72 55 93 59 101 69 M158 62 C148 55 127 59 119 69
+            M59 91 C68 106 88 108 101 97 M161 91 C152 106 132 108 119 97"/>
+        </g>
+        <g class="torso-bra" stroke-width="1.5">
+          <path d="M67 51 L63 76 Q79 70 99 80 L104 95 Q84 112 65 98 L61 80
+            M153 51 L157 76 Q141 70 121 80 L116 95 Q136 112 155 98 L159 80
+            M65 103 Q82 116 102 102 M155 103 Q138 116 118 102" opacity="0.7"/>
+          <path d="M68 78 Q81 84 99 81 M152 78 Q139 84 121 81" stroke-width="0.8" opacity="0.35"/>
+        </g>
+        <path class="torso-baby" d="M68 72 Q85 66 101 75 M152 72 Q135 66 119 75
+          M65 99 Q80 111 101 105 M155 99 Q140 111 119 105" stroke-width="1.1" opacity="0.3"/>
+        <path d="M63 112 Q110 127 157 112" stroke-width="1.2" opacity="0.4"/>
+      </g>
       <g id="torso-abdomen">
-              <!-- A soft abdominal contour and navel shift with each compression. -->
-              <path d="M57 111 C59 137 67 149 65 173 C64 190 60 206 61 222
-                M163 111 C161 137 153 149 155 173 C156 190 160 206 159 222"/>
-              <path d="M83 151 C78 169 80 188 86 201 M137 151 C142 169 140 188 134 201" stroke-width="1.4" opacity="0.35"/>
-              <path d="M108 174 Q112 178 109 181" stroke-width="1.6" opacity="0.65"/>
-              <path d="M71 214 Q87 209 99 219 M149 214 Q133 209 121 219" stroke-width="1.5" opacity="0.45"/>
-            </g>
+        <path class="torso-adult-male" d="M57 111 C59 137 67 149 65 173 Q60 205 61 222
+          M163 111 C161 137 153 149 155 173 Q160 205 159 222"/>
+        <path class="torso-adult-female" d="M58 111 C59 132 73 150 70 174 Q60 202 62 222
+          M162 111 C161 132 147 150 150 174 Q160 202 158 222"/>
+        <path class="torso-child" d="M61 111 Q63 137 70 157 Q65 186 67 211
+          M159 111 Q157 137 150 157 Q155 186 153 211"/>
+        <path class="torso-baby" d="M62 113 Q58 145 68 173 Q72 195 70 213
+          M158 113 Q162 145 152 173 Q148 195 150 213
+          M74 151 Q110 176 146 151" stroke-width="1.6"/>
+        <path d="M108 174 Q112 178 109 181 M74 211 Q88 207 100 216 M146 211 Q132 207 120 216" stroke-width="1.2" opacity="0.5"/>
+        <path class="torso-adult-detail" d="M84 151 Q77 177 87 201 M136 151 Q143 177 133 201" stroke-width="1" opacity="0.25"/>
+      </g>
       <g id="procedure-torso" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <use href="#torso-outline"/><use href="#torso-chest"/><use href="#torso-abdomen"/>
       </g>
+      <!-- Traced proportions from the supplied upright profile, rotated into
+           supine orientation. Open stroke endpoints join chest and back without
+           drawing a seam across the neck; only the subtle fill closes the shape. -->
+      <path id="side-profile-male" d="M495 905 C450 855 408 825 390 810 C377 767 365 721 365 681 Q365 655 345 650
+          C308 642 265 650 239 634 C216 621 224 598 223 580 L223 555 Q223 540 218 533
+          Q211 526 219 519 L229 514 Q220 510 213 505 Q205 497 210 485
+          L217 472 Q220 463 210 461 C190 459 171 446 169 432 C165 421 176 410 186 397
+          L224 347 Q240 329 229 305 C219 282 227 248 242 214 C253 181 277 131 315 98
+          C366 54 436 35 544 40 C654 34 731 121 767 239 C789 278 791 337 780 378
+          C769 420 741 462 722 501 C693 548 690 590 699 645 C710 708 741 771 760 810
+          C756 873 753 949 745 1021.667"/>
+      <path id="side-profile-female" d="M495 905 C450 855 408 825 390 810 C377 767 365 721 365 681 Q365 655 345 650
+          C308 642 265 650 246 632 C226 622 230 599 228 580 L223 555 Q223 540 218 533
+          Q211 526 219 519 L229 514 Q220 510 213 505 Q205 497 210 485
+          L217 472 Q220 463 210 461 C190 459 179 446 177 432 C174 422 182 410 190 397
+          L224 347 Q240 329 229 305 C219 282 227 248 242 214 C253 181 277 131 315 98
+          C366 54 436 35 544 40 C654 34 731 121 767 239 C789 278 791 337 780 378
+          C769 420 741 462 722 501 C693 548 690 590 699 645 C710 708 741 771 760 810
+          C756 873 753 949 745 1021.667"/>
+      <path id="side-profile-child" d="M495 905 C450 855 408 825 390 810 C377 767 365 721 365 681 Q365 655 345 650
+          C308 642 265 650 254 626 C235 615 235 597 232 580 L223 555 Q223 540 218 533
+          Q211 526 219 519 L229 514 Q220 510 213 505 Q205 497 210 485
+          L217 472 Q220 463 210 461 C190 459 185 445 183 432 C180 422 185 411 192 397
+          L224 347 Q240 329 229 305 C219 282 227 248 242 214 C253 181 277 131 315 98
+          C366 54 436 35 544 40 C654 34 731 121 767 239 C789 278 791 337 780 378
+          C769 420 741 462 722 501 C693 548 690 590 699 645 C710 708 741 771 760 810
+          C756 873 753 949 745 1021.667"/>
+      <path id="side-profile-baby" d="M495.000 905.000 C470.000 830.000 445.000 763.333 411.667 713.333 Q386.667 646.667 353.333 596.667 Q336.667 571.667 311.667 555.000 Q295.000 546.667 303.333 521.667 Q311.667 496.667 278.333 488.333 Q261.667 488.333 253.333 505.000 Q236.667 496.667 245.000 471.667 L245.000 438.333 Q245.000 413.333 228.333 413.333 Q211.667 413.333 228.333 396.667 L253.333 346.667 C203.333 238.333 245.000 88.333 378.333 13.333 C553.333 -61.667 720.000 38.333 745.000 205.000 Q786.667 430.000 661.667 663.333 Q745.000 830.000 745.000 1021.667"/>
+      <g id="resus-side-head" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <g transform="matrix(0 .12 -.12 0 357.6 74.6)" stroke-width="13">
+          <g class="airway-profile-male">
+
+            <use href="#side-profile-male" fill="none"/>
+          </g>
+          <g class="airway-profile-female">
+
+            <use href="#side-profile-female" fill="none"/>
+          </g>
+          <g class="airway-profile-child">
+
+            <use href="#side-profile-child" fill="none"/>
+          </g>
+          <g class="airway-profile-baby">
+
+            <use href="#side-profile-baby" fill="none"/>
+          </g>
+          <path class="airway-profile-male" d="M301 112 C366 54 436 35 544 40 C654 34 731 121 767 239
+          C789 278 791 337 780 378 Q770 430 722 501 L698 518
+          Q711 466 728 429 C766 344 728 246 676 202 Q630 154 568 154
+          L524 183 Q429 194 357 173 L330 196 Z"
+            fill="currentColor" fill-opacity="0.2" stroke-opacity="0.8" stroke-width="10"/>
+          <path class="airway-profile-female" d="M301 112 C366 54 436 35 544 40 C654 34 731 121 767 239
+          C789 278 791 337 780 378 Q780 451 756 530 Q737 615 754 734
+          Q780 870 780 962 L748 1008 Q707 942 694 864 L676 699
+          Q657 562 625 512 L607 476 Q632 427 588 389 L545 320
+          Q438 260 356 214 L306 202 Z"
+            fill="currentColor" fill-opacity="0.2" stroke-opacity="0.8" stroke-width="10"/>
+          <path class="airway-profile-child-male" d="M301 112 C366 54 436 35 544 40 C654 34 731 121 767 239
+          C789 278 791 337 780 378 Q770 430 722 501 L698 518
+          Q711 466 728 429 C766 344 728 246 676 202 Q630 154 568 154
+          L524 183 Q429 194 357 173 L330 196 Z"
+            fill="currentColor" fill-opacity="0.2" stroke-opacity="0.8" stroke-width="10"/>
+          <path class="airway-profile-child-female" d="M301 112 C366 54 436 35 544 40 C654 34 731 121 767 239
+          C789 278 791 337 780 378 Q780 451 756 530 Q737 615 754 734
+          Q780 870 780 962 L748 1008 Q707 942 694 864 L676 699
+          Q657 562 625 512 L607 476 Q632 427 588 389 L545 320
+          Q438 260 356 214 L306 202 Z"
+            fill="currentColor" fill-opacity="0.2" stroke-opacity="0.8" stroke-width="10"/>
+          <g fill="none" stroke-width="7" opacity="0.55">
+            <path class="airway-profile-male" d="M350 126 Q430 83 518 86 M611 87 Q721 171 745 266 M759 328 Q752 399 720 450"/>
+            <path class="airway-profile-child-male" d="M350 126 Q430 83 518 86 M611 87 Q721 171 745 266 M759 328 Q752 399 720 450"/>
+            <path class="airway-profile-female" d="M350 126 Q434 75 531 83 M674 152 Q781 299 743 470
+              Q708 614 740 800 L753 962 M724 546 Q707 742 733 889"/>
+            <path class="airway-profile-child-female" d="M350 126 Q434 75 531 83 M674 152 Q781 299 743 470
+              Q708 614 740 800 L753 962 M724 546 Q707 742 733 889"/>
+          </g>
+          <g class="resus-mature-face" fill="none" stroke-width="9">
+            <path d="M242 326 Q269 315 305 335 M245 353 Q270 341 300 354
+              M249 364 Q276 367 295 358 M211 435 Q228 428 236 445
+              M214 512 Q227 510 239 518" opacity="0.8"/>
+            <path d="M545 344 C513 342 500 371 507 398 Q493 420 506 447
+              Q506 475 530 486 C554 483 577 458 584 428 Q594 387 573 358 Q560 348 545 344 Z
+              M547 359 Q516 362 523 388 Q511 411 522 423 L540 410
+              Q558 397 560 418 Q560 443 539 458" fill="none"/>
+            <path d="M244 565 Q256 574 254 589 M299 626 Q382 635 448 579" opacity="0.25"/>
+          </g>
+        </g>
+        <g class="airway-profile-baby" fill="none" stroke-width="1">
+          <path d="M359 126 C366 126 368 121 365 118 C362 115 359 119 362 121
+            C366 124 371 120 368 115" stroke-width="1.5" opacity="0.9"/>
+          <path d="M319 113 Q321 115 324 113 M304 106 Q306 105 307 107
+            M293 113 Q296 114 298 111" opacity="0.8"/>
+          <path d="M325 135 C321 134 320 139 323 142 Q327 146 329 141
+            Q330 136 325 135 M324 138 Q323 140 326 140"/>
+        </g>
+      </g>
+      <!-- Static lower body/legs and arm are independent of the thorax/belly. -->
+      <g id="resus-side-lower" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M29 133 Q41 131 53 128 M31 160 C57 161 62 165 84 164
+          C108 164 126 158 146 160 C169 163 202 165 235 164"/>
+      </g>
+      <!-- BVM arm: two open contours extending toward the viewer. -->
+      <path id="resus-side-arm-outline" d="M227 141 L226 193 L204 228 M252 152 L259 194 L239 234"/>
+      <path id="resus-infant-arm-outline" d="M225 141 L225 177 L209 208 M254 151 L258 180 L240 213"/>
+      <mask id="resus-arm-knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="380" height="260">
+        <rect width="380" height="260" fill="white"/>
+        <path class="resus-standard-arm" d="M227 141 L226 193 L204 228 L239 234 L259 194 L249 134 Z" fill="black"/>
+        <path class="torso-baby" d="M225 141 L225 177 L209 208 L240 213 L258 180 L252 134 Z" fill="black"/>
+      </mask>
+      <g id="resus-side-arm" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <use class="resus-standard-arm" href="#resus-side-arm-outline"/>
+        <use class="torso-baby" href="#resus-infant-arm-outline"/>
+      </g>
+      <g id="resus-ground-contact" fill="currentColor" stroke="none">
+        <ellipse cx="186" cy="167" rx="158" ry="2.5" opacity="0.035"/>
+      </g>
+      <!-- Mechanical CPR has its own secured-arm pose; hands grasp the handles. -->
+      <path id="resus-lucas-arm-outline" d="M249 134 C251 127 241 123 234 127
+        C221 135 208 149 184 166 Q180 168 179 161 L162 75 L176 72
+        L197 157 Q198 163 203 162 L236 154 Q249 148 249 134 Z"/>
+      <mask id="lucas-arm-knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="380" height="210">
+        <rect width="380" height="210" fill="white"/>
+        <use href="#resus-lucas-arm-outline" fill="black" stroke="black" stroke-width="2"/>
+        <use href="#cpr-lower-hand" transform="matrix(0 -.55 .55 0 105 118.25)" fill="black" stroke="black" stroke-width="4"/>
+        <use href="#cpr-lower-hand" transform="matrix(0 -.48 .48 0 192.76 112.8)" fill="black" stroke="black" stroke-width="4"/>
+      </mask>
+      <mask id="lucas-far-arm-visibility" maskUnits="userSpaceOnUse" x="0" y="0" width="380" height="210">
+        <rect width="380" height="210" fill="white"/>
+        <path d="M201 116 C225 116 237 121 249 134 L380 134 V210 H201 Z" fill="black"/>
+      </mask>
+      <g id="resus-lucas-far-arm" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.45" mask="url(#lucas-far-arm-visibility)">
+        <path d="M239 78 L233 139 Q240 146 247 139 L255 78 Z"/>
+      </g>
+      <g id="resus-lucas-arm" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <use href="#resus-lucas-arm-outline"/>
+        <path d="M241 135 Q232 136 229 146 M185 166 Q190 171 198 166" stroke-width="0.9" opacity="0.5"/>
+        <use href="#cpr-lower-hand" transform="matrix(0 -.55 .55 0 105 118.25)" stroke-width="3.3"/>
+        <use href="#cpr-lower-hand" transform="matrix(0 -.48 .48 0 192.76 112.8)" stroke-width="3.4"/>
+        <!-- Broad wrist webbing, small buckles, and loops tied to the handles. -->
+        <g stroke-width="1.3">
+          <path d="M160 73 L178 70 L181 81 L162 85 Z M238 73 H257 V83 H238 Z" fill="currentColor" fill-opacity="0.16"/>
+          <path d="M178 76 Q189 74 189 66 L181 64 M251 74 Q262 71 260 63 L252 61"/>
+          <path d="M168 74 L175 73 L176 79 L169 80 Z M244 76 H251 V81 H244 Z"/>
+        </g>
+      </g>
+      <g id="resus-side-chest-details" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
+        <path class="side-bare-chest" d="M176 130 Q198 126 219 132" opacity="0.25"/>
+      </g>
       <g id="electrical-torso">
         <use href="#procedure-torso"/>
-        <g fill="none" stroke="#8bd6f1" stroke-width="1" opacity="0.25">
-          <path d="M105 60 Q74 44 62 66 M116 60 Q146 44 158 66 M105 72 Q73 58 61 79 M116 72 Q148 58 159 79 M105 84 Q72 73 61 92 M116 84 Q149 73 159 92 M105 96 Q74 88 65 105 M116 96 Q147 88 155 105 M105 108 Q78 103 70 118 M116 108 Q144 103 151 118"/>
-        </g>
+        <g class="electrical-pads">
         <g fill="#b7c7cc" fill-opacity="0.9" stroke="#eef7f4" stroke-width="1.5">
           <rect x="65" y="48" width="30" height="39" rx="7" transform="rotate(-14 80 67)"/>
           <rect x="145" y="108" width="30" height="41" rx="7" transform="rotate(22 160 128)"/>
@@ -146,6 +446,7 @@
         <g fill="none" stroke="#65a7c4" stroke-width="2">
           <path d="M80 55 V77 M71 66 H88 M158 117 L163 139 M151 129 L169 125"/>
           <path d="M76 49 Q56 18 32 22 M168 148 Q204 163 202 226"/>
+        </g>
         </g>
       </g>
       <g id="xray-heart" stroke="#9fe8f6" stroke-width="1.5" stroke-linejoin="round">
@@ -761,6 +1062,7 @@
     <div id="defib-overlay" aria-hidden="true">
       <div id="defib-header">DEFIBRILLATION</div>
       <svg id="defib-svg" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g class="patient-scene">
         <g class="electrical-patient" color="#a0b6c5">
           <use href="#electrical-torso"/>
           <g class="heart-before"><g class="heart-motion"><use href="#xray-heart"/></g></g>
@@ -769,7 +1071,8 @@
             <path d="M82 68 L98 81 L105 73 L115 95 L125 90 L138 115 L160 129"/>
             <ellipse cx="116" cy="101" rx="34" ry="38" stroke-width="1"/>
           </g>
-          <g class="sync-cue" fill="none" stroke="#e9d881" stroke-width="1.5"><path d="M99 72 V65 H108 M128 65 H137 V72"/></g>
+        </g>
+
         </g>
       </svg>
       <div id="defib-label"></div>
@@ -777,6 +1080,7 @@
     <div id="pacing-overlay" aria-hidden="true">
       <div id="pacing-header">TRANSCUTANEOUS PACING</div>
       <svg id="pacing-svg" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g class="patient-scene">
         <g class="electrical-patient" color="#a0b6c5">
           <use href="#electrical-torso"/>
           <g class="heart-before"><g class="heart-motion"><use href="#xray-heart"/></g></g>
@@ -785,7 +1089,8 @@
             <path d="M82 68 L98 81 L105 73 L115 95 L125 90 L138 115 L160 129"/>
             <ellipse cx="116" cy="101" rx="34" ry="38" stroke-width="1"/>
           </g>
-          <g class="sync-cue" fill="none" stroke="#e9d881" stroke-width="1.5"><path d="M99 72 V65 H108 M128 65 H137 V72"/></g>
+        </g>
+
         </g>
       </svg>
       <div id="pacing-label"></div>
@@ -793,7 +1098,9 @@
     <div id="chest_seal-overlay" aria-hidden="true">
       <div id="chest_seal-header">CHEST SEAL</div>
       <svg id="chest_seal-svg" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g class="patient-scene">
         <use href="#procedure-torso" color="#a0b6c5"/>
+        <g class="seal-device-size">
         <ellipse cx="143" cy="91" rx="5" ry="4" fill="#401e2a" stroke="#dd6672" stroke-width="1.5"/>
         <path class="seal-seep" d="M143 95 Q138 104 144 113 T143 132" fill="none" stroke="#c94358" stroke-width="3" stroke-linecap="round"/>
         <g class="seal-placement">
@@ -813,6 +1120,9 @@
           <path d="M119 57 L155 54 M123 71 Q138 65 148 75" fill="none" stroke="#4b7183"/>
         </g>
         <g class="seal-impact" fill="none" stroke="#d4e8dc" stroke-width="2"><path d="M110 77 L104 73 M112 104 L105 109 M172 77 L180 72 M173 102 L181 108"/></g>
+
+        </g>
+        </g>
       </svg>
       <div id="chest_seal-label"></div>
     </div>
@@ -824,12 +1134,12 @@
         <defs>
 
           <!-- One preformed curve; anterior trachea and posterior esophagus remain separate. -->
-          <!-- Keep the visible tracheal segment compact; the cuff and bevel sit just beyond the cords. -->
-          <path id="lx-tracheal-route" pathLength="100" d="M151 58 C151 128 171 170 226 170 L244 170"/>
+          <!-- The cuff and bevel sit well inside the visible tracheal lumen. -->
+          <path id="lx-tracheal-route" pathLength="100" d="M151 58 C151 128 171 170 226 170 L270 170"/>
           <path id="lx-esophageal-route" pathLength="100" d="M151 58 C151 132 176 198 226 198 L280 198"/>
           <path id="lx-failed-route" pathLength="100" d="M151 58 C151 124 169 160 198 167"/>
         </defs>
-        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <g class="airway-scene" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <g id="lx-anatomy">
           <g id="lx-head"><use href="#airway-head"/></g>
           <g id="lx-body"><use href="#airway-body"/></g>
@@ -878,7 +1188,7 @@
           <g id="lx-tube-assembly">
           <g id="lx-tube-tracheal" class="lx-tube">
             <use class="lx-tube-wall" href="#lx-tracheal-route"/><use class="lx-tube-lumen" href="#lx-tracheal-route"/>
-          <ellipse class="lx-murphy-eye" cx="238" cy="170" rx="2.1" ry="1.15" fill="#101923" stroke="#daeaf3" stroke-width="0.7"/>
+          <ellipse class="lx-murphy-eye" cx="264" cy="170" rx="2.1" ry="1.15" fill="#101923" stroke="#daeaf3" stroke-width="0.7"/>
             <g class="lx-stylet"><use href="#lx-tracheal-route" stroke="#e8c789" stroke-width="1.2"/><path d="M151 58 V43 Q151 36 144 38" stroke="#e8c789" stroke-width="2"/></g>
           </g>
           <g id="lx-tube-esophageal" class="lx-tube">
@@ -896,13 +1206,13 @@
             <path d="M-9 -8 L-9 8" stroke-width="3"/>
           </g>
           <g id="lx-tracheal-detail" class="lx-tube-detail" stroke="#506473" stroke-width="1.6">
-            <path d="M215 167 L215 173 M244 167 L240 173"/>
+            <path d="M225 167 L225 173 M270 167 L266 173"/>
           </g>
           <g id="lx-esophageal-detail" class="lx-tube-detail" stroke="#506473" stroke-width="1.6">
             <path d="M223 195 L223 201 M232 195 L232 201 M280 195 L276 201"/>
           </g>
-          <ellipse id="lx-tracheal-cuff" class="lx-cuff" cx="228" cy="170" rx="8" ry="8"/>
-          <ellipse id="lx-esophageal-cuff" class="lx-cuff" cx="257" cy="198" rx="9" ry="6"/>
+          <rect id="lx-tracheal-cuff" class="lx-cuff" x="236" y="162" width="26" height="16" rx="5" ry="6"/>
+          <rect id="lx-esophageal-cuff" class="lx-cuff" x="246" y="192" width="23" height="12" rx="4.5" ry="4.5"/>
           </g>
           <ellipse id="lx-success-ring" cx="209" cy="170" rx="19" ry="21" stroke="#66e898" stroke-width="2.5"/>
           <path id="lx-success-rays" d="M191 157 L185 150 M224 156 L230 149 M191 184 L185 191 M225 184 L231 191" stroke="#93efb3" stroke-width="2"/>
@@ -923,7 +1233,7 @@
 
 <div id="npa-overlay" aria-hidden="true">
       <div id="npa-header">NASOPHARYNGEAL AIRWAY</div>
-      <svg id="npa-svg" viewBox="0 -30 410 310" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg id="npa-svg" viewBox="0 -30 410 310" aria-hidden="true"><g class="airway-scene" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <g id="npa-head"><use href="#airway-head"/></g>
 <g id="npa-body"><use href="#airway-body"/></g>
 <g id="npa-tongue"><use href="#airway-tongue"/></g>
@@ -948,7 +1258,7 @@
     </div>
 <div id="obstruction-overlay" aria-hidden="true">
       <div id="obstruction-header">REMOVE OBSTRUCTION</div>
-      <svg id="obstruction-svg" viewBox="0 -30 410 310" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg id="obstruction-svg" viewBox="0 -30 410 310" aria-hidden="true"><g class="airway-scene" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <g id="obstruction-head"><use href="#airway-head"/></g>
 <g id="obstruction-body"><use href="#airway-body"/></g>
 <g id="obstruction-tongue"><use href="#airway-tongue"/></g>
@@ -1099,38 +1409,45 @@
       <svg id="cpr-svg" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <!-- Stacked palms with foreshortened wrists: pressure comes from above. -->
-          <path id="cpr-lower-hand" d="M85 113 L94 108 C100 103 105 101 112 102
-            L129 103 C136 103 140 105 140 108 C140 111 137 112 133 112
-            L143 113 C150 114 150 121 143 122 L138 122
-            C145 123 145 130 138 131 L130 131 C136 133 133 139 128 139
-            L108 138 C100 137 95 132 92 127 L83 130 Q80 122 85 113 Z"/>
-          <path id="cpr-upper-hand" d="M85 91 L96 96 C100 96 100 91 105 89
-            L114 85 C119 84 122 88 118 92 L111 98
-            L135 100 C142 101 143 108 136 109 L117 107
-            L144 111 C151 112 151 119 144 119 L116 115
-            L142 121 C149 123 147 129 141 129 L113 123
-            L133 130 C139 132 136 138 131 137 L108 129
-            C99 127 96 117 92 113 L80 109 Q79 99 85 91 Z"/>
+
+
+          <!-- Reference pose: forearms approach from below, fingers encircle
+               the back, and two adjacent thumb tips meet at the lower sternum. -->
+          <g id="cpr-infant-grip">
+            <path id="cpr-infant-left-grip" d="M35 239 C36 214 43 191 47 171 Q50 151 58 137
+              L58 123 Q58 115 63 116 Q68 119 65 128 L64 132
+              Q76 128 83 136 L88 146 Q90 156 84 166 C77 188 75 213 75 239 Z"/>
+            <use href="#cpr-infant-left-grip" transform="translate(220 0) scale(-1 1)"/>
+          </g>
+          <g id="cpr-encircling-thumbs">
+            <path id="cpr-infant-left-thumb" d="M65 139 C71 128 88 117 99 109
+              Q104 105 108 108 Q112 111 109 115 L89 131
+              Q82 142 78 146 Z"/>
+            <use href="#cpr-infant-left-thumb" transform="translate(220 0) scale(-1 1)"/>
+          </g>
           <!-- Knock out anatomy behind the hands without a colored fill. -->
           <mask id="cpr-anatomy-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="220" height="240">
             <rect width="220" height="240" fill="white"/>
-            <g class="cpr-hand-motion" fill="black" stroke="black" stroke-width="4">
+            <g class="cpr-hand-motion cpr-palms" fill="black" stroke="black" stroke-width="4">
               <use href="#cpr-lower-hand"/>
               <use href="#cpr-upper-hand"/>
             </g>
+            <use class="cpr-infant" href="#cpr-infant-grip" fill="black" stroke="black" stroke-width="4"/>
+            <use class="cpr-infant cpr-hand-motion" href="#cpr-encircling-thumbs" fill="black" stroke="black" stroke-width="4"/>
           </mask>
           <mask id="cpr-lower-hand-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="220" height="240">
             <rect width="220" height="240" fill="white"/>
             <use href="#cpr-upper-hand" fill="black" stroke="black" stroke-width="3"/>
           </mask>
         </defs>
+        <g class="patient-scene">
         <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <g mask="url(#cpr-anatomy-mask)">
             <use href="#torso-outline"/>
             <g id="cpr-chest"><use href="#torso-chest"/></g>
             <g id="cpr-abdomen"><use href="#torso-abdomen"/></g>
           </g>
-          <g id="cpr-press" class="cpr-hand-motion">
+          <g id="cpr-press" class="cpr-hand-motion cpr-palms">
             <g mask="url(#cpr-lower-hand-mask)">
               <use href="#cpr-lower-hand"/>
               <path d="M86 116 Q85 122 88 126 M100 132 Q110 138 121 136" stroke-width="1.3" opacity="0.55"/>
@@ -1140,6 +1457,19 @@
             <path d="M111 98 Q103 101 105 108 M117 107 L113 106
               M116 115 L112 114 M113 123 L110 122
               M89 96 Q85 101 86 106" stroke-width="1.3" opacity="0.6"/>
+          </g>
+        </g>
+
+          <g class="cpr-infant" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#cpr-infant-grip"/>
+            <path d="M51 170 Q61 174 76 170 M169 170 Q159 174 144 170
+              M59 124 L60 133 M161 124 L160 133" stroke-width="1" opacity="0.55"/>
+          </g>
+          <g class="cpr-infant cpr-hand-motion" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#cpr-encircling-thumbs"/>
+            <path d="M99 112 Q103 107 107 110 L105 115 Q102 116 99 112 Z
+              M121 112 Q117 107 113 110 L115 115 Q118 116 121 112 Z
+              M77 134 L83 137 M143 134 L137 137" stroke-width="0.8" opacity="0.65"/>
           </g>
         </g>
       </svg>
@@ -1154,13 +1484,21 @@
     <!-- BVM (bag-valve-mask ventilation) animation overlay -->
     <div id="bvm-overlay" aria-hidden="true">
       <div id="bvm-header">BAG-VALVE MASK</div>
-      <svg id="bvm-svg" viewBox="0 0 380 210" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <svg id="bvm-svg" viewBox="0 0 380 260" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g class="patient-scene">
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <use href="#procedure-patient-head"/>
-          <use id="bvm-chest" href="#procedure-patient-body"/>
-          <path d="M24 170 L356 170" opacity="0.2"/>
-          <g transform="translate(0 -8)">
+          <use href="#resus-ground-contact"/>
+          <use href="#resus-side-head" mask="url(#resus-arm-knockout)"/>
+          <use mask="url(#resus-arm-knockout)" id="bvm-lower-body" href="#resus-side-lower"/>
+          <path id="bvm-abdomen" class="side-abdomen-profile"/>
+          <g id="bvm-chest" mask="url(#resus-arm-knockout)">
+            <path class="side-chest-profile"/>
+            <g id="bvm-chest-details" class="side-chest-details"><use href="#resus-side-chest-details"/></g>
+          </g>
+          <use id="bvm-arm" href="#resus-side-arm"/>
+          <g class="bvm-position" transform="translate(0 -8)">
           <g id="bvm-assembly">
+            <g class="bvm-standard">
             <!-- Double cushion wraps the existing nose and mouth profile. -->
             <path id="bvm-seal" d="M289 115 Q286 106 293 98 L320 97 Q326 101 324 114"
               stroke="#7fd0ff" stroke-width="4" opacity="0.65"/>
@@ -1170,22 +1508,46 @@
             <path d="M299 83 L299 67 L278 67 L278 78 L289 78 L289 85 Z" fill="#151e28"/>
             <rect x="262" y="65" width="17" height="15" rx="3" fill="#151e28"/>
             <path d="M269 65 L269 58 M264 57 L274 57 M262 73 L252 73"/>
-            <!-- The bag deforms around a fixed valve axis: connectors stay attached. -->
-            <g id="bvm-bag">
-              <path d="M166 73 C168 50 184 43 207 44 C231 44 248 53 252 73 C249 92 231 101 208 102 C184 102 168 94 166 73 Z" fill="#7fd0ff" fill-opacity="0.09"/>
-              <path d="M184 51 Q174 72 184 95 M205 48 Q198 73 205 98 M226 49 Q237 73 226 96" opacity="0.5" stroke-width="1.3"/>
             </g>
-            <rect x="154" y="67" width="12" height="12" rx="2" fill="#151e28"/>
-            <path d="M154 73 L145 73 Q122 64 103 74 Q123 86 145 77" opacity="0.5"/>
-            <path d="M157 79 C148 97 135 96 123 98" opacity="0.5" stroke-width="1.5"/>
+            <g class="bvm-neonatal">
+              <path d="M284 105 C278 93 283 81 296 80 Q318 78 327 101 L327 108
+                Q306 118 284 105 Z" fill="currentColor" fill-opacity="0.035"/>
+              <ellipse class="bvm-mask-seal" cx="305" cy="109" rx="22" ry="6" stroke-width="2.4"/>
+              <path d="M290 101 Q289 88 299 85 M317 87 Q323 95 322 101" stroke-width="1" opacity="0.45"/>
+              <path d="M299 83 V69 L285 69 M299 78 L285 78"/>
+              <circle cx="273" cy="73" r="12" fill="#151e28"/>
+              <ellipse cx="273" cy="73" rx="8" ry="11" opacity="0.6"/>
+              <path d="M267 64 V82 M272 62 V84 M277 64 V82 M261 73 H257 M279 62 L285 57 L291 62 L285 68" stroke-width="1.2"/>
+            </g>
+            <!-- The bag deforms around a fixed valve axis: connectors stay attached. -->
+            <g class="bvm-bag-size"><g id="bvm-bag">
+              <path class="bvm-standard" d="M166 73 C168 50 184 43 207 44 C231 44 248 53 252 73 C249 92 231 101 208 102 C184 102 168 94 166 73 Z" fill="#7fd0ff" fill-opacity="0.09"/>
+              <path class="bvm-standard" d="M184 51 Q174 72 184 95 M205 48 Q198 73 205 98 M226 49 Q237 73 226 96" opacity="0.5" stroke-width="1.3"/>
+              <g class="bvm-neonatal">
+                <path d="M201 73 C202 55 214 43 228 44 C251 42 264 54 258 74
+                  C254 94 244 103 226 103 C212 101 204 91 201 73 Z" fill="currentColor" fill-opacity="0.07"/>
+                <path d="M210 58 Q203 73 213 91 M229 49 Q246 48 253 63" stroke-width="1" opacity="0.45"/>
+              </g>
+            </g>
+            <rect class="bvm-standard" x="154" y="67" width="12" height="12" rx="2" fill="#151e28"/>
+            <path class="bvm-standard" d="M154 73 L145 73 Q122 64 103 74 Q123 86 145 77" opacity="0.5"/>
+            <path class="bvm-standard" d="M157 79 C148 97 135 96 123 98" opacity="0.5" stroke-width="1.5"/>
             <!-- Gloved finger and thumb follow the bag's squeeze. -->
-            <g id="bvm-grip-top" stroke="#b9c7d1"><path d="M179 35 Q193 30 208 36 L224 43 Q229 47 226 50 Q223 52 216 48 L199 43" fill="#151e28"/></g>
-            <g id="bvm-grip-bottom" stroke="#b9c7d1"><path d="M186 110 Q201 118 216 109 L231 97 Q235 92 231 90 Q227 89 222 96 L207 102" fill="#151e28"/></g>
+            <g id="bvm-grip-top" stroke="#b9c7d1"><path class="bvm-standard" d="M179 35 Q193 30 208 36 L224 43 Q229 47 226 50 Q223 52 216 48 L199 43" fill="#151e28"/><path class="bvm-neonatal" d="M210 40 Q225 34 238 42 L248 49 Q251 54 247 55 L229 48" fill="#151e28"/></g>
+            <g id="bvm-grip-bottom" stroke="#b9c7d1"><path class="bvm-standard" d="M186 110 Q201 118 216 109 L231 97 Q235 92 231 90 Q227 89 222 96 L207 102" fill="#151e28"/><path class="bvm-neonatal" d="M214 111 Q231 120 244 106 L250 95 Q250 90 246 92 L234 104" fill="#151e28"/></g>
+            <g class="bvm-neonatal">
+              <path d="M180 53 Q169 73 180 93 L197 87 L204 78 V68 L197 59 Z" fill="#151e28"/>
+              <ellipse cx="180" cy="73" rx="7" ry="20"/>
+              <path d="M177 57 V89 M181 56 V90 M185 58 V88" stroke-width="1" opacity="0.65"/>
+              <rect x="162" y="65" width="13" height="16" rx="2" fill="#151e28"/>
+            </g>
+            </g>
             <path id="bvm-air" d="M272 73 L305 73 L305 99" stroke="#7fd0ff" stroke-width="2.5" stroke-dasharray="4 6"/>
             <path id="bvm-leak" d="M327 104 L337 96 M328 110 L342 108 M288 111 L278 105" stroke="#ccaa33" stroke-width="2.5"/>
           </g>
           </g>
-          <path id="bvm-rise-cue" d="M187 108 L198 101 L208 108 M198 101 L198 112" stroke="#7fd0ff"/>
+        </g>
+
         </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
@@ -1200,15 +1562,23 @@
     <div id="lucas-overlay" aria-hidden="true">
       <div id="lucas-header">MECHANICAL CPR</div>
       <svg id="lucas-svg" viewBox="0 0 380 210" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g class="patient-scene">
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#resus-lucas-far-arm"/>
           <!-- Far support stays behind the patient; small depth offset clarifies the frame. -->
           <path d="M184 62 L173 157 L183 167 L193 161 L199 66 Z" fill="#293c2a" stroke="#87a77b" opacity="0.45"/>
-          <g id="lucas-backplate">
+          <g id="lucas-backplate" mask="url(#lucas-arm-knockout)">
             <path d="M144 166 L250 166 L259 173 L251 179 L141 179 L136 173 Z" fill="#29333d"/>
             <path d="M151 173 L244 173" opacity="0.5"/>
           </g>
-          <use href="#procedure-patient-head"/>
-          <use id="lucas-chest" href="#procedure-patient-body"/>
+          <use href="#resus-side-head"/>
+          <use mask="url(#lucas-arm-knockout)" id="lucas-lower-body" href="#resus-side-lower"/>
+          <path id="lucas-abdomen" class="side-abdomen-profile"/>
+          <g id="lucas-chest" mask="url(#lucas-arm-knockout)">
+            <path class="side-chest-profile"/>
+            <g id="lucas-chest-details" class="side-chest-details"><use href="#resus-side-chest-details"/></g>
+          </g>
+
           <!-- Piston and pressure pad stay in contact through compression and recoil. -->
           <g id="lucas-piston">
             <rect x="207" y="67" width="12" height="37" rx="2" fill="#b9c7d1" stroke="#e0e7eb"/>
@@ -1219,7 +1589,7 @@
             <path d="M201 68 L225 68 L227 73 L201 77 L227 82 L201 87 L225 92 L201 92 Z"/>
           </g>
           <!-- Near support arm, broad curved hood, battery and control panel. -->
-          <g id="lucas-frame">
+          <g id="lucas-frame" mask="url(#lucas-arm-knockout)">
             <path d="M164 61 L177 64 L177 157 L169 169 L153 166 L156 151 Z" fill="#789767" stroke="#bad0a8"/>
             <path d="M164 86 L164 149" stroke="#34482f" stroke-width="3"/>
             <path d="M159 158 L175 158 L173 171 L156 171 Z" fill="#29333d"/>
@@ -1235,6 +1605,10 @@
             <path d="M156 148 Q146 141 147 151 Q148 159 156 153" stroke="#d7bc75" stroke-width="2.5"/>
           </g>
         </g>
+          <path d="M245 45 Q258 40 262 52 Q265 63 251 68" fill="none" stroke="#bccddd" stroke-width="2" mask="url(#lucas-arm-knockout)"/>
+          <use id="lucas-arm" href="#resus-lucas-arm"/>
+
+        </g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
         <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
@@ -1248,7 +1622,7 @@
     <div id="suction-overlay" aria-hidden="true">
       <div id="suction-header">SUCTION</div>
       <svg id="suction-svg" viewBox="0 -30 410 310" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <g class="airway-scene" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <g id="suction-head"><use href="#airway-head"/></g>
           <g id="suction-body"><use href="#airway-body"/></g>
           <g id="suction-tongue"><use href="#airway-tongue"/></g>
@@ -1310,7 +1684,7 @@
     <div id="sga-overlay" aria-hidden="true">
       <div id="sga-header">i-gel · SUPRAGLOTTIC AIRWAY</div>
       <svg id="sga-svg" viewBox="0 -30 410 310" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <g class="airway-scene" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <g id="sga-head"><use href="#airway-head"/></g>
           <g id="sga-body"><use href="#airway-body"/></g>
           <g id="sga-tongue"><use href="#airway-tongue"/></g>
@@ -1831,7 +2205,7 @@
     <div id="opa-overlay" aria-hidden="true">
       <div id="opa-header">OROPHARYNGEAL AIRWAY</div>
       <svg id="opa-svg" viewBox="0 -30 410 310" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <g class="airway-scene" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <g id="opa-head"><use href="#airway-head"/></g>
           <g id="opa-body"><use href="#airway-body"/></g>
           <g id="opa-tongue"><use href="#airway-tongue"/></g>
@@ -2252,7 +2626,7 @@
     </div>
   </dialog>
   <script src="monitor.js?v=5"></script>
-  <script src="app.js?v=118"></script>
+  <script src="app.js?v=122"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

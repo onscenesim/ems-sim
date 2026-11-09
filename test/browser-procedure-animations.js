@@ -55,12 +55,20 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
           strokeOffset: getComputedStyle(overlay.querySelector(outcome === 'SUCCESS' || outcome === 'MARGINAL' ? '.om-check' : '.om-x1')).strokeDashoffset,
           ...(id === 'npa' ? { deviceX: matrix('npa-device').e, deviceY: matrix('npa-device').f, tip: point('npa-device', 200, 184) } : {}),
           ...(id === 'obstruction' ? { objectX: matrix('obstruction-object').e, objectY: matrix('obstruction-object').f, flow: Number(css('obstruction-flow').opacity), flowOffset: Number.parseFloat(css('obstruction-flow').strokeDashoffset) } : {}),
-          ...(id === 'bvm' ? { chest: matrix('bvm-chest').d, bag: matrix('bvm-bag').d, leak: Number(css('bvm-leak').opacity), air: Number(css('bvm-air').opacity) } : {}),
-          ...(id === 'lucas' ? { chest: matrix('lucas-chest').d, piston: matrix('lucas-piston').f, frame: css('lucas-frame').transform } : {}),
+          ...(id === 'bvm' ? { chest: matrix('bvm-chest-details').d, bag: matrix('bvm-bag').d, leak: Number(css('bvm-leak').opacity), air: Number(css('bvm-air').opacity) } : {}),
+          ...(id === 'lucas' ? { chest: matrix('lucas-chest-details').d, piston: matrix('lucas-piston').f, frame: css('lucas-frame').transform } : {}),
+          ...(['bvm', 'lucas'].includes(id) ? {
+            chestContour: overlay.querySelector('.side-chest-profile').getBBox().height,
+            abdomenTop: overlay.querySelector('.side-abdomen-profile').getBBox().y,
+            fixedParts: [`${id}-lower-body`, `${id}-arm`].map(part => {
+              const rect = document.getElementById(part).getBoundingClientRect();
+              return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+            }),
+          } : {}),
           ...(id === 'laryngoscope' ? {
             tubes: ['tracheal', 'esophageal', 'failed'].map(route => ({ route, display: css(`lx-tube-${route}`).display, opacity: css(`lx-tube-${route}`).opacity, pathOpacity: Number(css('lx-tube-assembly').opacity), offset: Math.abs(matrix('lx-tube-assembly').f) })),
             cuffs: ['tracheal', 'esophageal'].map(route => ({ route, display: css(`lx-${route}-cuff`).display, opacity: Number(css(`lx-${route}-cuff`).opacity) })),
-            ring: Number(css('lx-success-ring').opacity), tubeTip: point('lx-tube-assembly', outcome === 'COMPLICATION' ? 280 : outcome === 'FAILURE' ? 198 : 244, outcome === 'COMPLICATION' ? 198 : outcome === 'FAILURE' ? 167 : 170), tubeRotation: matrix('lx-tube-assembly').b, wireOffset: Number.parseFloat(getComputedStyle(document.querySelector('#lx-tube-tracheal .lx-stylet > use')).strokeDashoffset), wireShaft: getComputedStyle(document.querySelector('#lx-tube-tracheal .lx-stylet > path')).d,
+            ring: Number(css('lx-success-ring').opacity), tubeTip: point('lx-tube-assembly', outcome === 'COMPLICATION' ? 280 : outcome === 'FAILURE' ? 198 : 270, outcome === 'COMPLICATION' ? 198 : outcome === 'FAILURE' ? 167 : 170), tubeRotation: matrix('lx-tube-assembly').b, wireOffset: Number.parseFloat(getComputedStyle(document.querySelector('#lx-tube-tracheal .lx-stylet > use')).strokeDashoffset), wireShaft: getComputedStyle(document.querySelector('#lx-tube-tracheal .lx-stylet > path')).d,
             macOpacity: Number(css('lx-mac').opacity),
             connector: Number(css('lx-tube-assembly').opacity), stylet: Number(getComputedStyle(document.querySelector('#lx-tube-tracheal .lx-stylet')).opacity), cuffScale: matrix('lx-tracheal-cuff').d,
             bladeTip: point('lx-mac', 191, 172),
@@ -137,11 +145,17 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     const squeeze = await sample('bvm', 'SUCCESS', 1100);
     assert.equal(rest.bag, 1); assert.equal(rest.chest, 1);
     assert.ok(squeeze.bag < 0.6 && squeeze.chest > 1.17);
+    assert.ok(squeeze.chestContour > rest.chestContour, 'successful ventilation raises the chest contour');
+    assert.equal(squeeze.abdomenTop, rest.abdomenTop, 'successful ventilation leaves the belly still');
+    assert.deepEqual(squeeze.fixedParts, rest.fixedParts, 'ventilation does not squash limbs');
     const marginal = await sample('bvm', 'MARGINAL', 1100);
     assert.ok(marginal.chest > 1 && marginal.chest < squeeze.chest);
     for (const outcome of ['FAILURE', 'COMPLICATION']) {
       const failed = await sample('bvm', outcome, 1100);
       assert.equal(failed.chest, 1); assert.equal(failed.air, 0); assert.equal(failed.leak, 1);
+      assert.equal(failed.chestContour, rest.chestContour, 'failed ventilation keeps the chest still');
+      assert.ok(failed.abdomenTop < rest.abdomenTop, 'failure/complication raises only the abdomen');
+      assert.deepEqual(failed.fixedParts, rest.fixedParts);
     }
     const refill = await sample('bvm', 'SUCCESS', 1850);
     assert.equal(refill.bag, 1); assert.equal(refill.chest, 1);
@@ -151,6 +165,9 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       assert.equal(pressed.piston, 9); assert.equal(pressed.chest, 0.8125);
       assert.equal(released.piston, 0); assert.equal(released.chest, 1);
       assert.equal(pressed.frame, 'none');
+      assert.ok(pressed.chestContour < released.chestContour, 'the piston depresses only the chest');
+      assert.ok(pressed.abdomenTop < released.abdomenTop, 'abdomen moves opposite to chest compression');
+      assert.deepEqual(pressed.fixedParts, released.fixedParts, 'legs and arm remain rigid during compression');
     }
     const anticipation = await sample('scalpel', 'SUCCESS', 280);
     const impact = await sample('scalpel', 'SUCCESS', 460);
@@ -263,8 +280,9 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
         handleForward: (handle.left + handle.right) / 2 > hinge.right,
         handleLevel: Math.abs(new DOMMatrix(getComputedStyle(document.getElementById('lx-mac-handle')).transform).b) < 0.01,
         flangeWidth: document.getElementById('lx-mac-flange').getBBox().width,
-        cuffX: Number(document.getElementById('lx-tracheal-cuff').getAttribute('cx')),
-        cuffRadius: Number(document.getElementById('lx-tracheal-cuff').getAttribute('rx')),
+        cuffX: document.getElementById('lx-tracheal-cuff').getBBox().x,
+        cuffWidth: document.getElementById('lx-tracheal-cuff').getBBox().width,
+        cuffHeight: document.getElementById('lx-tracheal-cuff').getBBox().height,
         routes: ['tracheal', 'esophageal', 'failed'].map(route => {
           const path = document.getElementById(`lx-${route}-route`);
           return Array.from({ length: 51 }, (_, i) => {
@@ -278,8 +296,9 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.ok(geometry.headDepthRatio > 0.7, 'the cranium has human depth rather than a flattened profile');
     assert.ok(geometry.handleForward && geometry.handleLevel, 'Mac handle extends forward at a right angle to the proximal blade');
     assert.ok(geometry.flangeWidth > 20, 'raised flange follows the broad curved spatula');
-    assert.ok(ends[0].x >= 235 && ends[0].x <= 250, 'successful tube has a compact visible segment beyond the cords');
-    assert.ok(geometry.cuffX - geometry.cuffRadius > 209 && geometry.cuffX + geometry.cuffRadius < ends[0].x - 4, 'cuff stays beyond the cords and behind the shortened tip');
+    assert.ok(ends[0].x >= 265 && ends[0].x <= 275, 'successful tube sits deeper in the visible trachea');
+    assert.ok(geometry.cuffX > 209 && geometry.cuffX + geometry.cuffWidth < ends[0].x - 4, 'cuff stays beyond the cords and behind the tip');
+    assert.ok(geometry.cuffWidth > geometry.cuffHeight * 1.5, 'cuff has an elongated, boxy oval silhouette');
     assert.equal(geometry.tubeFilter, 'none', 'no animated SVG blur during tube advancement');
     for (const points of geometry.routes) {
       let lastAngle = Infinity;
@@ -637,7 +656,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
             beat: css('.heart-after .heart-motion').animationName,
             rate: css('.heart-after .heart-motion').animationDuration,
             before: Number(css('.heart-before').opacity), after: Number(css('.heart-after').opacity),
-            energy: Number(css('.shock-energy').opacity), sync: Number(css('.sync-cue').opacity),
+            energy: Number(css('.shock-energy').opacity), sync: overlay.querySelector('.sync-cue') ? Number(css('.sync-cue').opacity) : 0,
             base: overlay.querySelector('.electrical-patient > use').getAttribute('href'),
           }),
         };
@@ -661,7 +680,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
             } else {
               assert.equal(state.base, '#electrical-torso');
               assert.equal(state.before, 0);
-              assert.equal(state.sync, procedure === 'cardioversion' ? 1 : 0);
+              assert.equal(state.sync, 0, 'both shock modes use exactly the same visual layers');
             }
             if (!reduced) await page.screenshot({ path: path.join(output, `${procedure}-${outcome}-${width}.png`) });
           }

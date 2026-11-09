@@ -11,11 +11,12 @@ const scenes = source.slice(source.indexOf('const PROCEDURE_TIMING'), source.ind
 function fixture({ reduced = false, missing = false } = {}) {
   let now = 0;
   const timers = [], played = [], elements = new Map();
-  for (const scene of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
+  for (const scene of ['cpr', 'bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
     for (const suffix of ['overlay', 'label', 'header']) {
-      const classes = new Set(), properties = {};
+      const classes = new Set(), properties = {}, attributes = {};
       elements.set(`${scene}-${suffix}`, {
-        textContent: '', offsetWidth: 100, properties,
+        textContent: '', offsetWidth: 100, properties, attributes,
+        setAttribute: (key, value) => { attributes[key] = value; },
         set className(value) { classes.clear(); value.split(' ').filter(Boolean).forEach(c => classes.add(c)); },
         classList: { add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c) },
         style: { setProperty: (key, value) => { properties[key] = value; } },
@@ -54,6 +55,56 @@ test('transport patient variants honor the under-4 and under-14 boundaries, incl
     assert.equal(transportPatient.variantFor({ age }), 'adult');
   }
   assert.equal(transportPatient.variantFor(null), 'adult');
+});
+
+test('airway profiles follow the focused patient and reset when demographics are unknown', () => {
+  const f = fixture();
+  f.context.window.TransportPatient = transportPatient;
+  const previous = { patient: { sex: 'male' }, patients: [{ id: 'patient_2', sex: 'female' }] };
+  for (const [current, expected] of [
+    [{ patient_focus: { id: 'patient_2' } }, 'female'],
+    [{ patient_focus: { id: 'patient_1' } }, 'male'],
+    [{ patient_focus: { id: 'patient_3' } }, 'male'],
+  ]) {
+    f.context.configureAirwayPatient(transportPatient.patientFor(current, previous));
+    for (const id of ['laryngoscope', 'sga', 'opa', 'suction', 'npa', 'obstruction']) {
+      assert.equal(f.elements.get(`${id}-overlay`).attributes['data-airway-profile'], expected);
+    }
+  }
+});
+
+test('airway pediatric profiles use the loading age boundaries and share one infant profile', () => {
+  const f = fixture();
+  f.context.window.TransportPatient = transportPatient;
+  for (const sex of ['male', 'female']) {
+    for (const [age, expected] of [
+      [0, 'baby'], [0.5, 'baby'], [3.99, 'baby'],
+      [4, `child-${sex}`], [9, `child-${sex}`], [13.99, `child-${sex}`],
+      [14, sex], [35, sex], [undefined, sex], [-1, sex], [NaN, sex],
+    ]) {
+      f.context.configureAirwayPatient({ age, sex });
+      for (const id of ['laryngoscope', 'sga', 'opa', 'suction', 'npa', 'obstruction']) {
+        assert.equal(f.elements.get(`${id}-overlay`).attributes['data-airway-profile'], expected, `${age}/${sex}`);
+      }
+    }
+  }
+});
+
+test('resuscitation scenes share patient profiles, with child artwork as the infant LUCAS fallback', () => {
+  const f = fixture();
+  f.context.window.TransportPatient = transportPatient;
+  for (const [patient, profile] of [
+    [{age:35,sex:'female'}, 'female'], [{age:9,sex:'female'}, 'child-female'],
+    [{age:9,sex:'male'}, 'child-male'], [{age:0,sex:'female'}, 'baby'],
+    [{age:2,sex:'male'}, 'baby'], [{age:35,sex:'male'}, 'male'], [{}, 'male'],
+  ]) {
+    f.context.configureAirwayPatient(patient);
+    for (const id of ['cpr', 'bvm', 'lucas', 'chest_seal', 'defib', 'pacing']) {
+      const expected = id === 'lucas' && profile === 'baby' ? 'child-male' : profile;
+      assert.equal(f.elements.get(`${id}-overlay`).attributes['data-patient-profile'], expected, id);
+      assert.equal(f.elements.get(`${id}-overlay`).attributes['data-airway-profile'], expected, id);
+    }
+  }
 });
 
 test('transport uses the latest focused patient, retains saved demographics, and does not borrow another patient\'s age', () => {
@@ -302,15 +353,19 @@ test('NCD routes to the chest scene while needle cric synchronizes its existing 
 });
 
 // Shock modes share the lifecycle and own their sound at the shock, including legacy multi-rolls.
-test('electrical shock modes preserve headers, sync state, and one timed sound', async () => {
+test('cardioversion and defibrillation use identical animation clocks and sound, retaining their headers', async () => {
   const f = fixture();
+  const traces = new Map();
   vm.runInContext(source.slice(source.indexOf('function animateDefib('), source.indexOf('function animateThorsHammer(')), f.context);
   for (const procedure of ['cardioversion', 'defibrillation']) {
     for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
       const before = f.played.length;
       const p = f.context.animateDefib(procedure, outcome);
       const overlay = f.elements.get('defib-overlay');
-      assert.equal(overlay.classList.contains('is-cardioversion'), procedure === 'cardioversion');
+      assert.equal(overlay.classList.contains('is-cardioversion'), false);
+      const trace = { properties: {...overlay.properties}, label: f.elements.get('defib-label').textContent };
+      if (traces.has(outcome)) assert.deepEqual(trace, traces.get(outcome));
+      else traces.set(outcome, trace);
       assert.equal(f.elements.get('defib-header').textContent, procedure === 'cardioversion' ? 'SYNCHRONIZED CARDIOVERSION' : 'DEFIBRILLATION');
       f.advance(0); assert.equal(f.played.at(-1).sound, 'defib_outside');
       f.advance(9646); await p;

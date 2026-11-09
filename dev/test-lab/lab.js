@@ -19,7 +19,7 @@ function card(name,id) {
 }
 function empty(root,count) { if(!count) {const p=document.createElement('p');p.className='empty';p.textContent='No matches. Try another name or clear the search.';root.append(p);} }
 function matches(...values) { return values.join(' ').toLowerCase().includes($('search').value.trim().toLowerCase()); }
-function options() { return {outcome:$('outcome').value,speed:$('speed').value,provider:$('provider').value,moving:$('moving').checked,sound:$('sound').checked,patient:({adult:{age:35,sex:'male'},female:{age:35,sex:'female'},child:{age:9,sex:'female'},baby:{age:2,sex:'male'}})[$('patient').value]}; }
+function options() { return {outcome:$('outcome').value,speed:$('speed').value,provider:$('provider').value,moving:$('moving').checked,sound:$('sound').checked,patient:({adult:{age:35,sex:'male'},female:{age:35,sex:'female'},child_male:{age:9,sex:'male'},child:{age:9,sex:'female'},baby:{age:2,sex:'male'}})[$('patient').value]}; }
 async function play(mode='play') {
   if(!api)return;
   stop();const token=sequence;
@@ -104,7 +104,7 @@ function render() {
   else { $('collection').hidden=false;renderGallery(); }
 }
 for(const [id,name] of collections) {const b=document.createElement('button');b.textContent=name;b.dataset.tab=id;b.onclick=()=>{tab=id;$('search').value='';render();};$('tabs').append(b);}
-$('play').onclick=()=>play();$('start').onclick=()=>play('start');$('end').onclick=()=>play('end');$('stop').onclick=()=>{stop();status('Stopped. Select a pose or press Play.');};
+$('play').onclick=()=>play();$('start').onclick=()=>play('start');$('action').onclick=()=>play('action');$('end').onclick=()=>play('end');$('stop').onclick=()=>{stop();status('Stopped. Select a pose or press Play.');};
 $('search').oninput=()=>{if(!api)return;if(tab==='animations')renderScenes();else if(tab==='sounds')renderSounds();else renderGallery();};
 for(const id of ['outcome','patient','provider','moving','speed'])$(id).onchange=()=>play('start');
 $('theme').onchange=()=>{const light=$('theme').value==='light';document.body.classList.toggle('light-mode',light);api?.theme(light);};

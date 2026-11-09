@@ -84,7 +84,11 @@
     for (const animation of el.getAnimations({subtree:true})) {
       if (animation.effect?.target === el) continue;
       animation.pause();
-      animation.currentTime = mode === 'start' ? 0 : Math.max(0, scene.duration - 1);
+      const timing = PROCEDURE_TIMING[scene.overlay];
+      const actionTime = scene.overlay === 'bvm' ? timing.start + timing.cycle * .5
+        : scene.overlay === 'lucas' ? timing.start + timing.cycle * .45
+        : scene.overlay === 'cpr' ? 275 : scene.duration * .5;
+      animation.currentTime = mode === 'start' ? 0 : mode === 'action' ? actionTime : Math.max(0, scene.duration - 1);
     }
     if (scene.id === 'dice' && mode === 'end') {
       diceNumberEl.textContent = ({SUCCESS:20,MARGINAL:12,FAILURE:5,COMPLICATION:1})[o.outcome];
@@ -126,6 +130,7 @@
       soundEnabled = mode === 'play' && options.sound;
       window._isMoving = options.moving;
       localTranscript={meta:{provider_level:options.provider}};
+      configureAirwayPatient(options.patient);
       speed = Number(options.speed) || 1; clockOrigin = nativeNow(); tracking = true;
       if (soundEnabled) unlockAudio();
       const result=scene.run(options);
