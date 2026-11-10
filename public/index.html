@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=101">
+  <link rel="stylesheet" href="style.css?v=102">
   <link rel="stylesheet" href="monitor.css?v=9">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="tutorial.css?v=1">
   <script src="/analytics-config.js"></script>
   <script src="/analytics.js?v=1"></script>
+  <link rel="stylesheet" href="airway-scenes.css?v=4">
 </head>
 <body>
 
@@ -57,87 +58,102 @@
       <!-- Supine sagittal cutaway. The profile is separate from the shared internal
            anatomy so patient variants retain every instrument/tissue contact point. -->
       <g id="airway-head" stroke="currentColor" stroke-width="1.6">
-        <!-- Forehead → bridge → rounded nose → philtrum and upper lip.
-             The lower lip, chin and submental curve continue into the neck. -->
-        <path class="airway-profile-male" d="M151 123
-          Q149 119 145 118 L140 119 Q134 119 133 116
-          Q132 113 136 110 Q141 108 140 105 Q139 101 135 103
-          L126 110 Q121 117 116 115 L109 112
-          C96 105 78 112 65 126 C47 144 41 165 46 189
-          C50 216 72 234 103 238 C139 243 177 234 208 218
-          Q229 216 260 222 L386 222
-          M174 123 Q174 119 177 119 Q181 119 181 124
-          C182 133 190 142 201 148 Q209 155 219 151
-          L260 136 C283 126 304 131 324 138 Q357 153 386 153"
-          fill="none"/>
-        <path class="airway-profile-female" d="M151 123
-          Q148 119 145 120 Q138 123 135 119 Q133 116 137 113
-          Q141 112 141 108 Q140 105 137 106
-          Q126 119 118 117 L111 114
-          C97 109 80 113 67 127 C49 144 43 165 48 188
-          C52 213 74 232 104 236 C139 242 176 233 208 218
-          Q229 216 260 222 L386 222
-          M174 123 Q175 120 178 121 Q181 122 181 127
-          Q184 141 202 150 Q210 155 220 151 L260 136
-          C283 126 304 131 324 138 Q357 153 386 153"
-          fill="none"/>
-        <!-- Pediatric faces keep the oral entrance in the same local coordinates;
-             the entire patient/device scene is scaled together for age. -->
-        <path class="airway-profile-child" d="M151 123 Q148 121 145 122
-          Q137 125 135 121 Q134 118 138 116 Q141 114 139 111
-          Q137 109 134 113 Q126 118 120 114
-          C109 103 92 100 77 109 C50 122 37 148 40 179
-          C42 209 65 232 98 237 Q155 246 206 217
-          Q229 215 260 222 L386 222
-          M174 123 Q176 120 179 123 Q181 133 193 144
-          Q206 156 220 151 L260 138 Q286 129 310 136
-          Q348 153 386 153" fill="none"/>
-        <path class="airway-profile-baby" d="M151 123 Q147 122 144 124
-          Q139 126 137 123 Q136 120 140 119 Q143 117 141 115
-          Q139 114 137 116 Q132 120 127 115
-          C115 101 98 94 80 101 C49 111 32 139 34 172
-          C34 205 57 231 91 237 Q153 249 205 216
-          Q229 214 260 222 L386 222
-          M174 123 Q177 121 179 125 Q180 136 190 145
-          Q202 156 219 152 L260 141 Q284 134 308 139
-          Q347 154 386 154" fill="none"/>
-        <!-- Restrained scalp and facial landmarks remain outside the section. -->
-        <g fill="none" stroke-width="1.1">
-          <path class="airway-profile-male" d="M68 125 Q53 144 51 163
-            C46 191 65 219 91 227 Q113 235 136 230
-            M62 143 Q55 166 60 185 M58 191 Q68 214 90 222"
-            opacity="0.35"/>
-          <path class="airway-profile-female" d="M73 123 C49 138 38 160 38 185
-            C38 216 58 237 90 243 Q137 254 180 240 L202 233
-            M64 141 C45 164 47 191 63 213 Q88 241 132 240 L165 235
-            M48 183 Q51 215 80 231 Q109 246 147 240
-            M65 220 Q89 243 123 244 M140 245 L174 239"
-            opacity="0.4"/>
-          <path class="airway-profile-child-male" d="M77 112 Q49 130 46 155
-            C41 182 53 207 76 222 M56 138 Q48 151 49 164
-            M48 176 Q50 199 66 213" opacity="0.35"/>
-          <path class="airway-profile-child-female" d="M77 110 C47 122 32 151 34 181
-            C34 215 57 239 94 244 Q132 252 168 241
-            C201 230 231 229 259 235 Q279 241 298 235
-            M64 124 C42 145 39 174 48 197 Q61 230 101 239
-            Q138 248 175 236 Q211 225 248 232
-            M41 180 Q43 210 69 229 M65 232 Q103 253 150 243
-            Q182 233 215 234 Q243 230 273 238 M257 232 Q280 232 290 236"
-            opacity="0.4"/>
-          <path class="airway-profile-child" d="M112 124 Q117 123 121 127
-            M116 132 Q113 137 116 141 M139 122 L143 121" opacity="0.6"/>
-          <path class="airway-profile-baby" d="M116 128 Q121 127 125 131
-            M121 136 Q119 140 122 143 M143 124 L146 123
-            M79 108 Q85 103 92 104 M86 109 Q92 105 97 107"
-            opacity="0.55"/>
-          <path class="airway-adult-detail" d="M107 124 Q112 121 116 125 M112 130 Q109 135 112 140
-            M112 137 L114 139 M137 118 Q139 115 142 117" opacity="0.7"/>
-          <path class="airway-adult-detail" d="M117 146 Q109 162 115 175" opacity="0.17"/>
+        <!-- Elevate the occiput and extend the face about the fixed oral entry.
+             The posterior neck flexes back to the patient plane below. -->
+        <g transform="matrix(0 .1548 .18 .0216 58 76.58)" fill="none" stroke-width="8.89">
+          <path class="airway-profile-male" d="M227.7778 516.6667 Q220 510 213 505 Q205 497 210 485
+          L217 472 Q220 463 210 461 C190 459 171 446 169 432 C165 421 176 410 186 397
+          L224 347 Q240 329 229 305 C219 282 227 248 242 214 C253 181 277 131 315 98
+          C366 54 436 35 544 40 C654 34 731 121 767 239 C789 278 791 337 780 378
+          C769 420 741 462 722 501 C797.8036 644.4444 837.0801 733.3333 854.9096 883.3333 C871.9638 1038.8889 835.0129 1211.1111 798.8372 1377.7778"/>
+          <path class="airway-profile-female" d="M227.7778 516.6667 Q220 510 213 505 Q205 497 210 485
+          L217 472 Q220 463 210 461 C190 459 179 446 177 432 C174 422 182 410 190 397
+          L224 347 Q240 329 229 305 C219 282 227 248 242 214 C253 181 277 131 315 98
+          C366 54 436 35 544 40 C654 34 731 121 767 239 C789 278 791 337 780 378
+          C769 420 741 462 722 501 C797.8036 644.4444 837.0801 733.3333 854.9096 883.3333 C871.9638 1038.8889 835.0129 1211.1111 798.8372 1377.7778"/>
+          <path class="airway-profile-child" d="M227.7778 516.6667 Q220 510 213 505 Q205 497 210 485
+          L217 472 Q220 463 210 461 C190 459 185 445 183 432 C180 422 185 411 192 397
+          L224 347 Q240 329 229 305 C219 282 227 248 242 214 C253 181 277 131 315 98
+          C366 54 436 35 544 40 C654 34 731 121 767 239 C789 278 791 337 780 378
+          C769 420 741 462 722 501 C797.8036 644.4444 837.0801 733.3333 854.9096 883.3333 C871.9638 1038.8889 835.0129 1211.1111 798.8372 1377.7778"/>
         </g>
+        <path class="airway-profile-baby" transform="matrix(1 .12 0 .86 0 -.9)" d="M151 123
+          Q147 125 144 122 Q141 120 144 117 Q146 114 142 113
+          Q137 115 132 111 L125 103
+          C109 89 86 94 70 108 C47 127 42 154 48 181
+          C54 212 78 231 111 232 Q164 237 206 216
+          C224 216 245 222 262 222 L306 222" fill="none"/>
+        <path id="airway-jaw-baby" class="airway-profile-baby" d="M187 123 Q188 120 191 119 Q194 118 197 121
+          Q201 124 205 121 C213 118 220 119 226 125
+          Q231 132 237 140 C243 150 253 156 266 156
+          Q287 156 306 154" fill="none"/>
+        <!-- Lower lip, projecting chin and submental neck. The open jaw stays
+             anterior to the complete blade envelope, including its lifted pose. -->
+        <path id="airway-jaw-male" class="airway-profile-male" d="M187 123 Q186 118 190 116 Q193 114 196 117
+          Q200 121 205 117 C215 110 225 110 231 117
+          Q236 123 238 135 C241 146 250 152 264 152
+          Q285 152 306 150" fill="none"/>
+        <path id="airway-jaw-female" class="airway-profile-female" d="M187 123 Q186 118 190 116 Q193 115 196 118
+          Q200 122 205 118 C214 112 224 112 230 119
+          Q234 125 237 136 C241 147 251 153 264 153
+          Q285 153 306 151" fill="none"/>
+        <path id="airway-jaw-child" class="airway-profile-child" d="M187 123 Q188 119 191 117 Q194 116 197 119
+          Q201 122 205 119 C214 114 223 114 229 121
+          Q233 127 237 137 C241 148 251 154 265 154
+          Q286 154 306 152" fill="none"/>
+        <!-- Clearly visible monochrome scalp/hair, matching the BVM profiles. -->
+        <g transform="matrix(0 .1548 .18 .0216 58 76.58)" fill="none" stroke-width="8.89">
+          <path class="airway-profile-male" d="M301 112 C366 54 436 35 544 40 C654 34 731 121 767 239
+          C789 278 791 337 780 378 Q770 430 722 501 L698 518
+          Q711 466 728 429 C766 344 728 246 676 202 Q630 154 568 154
+          L524 183 Q429 194 357 173 L330 196 Z"
+            fill="currentColor" fill-opacity="0.2" stroke-opacity="0.8" stroke-width="10"/>
+          <path class="airway-profile-female" d="M301 112 C366 54 436 35 544 40 C654 34 731 121 767 239
+          C789 278 791 337 780 378 Q780 451 756 530 Q737 615 754 734
+          Q780 870 780 962 L748 1008 Q707 942 694 864 L676 699
+          Q657 562 625 512 L607 476 Q632 427 588 389 L545 320
+          Q438 260 356 214 L306 202 Z"
+            fill="currentColor" fill-opacity="0.2" stroke-opacity="0.8" stroke-width="10"/>
+          <path class="airway-profile-child-male" d="M301 112 C366 54 436 35 544 40 C654 34 731 121 767 239
+          C789 278 791 337 780 378 Q770 430 722 501 L698 518
+          Q711 466 728 429 C766 344 728 246 676 202 Q630 154 568 154
+          L524 183 Q429 194 357 173 L330 196 Z"
+            fill="currentColor" fill-opacity="0.2" stroke-opacity="0.8" stroke-width="10"/>
+          <path class="airway-profile-child-female" d="M301 112 C366 54 436 35 544 40 C654 34 731 121 767 239
+          C789 278 791 337 780 378 Q780 451 756 530 Q737 615 754 734
+          Q780 870 780 962 L748 1008 Q707 942 694 864 L676 699
+          Q657 562 625 512 L607 476 Q632 427 588 389 L545 320
+          Q438 260 356 214 L306 202 Z"
+            fill="currentColor" fill-opacity="0.2" stroke-opacity="0.8" stroke-width="10"/>
+          <g fill="none" stroke-width="7" opacity="0.55">
+            <path class="airway-profile-male" d="M350 126 Q430 83 518 86 M611 87 Q721 171 745 266 M759 328 Q752 399 720 450"/>
+            <path class="airway-profile-child-male" d="M350 126 Q430 83 518 86 M611 87 Q721 171 745 266 M759 328 Q752 399 720 450"/>
+            <path class="airway-profile-female" d="M350 126 Q434 75 531 83 M674 152 Q781 299 743 470
+              Q708 614 740 800 L753 962 M724 546 Q707 742 733 889"/>
+            <path class="airway-profile-child-female" d="M350 126 Q434 75 531 83 M674 152 Q781 299 743 470
+              Q708 614 740 800 L753 962 M724 546 Q707 742 733 889"/>
+          </g>
+
+          <g fill="none" stroke-width="6.5" opacity="0.75">
+            <path class="airway-adult-detail" d="M242 326 Q269 315 305 335
+              M245 353 Q270 341 300 354 M249 364 Q276 367 295 358"/>
+            <path class="airway-profile-child" d="M245 353 Q270 341 300 354"/>
+          </g>
+          <path class="airway-adult-detail" transform="translate(33 -94)" d="M545 344 C513 342 500 371 507 398
+            Q493 420 506 447 Q506 475 530 486 C554 483 577 458 584 428
+            Q594 387 573 358 Q560 348 545 344 Z
+            M547 359 Q516 362 523 388 Q511 411 522 423 L540 410
+            Q558 397 560 418 Q560 443 539 458" stroke-width="7" opacity="0.65"/>
+        </g>
+        <path class="airway-profile-baby" transform="matrix(1 .12 0 .86 -11 -2.22)" d="M59 168 C53 168 49 164 52 160
+          C55 157 59 160 56 163 C52 166 47 162 50 157"
+          fill="none" stroke-width="1.5"/>
+        <path class="airway-profile-baby" transform="matrix(1 .12 0 .86 0 -.9)" d="M115 121 Q120 120 124 124"
+          fill="none" stroke-width="1.1" opacity="0.7"/>
         <!-- Nasal cavity and turbinates. The palate separates this from the mouth;
              the open pharynx curves behind the tongue into the larynx. -->
         <path d="M137 123 C126 133 123 150 129 168
-          Q135 186 157 195 Q174 208 197 211 L220 212 L290 211"
+          C139 188 164 200 191 207 C220 215 255 214 290 213"
           fill="none" stroke-width="1.4" opacity="0.75"/>
         <path d="M140 127 Q133 137 134 149 Q136 166 151 175
           M133 138 Q145 139 140 148 M137 153 Q150 154 148 164
@@ -150,12 +166,8 @@
         <path d="M149 132 C148 147 154 161 166 170" fill="none" stroke-width="0.7" opacity="0.5"/>
         <!-- Maxillary and mandibular incisors stay at the existing oral entrance. -->
         <path class="airway-teeth" d="M150 126 L150 133 Q154 135 157 132 L157 128
-          M177 126 L180 133 L184 131 L182 126"
+          M187 126 L191 133 L196 130 L193 124"
           fill="currentColor" fill-opacity="0.22" stroke-width="1.2"/>
-        <!-- Cranial base / posterior soft tissue, without a filled cartoon face. -->
-        <path class="airway-adult-detail" d="M84 138 C67 154 63 175 72 194 Q84 215 110 218
-          M112 219 Q136 229 161 220 Q182 216 195 217"
-          fill="none" stroke-width="0.8" opacity="0.18"/>
       </g>
       <g id="airway-tongue" stroke="currentColor" stroke-width="1.4">
         <!-- Anterior tip lies in the mouth; the broad muscular root meets the
@@ -163,14 +175,14 @@
         <path d="M165 123 C158 134 162 148 174 158 Q184 168 193 170
           Q203 172 205 166 C206 157 192 151 184 140
           Q179 128 172 126 Z" fill="currentColor" fill-opacity="0.1"/>
-        <path d="M166 130 C163 143 174 157 189 164
-          M173 134 Q178 149 196 160 M169 144 L175 146
-          M176 154 L184 155" fill="none" stroke-width="0.8" opacity="0.45"/>
+        <path d="M166 130 C163 143 174 157 189 164"
+          fill="none" stroke-width="0.8" opacity="0.4"/>
       </g>
       <path id="airway-epiglottis" d="M207 184 Q195 179 190 165 Q200 163 207 184 Z"
         fill="currentColor" fill-opacity="0.16" stroke="currentColor" stroke-width="1.3"/>
       <g id="airway-trachea" stroke="currentColor" stroke-width="1.4" fill="none">
-        <path d="M201 161 Q217 158 232 160 L290 160 M202 181 L290 181"/>
+        <path d="M201 161 C218 157 250 159 290 160
+          M202 181 C225 183 258 181 290 181"/>
         <path d="M224 161 Q222 164 224 166 M224 175 Q222 178 224 180
           M237 161 Q235 164 237 166 M237 175 Q235 178 237 180
           M250 161 Q248 164 250 166 M250 175 Q248 178 250 180
@@ -179,32 +191,31 @@
           stroke-width="2.4" opacity="0.55"/>
       </g>
       <g id="airway-esophagus" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.65">
-        <path d="M195 193 Q220 189 240 191 L290 191 M198 205 L290 205"/>
-        <path d="M212 198 Q230 195 248 198 T290 198" stroke-width="0.7" opacity="0.45"/>
+        <path d="M182 190 C202 188 222 191 242 191 L290 191
+          M187 202 C208 206 244 205 290 205"/>
+        <path d="M206 198 C230 196 258 199 290 198" stroke-width="0.7" opacity="0.45"/>
       </g>
       <g id="airway-cords" stroke="currentColor" fill="none">
         <path d="M201 161 Q207 161 210 166 M201 180 Q207 180 210 174" stroke-width="2.8"/>
         <path d="M208 166 Q212 170 208 174" stroke-width="1" opacity="0.7"/>
       </g>
+      <!-- Folded towel supports the elevated occiput without lifting the torso. -->
+      <g id="airway-towel" fill="currentColor" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round">
+        <path d="M65 213 C83 209 109 203 132 207 Q144 210 151 217
+          L154 239 H63 Q58 238 60 231 L61 219 Q62 215 65 213 Z" fill-opacity="0.08"/>
+        <path d="M62 221 C88 216 118 212 149 222 M61 230 Q105 224 151 231
+          M68 235 Q104 231 140 235" fill="none" opacity="0.5"/>
+      </g>
       <g id="airway-body" stroke="currentColor" fill="none">
-        <!-- Mandible and hyoid follow the underside of the tongue. -->
-        <path d="M182 133 Q192 151 207 155 L236 145
-          Q225 161 209 165 Q193 161 186 148" stroke-width="1.3" opacity="0.8"/>
-        <path d="M187 137 Q196 153 209 159 L224 153" stroke-width="0.7" opacity="0.35"/>
-        <path d="M207 150 Q215 146 222 149 M213 148 L212 144" stroke-width="1.7"/>
-        <!-- Posterior neck and a short run of cervical vertebrae. -->
-        <g stroke-width="0.9" opacity="0.3">
-          <path d="M219 219 L229 217 L232 226 L221 228 Z
-            M237 218 L247 217 L249 226 L238 228 Z
-            M255 218 L265 218 L266 227 L255 228 Z
-            M273 219 L283 219 L284 228 L273 228 Z"/>
-          <path d="M226 229 L224 234 M244 230 L243 234 M261 230 L261 234 M279 230 L280 234"/>
-        </g>
-        <path d="M243 145 Q269 136 291 139 M298 138 Q329 142 353 153"
-          stroke-width="0.9" opacity="0.25"/>
-        <path d="M59 241 Q96 236 133 240 L143 245 L56 245 Z"
-          fill="currentColor" fill-opacity="0.035" stroke-width="0.9" opacity="0.45"/>
-        <path d="M48 247 L390 247" stroke-width="0.8" opacity="0.3"/>
+        <!-- A single soft floor-of-mouth contour continues into the anterior throat. -->
+        <path d="M196 134 C205 148 219 155 238 158"
+          stroke-width="1" opacity="0.35"/>
+        <path d="M207 219 Q248 216 290 219" stroke-width="0.9" opacity="0.2"/>
+        <use class="airway-profile-male" href="#airway-towel"/>
+        <use class="airway-profile-female" href="#airway-towel"/>
+        <use class="airway-profile-child" href="#airway-towel"/>
+        <use class="airway-profile-baby" href="#airway-towel" transform="translate(0 6)"/>
+        <path d="M48 247 L306 247" stroke-width="0.8" opacity="0.3"/>
       </g>
       <g id="airway-labels" fill="none" stroke="currentColor">
         <g stroke-width="0.8" opacity="0.45">
@@ -1128,99 +1139,174 @@
     </div>
 
     <!-- Laryngoscope animation overlay — intubation outcomes -->
-    <div id="laryngoscope-overlay" aria-hidden="true">
+    <div data-refined-airway="true" id="laryngoscope-overlay" aria-hidden="true">
       <div id="laryngoscope-header"></div>
-      <svg id="laryngoscope-svg" viewBox="0 -30 410 310" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <svg id="laryngoscope-svg" viewBox="0 0 600 560" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
-
-          <!-- One preformed curve; anterior trachea and posterior esophagus remain separate. -->
-          <!-- The cuff and bevel sit well inside the visible tracheal lumen. -->
-          <path id="lx-tracheal-route" pathLength="100" d="M151 58 C151 128 171 170 226 170 L270 170"/>
-          <path id="lx-esophageal-route" pathLength="100" d="M151 58 C151 132 176 198 226 198 L280 198"/>
-          <path id="lx-failed-route" pathLength="100" d="M151 58 C151 124 169 160 198 167"/>
+          <linearGradient id="lx-skin-depth" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="var(--lx-skin-light)"/><stop offset="1" stop-color="var(--lx-skin)"/></linearGradient>
+          <linearGradient id="lx-muscle-depth" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--lx-tissue-light)"/><stop offset="1" stop-color="var(--lx-tissue)"/></linearGradient>
+          <linearGradient id="lx-steel" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#586d7b"/><stop offset=".35" stop-color="#dae3e6"/><stop offset=".6" stop-color="#97acb6"/><stop offset="1" stop-color="#4b6473"/></linearGradient>
+          <clipPath id="lx-tongue-grain-clip" clipPathUnits="userSpaceOnUse"><use href="#lx-male-tongue"/></clipPath>
+          <clipPath id="lx-trachea-clip" clipPathUnits="userSpaceOnUse"><use href="#lx-trachea"/></clipPath>
+          <clipPath id="lx-male-crop"><rect x="-600" y="-700" width="1100" height="1400"/></clipPath>
+          <pattern id="lx-knurl" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 0 L6 6 M6 0 L0 6" stroke="#d6e0e2" stroke-width=".7" opacity=".3"/></pattern>
+          <path id="lx-tracheal-route" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 285 333 301 C370 315 400 337 434 357"/>
+          <path id="lx-esophageal-route" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 289 C282 298 307 309 333 325 C370 347 400 373 434 393"/>
+          <path id="lx-failed-route" pathLength="100" d="M146 -147 C113 -50 115 36 125 115 C127 167 144 207 157 240 C175 266 201 278 224 280 C232 281 240 282 249 282"/>
         </defs>
-        <g class="airway-scene" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <g id="lx-anatomy">
-          <g id="lx-head"><use href="#airway-head"/></g>
-          <g id="lx-body"><use href="#airway-body"/></g>
-          <g id="lx-tongue"><use href="#airway-tongue"/></g>
-          <g id="lx-epiglottis"><use href="#airway-epiglottis"/></g>
-          <g id="lx-trachea"><use href="#airway-trachea"/></g>
-          <g id="lx-esophagus"><use href="#airway-esophagus"/></g>
-          <g id="lx-cords"><use href="#airway-cords"/></g>
-          <g id="lx-labels"><use href="#airway-labels"/></g>
+        <g class="lx-scene" fill="none" stroke="var(--lx-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path class="lx-bed" d="M24 537 H567" opacity=".2"/>
+          <!-- Cradle follows the rounded occiput in each patient profile. -->
+          <g id="lx-towel" class="lx-head-support">
+            <path d="M44 520 C40 491 54 462 74 448 Q83 442 94 453 C139 486 193 489 244 454 L265 438 Q281 425 293 445 C305 461 309 483 308 503 Q308 530 291 533 H65 Q43 534 44 520 Z" fill="var(--lx-towel)"/>
+            <path d="M56 510 Q55 483 77 466 C131 505 203 503 274 452 Q288 444 296 475 L297 495 Q208 525 68 520 Q56 520 56 510 Z M65 502 C132 523 221 509 290 486 M72 528 Q188 534 287 514" opacity=".36" stroke-width="1.6"/>
           </g>
-          <!-- Macintosh side profile: near-perpendicular cylindrical handle,
-               lock-on heel, broad curved spatula and raised lateral flange.
-               The distal tip retains the established vallecular contact point. -->
+          <g class="airway-profile-baby" id="lx-shoulder-roll">
+            <path d="M301 477 Q317 456 346 466 L397 503 Q413 517 412 534 H302 Z" fill="var(--lx-towel)"/>
+            <path d="M311 490 Q330 475 347 485 L395 521 M309 523 H393" opacity=".45"/>
+          </g>
+          <g id="lx-head" fill="url(#lx-skin-depth)">
+            <path class="airway-profile-male" d="M132 188 Q124 173 117 184 L108 199 Q103 207 97 203 L87 200 Q77 196 74 213 L68 245 Q66 253 59 257 C45 266 35 290 31 319 C21 355 25 394 40 423 C58 457 88 477 129 483 C179 491 217 471 251 445 Q270 429 282 436 C305 433 338 431 353 451 C366 474 374 502 389 518 Q405 532 425 535 L500 544 V275 C475 277 449 296 410 291 C378 288 351 268 325 262 Q301 258 291 251 Q282 246 277 232 L263 199 L251 172 Q245 150 235 143 Q221 135 212 143 Q203 151 196 145 Q185 138 183 151 L185 170"/>
+            <path class="airway-profile-female" d="M132 188 Q125 176 118 186 L108 200 Q104 207 98 204 L88 202 Q79 199 76 215 L69 247 Q66 255 60 259 C46 269 37 291 33 321 C23 357 27 394 43 423 C61 456 90 476 130 482 C179 490 218 470 251 445 Q270 430 282 437 C305 433 338 431 353 451 C366 474 374 502 389 518 Q405 532 425 535 L500 544 V275 C475 277 449 296 410 291 C378 289 351 269 325 263 Q301 259 291 252 Q283 247 278 234 L264 203 L252 178 Q245 159 235 151 Q222 144 213 150 Q203 156 197 150 Q186 143 184 155 L185 170"/>
+            <path class="airway-profile-child" d="M132 188 Q125 180 119 190 L111 202 Q106 210 99 208 Q85 202 80 220 L74 247 Q68 258 61 263 C39 279 26 310 26 343 C22 386 38 429 69 457 Q100 485 143 481 C185 479 220 460 251 440 Q270 427 284 439 C305 433 338 431 353 451 C366 474 374 502 389 518 Q405 532 425 535 L500 544 V275 C475 277 449 296 410 291 C376 291 351 271 325 264 Q301 259 291 252 Q283 247 278 235 L264 207 L253 184 Q244 168 235 163 Q223 151 214 156 Q204 161 197 156 Q187 145 184 153 L185 170"/>
+            <path class="airway-profile-baby" d="M132 188 Q125 180 119 190 L111 202 Q106 210 99 208 Q85 202 80 220 L74 247 Q68 258 61 263 C39 279 26 310 26 343 C22 386 38 429 69 457 Q100 485 143 481 C185 479 220 460 251 440 Q270 427 284 439 C305 433 338 431 353 451 C366 474 374 502 389 518 Q405 532 425 535 L500 544 V275 C475 277 449 296 410 291 C376 291 351 271 325 264 Q301 259 291 252 Q283 247 278 235 L264 207 L253 184 Q244 168 235 163 Q223 151 214 156 Q204 161 197 156 Q187 145 184 153 L185 170"/>
+          </g>
+          <!-- A rounded scalp and an ear posterior to the mandibular angle. -->
+          <g id="lx-hair" fill="var(--lx-hair)" stroke-width="1.6">
+            <path class="airway-profile-male" d="M31 319 C21 355 25 394 40 423 C58 457 88 477 129 483 C179 491 217 471 251 445 L273 434 Q265 410 267 397 C229 401 218 384 198 381 L179 370 L161 339 Q144 331 122 343 C90 359 61 352 47 336 L39 314 Z"/>
+            <path class="airway-profile-female" d="M33 321 C23 357 27 394 43 423 C61 456 90 476 130 482 C179 490 218 470 251 445 Q265 432 279 437 L297 449 L310 454 Q302 432 286 415 L260 389 Q221 398 200 380 L178 368 L163 340 Q143 334 123 344 C91 361 62 353 48 337 L41 317 Z"/>
+            <path class="airway-profile-child-male" d="M26 331 C22 386 38 429 69 457 Q100 485 143 481 C185 479 220 460 251 440 L271 432 Q257 417 258 403 Q220 400 198 382 L181 371 L163 341 Q142 334 120 345 Q73 366 44 341 L34 324 Z"/>
+            <path class="airway-profile-child-female" d="M26 331 C22 386 38 429 69 457 Q100 485 143 481 C185 479 220 460 251 440 L271 435 L291 447 L305 453 Q298 433 280 418 L256 400 Q219 400 198 382 L180 370 L163 341 Q142 334 120 345 Q73 366 44 341 L34 324 Z"/>
+            <g class="lx-hair-strands" fill="none" opacity=".28" stroke-width="1.2"><path d="M37 349 C37 413 97 469 155 469 Q209 464 253 432 M43 367 C59 425 103 454 162 455 Q205 450 249 423 M51 381 Q95 440 165 439 Q206 437 245 414 M67 370 Q104 406 144 412 M76 357 Q108 379 140 383"/></g>
+            <path class="airway-profile-baby" d="M29 328 C17 321 12 330 18 335 C24 340 31 331 24 329" fill="none" opacity=".65"/>
+          </g>
+          <g id="lx-ear" fill="url(#lx-skin-depth)" stroke-width="2">
+            <path d="M176 323 C190 313 205 318 209 334 C212 351 201 373 183 381 C168 387 155 374 157 357 Q159 344 169 337 Q172 332 176 323 Z"/>
+            <path d="M180 330 Q194 320 201 335 C203 350 193 368 181 372 Q170 377 165 367 Q160 356 174 347 Q184 342 180 330 Z" fill="var(--lx-skin-shadow)" opacity=".6"/>
+            <path d="M181 332 Q190 330 189 339 L179 352 Q170 348 167 359 Q164 366 172 368 M191 350 Q192 362 181 367" fill="none" opacity=".65" stroke-width="1.5"/>
+          </g>
+          <path class="lx-face-detail" d="M58 260 Q68 250 79 264 M65 254 L61 249 M92 211 Q99 224 110 223 M194 159 Q207 154 217 164" opacity=".65"/>
+          <path d="M54 269 Q68 263 78 276 M66 283 Q73 297 91 302" opacity=".16"/>
+          <!-- Continuous nasal/oral pharynx and posterior wall. The palate separates
+               the nasopharynx from the oral route without blocking their junction. -->
+          <path id="lx-pharynx" d="M102 218 C92 227 92 245 110 264 C127 283 153 292 177 283 C153 270 137 233 132 188 L185 166 C206 158 223 181 237 203 C252 228 272 251 297 257 C338 263 364 288 400 315 L514 389 L498 416 C441 380 390 345 333 322 C277 301 241 295 203 305 C171 315 143 326 116 315 C90 304 77 285 79 263 C81 243 91 223 102 218 Z" fill="var(--lx-lumen)" stroke="var(--lx-tissue-edge)" stroke-width="4"/>
+          <path id="lx-male-pharynx-outline" class="refined-airway-common" d="M102 218 C92 227 92 245 110 264 C127 283 153 292 177 283 C153 270 137 233 132 188 M185 166 C206 158 223 181 237 203 C252 228 272 251 282 267 M274 309 C253 300 229 298 203 305 C171 315 143 326 116 315 C90 304 77 285 79 263 C81 243 91 223 102 218" fill="none" stroke="var(--lx-tissue-edge)" stroke-width="2.2"/>
+          <path id="lx-nasopharynx" d="M100 224 C92 240 102 260 120 276 C139 292 158 295 181 285 L199 293 C173 302 151 312 130 305 C103 298 87 278 87 261 Q87 239 100 224 Z" fill="var(--lx-lumen)" stroke="none"/>
+          <path d="M98 240 Q108 242 114 255 M104 259 Q113 265 119 275" stroke="var(--lx-tissue-edge)" opacity=".65"/>
+          <path id="lx-oral-airway" d="M134 187 C128 214 144 251 170 269 C201 290 237 281 270 281 C307 279 338 291 373 315 L499 399 L489 408 C434 373 386 339 332 316 C284 296 241 291 205 298 C184 302 164 311 142 308 C177 300 190 288 173 280 C151 268 134 234 128 205 Z" fill="var(--lx-lumen)" stroke="none"/>
+          <path id="lx-palate" d="M132 188 C130 213 145 252 169 272 Q177 279 177 283 Q167 284 154 274 C132 254 116 231 115 219 Q112 210 119 199 Z" fill="var(--lx-palate)" stroke="var(--lx-tissue-edge)" stroke-width="1.4"/>
+          <path d="M124 215 Q134 246 157 268" stroke="var(--lx-outline)" opacity=".28" stroke-width="1"/>
+          <!-- Solid anterior support and the wall between the two distinct lumens. -->
+          <g class="refined-airway-common" fill="url(#lx-skin-depth)" stroke="none">
+            <path id="lx-anterior-neck-tissue" d="M271 245 C279 252 287 256 299 258 C331 261 354 279 387 301 L514 383 L513 400 C467 381 424 344 380 312 C347 284 322 265 282 267 C278 260 275 252 271 245 Z"/>
+            <path id="lx-airway-septum" d="M281 291 Q306 289 338 310 C388 334 444 373 503 412 L493 424 L382 348 C346 323 317 302 278 296 Z"/>
+          </g>
+          <!-- Adult male: one soft-tissue mass. The vallecula is a shallow
+               indentation within its continuous tongue / epiglottic boundary. -->
+          <g id="lx-male-soft-tissue" class="refined-airway-common">
+            <path id="lx-male-tongue" d="M185 166 C199 151 214 151 225 163 C240 185 244 215 263 240 C273 254 278 261 282 267 L282 276 C275 282 262 289 246 287 Q239 285 244 282 C250 279 260 279 267 277 Q276 273 267 270 C259 268 252 271 245 274 C229 277 216 270 205 258 C185 236 176 213 178 194 Q176 180 185 166 Z" fill="url(#lx-muscle-depth)" stroke="var(--lx-tissue-edge)"/>
+            <path class="lx-male-tongue-grain" d="M195 180 C207 218 227 247 249 260 M205 181 Q221 225 244 246 M217 191 Q233 227 251 241" stroke="var(--lx-tissue-edge)" stroke-width="1" opacity=".28"/>
+          </g>
+          <!-- Smooth airway walls: no decorative ring ticks inside the lumen. -->
+          <path id="lx-trachea" d="M282 267 C322 265 347 283 380 306 L513 393 L503 412 C444 373 388 334 338 310 Q306 289 281 291 Z" fill="var(--lx-lumen)" stroke="var(--lx-tissue-edge)"/>
+          <path id="lx-male-trachea-outline" class="refined-airway-common" d="M282 267 C322 265 347 283 380 306 L513 393 M281 291 Q306 289 338 310 C388 334 444 373 503 412" fill="none" stroke="var(--lx-outline)" stroke-width="1.8"/>
+          <path d="M294 262 C331 264 354 282 387 304 L514 386" stroke="var(--lx-fascia)" stroke-width="4" opacity=".42"/>
+          <path id="lx-esophagus" d="M278 296 C317 302 346 323 382 348 L493 424 L486 434 C433 401 384 366 341 340 Q305 317 274 309 Z" fill="var(--lx-lumen)" stroke="var(--lx-tissue-edge)" stroke-width="1.4"/>
+          <path id="lx-male-esophagus-outline" class="refined-airway-common" d="M278 296 C317 302 346 323 382 348 L493 424 M274 309 Q305 317 341 340 C384 366 433 401 486 434" fill="none" stroke="var(--lx-outline)" stroke-width="1.4"/>
+          <path id="lx-neck-detail" d="M290 321 Q345 352 398 390 M303 438 Q325 462 355 478 M420 289 Q464 291 503 278" opacity=".23" stroke-width="1.5"/>
+          <!-- The vallecula is the shallow recess between the rounded tongue
+               base and a single epiglottic leaf rooted in the anterior larynx. -->
+          <path id="lx-laryngeal-floor" d="M245 243 Q268 244 286 256 L300 266 L300 280 Q287 272 276 269 L257 257 Z" fill="url(#lx-skin-depth)" stroke="var(--lx-tissue-edge)" stroke-width="1.3"/>
+          <g id="lx-tongue">
+            <path class="lx-tongue-shape" d="M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q255 268 259 267 Q264 267 263 271 Q260 277 254 278 C235 282 220 274 210 267 C188 249 177 221 178 198 Q176 180 185 166 Z" fill="url(#lx-muscle-depth)" stroke="var(--lx-tissue-edge)"/>
+            <path class="lx-tongue-grain" d="M188 182 C191 218 208 248 233 260 M195 181 Q204 226 223 245 M202 188 Q215 226 229 239" stroke="var(--lx-tissue-edge)" stroke-width="1" opacity=".3"/>
+          </g>
+          <path id="lx-epiglottis" d="M299 275 C289 273 280 274 273 279 Q266 283 268 286 Q274 288 284 282 C291 278 295 279 300 280 Z" fill="var(--lx-tissue-light)" stroke="var(--lx-tissue-edge)" stroke-width="1.4"/>
+          <g id="lx-cords" stroke="var(--lx-fascia)" stroke-width="3"><path class="lx-original-cords" d="M287 270 L284 275 M280 289 L284 293"/><path class="refined-airway-common" d="M283 270 L286 273 M282 289 L286 286" stroke-width="2"/></g>
+          <g class="airway-teeth" fill="var(--lx-teeth)" stroke="var(--lx-outline)" stroke-width="1"><path class="lx-upper-teeth" d="M130 189 L135 186 L141 199 L135 201 Z"/><path class="lx-lower-teeth" d="M181 170 L188 170 L190 182 L184 183 Z"/></g>
           <g id="lx-mac">
-            <g id="lx-mac-handle" transform="translate(163 88)">
-              <!-- Metal neck and green identification collar lead into the grip. -->
-              <path d="M3 -7 L19 -7 L26 -10 L29 -10 L29 10 L26 10 L19 7 L3 7 Z" fill="#8ba2af" stroke="#d2dfe8" stroke-width="1.6"/>
-              <rect x="25" y="-10.5" width="61" height="21" rx="6" fill="#263642" stroke="#a5b9c6" stroke-width="1.8"/>
-              <path d="M34 -7 L77 -7" stroke="#8097a6" stroke-width="1.2" opacity="0.6"/>
-              <path d="M37 -5 V6 M43 -5 V6 M49 -5 V6 M55 -5 V6 M61 -5 V6 M67 -5 V6 M73 -5 V6" stroke="#657e8d" stroke-width="1.4"/>
-              <rect x="26" y="-10.5" width="5" height="21" rx="1.5" fill="#328e83" stroke="none"/>
-              <path d="M80 -8 L80 8" stroke="#a0b5c2" stroke-width="1.5"/>
+            <!-- Long blade and handle are one rigid assembly. The Mac seats in
+                 the vallecula; the infant Miller passes beneath the epiglottis. -->
+            <g id="lx-mac-handle">
+              <rect x="117" y="14" width="27" height="114" rx="7" fill="url(#lx-steel)" stroke="#c8d7de"/>
+              <rect x="120" y="21" width="21" height="95" rx="3" fill="#364e5e" stroke="none"/>
+              <rect x="120" y="21" width="21" height="95" rx="3" fill="url(#lx-knurl)" stroke="none"/>
+              <path d="M121 19 H140 M119 121 H142" stroke="#435b69" stroke-width="2"/>
+              <path d="M120 125 H141" stroke="#55a294" stroke-width="3.5"/>
             </g>
-            <path id="lx-mac-hinge" d="M154 80 H168 L173 85 V97 L168 101 H153 V87 Z" fill="#78909f" stroke="#d2dfe8" stroke-width="1.7"/>
-            <path d="M154 93 H171 M158 82 V89" stroke="#425b6b" stroke-width="1.5"/>
-            <circle cx="161" cy="87" r="3.2" fill="#3b5262" stroke="#b8cbd6" stroke-width="1.3"/>
-            <path id="lx-mac-blade" d="M154 98 L170 98 C167 124 173 151 185 166
-              Q188 170 191 172 Q181 178 174 168 C158 150 150 123 154 98 Z"
-              fill="#627b8c" stroke="#d2dfe8" stroke-width="1.8"/>
-            <!-- A raised flange and a separate rounded lower edge give the blade
-                 its recognizable curved cross-section without a bulky tube shape. -->
-            <path id="lx-mac-flange" d="M168 100 C165 125 171 152 185 168 L191 172
-              Q184 170 180 165 C166 146 161 123 164 100 Z" fill="#a6bac7" stroke="#e1eaf0" stroke-width="1.1"/>
-            <path d="M155 102 C154 127 161 151 177 168 Q184 175 191 172" stroke="#91a9b9" stroke-width="1.5"/>
-            <path d="M159 101 C158 127 164 148 177 162" stroke="#3e586b" stroke-width="1.5"/>
-            <circle id="lx-mac-tip" cx="191" cy="172" r="1.2" fill="#d2dfe8" stroke="none"/>
-            <path d="M174 159 L178 164" stroke="#fff0c4" stroke-width="2.5"/>
+            <rect x="122" y="129" width="17" height="10" rx="2" fill="url(#lx-steel)" stroke="#c8d7de" stroke-width="1.3"/>
+            <path id="lx-mac-hinge" d="M119 139 H146 V158 H130 Q119 158 119 150 Z" fill="url(#lx-steel)" stroke="#c8d7de"/>
+            <circle cx="127" cy="148" r="3.5" fill="#344c5b" stroke="#d7e0e3" stroke-width="1.2"/>
+            <g class="refined-airway-common" id="lx-male-mac">
+              <!-- Broad heel, arched spatula and rounded distal tip, traced from the Mac reference. -->
+              <path id="lx-male-mac-blade" d="M132 155 L132 177 C191 190 248 179 284 145 Q295 134 303 133 Q306 130 302 129 C292 131 281 140 272 146 C235 165 201 169 173 157 Q155 151 132 155 Z" fill="url(#lx-steel)" stroke="#d7e0e3" stroke-width="1.4"/>
+              <path d="M133 174 C191 187 247 176 284 143 Q296 132 302 131 C290 139 284 144 273 149 C233 169 201 173 173 160 Q153 154 133 158 Z" fill="#657d8c" stroke="#b6c7d0" stroke-width="1"/>
+              <path d="M139 177 C192 187 247 175 283 143" stroke="#edf1f1" stroke-width="1.3"/>
+              <path d="M270 153 L280 147" stroke="#3b505c" stroke-width="4.5"/>
+              <path d="M270 152 L279 147" stroke="#fff1bc" stroke-width="2.8"/>
+            </g>
+            <g class="lx-curved-blade">
+              <path id="lx-mac-blade" d="M132 155 L149 155 C191 169 240 162 303 133 Q292 153 272 167 C229 188 180 178 137 164 Z" fill="url(#lx-steel)" stroke="#d7e0e3"/>
+              <path id="lx-mac-flange" d="M132 155 L149 155 C191 169 240 162 303 133 L299 140 C245 167 195 177 149 163 L133 162 Z" fill="#506a7c" stroke="#becfd8" stroke-width="1.3"/>
+              <path d="M139 163 C188 184 245 183 292 148" stroke="#e0e7e8" stroke-width="1.6"/>
+              <path d="M143 161 C187 178 232 177 273 158" stroke="#3a5264" stroke-width="1.3"/>
+              <path d="M279 146 L289 141" stroke="#fff1bc" stroke-width="3.5"/>
+            </g>
+            <g class="airway-profile-baby" id="lx-miller-blade"><path d="M132 155 L149 155 L303 130 Q307 131 303 134 L149 163 L133 166 Z" fill="url(#lx-steel)" stroke="#d7e0e3"/><path d="M150 159 L298 133" stroke="#e0e7e8" stroke-width="1.4"/><path d="M285 135 L295 133" stroke="#fff1bc" stroke-width="3"/></g>
           </g>
-          <!-- These cues appear only after blade seating and forward/upward lift. -->
-          <path id="lx-light" d="M191 155 L216 160 L217 180 Z" fill="#ffe6a1" fill-opacity="0.075" stroke="none"/>
-          <g id="lx-lift-cue" stroke="#7fd0ff">
-            <path d="M279 88 L294 68 M283 70 L294 68 L295 79" stroke-width="2"/>
-            <text x="300" y="75" fill="currentColor" stroke="none" font-family="monospace" font-size="12">LIFT</text>
-          </g>
-          <path id="lx-view" d="M157 105 L208 170" stroke="#7fd0ff" stroke-width="1.2" stroke-dasharray="3 5"/>
+          <path id="lx-light" d="M262 254 L299 263 L286 291 Z" fill="#ffe8a5" fill-opacity=".1" stroke="none"/>
           <g id="lx-tube-assembly">
-          <g id="lx-tube-tracheal" class="lx-tube">
-            <use class="lx-tube-wall" href="#lx-tracheal-route"/><use class="lx-tube-lumen" href="#lx-tracheal-route"/>
-          <ellipse class="lx-murphy-eye" cx="264" cy="170" rx="2.1" ry="1.15" fill="#101923" stroke="#daeaf3" stroke-width="0.7"/>
-            <g class="lx-stylet"><use href="#lx-tracheal-route" stroke="#e8c789" stroke-width="1.2"/><path d="M151 58 V43 Q151 36 144 38" stroke="#e8c789" stroke-width="2"/></g>
+            <g id="lx-tube-tracheal" class="lx-tube">
+              <path id="lx-live-tracheal-route" class="lx-tube-wall lx-route-tracheal" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 285 333 301 C370 315 400 337 434 357"/><path class="lx-tube-lumen lx-route-tracheal" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 285 333 301 C370 315 400 337 434 357"/>
+              <g class="refined-airway-common">
+                <path class="lx-tube-markings lx-route-tracheal" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 285 333 301 C370 315 400 337 434 357"/>
+                <text class="lx-tube-depth"><textPath href="#lx-live-tracheal-route" startOffset="40%">18</textPath><textPath href="#lx-live-tracheal-route" startOffset="53%">20</textPath><textPath href="#lx-live-tracheal-route" startOffset="66%">22</textPath></text>
+                <ellipse id="lx-murphy-eye" class="lx-murphy-eye lx-murphy-tracheal" cx="276" cy="282" rx="3.2" ry="1.6" transform="rotate(23 276 282)" fill="#263b49" stroke="#edf5f7" stroke-width=".8"/>
+                <path class="lx-tube-bevel lx-bevel-tracheal" d="M286 281 L282 289" stroke="#526e80" stroke-width="1.7"/>
+              </g>
+              <g class="lx-stylet"><path class="lx-route-tracheal" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 285 333 301 C370 315 400 337 434 357" stroke="#dec38d" stroke-width="1.6"/></g>
+            </g>
+            <g id="lx-tube-esophageal" class="lx-tube">
+              <path id="lx-live-esophageal-route" class="lx-tube-wall lx-route-esophageal" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 289 C282 298 307 309 333 325 C370 347 400 373 434 393"/><path class="lx-tube-lumen lx-route-esophageal" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 289 C282 298 307 309 333 325 C370 347 400 373 434 393"/>
+              <g class="refined-airway-common">
+                <path class="lx-tube-markings lx-route-esophageal" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 285 333 301 C370 315 400 337 434 357"/>
+                <text class="lx-tube-depth"><textPath href="#lx-live-esophageal-route" startOffset="40%">18</textPath><textPath href="#lx-live-esophageal-route" startOffset="53%">20</textPath><textPath href="#lx-live-esophageal-route" startOffset="66%">22</textPath></text>
+                <ellipse class="lx-murphy-eye lx-murphy-esophageal" cx="276" cy="282" rx="3.2" ry="1.6" transform="rotate(23 276 282)" fill="#263b49" stroke="#edf5f7" stroke-width=".8"/>
+                <path class="lx-tube-bevel lx-bevel-esophageal" d="M286 281 L282 289" stroke="#526e80" stroke-width="1.7"/>
+              </g>
+              <g class="lx-stylet"><path class="lx-route-esophageal" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 289 C282 298 307 309 333 325 C370 347 400 373 434 393" stroke="#dec38d" stroke-width="1.6"/></g>
+            </g>
+            <g id="lx-tube-failed" class="lx-tube">
+              <path id="lx-live-failed-route" class="lx-tube-wall lx-route-failed" pathLength="100" d="M146 -147 C113 -50 115 36 125 115 C127 167 144 207 157 240 C175 266 201 278 224 280 C232 281 240 282 249 282"/><path class="lx-tube-lumen lx-route-failed" pathLength="100" d="M146 -147 C113 -50 115 36 125 115 C127 167 144 207 157 240 C175 266 201 278 224 280 C232 281 240 282 249 282"/>
+              <g class="refined-airway-common">
+                <path class="lx-tube-markings lx-route-failed" pathLength="100" d="M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 285 333 301 C370 315 400 337 434 357"/>
+                <text class="lx-tube-depth"><textPath href="#lx-live-failed-route" startOffset="40%">18</textPath><textPath href="#lx-live-failed-route" startOffset="53%">20</textPath><textPath href="#lx-live-failed-route" startOffset="66%">22</textPath></text>
+                <ellipse class="lx-murphy-eye lx-murphy-failed" cx="276" cy="282" rx="3.2" ry="1.6" transform="rotate(23 276 282)" fill="#263b49" stroke="#edf5f7" stroke-width=".8"/>
+                <path class="lx-tube-bevel lx-bevel-failed" d="M286 281 L282 289" stroke="#526e80" stroke-width="1.7"/>
+              </g>
+              <g class="lx-stylet"><path class="lx-route-failed" pathLength="100" d="M146 -147 C113 -50 115 36 125 115 C127 167 144 207 157 240 C175 266 201 278 224 280 C232 281 240 282 249 282" stroke="#dec38d" stroke-width="1.6"/></g>
+            </g>
+            <g id="lx-connector-motion"><g id="lx-tube-connector" transform="translate(175 50) rotate(30)"><rect x="-6" y="-17" width="12" height="19" rx="2" fill="#7bafc4" stroke="#d7e9ee" stroke-width="1.5"/><path d="M-10 -1 H10" stroke="#a1cbd9" stroke-width="3"/><path class="lx-stylet-handle" d="M0 -17 V-32 Q0 -37 -5 -37" stroke="#dec38d" stroke-width="2"/></g></g>
+            <g id="lx-pilot-motion" class="refined-airway-common">
+              <path d="M146 120 C167 124 173 147 190 135 L198 126" stroke="#b8dce8" stroke-width="1.4"/>
+              <g transform="rotate(-35 204 120)">
+                <ellipse id="lx-pilot-balloon" cx="204" cy="120" rx="9" ry="5.5" fill="#70b5ce" stroke="#d0e9f1" stroke-width="1.2"/>
+                <path d="M195 120 H190" stroke="#c4dce5" stroke-width="3"/>
+                <rect x="186" y="117" width="5" height="6" rx="1" fill="#86b6c8" stroke="#d0e9f1" stroke-width="1"/>
+              </g>
+            </g>
+            <g id="lx-tracheal-detail" class="lx-tube-detail"><path d="M315 288 L311 298 M322 292 L318 302 M434 351 L428 360" stroke="#526e80" stroke-width="2"/><ellipse cx="425" cy="350" rx="3" ry="1.5" transform="rotate(33 425 350)" fill="#314653" stroke="#d5e5ec" stroke-width=".7"/></g>
+            <g id="lx-esophageal-detail" class="lx-tube-detail"><path d="M315 313 L310 322 M322 317 L317 326 M434 387 L428 396" stroke="#526e80" stroke-width="2"/></g>
+            <g id="lx-tracheal-cuff-clip"><g class="lx-cuff-position" id="lx-tracheal-cuff-position" transform="rotate(33 388 330)"><rect id="lx-tracheal-cuff" class="lx-cuff" x="368" y="320" width="40" height="20" rx="8"/></g></g>
+            <g id="lx-male-cuff-clip" class="refined-airway-common">
+              <g id="lx-male-cuff-position" transform="translate(337 293.753) rotate(24.385)">
+                <path id="lx-male-cuff" class="lx-cuff" d="M-14 -5 C-14 -14 -8 -14 0 -14 C8 -14 14 -14 14 -5 L14 5 C14 14 8 14 0 14 C-8 14 -14 14 -14 5 Z"/>
+              </g>
+            </g>
+            <g class="lx-cuff-position" id="lx-esophageal-cuff-position" transform="translate(337 331.6) rotate(33)"><path id="lx-esophageal-cuff" class="lx-cuff" d="M-14 -3 C-14 -7 -8 -7 0 -7 C8 -7 14 -7 14 -3 L14 3 C14 7 8 7 0 7 C-8 7 -14 7 -14 3 Z"/></g>
           </g>
-          <g id="lx-tube-esophageal" class="lx-tube">
-            <use class="lx-tube-wall" href="#lx-esophageal-route"/><use class="lx-tube-lumen" href="#lx-esophageal-route"/>
-          <ellipse class="lx-murphy-eye" cx="274" cy="198" rx="2.1" ry="1.15" fill="#101923" stroke="#daeaf3" stroke-width="0.7"/>
-            <g class="lx-stylet"><use href="#lx-esophageal-route" stroke="#e8c789" stroke-width="1.2"/><path d="M151 58 V43 Q151 36 144 38" stroke="#e8c789" stroke-width="2"/></g>
-          </g>
-          <g id="lx-tube-failed" class="lx-tube">
-            <use class="lx-tube-wall" href="#lx-failed-route"/><use class="lx-tube-lumen" href="#lx-failed-route"/>
-          <ellipse class="lx-murphy-eye" cx="192" cy="167" rx="2.1" ry="1.15" fill="#101923" stroke="#daeaf3" stroke-width="0.7"/>
-            <g class="lx-stylet"><use href="#lx-failed-route" stroke="#e8c789" stroke-width="1.2"/><path d="M151 58 V43 Q151 36 144 38" stroke="#e8c789" stroke-width="2"/></g>
-          </g>
-          <g id="lx-tube-connector" transform="translate(151 58) rotate(90)">
-            <rect x="-10" y="-5" width="13" height="10" rx="2" fill="#7fd0ff" fill-opacity="0.25" stroke="#7fd0ff"/>
-            <path d="M-9 -8 L-9 8" stroke-width="3"/>
-          </g>
-          <g id="lx-tracheal-detail" class="lx-tube-detail" stroke="#506473" stroke-width="1.6">
-            <path d="M225 167 L225 173 M270 167 L266 173"/>
-          </g>
-          <g id="lx-esophageal-detail" class="lx-tube-detail" stroke="#506473" stroke-width="1.6">
-            <path d="M223 195 L223 201 M232 195 L232 201 M280 195 L276 201"/>
-          </g>
-          <rect id="lx-tracheal-cuff" class="lx-cuff" x="236" y="162" width="26" height="16" rx="5" ry="6"/>
-          <rect id="lx-esophageal-cuff" class="lx-cuff" x="246" y="192" width="23" height="12" rx="4.5" ry="4.5"/>
-          </g>
-          <ellipse id="lx-success-ring" cx="209" cy="170" rx="19" ry="21" stroke="#66e898" stroke-width="2.5"/>
-          <path id="lx-success-rays" d="M191 157 L185 150 M224 156 L230 149 M191 184 L185 191 M225 184 L231 191" stroke="#93efb3" stroke-width="2"/>
-          <g class="lx-phase-labels" fill="currentColor" stroke="none" text-anchor="middle" font-family="monospace" font-size="12" letter-spacing="1.2">
-            <text id="lx-phase-insert" x="205" y="267">FOLLOW THE TONGUE</text>
-            <text id="lx-phase-seat" x="205" y="267">SEAT IN VALLECULA</text>
-            <text id="lx-phase-lift" x="205" y="267">LIFT · EXPOSE THE CORDS</text>
-          </g>
+          <ellipse id="lx-success-ring" cx="285" cy="281" rx="20" ry="22" stroke="#66e898" stroke-width="2"/>
+          <path id="lx-success-rays" d="M266 263 L261 258 M304 265 L310 260 M266 298 L260 304 M303 299 L309 305" stroke="#93efb3"/>
         </g>
       </svg>
       <svg id="laryngoscope-outcome-svg" class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
@@ -1705,9 +1791,27 @@
                 <path d="M192 164 Q191 176 207 190" fill="none" stroke="#d5eae5" stroke-width="1.5" opacity="0.55"/>
                 <circle id="sga-tip" cx="216" cy="198" r="1.5" fill="#d9ecdc" stroke="none"/>
               </g>
-              <g id="sga-connector" fill="#70b9c9" stroke="#c9e8ed">
-                <rect x="145" y="74" width="16" height="15" rx="3"/>
-                <path d="M142 75 L164 75 M146 98 L159 98" stroke-width="3"/>
+              <g id="sga-connector" data-projection="lateral" fill="var(--igel-lumen)" stroke="#c9e8ed" stroke-width="1">
+                <!-- One lateral projection: the posterior oxygen branch sits
+                     behind the hub; the far collar lug is occluded. -->
+                <path id="sga-oxygen-port" d="M148 88 L141 84 L139 79" fill="none" stroke="#b6dfe9" stroke-width="4"/>
+                <path d="M148 88 L141 84 L139 79" fill="none" stroke="#8b9da2" stroke-width="2.2"/>
+                <path d="M146 75 Q153 77 160 75 L160 96 Q153 98 146 96 Z"/>
+                <rect id="sga-universal-connector" x="149" y="54" width="8" height="24" rx="1.6" fill="#c5d2d7"/>
+                <path d="M151 57 L151 74" stroke="#edf5f5" stroke-width="1.4" opacity=".8"/>
+                <ellipse cx="153" cy="54" rx="4" ry=".7" fill="#e1ebec"/>
+                <path d="M138 77 Q131 80 134 87 Q137 92 145 89" fill="none" stroke="var(--igel-size-color)" stroke-width="1.3"/>
+                <rect id="sga-oxygen-cap" x="135.7" y="75" width="5.5" height="3.5" rx="1.2" fill="var(--igel-size-color)" stroke="var(--igel-size-edge)" transform="rotate(-25 138.5 77)"/>
+                <g id="sga-size-band" fill="var(--igel-size-color)" stroke="var(--igel-size-edge)">
+                  <path d="M146 77 L144.5 76.5 L144.5 82 L146.5 84 Z"/>
+                  <path d="M145.5 79.5 Q153 82.5 160.5 79.5 L160.5 83 Q153 86 145.5 83 Z"/>
+                </g>
+                <path id="sga-gastric-proximal" d="M153.0625 84.5 L152.5792 96.1" fill="none" stroke="#b9ced2" stroke-width=".5626" stroke-linecap="butt" opacity=".42"/>
+                <g text-anchor="middle" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="#d8e5e8" stroke="none" transform="translate(45.9 0) scale(.7 1)">
+                  <text class="sga-size-4" x="153" y="92">4</text>
+                  <text class="sga-size-3" x="153" y="92">3</text>
+                  <text class="sga-size-1" x="153" y="92">1</text>
+                </g>
               </g>
               <!-- Gloved grip remains attached to the tube for the forward push,
                    then releases after seating. No free-floating device travel. -->
@@ -2626,6 +2730,7 @@
     </div>
   </dialog>
   <script src="monitor.js?v=5"></script>
+  <script src="airway-scenes.js?v=3"></script>
   <script src="app.js?v=122"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>

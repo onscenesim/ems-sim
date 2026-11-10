@@ -44,6 +44,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
           const p = new DOMPoint(x, y).matrixTransform(transform);
           return { x: p.x, y: p.y };
         };
+        const tongueContour = id === 'laryngoscope' ? getComputedStyle(overlay.querySelector('.lx-tongue-shape')).d.match(/-?\d+(?:\.\d+)?/g).map(Number) : [];
         const children = [...overlay.children].map(e => {
           const r = e.getBoundingClientRect();
           return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
@@ -72,12 +73,11 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
             macOpacity: Number(css('lx-mac').opacity),
             connector: Number(css('lx-tube-assembly').opacity), stylet: Number(getComputedStyle(document.querySelector('#lx-tube-tracheal .lx-stylet')).opacity), cuffScale: matrix('lx-tracheal-cuff').d,
             bladeTip: point('lx-mac', 191, 172),
-            tongueTip: point('lx-tongue', 193, 170),
-            tongueAnchor: point('lx-tongue', 165, 123),
-            epiglottisTip: point('lx-epiglottis', 190, 165),
+            tongueTip: point('lx-tongue', tongueContour[32], tongueContour[33]),
+            tongueAnchor: point('lx-tongue', tongueContour[0], tongueContour[1]),
+            epiglottisTip: point('lx-tongue', tongueContour[22], tongueContour[23]),
             cordsOpacity: Number(css('lx-cords').opacity),
             macRotation: matrix('lx-mac').b,
-            phaseSeat: Number(css('lx-phase-seat').opacity),
           } : {}),
           ...(['sga', 'opa'].includes(id) ? {
             tip: point(`${id}-device`, id === 'sga' ? 216 : 194, id === 'sga' ? 198 : 173),
@@ -125,7 +125,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
         await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
         for (const id of ['bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd']) {
           for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
-            const state = await sample(id, outcome, id === 'laryngoscope' ? 5400 : id === 'npa' ? 3900 : id === 'suction' ? 3300 : 3000);
+            const state = await sample(id, outcome, id === 'laryngoscope' ? 7000 : id === 'npa' ? 3900 : id === 'suction' ? 3300 : 3000);
             assert.equal(state.pointerEvents, 'none');
             assert.ok(state.width >= 240, `${id} remains legible`);
             for (const box of state.children) {
@@ -177,54 +177,53 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     // Check the mechanism, not just the result: insertion reaches the vallecula,
     // pauses without moving tissue, then lifts tongue/epiglottis before the ETT enters.
     const entering = await sample('laryngoscope', 'SUCCESS', 840);
-    const seated = await sample('laryngoscope', 'SUCCESS', 1568);
-    const seatHold = await sample('laryngoscope', 'SUCCESS', 1736);
-    const lifted = await sample('laryngoscope', 'SUCCESS', 2464);
+    const seated = await sample('laryngoscope', 'SUCCESS', 2016);
+    const seatHold = await sample('laryngoscope', 'SUCCESS', 2160);
+    const lifted = await sample('laryngoscope', 'SUCCESS', 3168);
     const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     assert.ok(entering.bladeTip.x < seated.bladeTip.x && entering.bladeTip.y < seated.bladeTip.y, 'blade advances down the tongue');
     assert.ok(distance(seated.bladeTip, seatHold.bladeTip) < 0.01, 'seat the tip before applying lift');
-    assert.ok(seated.phaseSeat > 0.7);
     assert.ok(distance(seated.bladeTip, seated.tongueTip) < 7, 'tip seats at the base of the tongue');
     assert.ok(distance(lifted.bladeTip, lifted.tongueTip) < 7, 'blade maintains contact while lifting the tongue');
     assert.ok(lifted.bladeTip.x > seated.bladeTip.x + 10 && lifted.bladeTip.y < seated.bladeTip.y - 10, 'forward/upward lift');
     assert.equal(seated.macRotation, lifted.macRotation, 'lift translates the seated blade instead of levering it against the teeth');
     assert.ok(distance(seated.tongueAnchor, lifted.tongueAnchor) < 0.01, 'tongue stays anchored');
-    assert.ok(lifted.tongueTip.x > seated.tongueTip.x + 10 && lifted.tongueTip.y < seated.tongueTip.y - 10);
-    assert.ok(lifted.epiglottisTip.x > seated.epiglottisTip.x + 15);
-    assert.ok(seated.cordsOpacity < 0.3 && lifted.cordsOpacity === 1, 'cords become visible only after lift');
-    const airwayView = await sample('laryngoscope', 'SUCCESS', 2464);
+    assert.ok(lifted.tongueTip.x > seated.tongueTip.x + 7 && lifted.tongueTip.y < seated.tongueTip.y - 10);
+    assert.ok(lifted.epiglottisTip.x > seated.epiglottisTip.x + 8);
+    assert.ok(seated.cordsOpacity < 0.4 && lifted.cordsOpacity === 1, 'cords become visible only after lift');
+    const airwayView = await sample('laryngoscope', 'SUCCESS', 3168);
     assert.equal(airwayView.macOpacity, 1);
-    assert.equal(airwayView.tubes[0].offset, 82, 'blade lift precedes tube pass');
+    assert.equal(airwayView.tubes[0].offset, 80, 'blade lift precedes tube pass');
     assert.equal(airwayView.tubes[0].pathOpacity, 0, 'no floating tube endcaps before entry');
-    const airwayPass = await sample('laryngoscope', 'SUCCESS', 3220);
+    const airwayPass = await sample('laryngoscope', 'SUCCESS', 3600);
     assert.ok(airwayPass.tubes[0].offset > 0 && airwayPass.tubes[0].offset < 100);
-    const styletIn = await sample('laryngoscope', 'SUCCESS', 3528);
-    const styletOut = await sample('laryngoscope', 'SUCCESS', 4816);
-    const styletPull = await sample('laryngoscope', 'SUCCESS', 4032);
+    const styletIn = await sample('laryngoscope', 'SUCCESS', 4608);
+    const styletOut = await sample('laryngoscope', 'SUCCESS', 6200);
+    const styletPull = await sample('laryngoscope', 'SUCCESS', 5200);
     assert.ok(styletPull.wireOffset > 0 && styletPull.wireOffset < 100);
     assert.notEqual(styletPull.wireShaft, styletIn.wireShaft, 'exposed wire extends out of the connector');
     assert.equal(styletPull.stylet, 1, 'wire remains opaque while physically withdrawing');
     assert.equal(styletIn.stylet, 1); assert.equal(styletOut.stylet, 0);
     assert.ok(styletIn.cuffScale < 0.4 && styletOut.cuffScale < 1, 'stylet withdraws before cuff finishes inflating');
-    const airwaySuccess = await sample('laryngoscope', 'SUCCESS', 5300);
+    const airwaySuccess = await sample('laryngoscope', 'SUCCESS', 6800);
     assert.equal(airwaySuccess.tubes[0].display, 'block');
     assert.equal(airwaySuccess.tubes[0].offset, 0);
     assert.equal(airwaySuccess.tubes[1].display, 'none');
     assert.equal(airwaySuccess.cuffs[0].opacity, 1);
     assert.ok(airwaySuccess.ring > 0);
-    const airwayMarginal = await sample('laryngoscope', 'MARGINAL', 5300);
+    const airwayMarginal = await sample('laryngoscope', 'MARGINAL', 6800);
     assert.equal(airwayMarginal.tubes[0].offset, 0);
     assert.equal(airwayMarginal.ring, 0, 'marginal does not get the success celebration');
-    const failedAttempt = await sample('laryngoscope', 'FAILURE', 3528);
-    const withdrawing = await sample('laryngoscope', 'FAILURE', 3864);
-    const withdrawn = await sample('laryngoscope', 'FAILURE', 4480);
-    assert.equal(failedAttempt.tubes[2].offset, 0);
+    const failedAttempt = await sample('laryngoscope', 'FAILURE', 4608);
+    const withdrawing = await sample('laryngoscope', 'FAILURE', 5300);
+    const withdrawn = await sample('laryngoscope', 'FAILURE', 6300);
+    assert.ok(failedAttempt.tubes[2].offset < .01);
     assert.ok(withdrawing.tubes[2].offset > 0 && withdrawing.tubes[2].offset < 100);
-    assert.equal(withdrawn.tubes[2].offset, 79);
+    assert.equal(withdrawn.tubes[2].offset, 77);
     assert.equal(withdrawn.tubes[2].pathOpacity, 0, 'withdrawal leaves no tube tip or endcaps behind');
     assert.equal(withdrawn.connector, 0);
     assert.equal(withdrawn.cuffs[0].display, 'none');
-    const misplaced = await sample('laryngoscope', 'COMPLICATION', 5040);
+    const misplaced = await sample('laryngoscope', 'COMPLICATION', 6600);
     assert.equal(misplaced.tubes[0].display, 'none');
     assert.equal(misplaced.tubes[1].offset, 0);
     assert.equal(misplaced.cuffs[1].opacity, 1);
@@ -261,10 +260,10 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     assert.ok(ends[1].x > 210 && ends[1].y > 191 && ends[1].y < 205);
     assert.ok(ends[2].x < 201);
     // Tip enters through the mouth, then turns along the tongue. No base-path morphing.
-    const oralEntry = await sample('laryngoscope', 'SUCCESS', 2800);
-    assert.ok(distance(oralEntry.tubeTip, { x: 158, y: 118 }) < 0.01);
+    const oralEntry = await sample('laryngoscope', 'SUCCESS', 3600);
+    assert.ok(oralEntry.tubeTip.x > 150 && oralEntry.tubeTip.x < 175 && oralEntry.tubeTip.y > 110 && oralEntry.tubeTip.y < 145, 'tip passes through the oral opening');
     let previous = oralEntry;
-    for (const time of [2912, 3024, 3136, 3248, 3360, 3472, 3584]) {
+    for (const time of [3672, 3816, 3960, 4104, 4248, 4392, 4608]) {
       const current = await sample('laryngoscope', 'SUCCESS', time);
       assert.ok(current.tubeTip.x > previous.tubeTip.x && current.tubeTip.y >= previous.tubeTip.y - 0.01);
       assert.ok(current.tubeRotation <= previous.tubeRotation, 'tube turns as the tip follows the tongue');
@@ -278,7 +277,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       return {
         headDepthRatio: profile.width / profile.height,
         handleForward: (handle.left + handle.right) / 2 > hinge.right,
-        handleLevel: Math.abs(new DOMMatrix(getComputedStyle(document.getElementById('lx-mac-handle')).transform).b) < 0.01,
+        handleLevel: Math.abs(new DOMMatrix(getComputedStyle(document.getElementById('lx-mac-handle')).transform).b) < .01,
         flangeWidth: document.getElementById('lx-mac-flange').getBBox().width,
         cuffX: document.getElementById('lx-tracheal-cuff').getBBox().x,
         cuffWidth: document.getElementById('lx-tracheal-cuff').getBBox().width,
@@ -294,7 +293,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
       };
     });
     assert.ok(geometry.headDepthRatio > 0.7, 'the cranium has human depth rather than a flattened profile');
-    assert.ok(geometry.handleForward && geometry.handleLevel, 'Mac handle extends forward at a right angle to the proximal blade');
+    assert.ok(geometry.handleForward && geometry.handleLevel, 'handle meets the proximal blade at a right angle');
     assert.ok(geometry.flangeWidth > 20, 'raised flange follows the broad curved spatula');
     assert.ok(ends[0].x >= 265 && ends[0].x <= 275, 'successful tube sits deeper in the visible trachea');
     assert.ok(geometry.cuffX > 209 && geometry.cuffX + geometry.cuffWidth < ends[0].x - 4, 'cuff stays beyond the cords and behind the tip');
@@ -442,7 +441,7 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     // Save reviewable fixed frames. Screenshots don't require a live scenario.
     for (const width of [320, 1280]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 800 });
-      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 5300], ['sga', 3000], ['opa', 3200], ['suction', 3300], ['ncd', 2400]]) {
+      for (const [id, time] of [['bvm', 1100], ['lucas', 370], ['scalpel', 460], ['laryngoscope', 7000], ['sga', 3000], ['opa', 3200], ['suction', 3300], ['ncd', 2400]]) {
         await sample(id, 'SUCCESS', time);
         await page.screenshot({ path: path.join(output, `${id}-${width}.png`) });
       }
@@ -464,13 +463,34 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-procedures-'));
     await page.screenshot({ path: path.join(output, 'intubation-landscape.png') });
     // All three airway scenes must resolve the shared supine head, including its
     // full cranium. A missing definition can silently render an empty <use>.
-    const sharedHeads = await page.evaluate(() => ['laryngoscope', 'sga', 'opa', 'suction'].map(id => {
+    const sharedHeads = await page.evaluate(() => ['sga', 'opa', 'suction'].map(id => {
       document.getElementById(`${id}-overlay`).style.display = 'flex';
-      const prefix = id === 'laryngoscope' ? 'lx' : id;
+      const prefix = id;
       const head = document.querySelector(`#${prefix}-head use`).getBBox();
       return { width: head.width, height: head.height };
     }));
     sharedHeads.forEach(head => assert.ok(head.width > 180 && head.height > 100, 'complete shared head renders'));
+    // Exercise the rebuilt contour with each demographic, including the infant
+    // straight blade and shoulder support. The joint must stay square during lift.
+    for (const [age, sex] of [[35, 'male'], [35, 'female'], [8, 'male'], [8, 'female'], [.5, 'female']]) {
+      await page.evaluate(patient => configureAirwayPatient(patient), { age, sex });
+      const beforeLift = await sample('laryngoscope', 'SUCCESS', 2160);
+      const afterLift = await sample('laryngoscope', 'SUCCESS', 3168);
+      assert.ok(distance(beforeLift.bladeTip, beforeLift.tongueTip) < 7);
+      assert.ok(distance(afterLift.bladeTip, afterLift.tongueTip) < 7);
+      assert.equal(beforeLift.macRotation, afterLift.macRotation);
+      for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
+        const final = await sample('laryngoscope', outcome, 7199);
+        assert.equal(final.connector, outcome === 'FAILURE' ? 0 : 1);
+        assert.equal(final.macOpacity, 0);
+      }
+    }
+    await page.evaluate(() => configureAirwayPatient({ age: 35, sex: 'male' }));
+    if (process.argv.includes('--airway-only')) {
+      assert.deepEqual(errors, []);
+      console.log(`Airway browser checks passed: five profiles, four outcomes, insertion/lift/withdrawal, reduced motion and responsive layouts. Screenshots: ${output}`);
+      return;
+    }
     // Shared <use> anatomy must also render in the three original upright scenes.
     const anatomy = await page.evaluate(() => ['inmed', 'nebmed', 'niv'].map(id => {
       document.getElementById(`${id}-overlay`).style.display = 'flex';

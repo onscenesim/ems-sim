@@ -606,3 +606,16 @@ test('backgrounding pacing cancels future capture tones', () => {
   f.advance(4000);
   assert.deepEqual(f.played, [{ sound: 'pacing_beep', time: 1800 }]);
 });
+
+// The full blade/soft-tissue collision audit lives in browser-laryngoscope.js.
+test('rebuilt intubation routes use the oral opening and separate descending lumens', () => {
+  const routes = ['tracheal', 'esophageal', 'failed'].map(name => {
+    const d = html.match(new RegExp('id="lx-' + name + '-route"[^>]*d="([^\"]+)"'))[1];
+    const values = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
+    return { start: values.slice(0, 2), end: values.slice(-2) };
+  });
+  assert.deepEqual(routes[0].start, routes[1].start, 'both outcomes enter through the same mouth');
+  assert.ok(routes[0].end[0] > 400 && routes[0].end[1] > 330, 'tube descends with the neck');
+  assert.ok(routes[1].end[1] - routes[0].end[1] > 25, 'esophageal tube remains posterior to the tracheal tube');
+  assert.ok(routes[2].end[0] < 280, 'failed pass stops before the cords');
+});

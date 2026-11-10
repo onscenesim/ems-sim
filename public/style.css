@@ -4135,179 +4135,457 @@ body.light-mode .proc-confirm-edit textarea { color: #302c21; background: #fffdf
   #bvm-leak { opacity: var(--leak-opacity); }
 }
 
-/* Supine direct laryngoscopy: blade insertion, vallecular seating, then
-   forward/upward lift. The tube starts only once the cords are exposed. */
-#laryngoscope-svg { width: min(510px, 92vw, 100vh); }
-#laryngoscope-outcome-svg { width: 60px; height: 60px; }
-#lx-mac, #lx-tongue, #lx-epiglottis { transform-box: view-box; }
-#lx-mac { transform-origin: 163px 88px; }
-#lx-tongue { transform-origin: 165px 123px; }
-#lx-epiglottis { transform-origin: 207px 184px; }
-#laryngoscope-overlay.visible #lx-mac { animation: lxMacLift var(--procedure-duration) ease-in-out both; }
-#laryngoscope-overlay.visible #lx-tongue { animation: lxTongueLift var(--procedure-duration) ease-in-out both; }
-#laryngoscope-overlay.visible #lx-epiglottis { animation: lxEpiglottisLift var(--procedure-duration) ease-in-out both; }
-#lx-light, #lx-lift-cue, #lx-view, .lx-phase-labels text { opacity: 0; }
-#lx-cords { opacity: 0.22; }
+/* Reference-led intubation: a continuous nasal/oral pharynx, rounded occiput,
+   extended neck and descending airway. Tube deformation follows this anatomy. */
+#laryngoscope-svg { width: min(650px, 94vw, 83vh); }
+#laryngoscope-outcome-svg { width: 48px; height: 48px; }
+#laryngoscope-overlay {
+  --lx-outline: #b7c2c5; --lx-skin-light: #4b555a; --lx-skin: #303d46;
+  --lx-skin-shadow: #687477; --lx-hair: #29343d; --lx-lumen: #151f29;
+  --lx-tissue-light: #a06b70; --lx-tissue: #6d424e; --lx-tissue-edge: #c09799;
+  --lx-palate: #b4a098; --lx-fascia: #ccd1c5; --lx-teeth: #d0d3c6; --lx-towel: #3d6c76;
+}
+body.light-mode #laryngoscope-overlay {
+  --lx-outline: #6f7575; --lx-skin-light: #ead9cb; --lx-skin: #c5bab0;
+  --lx-skin-shadow: #b28f86; --lx-hair: #8d8377; --lx-lumen: #f2ddd4;
+  --lx-tissue-light: #d89c94; --lx-tissue: #a4676c; --lx-tissue-edge: #925e65;
+  --lx-palate: #e6cabc; --lx-fascia: #ece7d6; --lx-teeth: #ecebdd; --lx-towel: #77a3a5;
+}
+.lx-scene { transform-box: view-box; transform-origin: 300px 280px; transform: scale(var(--lx-scale, 1)); }
+#laryngoscope-overlay[data-airway-profile^="child-"] { --lx-scale: .91; }
+#laryngoscope-overlay[data-airway-profile="baby"] { --lx-scale: .82; }
+#laryngoscope-overlay[data-airway-profile="baby"] :is(#lx-shoulder-roll, .lx-curved-blade, .lx-hair-strands) { display: none; }
+#laryngoscope-overlay[data-airway-profile="baby"] #lx-ear { transform: translate(-8px, 9px) scale(.96); transform-origin: 185px 350px; }
+#laryngoscope-overlay[data-airway-profile="baby"] .lx-bed { d: path('M22 537 H535'); }
+#laryngoscope-overlay[data-refined-airway] :is(#lx-tongue, #lx-laryngeal-floor, #lx-epiglottis) { display: none; }
+/* Neutral surrounding tissue leaves the moving tongue as the color focus. */
+#laryngoscope-overlay[data-refined-airway] { --lx-tissue-edge: var(--lx-outline); --lx-palate: var(--lx-skin); }
+#laryngoscope-overlay[data-refined-airway] #lx-palate { fill: url(#lx-skin-depth); }
+#lx-male-soft-tissue { --lx-tissue-edge: #c09799; }
+body.light-mode #lx-male-soft-tissue { --lx-tissue-edge: #925e65; }
+#laryngoscope-overlay[data-refined-airway] #lx-pharynx { stroke: none; }
+#laryngoscope-overlay[data-refined-airway] .lx-curved-blade { display: none; }
+#laryngoscope-overlay[data-refined-airway].visible #lx-mac { animation-name: lxMaleMacLift; }
+#laryngoscope-overlay.visible #lx-male-tongue { animation: lxMaleTongue var(--procedure-duration) linear both; }
+/* A single closed contour keeps the tongue, tongue base and epiglottis joined.
+   The anterior surface yields as the blade enters; the leaf lifts only after seating. */
+@keyframes lxMaleTongue {
+  0%, 18% { d: var(--lx-contour-rest, path('M185 166 C199 151 214 151 225 163 C240 185 244 215 263 240 C273 254 278 261 282 267 L282 276 C275 282 262 289 246 287 Q239 285 244 282 C250 279 260 279 267 277 Q276 273 267 270 C259 268 252 271 245 274 C229 277 216 270 205 258 C185 236 176 213 178 194 Q176 180 185 166 Z')); }
+  26%, 32% { d: var(--lx-contour-seat, path('M185 166 C199 151 214 151 225 163 C240 185 244 215 263 240 C273 254 278 261 282 267 L282 276 C275 282 262 289 246 287 Q239 285 244 282 C250 279 260 279 267 277 Q276 274 269 270 C261 266 252 264 245 260 C237 257 217 243 196 223 C181 208 177 184 181 174 Q181 168 185 166 Z')); }
+  44%, 84% { d: var(--lx-contour-lift, path('M185 166 C199 151 214 151 225 163 C240 185 244 215 263 240 C273 254 278 261 282 267 L282 273 C275 275 267 273 256 269 Q249 267 254 264 C260 261 266 261 270 259 Q276 258 271 254 C263 250 254 246 247 242 C239 239 219 225 198 205 C183 190 179 178 183 170 Q183 168 185 166 Z')); }
+  92%, 100% { d: var(--lx-male-tongue-after, var(--lx-contour-after, path('M185 166 C199 151 214 151 225 163 C240 185 244 215 263 240 C273 254 278 261 282 267 L282 271 C273 273 262 274 244 271 Q237 269 242 266 C250 263 260 264 267 263 Q276 260 267 259 C259 258 252 260 235 260 C229 270 216 270 205 258 C185 236 176 213 178 194 Q176 180 185 166 Z'))); }
+}
+#laryngoscope-overlay.outcome-FAILURE { --lx-male-tongue-after: var(--lx-contour-rest, path('M185 166 C199 151 214 151 225 163 C240 185 244 215 263 240 C273 254 278 261 282 267 L282 276 C275 282 262 289 246 287 Q239 285 244 282 C250 279 260 279 267 277 Q276 273 267 270 C259 268 252 271 245 274 C229 277 216 270 205 258 C185 236 176 213 178 194 Q176 180 185 166 Z')); }
+#laryngoscope-overlay[data-refined-airway] .lx-male-tongue-grain {
+  animation: none;
+  clip-path: url(#lx-tongue-grain-clip);
+  d: path('M204 174 C217 196 230 218 251 237 M214 179 C229 201 237 215 254 229 M222 188 C235 205 244 217 257 227');
+}
+#laryngoscope-overlay[data-refined-airway] :is(#lx-trachea, #lx-esophagus) { stroke: none; }
+#laryngoscope-overlay[data-refined-airway] :is(#lx-neck-detail, .lx-original-cords) { display: none; }
+#lx-mac { transform-box: view-box; transform-origin: 130px 155px; }
+#laryngoscope-overlay.visible #lx-mac { animation: lxMacLift var(--procedure-duration) linear both; }
+#laryngoscope-overlay.visible .lx-tongue-shape { animation: lxTongueContour var(--procedure-duration) linear both; }
+#laryngoscope-overlay.visible .lx-tongue-grain { animation: lxTongueGrain var(--procedure-duration) ease-in-out both; }
 #laryngoscope-overlay.visible #lx-light { animation: lxLight var(--procedure-duration) linear both; }
-#laryngoscope-overlay.visible #lx-lift-cue { animation: lxLiftCue var(--procedure-duration) linear both; }
-#laryngoscope-overlay.visible #lx-view { animation: lxView var(--procedure-duration) linear both; }
-#laryngoscope-overlay.visible #lx-cords { animation: lxExposeCords var(--procedure-duration) ease-out both; }
+#lx-light { opacity: 0; }
+#laryngoscope-overlay.visible #lx-cords { animation: lxExposeCords var(--procedure-duration) linear both; }
 @keyframes lxMacLift {
-  0%, 4% { transform: translate(-52px, -50px) rotate(-18deg); opacity: 0; }
-  8% { opacity: 1; }
-  14% { transform: translate(-37px, -24px) rotate(-10deg); }
-  25%, 32% { transform: translate(0, 0) rotate(0); }
-  44%, 86% { transform: translate(14px, -15px) rotate(0); opacity: 1; }
-  92%, 100% { transform: translate(-52px, -50px) rotate(-18deg); opacity: 0; }
+  0%, 3% { opacity: 0; transform: translate(269.095px, -232.250px) rotate(145.000deg); }
+  4% { opacity: 1; transform: translate(269.095px, -232.250px) rotate(145.000deg); }
+  5% { opacity: 1; transform: translate(234.496px, -242.911px) rotate(141.429deg); }
+  6% { opacity: 1; transform: translate(203.079px, -248.430px) rotate(137.857deg); }
+  7% { opacity: 1; transform: translate(174.702px, -249.329px) rotate(134.286deg); }
+  8% { opacity: 1; transform: translate(149.226px, -246.130px) rotate(130.714deg); }
+  9% { opacity: 1; transform: translate(126.511px, -239.356px) rotate(127.143deg); }
+  10% { opacity: 1; transform: translate(106.422px, -229.536px) rotate(123.571deg); }
+  11% { opacity: 1; transform: translate(88.822px, -217.197px) rotate(120.000deg); }
+  12% { opacity: 1; transform: translate(73.578px, -202.872px) rotate(116.429deg); }
+  13% { opacity: 1; transform: translate(60.556px, -187.093px) rotate(112.857deg); }
+  14% { opacity: 1; transform: translate(49.624px, -170.398px) rotate(109.286deg); }
+  15% { opacity: 1; transform: translate(40.649px, -153.324px) rotate(105.714deg); }
+  16% { opacity: 1; transform: translate(35.501px, -136.413px) rotate(102.143deg); }
+  17% { opacity: 1; transform: translate(32.049px, -120.209px) rotate(98.571deg); }
+  18% { opacity: 1; transform: translate(30.162px, -105.259px) rotate(95.000deg); }
+  19% { opacity: 1; transform: translate(21.138px, -92.537px) rotate(89.375deg); }
+  20% { opacity: 1; transform: translate(13.984px, -79.686px) rotate(83.750deg); }
+  21% { opacity: 1; transform: translate(8.629px, -66.679px) rotate(78.125deg); }
+  22% { opacity: 1; transform: translate(4.996px, -53.503px) rotate(72.500deg); }
+  23% { opacity: 1; transform: translate(3.004px, -40.160px) rotate(66.875deg); }
+  24% { opacity: 1; transform: translate(0.563px, -26.670px) rotate(61.250deg); }
+  25% { opacity: 1; transform: translate(-0.421px, -13.063px) rotate(55.625deg); }
+  26% { opacity: 1; transform: translate(-0.055px, 0.616px) rotate(50.000deg); }
+  32% { opacity: 1; transform: translate(-0.055px, 0.616px) rotate(50.000deg); }
+  44%, 84% { opacity: 1; transform: translate(10px, -18px) rotate(50deg); }
+  86.000% { opacity: 1; transform: translate(-0.055px, 0.616px) rotate(50.000deg); }
+  86.545% { opacity: 1; transform: translate(-0.421px, -13.063px) rotate(55.625deg); }
+  87.091% { opacity: 1; transform: translate(0.563px, -26.670px) rotate(61.250deg); }
+  87.636% { opacity: 1; transform: translate(3.004px, -40.160px) rotate(66.875deg); }
+  88.182% { opacity: 1; transform: translate(4.996px, -53.503px) rotate(72.500deg); }
+  88.727% { opacity: 1; transform: translate(8.629px, -66.679px) rotate(78.125deg); }
+  89.273% { opacity: 1; transform: translate(13.984px, -79.686px) rotate(83.750deg); }
+  89.818% { opacity: 1; transform: translate(21.138px, -92.537px) rotate(89.375deg); }
+  90.364% { opacity: 1; transform: translate(30.162px, -105.259px) rotate(95.000deg); }
+  90.909% { opacity: 1; transform: translate(32.049px, -120.209px) rotate(98.571deg); }
+  91.455% { opacity: 1; transform: translate(35.501px, -136.413px) rotate(102.143deg); }
+  92.000% { opacity: 1; transform: translate(40.649px, -153.324px) rotate(105.714deg); }
+  92.545% { opacity: 1; transform: translate(49.624px, -170.398px) rotate(109.286deg); }
+  93.091% { opacity: 1; transform: translate(60.556px, -187.093px) rotate(112.857deg); }
+  93.636% { opacity: 1; transform: translate(73.578px, -202.872px) rotate(116.429deg); }
+  94.182% { opacity: 1; transform: translate(88.822px, -217.197px) rotate(120.000deg); }
+  94.727% { opacity: 1; transform: translate(106.422px, -229.536px) rotate(123.571deg); }
+  95.273% { opacity: 1; transform: translate(126.511px, -239.356px) rotate(127.143deg); }
+  95.818% { opacity: 1; transform: translate(149.226px, -246.130px) rotate(130.714deg); }
+  96.364% { opacity: 1; transform: translate(174.702px, -249.329px) rotate(134.286deg); }
+  96.909% { opacity: 1; transform: translate(203.079px, -248.430px) rotate(137.857deg); }
+  97.455% { opacity: 1; transform: translate(234.496px, -242.911px) rotate(141.429deg); }
+  98.000% { opacity: 1; transform: translate(269.095px, -232.250px) rotate(145.000deg); }
+  99%, 100% { opacity: 0; transform: translate(269.095px, -232.250px) rotate(145.000deg); }
 }
-@keyframes lxTongueLift {
-  0%, 32%, 94%, 100% { transform: rotate(0); }
-  44%, 86% { transform: rotate(-23deg); }
-}
-@keyframes lxEpiglottisLift {
-  0%, 32%, 94%, 100% { transform: rotate(0); }
-  44%, 86% { transform: rotate(54deg); }
-}
-@keyframes lxLight { 0%, 32%, 90%, 100% { opacity: 0; } 44%, 86% { opacity: 1; } }
-@keyframes lxLiftCue { 0%, 32%, 49%, 100% { opacity: 0; } 36%, 44% { opacity: 0.85; } }
-@keyframes lxView { 0%, 39%, 58%, 100% { opacity: 0; } 44%, 48% { opacity: 0.7; } }
-@keyframes lxExposeCords { 0%, 32% { opacity: 0.22; } 44%, 100% { opacity: 1; } }
-#laryngoscope-overlay.visible #lx-phase-insert { animation: lxPhaseInsert var(--procedure-duration) linear both; }
-#laryngoscope-overlay.visible #lx-phase-seat { animation: lxPhaseSeat var(--procedure-duration) linear both; }
-#laryngoscope-overlay.visible #lx-phase-lift { animation: lxPhaseLift var(--procedure-duration) linear both; }
-@keyframes lxPhaseInsert { 0%, 24%, 100% { opacity: 0; } 7%, 21% { opacity: 0.8; } }
-@keyframes lxPhaseSeat { 0%, 24%, 36%, 100% { opacity: 0; } 26%, 32% { opacity: 0.8; } }
-@keyframes lxPhaseLift { 0%, 35%, 72%, 100% { opacity: 0; } 39%, 65% { opacity: 0.8; } }
 
-/* Preserve the preformed tube shape throughout insertion and withdrawal. */
+/* Tip follows the approach arc, clears the incisors, then seats before lifting.
+   Withdrawal preserves lift until the blade clears the mouth. */
+@keyframes lxMaleMacLift {
+  0%, 3% { opacity: 0; transform: translate(273.095px, -228.250px) rotate(145.000deg); }
+  4% { opacity: 1; transform: translate(273.095px, -228.250px) rotate(145.000deg); }
+  5% { opacity: 1; transform: translate(238.496px, -238.911px) rotate(141.429deg); }
+  6% { opacity: 1; transform: translate(207.079px, -244.430px) rotate(137.857deg); }
+  7% { opacity: 1; transform: translate(178.702px, -245.329px) rotate(134.286deg); }
+  8% { opacity: 1; transform: translate(153.226px, -242.130px) rotate(130.714deg); }
+  9% { opacity: 1; transform: translate(130.511px, -235.356px) rotate(127.143deg); }
+  10% { opacity: 1; transform: translate(110.422px, -225.536px) rotate(123.571deg); }
+  11% { opacity: 1; transform: translate(92.822px, -213.197px) rotate(120.000deg); }
+  12% { opacity: 1; transform: translate(77.578px, -198.872px) rotate(116.429deg); }
+  13% { opacity: 1; transform: translate(64.556px, -183.093px) rotate(112.857deg); }
+  14% { opacity: 1; transform: translate(53.624px, -166.398px) rotate(109.286deg); }
+  15% { opacity: 1; transform: translate(44.649px, -149.324px) rotate(105.714deg); }
+  16% { opacity: 1; transform: translate(39.501px, -132.413px) rotate(102.143deg); }
+  17% { opacity: 1; transform: translate(36.049px, -116.209px) rotate(98.571deg); }
+  18% { opacity: 1; transform: translate(34.162px, -101.259px) rotate(95.000deg); }
+  19% { opacity: 1; transform: translate(25.138px, -88.537px) rotate(89.375deg); }
+  20% { opacity: 1; transform: translate(17.984px, -75.686px) rotate(83.750deg); }
+  21% { opacity: 1; transform: translate(12.629px, -62.679px) rotate(78.125deg); }
+  22% { opacity: 1; transform: translate(11.771px, -50.753px) rotate(73.500deg); }
+  23% { opacity: 1; transform: translate(12.309px, -39.146px) rotate(68.875deg); }
+  24% { opacity: 1; transform: translate(12.088px, -27.841px) rotate(64.250deg); }
+  25% { opacity: 1; transform: translate(12.955px, -18.826px) rotate(59.625deg); }
+  26% { opacity: 1; transform: translate(16.750px, -8.094px) rotate(55.000deg); }
+  32% { opacity: 1; transform: translate(16.750px, -8.094px) rotate(55.000deg); }
+  44%, 84% { opacity: 1; transform: translate(18.750px, -26.094px) rotate(55.000deg); }
+  84.636% { opacity: 1; transform: translate(14.955px, -36.826px) rotate(59.625deg); }
+  85.273% { opacity: 1; transform: translate(14.088px, -45.841px) rotate(64.250deg); }
+  85.909% { opacity: 1; transform: translate(14.309px, -57.146px) rotate(68.875deg); }
+  86.545% { opacity: 1; transform: translate(13.771px, -68.753px) rotate(73.500deg); }
+  87.182% { opacity: 1; transform: translate(14.629px, -80.679px) rotate(78.125deg); }
+  87.818% { opacity: 1; transform: translate(19.984px, -93.686px) rotate(83.750deg); }
+  88.455% { opacity: 1; transform: translate(27.138px, -106.537px) rotate(89.375deg); }
+  89.091% { opacity: 1; transform: translate(36.162px, -119.259px) rotate(95.000deg); }
+  89.727% { opacity: 1; transform: translate(38.049px, -134.209px) rotate(98.571deg); }
+  90.364% { opacity: 1; transform: translate(41.501px, -150.413px) rotate(102.143deg); }
+  91.000% { opacity: 1; transform: translate(46.649px, -167.324px) rotate(105.714deg); }
+  91.636% { opacity: 1; transform: translate(55.624px, -184.398px) rotate(109.286deg); }
+  92.273% { opacity: 1; transform: translate(66.556px, -201.093px) rotate(112.857deg); }
+  92.909% { opacity: 1; transform: translate(79.578px, -216.872px) rotate(116.429deg); }
+  93.545% { opacity: 1; transform: translate(94.822px, -231.197px) rotate(120.000deg); }
+  94.182% { opacity: 1; transform: translate(112.422px, -243.536px) rotate(123.571deg); }
+  94.818% { opacity: 1; transform: translate(132.511px, -253.356px) rotate(127.143deg); }
+  95.455% { opacity: 1; transform: translate(155.226px, -260.130px) rotate(130.714deg); }
+  96.091% { opacity: 1; transform: translate(180.702px, -263.329px) rotate(134.286deg); }
+  96.727% { opacity: 1; transform: translate(209.079px, -262.430px) rotate(137.857deg); }
+  97.364% { opacity: 1; transform: translate(240.496px, -256.911px) rotate(141.429deg); }
+  98.000% { opacity: 1; transform: translate(275.095px, -246.250px) rotate(145.000deg); }
+  99%, 100% { opacity: 0; transform: translate(275.095px, -246.250px) rotate(145.000deg); }
+}
+#laryngoscope-overlay.outcome-FAILURE { --lx-tongue-after: path('M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q255 268 259 267 Q264 267 263 271 Q260 277 254 278 C235 282 220 274 210 267 C188 249 177 221 178 198 Q176 180 185 166 Z'); --lx-epiglottis-after: path('M299 275 C289 273 280 274 273 279 Q266 283 268 286 Q274 288 284 282 C291 278 295 279 300 280 Z'); }
+@keyframes lxTongueContour {
+  0%, 18% { d: path('M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q255 268 259 267 Q264 267 263 271 Q260 277 254 278 C235 282 220 274 210 267 C188 249 177 221 178 198 Q176 180 185 166 Z'); }
+  22%, 32%, 88% { d: path('M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q255 268 260 266 Q266 264 268 267 Q266 271 260 272 C228.5 257 204 241 185 224 C178 210 176 185 181 174 Q181 168 185 166 Z'); }
+  44%, 84% { d: path('M185 166 C198 157 213 169 224 187 C239 208 245 227 264 239 Q272 246 274 247 Q276 250 273 252 Q272 254 270 254 C238.5 239 214 223 195 206 C188 192 180 175 185 170 Q183 168 185 166 Z'); }
+  99%, 100% { d: var(--lx-tongue-after, path('M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q255 268 260 266 Q266 264 268 267 Q266 271 260 272 C228.5 257 204 241 185 224 C178 210 176 185 181 174 Q181 168 185 166 Z')); }
+}
+#laryngoscope-overlay[data-airway-profile="baby"].visible .lx-tongue-shape { animation-name: lxMillerTongue; }
+@keyframes lxMillerTongue {
+  0%, 18% { d: path('M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q255 268 259 267 Q264 267 263 271 Q260 277 254 278 C235 282 220 274 210 267 C188 249 177 221 178 198 Q176 180 185 166 Z'); }
+  22%, 32%, 88% { d: path('M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q259 271 264 274 Q267 277 264 280 Q262 282 260 282 C236 257 213 232 190 208 C181 193 178 182 185 174 Q181 168 185 166 Z'); }
+  44%, 84% { d: path('M185 166 C198 157 213 169 224 187 C239 208 245 227 264 239 Q274 252 277 257 Q279 261 274 263 Q272 264 270 264 C246 239 223 214 200 190 C190 175 185 168 185 170 Q183 168 185 166 Z'); }
+  99%, 100% { d: var(--lx-tongue-after, path('M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q259 271 264 274 Q267 277 264 280 Q262 282 260 282 C236 257 213 232 190 208 C181 193 178 182 185 174 Q181 168 185 166 Z')); }
+}
+#laryngoscope-overlay.visible #lx-epiglottis { animation: lxEpiglotticContour var(--procedure-duration) linear both; }
+#laryngoscope-overlay[data-airway-profile="baby"] { --lx-epiglottis-lift: path('M299 270 C290 271 280 272 273 269 Q267 264 268 268 Q275 278 289 277 C297 276 298 274 300 273 Z'); }
+@keyframes lxEpiglotticContour {
+  0%, 32% { d: path('M299 275 C289 273 280 274 273 279 Q266 283 268 286 Q274 288 284 282 C291 278 295 279 300 280 Z'); }
+  44%, 100% { d: var(--lx-epiglottis-lift, path('M299 270 C292 270 286 266 281 263 Q275 259 275 263 Q281 273 291 274 C296 274 298 273 300 273 Z')); }
+}
+@keyframes lxTongueGrain { 0%, 32%, 98%, 100% { transform: none; } 44%, 84% { transform: translate(4px, -6px); } }
+@keyframes lxLight { 0%, 32%, 98%, 100% { opacity: 0; } 44%, 84% { opacity: 1; } }
+@keyframes lxExposeCords { 0%, 32% { opacity: .3; } 44%, 100% { opacity: 1; } }
 .lx-tube { display: none; }
 #laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tube-tracheal,
 #laryngoscope-overlay.outcome-COMPLICATION #lx-tube-esophageal,
 #laryngoscope-overlay.outcome-FAILURE #lx-tube-failed { display: block; }
-/* Rotate the unchanged preformed tube about its advancing tip. The sampled
-   tip positions track the oral corridor, rather than a diagonal across the face. */
-.lx-tube > use { stroke-linecap: butt; }
-.lx-tube-wall { stroke: #c1d8e5; stroke-width: 5.5; }
-.lx-tube-lumen { stroke: #708a9c; stroke-width: 2; }
-#lx-tube-assembly { opacity: 0; transform-box: view-box; transform-origin: 270px 170px; }
-#laryngoscope-overlay.outcome-COMPLICATION #lx-tube-assembly { transform-origin: 280px 198px; }
-#laryngoscope-overlay.outcome-FAILURE #lx-tube-assembly { transform-origin: 198px 167px; }
-#laryngoscope-overlay.visible #lx-tube-assembly { animation: lxTubePass var(--procedure-duration) linear both; }
-#laryngoscope-overlay.outcome-COMPLICATION.visible #lx-tube-assembly { animation-name: lxTubeEsophageal; }
-#laryngoscope-overlay.outcome-FAILURE.visible #lx-tube-assembly { animation-name: lxTubeWithdraw; }
+.lx-tube-wall { stroke: #d0e0e8; stroke-width: 8; }
+.lx-tube-lumen { stroke: #8093b1; stroke-width: 3.4; }
+.lx-tube > path { stroke-linecap: butt; }
+#lx-tube-assembly { opacity: 0; }
+#laryngoscope-overlay.visible #lx-tube-assembly { animation: lxTubeVisible var(--procedure-duration) linear both; }
+#laryngoscope-overlay.outcome-FAILURE.visible #lx-tube-assembly { animation-name: lxFailedVisible; }
+@keyframes lxTubeVisible { 0%, 44% { opacity: 0; } 45%, 100% { opacity: 1; } }
+@keyframes lxFailedVisible { 0%, 44%, 86%, 100% { opacity: 0; } 45%, 83% { opacity: 1; } }
+#laryngoscope-overlay.visible .lx-route-tracheal { animation: lxTubePass var(--procedure-duration) linear both; }
+#laryngoscope-overlay.visible .lx-route-esophageal { animation: lxTubeEsophageal var(--procedure-duration) linear both; }
+#laryngoscope-overlay.visible .lx-route-failed { animation: lxTubeWithdraw var(--procedure-duration) linear both; }
 @keyframes lxTubePass {
-  0%, 45% { opacity: 0; transform: translate(-112.000px, -82.000px) rotate(90.000deg); }
-  47.000% { opacity: 1; transform: translate(-112.000px, -82.000px) rotate(90.000deg); }
-  50.000% { opacity: 1; transform: translate(-112.000px, -52.000px) rotate(90.000deg); }
-  51.083% { opacity: 1; transform: translate(-110.847px, -43.414px) rotate(85.724deg); }
-  52.167% { opacity: 1; transform: translate(-107.524px, -35.648px) rotate(81.136deg); }
-  53.250% { opacity: 1; transform: translate(-102.234px, -28.688px) rotate(75.843deg); }
-  54.333% { opacity: 1; transform: translate(-95.186px, -22.519px) rotate(69.513deg); }
-  55.417% { opacity: 1; transform: translate(-86.579px, -17.127px) rotate(62.548deg); }
-  56.500% { opacity: 1; transform: translate(-76.625px, -12.500px) rotate(55.069deg); }
-  57.583% { opacity: 1; transform: translate(-65.525px, -8.623px) rotate(47.103deg); }
-  58.667% { opacity: 1; transform: translate(-53.481px, -5.481px) rotate(38.623deg); }
-  59.750% { opacity: 1; transform: translate(-40.703px, -3.062px) rotate(29.615deg); }
-  60.833% { opacity: 1; transform: translate(-27.393px, -1.352px) rotate(20.052deg); }
-  61.917% { opacity: 1; transform: translate(-13.757px, -0.336px) rotate(10.027deg); }
-  63.000% { opacity: 1; transform: translate(0.000px, 0.000px) rotate(0deg); }
-  64%, 100% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  0%, 45% { d: path('M180 -330 C130 -250 113 -150 120 -90 C124 -30 130 70 130 110 C130 140 134 156 140 168 C141 172 143 176 145 180'); }
+  50% { d: path('M160 -245 C116 -160 112 -60 120 10 C122 70 134 148 146 199 C155 228 165 243 177 254 C181 258 184 261 188 264'); }
+  55% { d: path('M146 -147 C113 -50 115 36 125 115 C127 167 144 207 157 240 C175 266 201 278 224 280 C240 282 254 282 270 282'); }
+  60% { d: path('M146 -47 C115 29 122 68 135 130 C143 187 150 228 175 255 C210 282 246 280 282 281 C309 284 335 292 352 302'); }
+  64% { d: path('M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 281 333 296 C370 309 400 330 434 350'); }
+  82%, 100% { d: path('M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 285 333 301 C370 315 400 337 434 357'); }
 }
 @keyframes lxTubeEsophageal {
-  0%, 45% { opacity: 0; transform: translate(-122.000px, -110.000px) rotate(90.000deg); }
-  47.000% { opacity: 1; transform: translate(-122.000px, -110.000px) rotate(90.000deg); }
-  50.000% { opacity: 1; transform: translate(-122.000px, -80.000px) rotate(90.000deg); }
-  51.083% { opacity: 1; transform: translate(-120.898px, -67.082px) rotate(85.124deg); }
-  52.167% { opacity: 1; transform: translate(-117.686px, -55.324px) rotate(80.083deg); }
-  53.250% { opacity: 1; transform: translate(-112.500px, -44.719px) rotate(74.930deg); }
-  54.333% { opacity: 1; transform: translate(-105.482px, -35.259px) rotate(69.736deg); }
-  55.417% { opacity: 1; transform: translate(-96.768px, -26.939px) rotate(64.372deg); }
-  56.500% { opacity: 1; transform: translate(-86.500px, -19.750px) rotate(57.523deg); }
-  57.583% { opacity: 1; transform: translate(-74.815px, -13.686px) rotate(49.307deg); }
-  58.667% { opacity: 1; transform: translate(-61.852px, -8.741px) rotate(39.993deg); }
-  59.750% { opacity: 1; transform: translate(-47.750px, -4.906px) rotate(30.046deg); }
-  60.833% { opacity: 1; transform: translate(-32.648px, -2.176px) rotate(19.916deg); }
-  61.917% { opacity: 1; transform: translate(-16.685px, -0.543px) rotate(9.917deg); }
-  63.000% { opacity: 1; transform: translate(0.000px, 0.000px) rotate(0deg); }
-  64%, 100% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  0%, 45% { d: path('M180 -330 C130 -250 113 -150 120 -90 C124 -30 130 70 130 110 C130 140 134 156 140 168 C141 172 143 176 145 180'); }
+  50% { d: path('M160 -245 C116 -160 112 -60 120 10 C122 70 134 148 146 199 C155 228 165 243 177 254 C181 258 184 261 188 264'); }
+  55% { d: path('M146 -147 C113 -50 115 36 125 115 C127 167 144 207 157 240 C175 266 201 278 224 280 C240 282 254 282 270 282'); }
+  60% { d: path('M146 -47 C115 29 122 68 135 130 C143 187 150 228 175 255 C210 284 246 291 282 303 C309 315 335 327 352 340'); }
+  64% { d: path('M175 50 C145 100 133 153 149 198 C168 251 196 277 247 289 C282 298 307 309 333 325 C370 347 400 373 434 393'); }
+  82%, 100% { d: path('M175 50 C145 100 133 153 149 198 C168 251 196 277 247 289 C282 298 307 309 333 325 C370 347 400 373 434 393'); }
 }
 @keyframes lxTubeWithdraw {
-  0%, 45% { opacity: 0; transform: translate(-40.000px, -79.000px) rotate(90.000deg); }
-  47.000% { opacity: 1; transform: translate(-40.000px, -79.000px) rotate(90.000deg); }
-  50.000% { opacity: 1; transform: translate(-40.000px, -49.000px) rotate(90.000deg); }
-  51.083% { opacity: 1; transform: translate(-39.633px, -42.574px) rotate(68.863deg); }
-  52.167% { opacity: 1; transform: translate(-38.565px, -36.343px) rotate(61.306deg); }
-  53.250% { opacity: 1; transform: translate(-36.844px, -30.375px) rotate(54.023deg); }
-  54.333% { opacity: 1; transform: translate(-34.519px, -24.741px) rotate(46.912deg); }
-  55.417% { opacity: 1; transform: translate(-31.638px, -19.509px) rotate(40.162deg); }
-  56.500% { opacity: 1; transform: translate(-28.250px, -14.750px) rotate(33.761deg); }
-  57.583% { opacity: 1; transform: translate(-24.404px, -10.532px) rotate(27.629deg); }
-  58.667% { opacity: 1; transform: translate(-20.148px, -6.926px) rotate(21.790deg); }
-  59.750% { opacity: 1; transform: translate(-15.531px, -4.000px) rotate(16.203deg); }
-  60.833% { opacity: 1; transform: translate(-10.601px, -1.824px) rotate(10.818deg); }
-  61.917% { opacity: 1; transform: translate(-5.408px, -0.468px) rotate(5.480deg); }
-  63.000% { opacity: 1; transform: translate(0.000px, 0.000px) rotate(0deg); }
-  64%, 65% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
-  65.866% { opacity: 1; transform: translate(-5.408px, -0.468px) rotate(5.480deg); }
-  66.734% { opacity: 1; transform: translate(-10.601px, -1.824px) rotate(10.818deg); }
-  67.600% { opacity: 1; transform: translate(-15.531px, -4.000px) rotate(16.203deg); }
-  68.466% { opacity: 1; transform: translate(-20.148px, -6.926px) rotate(21.790deg); }
-  69.334% { opacity: 1; transform: translate(-24.404px, -10.532px) rotate(27.629deg); }
-  70.200% { opacity: 1; transform: translate(-28.250px, -14.750px) rotate(33.761deg); }
-  71.066% { opacity: 1; transform: translate(-31.638px, -19.509px) rotate(40.162deg); }
-  71.934% { opacity: 1; transform: translate(-34.519px, -24.741px) rotate(46.912deg); }
-  72.800% { opacity: 1; transform: translate(-36.844px, -30.375px) rotate(54.023deg); }
-  73.666% { opacity: 1; transform: translate(-38.565px, -36.343px) rotate(61.306deg); }
-  74.534% { opacity: 1; transform: translate(-39.633px, -42.574px) rotate(68.863deg); }
-  75.400% { opacity: 1; transform: translate(-40.000px, -49.000px) rotate(90.000deg); }
-  77.800% { opacity: 1; transform: translate(-40.000px, -79.000px) rotate(90.000deg); }
-  79%, 100% { opacity: 0; transform: translate(-40px, -79px) rotate(90deg); }
+  0%, 45% { d: path('M180 -330 C130 -250 113 -150 120 -90 C124 -30 130 70 130 110 C130 140 134 156 140 168 C141 172 143 176 145 180'); }
+  53% { d: path('M160 -245 C116 -160 112 -60 120 10 C122 70 134 148 146 199 C155 228 165 243 177 254 C181 258 184 261 188 264'); }
+  64%, 66% { d: path('M146 -147 C113 -50 115 36 125 115 C127 167 144 207 157 240 C175 266 201 278 224 280 C232 281 240 282 249 282'); }
+  75% { d: path('M160 -245 C116 -160 112 -60 120 10 C122 70 134 148 146 199 C155 228 165 243 177 254 C181 258 184 261 188 264'); }
+  84%, 100% { d: path('M180 -330 C130 -250 113 -150 120 -90 C124 -30 130 70 130 110 C130 140 134 156 140 168 C141 172 143 176 145 180'); }
 }
-
-/* Feed wire out through the proximal connector. The internal segment retreats
-   tip-first while the exposed shaft and hooked handle extend by the same amount.
-   Only after the distal end clears the connector does the whole wire lift away. */
-.lx-stylet { opacity: 0; }
-#laryngoscope-overlay.visible .lx-stylet { animation: lxStyletRemove var(--procedure-duration) linear both; }
-#laryngoscope-overlay.visible .lx-stylet > use { stroke-dasharray: 100; animation: lxStyletFeed var(--procedure-duration) linear both; }
-#laryngoscope-overlay.visible .lx-stylet > path { animation: lxStyletHandle var(--procedure-duration) linear both; }
-@keyframes lxStyletFeed { 0%, 64% { stroke-dashoffset: 0; } 79%, 100% { stroke-dashoffset: 100; } }
-@keyframes lxStyletHandle {
-  0%, 64% { d: path("M151 58 L151 43 Q151 36 144 38"); }
-  79%, 100% { d: path("M151 58 L151 -145 Q151 -152 144 -150"); }
-}
-@keyframes lxStyletRemove {
-  0%, 79% { opacity: 1; transform: translateY(0); }
-  84% { opacity: 1; transform: translateY(-105px); }
-  85%, 100% { opacity: 0; transform: translateY(-150px); }
-}
-#laryngoscope-overlay.outcome-FAILURE.visible .lx-stylet,
-#laryngoscope-overlay.outcome-FAILURE.visible .lx-stylet > use,
-#laryngoscope-overlay.outcome-FAILURE.visible .lx-stylet > path { animation: none; opacity: 1; }
-#lx-tube-connector { opacity: 1; }
-.lx-cuff { display: none; opacity: 0; fill: #b9e6ff; fill-opacity: 0.13; stroke: #b9d8e9; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; }
+#laryngoscope-overlay.visible #lx-connector-motion { animation: lxConnectorPass var(--procedure-duration) linear both; }
+#laryngoscope-overlay.outcome-FAILURE.visible #lx-connector-motion { animation-name: lxConnectorWithdraw; }
+@keyframes lxConnectorPass { 0%, 45% { transform: translate(5px, -380px); } 50% { transform: translate(-15px, -295px); } 55% { transform: translate(-29px, -197px); } 60% { transform: translate(-29px, -97px); } 64%, 100% { transform: none; } }
+@keyframes lxConnectorWithdraw { 0%, 45%, 84%, 100% { transform: translate(5px, -380px); } 53%, 75% { transform: translate(-15px, -295px); } 64%, 66% { transform: translate(-29px, -197px); } }
+.lx-stylet { stroke-dasharray: 100; }
+#laryngoscope-overlay.visible .lx-stylet { animation: lxStyletFeed var(--procedure-duration) linear both; }
+#laryngoscope-overlay.visible .lx-stylet-handle { animation: lxStyletHandle var(--procedure-duration) linear both; }
+@keyframes lxStyletFeed { 0%, 64% { stroke-dashoffset: 0; } 80%, 100% { stroke-dashoffset: 100; } }
+@keyframes lxStyletHandle { 0%, 64% { d: path('M0 -17 V-32 Q0 -37 -5 -37'); opacity: 1; } 80% { d: path('M0 -17 V-320 Q0 -325 -5 -325'); opacity: 1; } 85%, 100% { d: path('M0 -100 V-403 Q0 -408 -5 -408'); opacity: 0; } }
+#laryngoscope-overlay.outcome-FAILURE.visible :is(.lx-stylet, .lx-stylet-handle) { animation: none; }
+.lx-cuff { display: none; fill: #b8dce8; fill-opacity: .3; stroke: #dae5e8; stroke-width: 1.7; transform-box: fill-box; transform-origin: center; }
 #laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tracheal-cuff,
 #laryngoscope-overlay.outcome-COMPLICATION #lx-esophageal-cuff { display: block; }
 #laryngoscope-overlay.visible .lx-cuff { animation: lxCuffSeat var(--procedure-duration) ease-out both; }
-@keyframes lxCuffSeat { 0%, 85% { opacity: 1; transform: scaleY(0.3); } 90%, 100% { opacity: 1; transform: scaleY(1); } }
-
-/* Depth bands travel with the complete tube. */
-.lx-tube-detail { display: none; opacity: 0; }
+@keyframes lxCuffSeat { 0%, 63% { opacity: 0; transform: scaleY(.3); } 64%, 85% { opacity: 1; transform: scaleY(.3); } 91%, 100% { opacity: 1; transform: scaleY(1); } }
+#laryngoscope-overlay.visible #lx-tracheal-cuff-position { animation: lxCuffFlex var(--procedure-duration) linear both; }
+@keyframes lxCuffFlex { 0%, 64% { transform: translate(0, -10px) rotate(33deg); transform-origin: 388px 330px; } 82%, 100% { transform: translate(0, 0) rotate(33deg); transform-origin: 388px 330px; } }
+.lx-tube-detail { display: none; }
 #laryngoscope-overlay:is(.outcome-SUCCESS, .outcome-MARGINAL) #lx-tracheal-detail,
 #laryngoscope-overlay.outcome-COMPLICATION #lx-esophageal-detail { display: block; }
-#laryngoscope-overlay.visible .lx-tube-detail { opacity: 1; }
-
-/* The payoff: a clean green airway accent, one expanding ring and a check
-   that lands with the existing success sound. Marginal retains a quiet amber result. */
+#laryngoscope-overlay.visible .lx-tube-detail { animation: lxDetailReveal var(--procedure-duration) linear both; }
+@keyframes lxDetailReveal { 0%, 81% { opacity: 0; } 83%, 100% { opacity: 1; } }
 #lx-success-ring, #lx-success-rays { opacity: 0; transform-box: fill-box; transform-origin: center; }
 #laryngoscope-overlay.outcome-SUCCESS.visible #lx-success-ring { animation: lxSuccessRing 650ms ease-out var(--procedure-result) both; }
 #laryngoscope-overlay.outcome-SUCCESS.visible #lx-success-rays { animation: lxSuccessRays 440ms ease-out var(--procedure-result) both; }
-#laryngoscope-overlay.outcome-SUCCESS.visible #laryngoscope-outcome-svg { animation: lxResultLand 440ms cubic-bezier(0.16, 1, 0.3, 1) var(--procedure-result) both; }
-#laryngoscope-overlay.outcome-SUCCESS.visible .om-check { animation-duration: 280ms; }
-@keyframes lxSuccessRing { 0% { opacity: 0; transform: scale(0.7); } 18% { opacity: 0.85; } 100% { opacity: 0; transform: scale(1.6); } }
-@keyframes lxSuccessRays { 0% { opacity: 0; transform: scale(0.85); } 25% { opacity: 0.9; } 100% { opacity: 0; transform: scale(1.2); } }
-@keyframes lxResultLand { 0% { transform: scale(0.75); } 45% { transform: scale(1.17); } 100% { transform: scale(1); } }
+#laryngoscope-overlay.outcome-SUCCESS.visible #laryngoscope-outcome-svg { animation: lxResultLand 440ms cubic-bezier(.16, 1, .3, 1) var(--procedure-result) both; }
+@keyframes lxSuccessRing { 0% { opacity: 0; transform: scale(.7); } 18% { opacity: .85; } 100% { opacity: 0; transform: scale(1.6); } }
+@keyframes lxSuccessRays { 0% { opacity: 0; transform: scale(.85); } 25% { opacity: .9; } 100% { opacity: 0; transform: scale(1.2); } }
+@keyframes lxResultLand { 0% { transform: scale(.75); } 45% { transform: scale(1.17); } 100% { transform: scale(1); } }
 
+/* Continuous support tissue and progressively narrower distal trachea. */
+#laryngoscope-overlay[data-refined-airway] #lx-trachea {
+  d: path('M282 267 C322 265 347 284 380 312 C424 344 467 381 513 400 L503 412 C444 373 388 334 338 310 Q306 289 281 291 Z');
+}
+#laryngoscope-overlay[data-refined-airway] #lx-male-trachea-outline {
+  d: path('M282 267 C322 265 347 284 380 312 C424 344 467 381 513 400 M281 291 Q306 289 338 310 C388 334 444 373 503 412');
+}
+#laryngoscope-overlay[data-refined-airway] :is(#lx-light, #lx-success-ring, #lx-success-rays) { display: none; }
+#laryngoscope-overlay[data-refined-airway] #lx-male-cuff-position {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  transform: translate(337px, 293.753px) rotate(24.385deg);
+}
+#laryngoscope-overlay[data-refined-airway].visible #lx-male-cuff-position { animation: lxMaleCuffAlignment var(--procedure-duration) linear both; }
+@keyframes lxMaleCuffAlignment {
+  0%, 64% { transform: translate(337px, 293.736px) rotate(23.98deg); }
+  82%, 100% { transform: translate(337px, 293.753px) rotate(24.385deg); }
+}
+
+/* The shared tube remains rigid in free space and flexes after airway entry. */
+#laryngoscope-overlay[data-refined-airway] .lx-scene { clip-path: url(#lx-male-crop); }
+#laryngoscope-overlay[data-refined-airway] .lx-lower-teeth { display: none; }
+#laryngoscope-overlay[data-refined-airway] #lx-neck-detail { d: path('M290 321 Q345 352 398 390 M306 442 Q331 442 344 455 M420 289 Q464 291 493 281'); }
+#laryngoscope-overlay[data-refined-airway] .lx-tube-wall { stroke-width: 9.5; }
+#laryngoscope-overlay[data-refined-airway] .lx-tube-lumen { stroke-width: 4; }
+#laryngoscope-overlay[data-refined-airway] :is(.lx-tube, #lx-connector-motion, #lx-pilot-motion) { transform-box: view-box; transform-origin: 0 0; }
+#laryngoscope-overlay[data-refined-airway].visible :is(.lx-tube, #lx-connector-motion, #lx-pilot-motion) { animation: lxMaleRigidTubeMotion var(--procedure-duration) linear both; }
+#laryngoscope-overlay[data-refined-airway].outcome-FAILURE.visible :is(.lx-tube, #lx-connector-motion, #lx-pilot-motion) { animation-name: lxMaleRigidTubeWithdraw; }
+@keyframes lxMaleRigidTubeMotion {
+  0%, 45.000% {transform:translate(145.000px,180.000px) rotate(60.000deg) translate(-284px,-281px);}
+  45.500% {transform:translate(150.792px,186.606px) rotate(57.500deg) translate(-284px,-281px);}
+  46.000% {transform:translate(156.583px,193.183px) rotate(55.000deg) translate(-284px,-281px);}
+  46.500% {transform:translate(162.375px,199.704px) rotate(52.500deg) translate(-284px,-281px);}
+  47.000% {transform:translate(168.167px,206.141px) rotate(50.000deg) translate(-284px,-281px);}
+  47.500% {transform:translate(173.958px,212.465px) rotate(47.500deg) translate(-284px,-281px);}
+  48.000% {transform:translate(179.750px,218.651px) rotate(45.000deg) translate(-284px,-281px);}
+  48.500% {transform:translate(185.542px,224.671px) rotate(42.500deg) translate(-284px,-281px);}
+  49.000% {transform:translate(191.333px,230.500px) rotate(40.000deg) translate(-284px,-281px);}
+  49.500% {transform:translate(197.125px,236.113px) rotate(37.500deg) translate(-284px,-281px);}
+  50.000% {transform:translate(202.917px,241.485px) rotate(35.000deg) translate(-284px,-281px);}
+  50.500% {transform:translate(208.708px,246.594px) rotate(32.500deg) translate(-284px,-281px);}
+  51.000% {transform:translate(214.500px,251.418px) rotate(30.000deg) translate(-284px,-281px);}
+  51.500% {transform:translate(220.292px,255.936px) rotate(27.500deg) translate(-284px,-281px);}
+  52.000% {transform:translate(226.083px,260.129px) rotate(25.000deg) translate(-284px,-281px);}
+  52.500% {transform:translate(231.875px,263.978px) rotate(22.500deg) translate(-284px,-281px);}
+  53.000% {transform:translate(237.667px,267.469px) rotate(20.000deg) translate(-284px,-281px);}
+  53.500% {transform:translate(243.458px,270.584px) rotate(17.500deg) translate(-284px,-281px);}
+  54.000% {transform:translate(249.250px,273.312px) rotate(15.000deg) translate(-284px,-281px);}
+  54.500% {transform:translate(255.042px,275.640px) rotate(12.500deg) translate(-284px,-281px);}
+  55.000% {transform:translate(260.833px,277.559px) rotate(10.000deg) translate(-284px,-281px);}
+  55.500% {transform:translate(266.625px,279.059px) rotate(7.500deg) translate(-284px,-281px);}
+  56.000% {transform:translate(272.417px,280.136px) rotate(5.000deg) translate(-284px,-281px);}
+  56.500% {transform:translate(278.208px,280.784px) rotate(2.500deg) translate(-284px,-281px);}
+  57.000% {transform:translate(284.000px,281.000px) rotate(0.000deg) translate(-284px,-281px);}
+  60%,100% {transform:none;}
+}
+@keyframes lxMaleRigidTubeWithdraw {
+  45.000% { transform: translate(145.000px, 180.000px) rotate(60.000deg) translate(-284px, -285px); }
+  45.950% { transform: translate(150.792px, 186.867px) rotate(57.500deg) translate(-284px, -285px); }
+  46.900% { transform: translate(156.583px, 193.705px) rotate(55.000deg) translate(-284px, -285px); }
+  47.850% { transform: translate(162.375px, 200.484px) rotate(52.500deg) translate(-284px, -285px); }
+  48.800% { transform: translate(168.167px, 207.176px) rotate(50.000deg) translate(-284px, -285px); }
+  49.750% { transform: translate(173.958px, 213.751px) rotate(47.500deg) translate(-284px, -285px); }
+  50.700% { transform: translate(179.750px, 220.182px) rotate(45.000deg) translate(-284px, -285px); }
+  51.650% { transform: translate(185.542px, 226.440px) rotate(42.500deg) translate(-284px, -285px); }
+  52.600% { transform: translate(191.333px, 232.500px) rotate(40.000deg) translate(-284px, -285px); }
+  53.550% { transform: translate(197.125px, 238.335px) rotate(37.500deg) translate(-284px, -285px); }
+  54.500% { transform: translate(202.917px, 243.920px) rotate(35.000deg) translate(-284px, -285px); }
+  55.450% { transform: translate(208.708px, 249.231px) rotate(32.500deg) translate(-284px, -285px); }
+  56.400% { transform: translate(214.500px, 254.246px) rotate(30.000deg) translate(-284px, -285px); }
+  57.350% { transform: translate(220.292px, 258.943px) rotate(27.500deg) translate(-284px, -285px); }
+  58.300% { transform: translate(226.083px, 263.302px) rotate(25.000deg) translate(-284px, -285px); }
+  59.250% { transform: translate(231.875px, 267.304px) rotate(22.500deg) translate(-284px, -285px); }
+  60.200% { transform: translate(237.667px, 270.933px) rotate(20.000deg) translate(-284px, -285px); }
+  61.150% { transform: translate(243.458px, 274.172px) rotate(17.500deg) translate(-284px, -285px); }
+  62.100% { transform: translate(249.250px, 277.007px) rotate(15.000deg) translate(-284px, -285px); }
+  63.050% { transform: translate(255.042px, 279.428px) rotate(12.500deg) translate(-284px, -285px); }
+  64.000% { transform: translate(260.833px, 281.422px) rotate(10.000deg) translate(-284px, -285px); }
+  66% { transform: translate(260.833px, 281.422px) rotate(10.000deg) translate(-284px, -285px); }
+  66.900% { transform: translate(255.042px, 279.428px) rotate(12.500deg) translate(-284px, -285px); }
+  67.800% { transform: translate(249.250px, 277.007px) rotate(15.000deg) translate(-284px, -285px); }
+  68.700% { transform: translate(243.458px, 274.172px) rotate(17.500deg) translate(-284px, -285px); }
+  69.600% { transform: translate(237.667px, 270.933px) rotate(20.000deg) translate(-284px, -285px); }
+  70.500% { transform: translate(231.875px, 267.304px) rotate(22.500deg) translate(-284px, -285px); }
+  71.400% { transform: translate(226.083px, 263.302px) rotate(25.000deg) translate(-284px, -285px); }
+  72.300% { transform: translate(220.292px, 258.943px) rotate(27.500deg) translate(-284px, -285px); }
+  73.200% { transform: translate(214.500px, 254.246px) rotate(30.000deg) translate(-284px, -285px); }
+  74.100% { transform: translate(208.708px, 249.231px) rotate(32.500deg) translate(-284px, -285px); }
+  75.000% { transform: translate(202.917px, 243.920px) rotate(35.000deg) translate(-284px, -285px); }
+  75.900% { transform: translate(197.125px, 238.335px) rotate(37.500deg) translate(-284px, -285px); }
+  76.800% { transform: translate(191.333px, 232.500px) rotate(40.000deg) translate(-284px, -285px); }
+  77.700% { transform: translate(185.542px, 226.440px) rotate(42.500deg) translate(-284px, -285px); }
+  78.600% { transform: translate(179.750px, 220.182px) rotate(45.000deg) translate(-284px, -285px); }
+  79.500% { transform: translate(173.958px, 213.751px) rotate(47.500deg) translate(-284px, -285px); }
+  80.400% { transform: translate(168.167px, 207.176px) rotate(50.000deg) translate(-284px, -285px); }
+  81.300% { transform: translate(162.375px, 200.484px) rotate(52.500deg) translate(-284px, -285px); }
+  82.200% { transform: translate(156.583px, 193.705px) rotate(55.000deg) translate(-284px, -285px); }
+  83.100% { transform: translate(150.792px, 186.867px) rotate(57.500deg) translate(-284px, -285px); }
+  84.000% { transform: translate(145.000px, 180.000px) rotate(60.000deg) translate(-284px, -285px); }
+  0%, 100% { transform: translate(145.000px, 180.000px) rotate(60.000deg) translate(-284px, -285px); }
+}
+#laryngoscope-overlay[data-refined-airway] .lx-route-tracheal { d: path('M175 50 C145 100 133 153 149 198 C168 254 196 280 247 283 C282 283 307 281 333 292 C350.333 299.333 365 309 376 316'); }
+#laryngoscope-overlay[data-refined-airway].visible .lx-route-tracheal { animation-name: lxMaleTubePass; }
+@keyframes lxMaleTubePass {
+  0%,57% {d:path('M175 -80 C103.5 37 105.938 147.663 158.695 215.188 C178.986 241.159 206.721 260.749 240.556 271.864 C248.676 274.532 257.148 276.711 265.953 278.373 C271.822 279.482 277.84 280.36 284 281');}
+  57.5% {d:path('M175 -78.105 C104.105 37.918 106.332 147.74 158.553 214.937 C178.826 241.302 206.565 260.986 240.65 271.983 C251.209 275.389 261.79 277.009 272.519 278.54 C278.296 279.364 284.117 280.163 290 281.2');}
+  58% {d:path('M175 -72.799 C105.799 40.49 107.437 147.958 158.158 214.236 C178.377 241.704 206.127 261.649 240.913 272.315 C252.928 275.999 264.931 277.722 277.119 279.216 C283.682 280.02 290.299 280.758 297 281.7');}
+  59% {d:path('M175 -54.227 C111.727 49.49 111.303 148.721 156.773 211.78 C176.808 243.11 204.596 263.971 241.834 273.477 C257.254 277.414 272.703 278.212 288.124 280.03 C296.427 281.008 304.722 282.282 313 284.5');}
+  60% {d:path('M175 -28.834 C119.834 61.796 116.589 149.763 154.879 208.423 C174.662 245.032 202.501 267.145 243.092 275.066 C262.238 278.802 281.63 279.045 300.387 282.109 C310.488 283.76 320.404 286.228 330 290.5');}
+  62% {d:path('M175 24.227 C136.773 87.51 127.635 151.942 150.922 201.407 C170.178 249.049 198.125 273.778 245.722 278.387 C271.636 280.896 297.952 283.016 322.423 290.183 C335.6 294.042 348.243 299.365 360 307');}
+  64% {d:path('M175 50 C145 100 133 153 149 198 C168 251 196 277 247 280 C282 280 307 281 333 292 C350.333 299.333 365 308 376 315');}
+  82%,100% {d:path('M175 50 C145 100 133 153 149 198 C168 254 196 280 247 283 C282 283 307 281 333 292 C350.333 299.333 365 309 376 316');}
+}
+#laryngoscope-overlay[data-refined-airway] .lx-route-esophageal { d: path('M175 50 C145 100 133 153 149 198 C165 243 211 282 247 292 C272.35 299.15 304.038 313.06 333 328.512 C348.595 336.833 363.4 345.6 376 354'); }
+#laryngoscope-overlay[data-refined-airway].visible .lx-route-esophageal { animation-name: lxMaleTubeEsophageal; }
+@keyframes lxMaleTubeEsophageal {
+  0%,57% {d:path('M175 -80 C103.5 37 105.938 143.438 157.047 217.068 C176.704 245.387 203.562 268.853 236.182 286.201 C244.011 290.364 252.172 294.175 260.644 297.616 C266.293 299.91 272.08 302.04 278 304');}
+  57.5% {d:path('M175 -78.105 C104.105 37.918 106.332 143.577 156.93 216.79 C176.534 245.352 203.67 269.045 236.34 286.286 C246.347 291.567 256.545 295.444 266.966 299.1 C272.577 301.069 278.253 302.974 284 305');}
+  58% {d:path('M175 -72.799 C105.799 40.49 107.437 143.967 156.601 216.012 C176.056 245.255 203.974 269.582 236.781 286.522 C248.141 292.388 259.858 296.241 271.726 300.112 C278.117 302.197 284.552 304.287 291 306.7');}
+  59% {d:path('M175 -54.227 C111.727 49.49 111.303 145.333 155.452 213.288 C174.384 244.914 205.037 271.46 238.327 287.351 C252.913 294.313 267.86 298.793 282.836 303.713 C290.9 306.363 298.972 309.139 307 312.5');}
+  60% {d:path('M175 -28.834 C119.834 61.796 116.589 147.201 153.88 209.563 C172.098 244.448 206.489 274.028 240.44 288.483 C258.635 296.231 276.822 302.019 294.902 308.641 C304.638 312.207 314.342 316.015 324 320.5');}
+  62% {d:path('M175 24.227 C136.773 87.51 127.635 151.104 150.595 201.78 C167.32 243.473 209.525 279.394 244.855 290.85 C270.403 299.135 294.474 308.87 318.089 320.225 C330.805 326.338 343.389 332.921 356 340');}
+  64%,100% {d:path('M175 50 C145 100 133 153 149 198 C165 243 211 282 247 292 C272.35 299.15 304.038 313.06 333 328.512 C348.595 336.833 363.4 345.6 376 354');}
+}
+#laryngoscope-overlay[data-refined-airway] .lx-route-failed { d: path('M175 -80 C103.5 37 105.938 147.663 158.695 215.188 C178.986 241.159 206.721 260.749 240.556 271.864 C248.676 274.532 257.148 276.711 265.953 278.373 C271.822 279.482 277.84 280.36 284 281'); }
+#laryngoscope-overlay[data-refined-airway].visible .lx-route-failed { animation-name: lxMaleTubeFailed; }
+@keyframes lxMaleTubeFailed {0%,100% {d:path('M175 -80 C103.5 37 105.938 147.663 158.695 215.188 C178.986 241.159 206.721 260.749 240.556 271.864 C248.676 274.532 257.148 276.711 265.953 278.373 C271.822 279.482 277.84 280.36 284 281');}}
+#laryngoscope-overlay[data-refined-airway] #lx-tube-connector { transform: translate(175px, 50px) rotate(30deg); }
+#laryngoscope-overlay[data-refined-airway].visible #lx-tube-connector { animation: lxMaleConnectorFeed var(--procedure-duration) linear both; }
+@keyframes lxMaleConnectorFeed {
+  0%, 57% { transform: translate(175px, -80px) rotate(16.7deg); }
+  60% { transform: translate(175px, -25px) rotate(23deg); }
+  64%, 100% { transform: translate(175px, 50px) rotate(30deg); }
+}
+#laryngoscope-overlay[data-refined-airway].outcome-FAILURE #lx-tube-connector { animation: none; transform: translate(175px, -80px) rotate(16.7deg); }
+#laryngoscope-overlay[data-refined-airway] :is(#lx-tracheal-cuff-clip, #lx-tracheal-detail) { display: none; }
+#lx-male-cuff-clip { clip-path: url(#lx-trachea-clip); }
+#lx-male-cuff { fill-opacity: .45; stroke-width: 1.2; }
+#laryngoscope-overlay[data-refined-airway]:is(.outcome-SUCCESS, .outcome-MARGINAL) :is(#lx-male-cuff, #lx-male-tracheal-detail) { display: block; }
+#laryngoscope-overlay.visible #lx-pilot-balloon { transform-box: fill-box; transform-origin: center; animation: lxPilotInflate var(--procedure-duration) ease-out both; }
+@keyframes lxPilotInflate { 0%, 85% { transform: scaleY(.3); } 91%, 100% { transform: scaleY(1); } }
+#laryngoscope-overlay.outcome-FAILURE #lx-pilot-balloon { animation: none; }
+
+/* Graduations and Murphy eyes remain attached to the live tube during feed. */
+.lx-tube-markings { stroke: #426174; stroke-width: 6; stroke-dasharray: .24 4.76; stroke-linecap: butt; fill: none; opacity: .8; }
+.lx-tube-depth { fill: #2c4659; stroke: none; font: 4px monospace; }
+#laryngoscope-overlay[data-refined-airway] .lx-tube-markings { stroke-width: 6; }
+#laryngoscope-overlay[data-refined-airway].visible .lx-murphy-tracheal { animation: lxMaleTubeEye var(--procedure-duration) linear both; }
+#laryngoscope-overlay[data-refined-airway].visible .lx-bevel-tracheal { animation: lxMaleTubeBevel var(--procedure-duration) linear both; }
+@keyframes lxMaleTubeEye {
+  0%,57% {cx:277.037px;cy:280.277px;transform:rotate(5.930deg);transform-origin:277.037px 280.277px;}
+  57.5% {cx:283.106px;cy:279.984px;transform:rotate(10.000deg);transform-origin:283.106px 279.984px;}
+  58% {cx:290.068px;cy:280.726px;transform:rotate(8.000deg);transform-origin:290.068px 280.726px;}
+  59% {cx:306.239px;cy:282.688px;transform:rotate(15.000deg);transform-origin:306.239px 282.688px;}
+  60% {cx:323.605px;cy:287.653px;transform:rotate(24.000deg);transform-origin:323.605px 287.653px;}
+  62% {cx:354.129px;cy:303.188px;transform:rotate(33.000deg);transform-origin:354.129px 303.188px;}
+  64% {cx:370.129px;cy:311.188px;transform:rotate(33.000deg);transform-origin:370.129px 311.188px;}
+  82%,100% {cx:370.129px;cy:312.188px;transform:rotate(33.000deg);transform-origin:370.129px 312.188px;}
+}
+@keyframes lxMaleTubeBevel {
+  0%,57% {d:path('M284.491 276.275 L283.509 285.725');}
+  57.5% {d:path('M290.825 276.522 L289.175 285.878');}
+  58% {d:path('M297.661 276.996 L296.339 286.404');}
+  59% {d:path('M314.229 279.912 L311.771 289.088');}
+  60% {d:path('M331.932 286.161 L328.068 294.839');}
+  62% {d:path('M362.587 303.016 L357.413 310.984');}
+  64% {d:path('M378.587 311.016 L373.413 318.984');}
+  82%,100% {d:path('M378.587 312.016 L373.413 319.984');}
+}
+#laryngoscope-overlay[data-refined-airway].visible .lx-murphy-esophageal { animation: lxMaleEsophagealEye var(--procedure-duration) linear both; }
+#laryngoscope-overlay[data-refined-airway].visible .lx-bevel-esophageal { animation: lxMaleEsophagealBevel var(--procedure-duration) linear both; }
+@keyframes lxMaleEsophagealEye {
+  0%,57% {cx:271.355px;cy:301.800px;transform:rotate(18.320deg);transform-origin:271.355px 301.800px;}
+  57.5% {cx:277.398px;cy:302.673px;transform:rotate(19.419deg);transform-origin:277.398px 302.673px;}
+  58% {cx:284.444px;cy:304.247px;transform:rotate(20.517deg);transform-origin:284.444px 304.247px;}
+  59% {cx:300.543px;cy:309.797px;transform:rotate(22.714deg);transform-origin:300.543px 309.797px;}
+  60% {cx:317.651px;cy:317.551px;transform:rotate(24.911deg);transform-origin:317.651px 317.551px;}
+  62% {cx:349.896px;cy:336.574px;transform:rotate(29.306deg);transform-origin:349.896px 336.574px;}
+  64% {cx:370.176px;cy:350.116px;transform:rotate(33.700deg);transform-origin:370.176px 350.116px;}
+  100% {cx:370.176px;cy:350.116px;transform:rotate(33.700deg);transform-origin:370.176px 350.116px;}
+}
+@keyframes lxMaleEsophagealBevel {
+  0%,57% {d:path('M279.493 299.491 L276.507 308.509');}
+  57.5% {d:path('M285.579 300.520 L282.421 309.480');}
+  58% {d:path('M292.665 302.251 L289.335 311.149');}
+  59% {d:path('M308.834 308.118 L305.166 316.882');}
+  60% {d:path('M326.001 316.192 L321.999 324.808');}
+  62% {d:path('M358.325 335.858 L353.675 344.142');}
+  64% {d:path('M378.636 350.048 L373.364 357.952');}
+  100% {d:path('M378.636 350.048 L373.364 357.952');}
+}
+@media (prefers-reduced-motion: reduce) {
+  #laryngoscope-overlay[data-refined-airway] .lx-murphy-tracheal { cx: 369px; cy: 312px; transform: rotate(33deg); transform-origin: 369px 312px; }
+  #laryngoscope-overlay[data-refined-airway] .lx-bevel-tracheal { d: path('M378.55 312 L373.45 320'); }
+  #laryngoscope-overlay[data-refined-airway] .lx-murphy-esophageal { cx: 370px; cy: 350px; transform: rotate(33.7deg); transform-origin: 370px 350px; }
+  #laryngoscope-overlay[data-refined-airway] .lx-bevel-esophageal { d: path('M378.635 350.05 L373.365 357.95'); }
+}
+
+#laryngoscope-overlay[data-airway-profile="baby"] #lx-male-mac { display: none; }
 /* Short landscape uses the available width instead of shrinking the anatomy. */
 @media (max-height: 450px) and (min-aspect-ratio: 5/4) {
   #laryngoscope-overlay {
@@ -4318,7 +4596,7 @@ body.light-mode .proc-confirm-edit textarea { color: #302c21; background: #fffdf
     row-gap: 8px;
     justify-content: center;
   }
-  #laryngoscope-svg { grid-column: 1; grid-row: 1 / 4; width: min(100%, calc((100vh - 32px) * 1.32)); }
+  #laryngoscope-svg { grid-column: 1; grid-row: 1 / 4; width: min(100%, calc((100vh - 32px) * 1.0714)); }
   #laryngoscope-header { grid-column: 2; grid-row: 1; align-self: end; }
   #laryngoscope-outcome-svg { grid-column: 2; grid-row: 2; justify-self: center; }
   #laryngoscope-label { grid-column: 2; grid-row: 3; align-self: start; }
@@ -4326,13 +4604,17 @@ body.light-mode .proc-confirm-edit textarea { color: #302c21; background: #fffdf
 @media (prefers-reduced-motion: reduce) {
   #laryngoscope-overlay { transition: none; }
   #laryngoscope-overlay.visible * { animation: none !important; }
-  #laryngoscope-overlay.visible :is(.om-check, .om-x1, .om-x2),
-  #laryngoscope-overlay.visible .lx-tube use { stroke-dashoffset: 0; }
-  #laryngoscope-label, #lx-tube-connector, .lx-cuff, .lx-tube-detail { opacity: 1; }
-  #lx-mac, #lx-light, #lx-lift-cue, #lx-view, .lx-phase-labels text, #lx-success-ring, #lx-success-rays { opacity: 0; }
+  #laryngoscope-overlay.visible :is(.om-check, .om-x1, .om-x2) { stroke-dashoffset: 0; }
+  #laryngoscope-label, #lx-tube-assembly, .lx-cuff, .lx-tube-detail { opacity: 1; }
+  #lx-mac, #lx-light, #lx-success-ring, #lx-success-rays, .lx-stylet, .lx-stylet-handle { opacity: 0; }
+  #laryngoscope-overlay .lx-tongue-shape { d: var(--lx-tongue-after, path('M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q255 268 260 266 Q266 264 268 267 Q266 271 260 272 C228.5 257 204 241 185 224 C178 210 176 185 181 174 Q181 168 185 166 Z')); }
+  #laryngoscope-overlay[data-airway-profile="baby"] .lx-tongue-shape { d: var(--lx-tongue-after, path('M185 166 C192 159 201 170 208 191 C219 222 226 247 245 261 Q259 271 264 274 Q267 277 264 280 Q262 282 260 282 C236 257 213 232 190 208 C181 193 178 182 185 174 Q181 168 185 166 Z')); }
+  #lx-epiglottis { d: var(--lx-epiglottis-after, var(--lx-epiglottis-lift, path('M299 270 C292 270 286 266 281 263 Q275 259 275 263 Q281 273 291 274 C296 274 298 273 300 273 Z'))); }
   #lx-cords { opacity: 1; }
-  #laryngoscope-overlay.outcome-FAILURE :is(#lx-tube-failed, #lx-tube-connector) { opacity: 0; }
+  #lx-male-tongue { d: var(--lx-male-tongue-after, var(--lx-contour-after, path('M185 166 C199 151 214 151 225 163 C240 185 244 215 263 240 C273 254 278 261 282 267 L282 271 C273 273 262 274 244 271 Q237 269 242 266 C250 263 260 264 267 263 Q276 260 267 259 C259 258 252 260 235 260 C229 270 216 270 205 258 C185 236 176 213 178 194 Q176 180 185 166 Z'))); }
+  #laryngoscope-overlay.outcome-FAILURE #lx-tube-assembly { opacity: 0; }
 }
+
 
 
 /* i-gel and OPA share the supine cutaway with direct laryngoscopy. The rigid
@@ -4418,7 +4700,7 @@ body.light-mode .proc-confirm-edit textarea { color: #302c21; background: #fffdf
     grid-template-rows: 1fr auto 1fr;
     column-gap: 20px; row-gap: 8px; justify-content: center;
   }
-  #sga-svg, #opa-svg, #suction-svg { grid-column: 1; grid-row: 1 / 4; width: min(100%, calc((100vh - 32px) * 1.32)); }
+  #sga-svg, #opa-svg, #suction-svg { grid-column: 1; grid-row: 1 / 4; width: min(100%, calc((100vh - 32px) * 1.0714)); }
   #sga-header, #opa-header, #suction-header { grid-column: 2; grid-row: 1; align-self: end; }
   :is(#sga-overlay, #opa-overlay, #suction-overlay) .outcome-mark { grid-column: 2; grid-row: 2; justify-self: center; }
   #sga-label, #opa-label, #suction-label { grid-column: 2; grid-row: 3; align-self: start; }
@@ -4820,13 +5102,14 @@ body.light-mode .proc-confirm-edit textarea { color: #302c21; background: #fffdf
 @keyframes obstructionBurst { 0%, 51%, 67%, 100% { opacity: 0; } 58% { opacity: 0.9; } }
 @media (max-height: 450px) and (min-aspect-ratio: 5/4) {
   #npa-overlay, #obstruction-overlay { display: grid; grid-template-columns: minmax(0, 320px) minmax(100px, 180px); grid-template-rows: 1fr auto 1fr; gap: 8px 20px; }
-  #npa-svg, #obstruction-svg { grid-column: 1; grid-row: 1 / 4; width: min(100%, calc((100vh - 32px) * 1.32)); }
+  #npa-svg, #obstruction-svg { grid-column: 1; grid-row: 1 / 4; width: min(100%, calc((100vh - 32px) * 1.0714)); }
   #npa-header, #obstruction-header { grid-column: 2; grid-row: 1; align-self: end; }
   :is(#npa-overlay, #obstruction-overlay) .outcome-mark { grid-column: 2; grid-row: 2; justify-self: center; }
   #npa-label, #obstruction-label { grid-column: 2; grid-row: 3; align-self: start; }
 }
 @media (prefers-reduced-motion: reduce) {
   #laryngoscope-overlay #lx-tube-assembly { opacity: 1; transform: none; }
+  #lx-male-tongue { d: var(--lx-male-tongue-after, var(--lx-contour-after, path('M185 166 C199 151 214 151 225 163 C240 185 244 215 263 240 C273 254 278 261 282 267 L282 271 C273 273 262 274 244 271 Q237 269 242 266 C250 263 260 264 267 263 Q276 260 267 259 C259 258 252 260 235 260 C229 270 216 270 205 258 C185 236 176 213 178 194 Q176 180 185 166 Z'))); }
   #laryngoscope-overlay.outcome-FAILURE #lx-tube-assembly { opacity: 0; }
   #laryngoscope-overlay.visible .lx-stylet { opacity: 0; }
   #npa-overlay, #obstruction-overlay { transition: none; }
@@ -5269,3 +5552,86 @@ body.light-mode .color-key { color: #394549; }
 @media (max-height: 450px) and (min-aspect-ratio: 5/4) {
   #bvm-svg { width: min(420px, 90vw, calc((100dvh - 150px) * 380 / 260)); }
 }
+
+/* Complication has its own rigid preformed approach to the posterior lumen. */
+#laryngoscope-overlay[data-refined-airway].outcome-COMPLICATION.visible :is(.lx-tube,#lx-connector-motion,#lx-pilot-motion) {animation-name:lxDirectEsophagealMotion;}
+@keyframes lxDirectEsophagealMotion {
+  0%, 45.000% {transform:translate(145.000px,180.000px) rotate(60.000deg) translate(-278px,-304px);}
+  45.500% {transform:translate(150.542px,188.110px) rotate(57.500deg) translate(-278px,-304px);}
+  46.000% {transform:translate(156.083px,196.185px) rotate(55.000deg) translate(-278px,-304px);}
+  46.500% {transform:translate(161.625px,204.191px) rotate(52.500deg) translate(-278px,-304px);}
+  47.000% {transform:translate(167.167px,212.094px) rotate(50.000deg) translate(-278px,-304px);}
+  47.500% {transform:translate(172.708px,219.858px) rotate(47.500deg) translate(-278px,-304px);}
+  48.000% {transform:translate(178.250px,227.453px) rotate(45.000deg) translate(-278px,-304px);}
+  48.500% {transform:translate(183.792px,234.844px) rotate(42.500deg) translate(-278px,-304px);}
+  49.000% {transform:translate(189.333px,242.000px) rotate(40.000deg) translate(-278px,-304px);}
+  49.500% {transform:translate(194.875px,248.891px) rotate(37.500deg) translate(-278px,-304px);}
+  50.000% {transform:translate(200.417px,255.486px) rotate(35.000deg) translate(-278px,-304px);}
+  50.500% {transform:translate(205.958px,261.759px) rotate(32.500deg) translate(-278px,-304px);}
+  51.000% {transform:translate(211.500px,267.681px) rotate(30.000deg) translate(-278px,-304px);}
+  51.500% {transform:translate(217.042px,273.228px) rotate(27.500deg) translate(-278px,-304px);}
+  52.000% {transform:translate(222.583px,278.376px) rotate(25.000deg) translate(-278px,-304px);}
+  52.500% {transform:translate(228.125px,283.102px) rotate(22.500deg) translate(-278px,-304px);}
+  53.000% {transform:translate(233.667px,287.387px) rotate(20.000deg) translate(-278px,-304px);}
+  53.500% {transform:translate(239.208px,291.212px) rotate(17.500deg) translate(-278px,-304px);}
+  54.000% {transform:translate(244.750px,294.561px) rotate(15.000deg) translate(-278px,-304px);}
+  54.500% {transform:translate(250.292px,297.419px) rotate(12.500deg) translate(-278px,-304px);}
+  55.000% {transform:translate(255.833px,299.775px) rotate(10.000deg) translate(-278px,-304px);}
+  55.500% {transform:translate(261.375px,301.617px) rotate(7.500deg) translate(-278px,-304px);}
+  56.000% {transform:translate(266.917px,302.939px) rotate(5.000deg) translate(-278px,-304px);}
+  56.500% {transform:translate(272.458px,303.735px) rotate(2.500deg) translate(-278px,-304px);}
+  57.000% {transform:translate(278.000px,304.000px) rotate(0.000deg) translate(-278px,-304px);}
+  60%,100% {transform:none;}
+}
+
+#laryngoscope-overlay[data-refined-airway] #lx-esophageal-detail {display:none;}
+#laryngoscope-overlay[data-refined-airway] #lx-esophageal-cuff-position {transform-box:view-box;transform-origin:0 0;transform:translate(337px,331.6px) rotate(33deg);}
+
+
+
+#laryngoscope-overlay[data-refined-airway].visible #lx-tube-connector {animation-name:lxGentleConnectorFeed;}
+@keyframes lxGentleConnectorFeed {
+  0%,57% {transform:translate(175.000px,-80.000px) rotate(31.430deg);}
+  57.5% {transform:translate(175.000px,-78.105px) rotate(31.427deg);}
+  58% {transform:translate(175.000px,-72.799px) rotate(31.418deg);}
+  59% {transform:translate(175.000px,-54.227px) rotate(31.385deg);}
+  60% {transform:translate(175.000px,-28.834px) rotate(31.329deg);}
+  62% {transform:translate(175.000px,24.227px) rotate(31.135deg);}
+  64% {transform:translate(175.000px,50.000px) rotate(30.964deg);}
+  82%,100% {transform:translate(175.000px,50.000px) rotate(30.964deg);}
+}
+#laryngoscope-overlay[data-refined-airway].visible #lx-pilot-motion > path {animation:lxGentlePilotFeed var(--procedure-duration) linear both;}
+@keyframes lxGentlePilotFeed {
+  0%,57% {d:path('M121.472 120 C167 124 173 147 190 135 L198 126');}
+  57.5% {d:path('M121.740 120 C167 124 173 147 190 135 L198 126');}
+  58% {d:path('M122.502 120 C167 124 173 147 190 135 L198 126');}
+  59% {d:path('M125.271 120 C167 124 173 147 190 135 L198 126');}
+  60% {d:path('M129.366 120 C167 124 173 147 190 135 L198 126');}
+  62% {d:path('M139.629 120 C167 124 173 147 190 135 L198 126');}
+  64% {d:path('M145.963 120 C167 124 173 147 190 135 L198 126');}
+  82%,100% {d:path('M145.963 120 C167 124 173 147 190 135 L198 126');}
+}
+
+#laryngoscope-overlay[data-refined-airway].outcome-COMPLICATION.visible #lx-tube-connector {animation-name:lxGentleEsophagealConnectorFeed;}
+@keyframes lxGentleEsophagealConnectorFeed {
+  0%,57% {transform:translate(175.000px,-80.000px) rotate(31.430deg);}
+  57.5% {transform:translate(175.000px,-78.105px) rotate(31.427deg);}
+  58% {transform:translate(175.000px,-72.799px) rotate(31.418deg);}
+  59% {transform:translate(175.000px,-54.227px) rotate(31.385deg);}
+  60% {transform:translate(175.000px,-28.834px) rotate(31.329deg);}
+  62% {transform:translate(175.000px,24.227px) rotate(31.135deg);}
+  64%,100% {transform:translate(175.000px,50.000px) rotate(30.964deg);}
+}
+#laryngoscope-overlay[data-refined-airway].outcome-COMPLICATION.visible #lx-pilot-motion > path {animation:lxGentleEsophagealPilotFeed var(--procedure-duration) linear both;}
+@keyframes lxGentleEsophagealPilotFeed {
+  0%,57% {d:path('M121.238 120 C167 124 173 147 190 135 L198 126');}
+  57.5% {d:path('M121.509 120 C167 124 173 147 190 135 L198 126');}
+  58% {d:path('M122.275 120 C167 124 173 147 190 135 L198 126');}
+  59% {d:path('M125.061 120 C167 124 173 147 190 135 L198 126');}
+  60% {d:path('M129.187 120 C167 124 173 147 190 135 L198 126');}
+  62% {d:path('M139.551 120 C167 124 173 147 190 135 L198 126');}
+  64%,100% {d:path('M145.963 120 C167 124 173 147 190 135 L198 126');}
+}
+#laryngoscope-overlay[data-refined-airway].outcome-FAILURE.visible #lx-tube-connector {animation:none;transform:translate(175px,-80px) rotate(31.43deg);}
+#laryngoscope-overlay[data-refined-airway].outcome-FAILURE.visible #lx-pilot-motion > path {animation:none;d:path('M136 120 C167 124 173 147 190 135 L198 126');}
+#laryngoscope-overlay[data-refined-airway] #lx-esophageal-cuff-position {transform:translate(337px,330.666px) rotate(28.6deg);}
