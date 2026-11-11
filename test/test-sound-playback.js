@@ -28,8 +28,8 @@ function soundFixture({ delayed = false } = {}) {
   const context = vm.createContext({
     window: { AudioContext: function () { return ctx; } }, EventTarget, Event,
     setTimeout, clearTimeout, btoa,
-    Audio: class {
-      constructor(src) { this.src = src; }
+    Audio: class extends EventTarget {
+      constructor(src) { super(); this.src = src; }
       setAttribute() {}
       play() { return Promise.resolve(); }
       pause() {}
@@ -56,6 +56,25 @@ test('shared mixer plays every overlapping cue with one decode and releases ende
   assert.equal(f.context.activeCount(), 0);
   f.context.playSound('healing'); await flush();
   assert.equal(f.requests.length, 1, 'reuses decoded audio');
+});
+
+test('a ready tone loops on one audio source until stopped, including the media fallback', async () => {
+  const f = soundFixture();
+  const tone = f.context.playSound('defib_ready', { loop: true });
+  await flush();
+  assert.equal(f.nodes.length, 1);
+  assert.equal(f.nodes[0].loop, true);
+  f.ctx.currentTime = 12.25;
+  assert.equal(tone.currentTime, .25);
+  tone.pause();
+  assert.equal(f.nodes[0].stopped, true);
+  assert.equal(f.context.activeCount(), 0);
+
+  f.context.window.AudioContext = undefined;
+  const fallback = f.context.playSound('defib_ready', { loop: true });
+  assert.equal(fallback.loop, true);
+  fallback.paused = true;
+  assert.equal(f.context.playSound('defib_ready').loop, false, 'a reused media voice resets the loop flag');
 });
 
 test('mute, backgrounding and explicit stop cancel pending decodes without a later burst', async () => {

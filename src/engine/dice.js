@@ -5,6 +5,7 @@ const { parseActions: hemorrhageActions, nonWoundCare } = require('./hemorrhage'
 const { SITE_PROCEDURES, procedureTargets, rollEntry } = require('./procedure-targets');
 const { medicationPresentationAt } = require('./medication-route');
 const { unavailableProcedure } = require('./equipment');
+const { SHOCK_PROC_IDS } = require('./shock');
 const { MEDICATION_ALIASES } = require('../../public/medication-aliases');
 const MEDICATION_NAMES = new Map(Object.entries(MEDICATION_ALIASES).flatMap(
   ([name, aliases]) => aliases.map(alias => [alias.toLowerCase(), name])));
@@ -445,7 +446,6 @@ function procEntryKey(procId, matchedKey) {
 // a shock synonym in the same sentence, the entry is force-suppressed: no roll,
 // no confirm prompt, and the model is told to narrate charging only.
 const PRECHARGE_RE = /\bpre[\s-]?charg\w*/i;
-const SHOCK_PROC_IDS = new Set(['defibrillation', 'cardioversion']);
 
 function isPrecharge(text, matchStart, procId) {
   if (!SHOCK_PROC_IDS.has(procId)) return false;
@@ -894,7 +894,7 @@ function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
  * Returns { rolls, suppressed } where suppressed is
  * [{ procedure_id, matchedKey, reason }].
  */
-function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMAL', overrides = {}) {
+function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMAL', overrides = {}, shock = {}) {
   const allow = new Set(overrides.allow || []);
   const deny  = new Set(overrides.deny  || []);
   const entries = detectAllProcedures(userText);
@@ -908,6 +908,7 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
   const suppressed = [];
   for (const entry of entries) {
     const { proc, matchedKey, uncertain, reason, precharge, key } = entry;
+    if (shock.only && !SHOCK_PROC_IDS.has(proc.id)) continue;
     if (contextFlags.managed_hemorrhage && ['bleeding_control','tourniquet'].includes(proc.id)) continue;
     // Pre-charge is a forced suppression — deterministic, not overridable by a
     // confirm click: the wording itself says "charge, don't shock."
@@ -926,6 +927,11 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
     }
     if (uncertain && !allow.has(key)) {
       suppressed.push({ procedure_id: proc.id, matchedKey, reason });
+      continue;
+    }
+    const prepared = shock.rolls?.find(result => result.procedure_id === proc.id);
+    if (prepared) {
+      rolls.push(prepared);
       continue;
     }
     const results = rollEntry(entry, { ...contextFlags, suction_assisted }, difficulty, rollProcedure);

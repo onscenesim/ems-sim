@@ -7,6 +7,7 @@ const SOUNDS = {
   suction: '/sounds/Suction.wav',
   oxygen_flow: '/sounds/Oxygen.mp3',
   intubation: '/sounds/ReverseCymbal.mp3',
+  goose_honk: '/sounds/GooseHonk.wav',
   chest_slap: '/sounds/SlapReverb.mp3',
   airway_gulp: '/sounds/GULP.mp3',
   healing: '/sounds/health-healed-01.wav',
@@ -24,6 +25,8 @@ const SOUNDS = {
   pacing_beep: '/sounds/PacingMonitorBeep.wav',
   defib_outside: '/sounds/Defiboutsideambulance.m4a',
   defib_amb:     '/sounds/Defibinambulance.m4a',
+  defib_charge:  '/sounds/DefibCharge.wav',
+  defib_ready:   '/sounds/DefibReadyLoop.wav',
   fail:     '/sounds/interface-diceroll-fail-02-01.wav',
   success:  '/sounds/interface-diceroll-success-02-01.wav',
   io:       '/sounds/IODrillSoundEffect.m4a',
@@ -60,7 +63,7 @@ const SOUNDS = {
 };
 // Match active audio (excluding quiet tails) near -27 dBFS for the new cues.
 // Keep their original dynamics; do not peak-normalize the quiet dialog texture.
-const SOUND_LEVELS = { pacing_beep: .4, glovebox: .65, paper: .8, monitor_open: .2, monitor_reopen: 1, success: .42, fail: .56, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .62, med_im_action: .55, med_in_action: .48, squelch: .65, signoff: .65 };
+const SOUND_LEVELS = { pacing_beep: .4, glovebox: .65, paper: .8, monitor_open: .2, monitor_reopen: 1, success: .42, fail: .56, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .62, med_im_action: .55, med_in_action: .48, squelch: .65, signoff: .65, defib_ready: .65 };
 // The recordings share a rising roll, with the first result impact at these
 // media times. Feedback outside the dice scene starts directly at that impact.
 const DICE_DROP_SECONDS = { success: .85, fail: .87 };
@@ -125,7 +128,7 @@ function loadSoundBuffer(name) {
   }
   return SOUND_BUFFERS.get(name);
 }
-function playBufferedSound(name, ctx, offset) {
+function playBufferedSound(name, ctx, offset, loop = false) {
   const voice = new EventTarget();
   let node, gain, startedAt = 0;
   voice.name = name;
@@ -133,7 +136,11 @@ function playBufferedSound(name, ctx, offset) {
   voice.ended = false;
   voice.volume = SOUND_LEVELS[name] ?? 1;
   voice.duration = 0;
-  Object.defineProperty(voice, 'currentTime', { get: () => node ? Math.min(offset + ctx.currentTime - startedAt, voice.duration) : 0 });
+  Object.defineProperty(voice, 'currentTime', { get: () => {
+    if (!node) return 0;
+    const elapsed = offset + ctx.currentTime - startedAt;
+    return loop ? elapsed % voice.duration : Math.min(elapsed, voice.duration);
+  } });
   const release = () => { ACTIVE_SOUND_VOICES.delete(voice); node?.disconnect(); gain?.disconnect(); };
   voice.pause = () => {
     if (voice.paused || voice.ended) return;
@@ -152,6 +159,7 @@ function playBufferedSound(name, ctx, offset) {
     node = ctx.createBufferSource();
     gain = ctx.createGain();
     node.buffer = buffer;
+    node.loop = loop;
     voice.duration = buffer.duration;
     gain.gain.value = voice.volume;
     node.connect(gain).connect(ctx.destination);
@@ -238,19 +246,20 @@ function getDispatchSound(regionId) {
   return map[regionId] || 'dispatch';
 }
 
-function playSound(name, { offset = DICE_DROP_SECONDS[name] || 0 } = {}) {
+function playSound(name, { offset = DICE_DROP_SECONDS[name] || 0, loop = false } = {}) {
   if (!soundEnabled) return;
   if (document.hidden) return;   // don't queue sounds while backgrounded — iOS flushes on return
   const s = SOUNDS[name];
   if (s === undefined) { console.warn('[sound] unknown:', name); return; }
   if (s === null) return;  // known slot — file not yet assigned
   const ctx = getSoundContext();
-  if (ctx) return playBufferedSound(name, ctx, offset);
+  if (ctx) return playBufferedSound(name, ctx, offset, loop);
   const voice = soundVoice(name, s);
   if (!voice) return null;
   console.log('[sound] playing:', name);
   voice.muted = false;  // ensure not silenced from unlock phase
   voice.volume = SOUND_LEVELS[name] ?? 1;
+  voice.loop = loop;
   voice.currentTime = offset;
   voice.play().catch(err => {
     console.warn('[sound] play error:', name, err.message);
@@ -542,7 +551,8 @@ function printReply(text) {
 
 function printRoll(roll) {
   if (!roll || roll.no_roll) return;
-  const disSuffix = (roll.target ? ` [${roll.target}]` : '') + (roll.disadvantage ? ' (dis)' : '');
+  const disSuffix = (roll.target ? ` [${roll.target}]` : '') + (roll.disadvantage ? ' (dis)' : '')
+    + (roll.shock_sync_missed ? ' (SYNC OFF · AUTOMATIC 1)' : '');
   function fmtRoll(r) {
     if (r.both_rolls && r.both_rolls.length === 2) {
       return `d20=${r.both_rolls[0]}↓${r.both_rolls[1]}=${r.roll} vs DC ${r.dc} → ${r.outcome}`;
@@ -1352,7 +1362,8 @@ async function sendTurn(msg, opts = {}) {
     // A time-skip is never also a radio report. On a confirm-resend the report
     // toggle was already consumed — reuse the value captured the first time.
     if (reportMode) { reportMode = false; updateReportBtn(); }
-    const data = await apiOperation(`/api/scenario/${sessionId}/turn`, {
+    const path = `/api/scenario/${sessionId}/turn`;
+    const body = {
       message: msg,
       ecg_ink:ecgInk,
       report_mode: isReport,
@@ -1360,7 +1371,10 @@ async function sendTurn(msg, opts = {}) {
       proc_allow: opts.procAllow || [],
       proc_deny: opts.procDeny || [],
       procs_resolved: !!opts.resolved,
-    }, operationId);
+      shock_interactive: true,
+    };
+    if (opts.shockSync) body.shock_sync = opts.shockSync;
+    let data = await apiOperation(path, body, operationId);
     retryTurn = null;
 
     // Ambiguous wording — the server wants a ✓/✗ on each uncertain procedure
@@ -1370,6 +1384,27 @@ async function sendTurn(msg, opts = {}) {
       setLoading(false);
       showProcConfirm(msg, { skipMode, isReport, ecgInk }, data.needs_confirmation);
       return;
+    }
+    if (data.needs_shock) {
+      hideLoadingDots();
+      const prepared = data.needs_shock;
+      window._isMoving = prepared.moving;
+      configureAirwayPatient(window.TransportPatient?.patientFor(prepared, {
+        patients: notebookPatients,
+        patient_focus: { id: focusedPatientId },
+        patient: localTranscript?.meta?.patient,
+      }));
+      body.shock_sync = [];
+      for (const r of prepared.rolls) {
+        await animateDiceRoll(r.procedure_id, r.roll, r.dc, r.outcome, r.target);
+        const sync = await animateDefib(r.procedure_id, r.outcome, r.shock_energy);
+        if (sync === null) throw Object.assign(new Error('Shock cancelled.'), { code: 'operation_cancelled' });
+        body.shock_sync.push(sync);
+      }
+      // A dropped response must retry the discharge that already happened.
+      retryOpts.shockSync = body.shock_sync;
+      showLoadingDots();
+      data = await apiOperation(path, body, operationId);
     }
 
     // decompensating flag intentionally not shown to student — Claude fires it internally
@@ -1390,6 +1425,7 @@ async function sendTurn(msg, opts = {}) {
       // Dice own outcome feedback; every procedure scene owns its physical cue.
       // Shocks roll visibly before the charging and discharge scene.
       if (DEFIB_PROCS.has(r.procedure_id)) {
+        if (r.shock_energy != null) continue;
         await animateDiceRoll(r.procedure_id, r.roll, r.dc, r.outcome, r.target);
         await animateDefib(r.procedure_id, r.outcome);
         continue;
@@ -1413,7 +1449,7 @@ async function sendTurn(msg, opts = {}) {
       if (r.procedure_id === 'suction') await animateSuction(r.outcome);
       if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
       if (r.procedure_id === 'peripheral_iv') await animateIV(r.outcome);
-      if (ECG_PROCS.has(r.procedure_id)) await animateTwelveLead(r.outcome);
+      if (ECG_PROCS.has(r.procedure_id)) await animateTwelveLead(r.outcome, r.procedure_id);
       if (r.procedure_id === 'oropharyngeal_airway') await animateOPA(r.outcome);
       if (r.procedure_id === 'needle_decompression') await animateNCD(r.outcome, 'needle_decompression');
       if (r.procedure_id === 'needle_cricothyrotomy') await animateNCD(r.outcome, 'needle_cricothyrotomy');
@@ -2674,6 +2710,7 @@ const PROCEDURE_TIMING = Object.freeze({
   lucas: Object.freeze({ hold: 1900, start: 100, cycle: 600, result: 1450, sound: 100 }),
   // The cymbal rises into the tube's first pass through the exposed cords.
   laryngoscope: Object.freeze({ hold: 7200, start: 0, cycle: 7200, result: 6480, sound: 6480, action: 'intubation', actionAt: 2600 }),
+  goose: Object.freeze({ hold: 1700, sound: 160 }),
   sga: Object.freeze({ hold: 3400, start: 0, cycle: 3400, result: 2652, sound: 2652, action: 'airway_gulp', actionAt: 1950 }),
   ncd: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2280, sound: 2160 }),
   suction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2880, sound: 2880, action: 'suction' }),
@@ -2738,7 +2775,7 @@ function configureResuscitationPatient(patient) {
   const variant = window.TransportPatient?.variantFor(patient) || 'adult';
   const sex = patient?.sex === 'female' ? 'female' : 'male';
   const profile = variant === 'baby' ? 'baby' : variant === 'child' ? `child-${sex}` : sex;
-  for (const id of ['cpr', 'bvm', 'lucas', 'chest_seal', 'defib', 'pacing']) {
+  for (const id of ['cpr', 'bvm', 'lucas', 'chest_seal', 'defib', 'pacing', 'ekg']) {
     const overlay = document.getElementById(`${id}-overlay`);
     // No infant LUCAS art: the presentation fallback is the existing child model.
     const selected = id === 'lucas' && profile === 'baby' ? 'child-male' : profile;
@@ -2812,8 +2849,111 @@ function animateScalpel(procedureId, outcome) {
   return animateProcedureScene('scalpel', procedureId, outcome);
 }
 
-function animateDefib(procedureId, outcome) {
-  return animateProcedureScene('defib', procedureId, outcome);
+let cancelActiveShock = null;
+function animateDefib(procedureId, outcome, energy, playbackRate = 1) {
+  // Still poses and old recordings use the same shock artwork on a fixed clock.
+  if (energy == null) return animateProcedureScene('defib', procedureId, outcome);
+  const overlay = document.getElementById('defib-overlay');
+  const syncButton = document.getElementById('defib-sync');
+  const shockButton = document.getElementById('defib-shock');
+  const charge = document.getElementById('defib-charge');
+  const status = document.getElementById('defib-charge-status');
+  const current = document.getElementById('defib-current-energy');
+  const label = document.getElementById('defib-label');
+  if (!overlay || !syncButton || !shockButton || !charge || !status || !current || !label) return Promise.resolve(null);
+  cancelActiveShock?.();
+  const needsSync = procedureId === 'cardioversion';
+  const CHARGE_MS = 2800;
+  const RECOVERY_MS = 3800;
+  const focusBefore = document.activeElement;
+  overlay.className = 'shock-interactive shock-wait';
+  overlay.setAttribute('aria-hidden', 'false');
+  overlay.style.setProperty('--procedure-result', '1ms');
+  overlay.style.setProperty('--procedure-fade', `${PROCEDURE_FADE_MS}ms`);
+  document.getElementById('defib-header').textContent = needsSync ? 'SYNCHRONIZED CARDIOVERSION' : 'DEFIBRILLATION';
+  label.textContent = '';
+  status.textContent = `Charging to ${energy} J`;
+  charge.max = energy;
+  charge.value = 0;
+  current.textContent = '0 J';
+  syncButton.disabled = !needsSync;
+  syncButton.setAttribute('aria-pressed', 'false');
+  shockButton.disabled = true;
+  void overlay.offsetWidth;
+  overlay.classList.add('visible');
+  if (needsSync) syncButton.focus();
+
+  return new Promise(resolve => {
+    let readyTimer, recoveryTimer, fadeTimer, readyVoice, shockVoice;
+    let synchronized = false;
+    const chargeVoice = playSound('defib_charge');
+    const start = performance.now();
+    const updateCharge = () => {
+      const elapsed = performance.now() - start;
+      const value = Math.floor(energy * Math.min(1, elapsed / CHARGE_MS));
+      charge.value = value;
+      current.textContent = `${value} J`;
+    };
+    const progressTimer = setInterval(updateCharge, 40);
+    const chargeTimer = setTimeout(() => {
+      clearInterval(progressTimer);
+      charge.value = energy;
+      current.textContent = `${energy} J`;
+      status.textContent = `Charged to ${energy} J`;
+      shockButton.disabled = false;
+      if (document.activeElement !== syncButton) shockButton.focus();
+      chargeVoice?.pause();
+      const keepReadyTone = () => {
+        if (!soundEnabled || document.hidden || (readyVoice && !readyVoice.paused && !readyVoice.ended)) return;
+        readyVoice = playSound('defib_ready', { loop: true });
+      };
+      keepReadyTone();
+      // The mixer stops voices on mute or backgrounding. Restart only if it did.
+      readyTimer = setInterval(keepReadyTone, 500);
+    }, CHARGE_MS);
+    const finish = result => {
+      clearInterval(progressTimer);
+      clearInterval(readyTimer);
+      clearTimeout(chargeTimer);
+      clearTimeout(recoveryTimer);
+      clearTimeout(fadeTimer);
+      chargeVoice?.pause();
+      readyVoice?.pause();
+      if (result === null) shockVoice?.pause();
+      syncButton.onclick = shockButton.onclick = null;
+      syncButton.disabled = shockButton.disabled = true;
+      overlay.className = '';
+      overlay.setAttribute('aria-hidden', 'true');
+      if (overlay.contains(document.activeElement)) focusBefore?.focus();
+      cancelActiveShock = null;
+      resolve(result);
+    };
+    cancelActiveShock = () => finish(null);
+    syncButton.onclick = () => {
+      synchronized = !synchronized;
+      syncButton.setAttribute('aria-pressed', String(synchronized));
+    };
+    shockButton.onclick = () => {
+      if (shockButton.disabled) return;
+      shockButton.disabled = syncButton.disabled = true;
+      clearInterval(readyTimer);
+      readyVoice?.pause();
+      const missedSync = needsSync && !synchronized;
+      const result = missedSync ? 'COMPLICATION' : outcome;
+      status.textContent = `${energy} J delivered`;
+      label.textContent = missedSync ? 'COMPLICATION · SYNC OFF · AUTOMATIC d20 = 1' : result;
+      overlay.classList.remove('shock-wait');
+      overlay.classList.add(`outcome-${result}`);
+      if (playbackRate !== 1) {
+        overlay.getAnimations({ subtree: true }).forEach(animation => animation.updatePlaybackRate(playbackRate));
+      }
+      shockVoice = playSound(getProcedureSound(procedureId, result), { offset: 4.98 });
+      recoveryTimer = setTimeout(() => {
+        overlay.classList.add('is-fading');
+        fadeTimer = setTimeout(() => finish(synchronized), PROCEDURE_FADE_MS);
+      }, RECOVERY_MS);
+    };
+  });
 }
 
 function animateThorsHammer(outcome) {
@@ -3009,30 +3149,68 @@ function animateOPA(outcome) {
   return animateProcedureScene('opa', 'oropharyngeal_airway', outcome);
 }
 
-function animateTwelveLead(outcome) {
+function animateTwelveLead(outcome, procedureId = 'twelve_lead') {
   return new Promise(resolve => {
-    const HOLD_MS = 2600;   // covers the six staggered leads + the outcome mark
+    const HOLD_MS = 2600;   // covers placement and the outcome mark
     const FADE_MS = 220;
     const overlay = document.getElementById('ekg-overlay');
     const label   = document.getElementById('ekg-label');
-    if (!overlay) { playSound(getProcedureSound('twelve_lead', outcome)); resolve(); return; }
+    const sound = getProcedureSound(procedureId, outcome);
+    if (!overlay) { playSound(sound); resolve(); return; }
+    const { views, procedureViews } = TwelveLead.catalog;
+    const view = procedureViews[procedureId] || 'standard';
+    overlay.setAttribute('data-ecg-view', view);
+    document.getElementById('ekg-header').textContent = view === 'standard' ? '12-LEAD EKG' : views[view].label;
+    const frontLeads = view === 'posterior' ? views.standard.leads : views[view].leads;
+    for (const electrode of overlay.querySelectorAll('#ekg-front [data-lead]')) {
+      const lead = electrode.getAttribute('data-lead');
+      electrode.querySelector('text').textContent = frontLeads[lead] || lead;
+    }
     label.textContent = outcome || '';
     overlay.className = '';
     void overlay.offsetWidth;
     overlay.classList.add('visible');
     if (outcome) overlay.classList.add(`outcome-${outcome}`);
-    const cancelAudio = scheduleSceneAudio({ resultSound: getProcedureSound('twelve_lead', outcome), resultAt: 1500,
+    const cancelAudio = scheduleSceneAudio({ resultSound: sound, resultAt: 1500,
       reduced: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
     setTimeout(() => {
       cancelAudio();
-      overlay.classList.remove('visible');
-      setTimeout(resolve, FADE_MS);
+      overlay.classList.add('is-fading');
+      setTimeout(() => {
+        overlay.classList.remove('visible');
+        overlay.classList.remove('is-fading');
+        resolve();
+      }, FADE_MS);
     }, HOLD_MS);
   });
 }
 
-function animateLaryngoscope(procedureId, outcome) {
-  return animateProcedureScene('laryngoscope', procedureId, outcome);
+async function animateLaryngoscope(procedureId, outcome) {
+  const esophageal = outcome === 'COMPLICATION';
+  if (esophageal) loadSoundBuffer('goose_honk');
+  await animateProcedureScene('laryngoscope', procedureId, outcome);
+  if (esophageal) await animateGoose();
+}
+
+function animateGoose() {
+  const overlay = document.getElementById('goose-overlay');
+  if (!overlay) return Promise.resolve();
+  const { hold, sound } = PROCEDURE_TIMING.goose;
+  overlay.style.setProperty('--goose-duration', `${hold}ms`);
+  void overlay.offsetWidth;
+  overlay.classList.add('visible');
+  const cancelAudio = scheduleSceneAudio({ resultSound: 'goose_honk', resultAt: sound });
+  return new Promise(resolve => {
+    setTimeout(() => {
+      cancelAudio();
+      overlay.classList.add('is-fading');
+      setTimeout(() => {
+        overlay.classList.remove('visible');
+        overlay.classList.remove('is-fading');
+        resolve();
+      }, PROCEDURE_FADE_MS);
+    }, hold);
+  });
 }
 
 function animateDepart() {
@@ -3047,8 +3225,12 @@ function animateDepart() {
  * @param {string} outcome       'SUCCESS' | 'MARGINAL' | 'FAILURE' | 'COMPLICATION'
  */
 async function animateDiceRoll(procedureId, roll, dc, outcome, target) {
-  // Decode the longer charge recording during the dice roll, before its scene.
-  if (procedureId === 'defibrillation' || procedureId === 'cardioversion') loadSoundBuffer(getProcedureSound(procedureId, outcome));
+  // Warm the cues while the dice overlay is playing.
+  if ((procedureId === 'defibrillation' || procedureId === 'cardioversion') && soundEnabled) {
+    for (const cue of ['defib_charge', 'defib_ready', getProcedureSound(procedureId, outcome)]) {
+      loadSoundBuffer(cue).catch(() => {});
+    }
+  }
   if (procedureId === 'pacing') loadSoundBuffer('pacing_beep');
   const sound = getOutcomeSound(outcome);
   const dropAt = DICE_DROP_SECONDS[sound] * 1000;

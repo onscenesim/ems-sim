@@ -35,7 +35,7 @@ app.get('/',(_req,res)=>{
   qaGet('qa-ectopy').onchange=()=>qaApply();
   qaGet('qa-rate').onchange=()=>qaApply();
   function qaApply(openNew=false){ecgViewer.setPatient(qaPatient);ecgViewer.update(qaRecords,{openNew});applyVitals({HR:Number(qaGet('qa-rate').value),Rhythm:qaGet('qa-rhythm').value,Ectopy:qaGet('qa-ectopy').value||undefined});}
-  qaGet('qa-acquire').onclick=async()=>{qaGet('qa-acquire').disabled=true;const r=await fetch('/preview/acquire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pathology:qaGet('qa-pathology').value,procedure:qaGet('qa-view').value,ink:window.EMSCosmetics?.ink(),rhythm:qaGet('qa-rhythm').value,ectopy:qaGet('qa-ectopy').value||undefined,rhythmVariant:qaGet('qa-rhythm').value==='asystole'?(qaGet('qa-variant').value||undefined):undefined,rate:Number(qaGet('qa-rate').value),outcome:qaGet('qa-outcome').value,patient:qaPatient,minute:++qaCount*2,turn:qaCount})});const records=await r.json();await animateTwelveLead(qaGet('qa-outcome').value);qaRecords.push(...records);qaApply(true);qaGet('qa-status').textContent='Filed '+qaRecords.length+' recording(s)';qaGet('qa-acquire').disabled=false;};
+  qaGet('qa-acquire').onclick=async()=>{qaGet('qa-acquire').disabled=true;const r=await fetch('/preview/acquire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pathology:qaGet('qa-pathology').value,procedure:qaGet('qa-view').value,ink:window.EMSCosmetics?.ink(),rhythm:qaGet('qa-rhythm').value,ectopy:qaGet('qa-ectopy').value||undefined,rhythmVariant:qaGet('qa-rhythm').value==='asystole'?(qaGet('qa-variant').value||undefined):undefined,rate:Number(qaGet('qa-rate').value),outcome:qaGet('qa-outcome').value,patient:qaPatient,minute:++qaCount*2,turn:qaCount})});const records=await r.json();await animateTwelveLead(qaGet('qa-outcome').value,qaGet('qa-view').value);qaRecords.push(...records);qaApply(true);qaGet('qa-status').textContent='Filed '+qaRecords.length+' recording(s)';qaGet('qa-acquire').disabled=false;};
   qaGet('qa-send-order').onclick=async()=>{
     qaGet('qa-send-order').disabled=true;
     try {
@@ -43,7 +43,7 @@ app.get('/',(_req,res)=>{
         body:JSON.stringify({order:qaGet('qa-order').value,patient:qaPatient,turn:++qaCount})});
       const {rolls,records}=await r.json();
       const ecgRolls=rolls.filter(r=>TwelveLead.catalog.procedureViews[r.procedure_id]);
-      for(const roll of ecgRolls)await animateTwelveLead(roll.outcome);
+      for(const roll of ecgRolls)await animateTwelveLead(roll.outcome,roll.procedure_id);
       qaRecords.push(...records);qaApply(records.length>0);
       qaGet('qa-status').textContent=(ecgRolls.length?ecgRolls.map(roll=>TwelveLead.catalog.views[TwelveLead.catalog.procedureViews[roll.procedure_id]].label+': d20 '+roll.roll+' vs DC '+roll.dc+' — '+roll.outcome).join(' / '):'No acquisition roll')+' · '+qaRecords.length+' recording(s)';
     }finally{qaGet('qa-send-order').disabled=false;}

@@ -7,6 +7,7 @@ const { reviewText } = require('./instructor');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, getProcedure, rollProcedure, PRECHARGE_RE } = require('./dice');
+const { SHOCK_PROC_IDS, shockEnergy } = require('./shock');
 const hemorrhage = require('./hemorrhage');
 const { evaluateObjectives } = require('./learning');
 const sceneAPI = require('./api');
@@ -102,7 +103,7 @@ function reconcileRolls(rolls, reply) {
   const sentences = reply.split(/(?<=[.;!?])\s+/);
   const noMeds = medNotGiven(reply);
   return rolls.filter(r => {
-    if (r.no_roll) return true;                       // routine action, always kept
+    if (r.no_roll || r.shock_energy != null) return true; // routine action or a shock already delivered by the player
     const isMed = r.procedure_id === 'medication_push';
     if (isMed && noMeds) return false;                // no route / nothing given
     const terms = rollSearchTerms(r);
@@ -615,6 +616,30 @@ class Session {
     return result;
   }
 
+  prepareShocks(userText, overrides) {
+    if (this.closed || isDebriefTrigger(userText)) return [];
+    const context = buildTurnContextFlags(this.seed, this.contextFlags, this.lastVitals, userText, this.moving);
+    context.monitor_available = hasCardiacMonitor(this.seed, this.backupStatus);
+    const { rolls } = detectWithConfirmation(userText, context, this.seed.difficulty, overrides, { only: true });
+    const patientId = this.patientFocus?.id || 'patient_1';
+    const record = this.patientRecords.find(patient => patient.id === patientId) || {};
+    const patient = patientId === 'patient_1' ? { age: this.seed.patient_age, ...record } : record;
+    const vitals = this.patientVitals?.[patientId] || this.lastVitals;
+    return rolls.map(roll => {
+      let previous;
+      for (let i = this.turns.length - 1; i >= 0 && !previous; i--) {
+        const turn = this.turns[i];
+        previous = (turn.rolls || []).find(r => r.procedure_id === roll.procedure_id
+          && (r.shock_patient_id || turn.patientFocus?.id || 'patient_1') === patientId);
+      }
+      return {
+        ...roll,
+        shock_energy: shockEnergy(userText, roll.procedure_id, patient, vitals, previous),
+        shock_patient_id: patientId,
+      };
+    });
+  }
+
   /**
    * Send a user message and get Claude's response.
    * Auto-detects procedures and logs dice rolls.
@@ -680,7 +705,7 @@ class Session {
     rollContext.monitor_available = hasCardiacMonitor(this.seed, monitorBackup);
     const detection = (reportMode || skipMode)
       ? { rolls: [], suppressed: [] }
-      : detectWithConfirmation(userText, rollContext, this.seed.difficulty, procOverrides);
+      : detectWithConfirmation(userText, rollContext, this.seed.difficulty, procOverrides, { rolls: options.shockRolls });
     const rolls = detection.rolls;
     const suppressed = detection.suppressed;
     const woundResult = hemorrhage.resolvePlan(woundPlan.plan, rollProcedure, rollContext, this.seed.difficulty, this.sceneMinute);
@@ -830,7 +855,9 @@ class Session {
     }
 
     const rollLines = rolls.filter(r => !r.no_roll).map(r => {
-      const guide = r.hemorrhage_managed && ['FAILURE','COMPLICATION'].includes(r.outcome)
+      const guide = r.shock_sync_missed
+        ? 'SYNC was off when the player pressed SHOCK. An unsynchronized shock delivered at the selected energy. Honor this automatic natural 1 and narrate the resulting rhythm deterioration.'
+        : r.hemorrhage_managed && ['FAILURE','COMPLICATION'].includes(r.outcome)
         ? `The ${r.hemorrhage_method} attempt does not establish the intended new control. Honor retained prior pressure if the state records it. Do not invent another attempt, a different method, injury from an unperformed method, or provider negligence.`
         : outcomeGuidance(r.procedure_id, r.outcome);
       const guideStr = guide ? ` — narrate: ${guide}` : '';
@@ -845,6 +872,9 @@ class Session {
     if (rollLines.length > 0) {
       messageText += '\n\n' + rollLines.join('\n');
       if (rolls.some(r => r.target)) messageText += '\n[SYSTEM NOTE: Each labeled target is an independent attempt. Honor and describe each target’s own outcome; one successful side does not make a failed side successful. Only SUCCESS or MARGINAL IV/IO placements create usable access. Do not invent extra access sites.]';
+    }
+    for (const r of rolls.filter(r => SHOCK_PROC_IDS.has(r.procedure_id) && r.shock_energy != null)) {
+      messageText += `\n[SYSTEM NOTE: The player pressed SHOCK at ${r.shock_energy} J with SYNC ${r.shock_sync ? 'on' : 'off'}. Use this device state and energy for the shock.]`;
     }
 
     const glucagon = rolls.find(r => r.medication_name === 'Glucagon');

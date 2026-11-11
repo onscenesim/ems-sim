@@ -18,6 +18,7 @@ const { Session } = require('../src/engine/session');
 const { rollScenario } = require('../src/engine/roller');
 const { restoreSession, deleteSession } = require('../src/server/sessionStore');
 const { detectWithConfirmation } = require('../src/engine/dice');
+const { shockEnergy } = require('../src/engine/shock');
 const { acquireTwelveLeads } = require('../src/engine/twelve-lead');
 const { hasCardiacMonitor } = require('../src/engine/equipment');
 const router = require('../src/server/routes/scenario');
@@ -159,6 +160,70 @@ test('legacy runs: the real turn route returns unavailable equipment during conf
   assert.equal(payload.needs_confirmation.length, 1);
   assert.match(payload.needs_confirmation[0].unavailable, /No cardiac monitor/);
   deleteSession(id);
+});
+
+test('shock energy uses the typed dose, patient weight, rhythm, and prior shocks', () => {
+  const adult = { age: 40 };
+  assert.equal(shockEnergy('Defibrillate at 150J.', 'defibrillation', adult), 150);
+  assert.equal(shockEnergy('Defibrillate', 'defibrillation', adult), 200);
+  assert.equal(shockEnergy('Defibrillate', 'defibrillation', adult, null, { outcome: 'FAILURE', shock_energy: 200 }), 300);
+  assert.equal(shockEnergy('Cardiovert', 'cardioversion', adult, { Rhythm: 'atrial_flutter' }), 200);
+  assert.equal(shockEnergy('Cardiovert', 'cardioversion', adult, { Rhythm: 'SVT' }), 100);
+  assert.equal(shockEnergy('Defibrillate', 'defibrillation', { age: 5, weight_kg: 18 }), 36);
+  assert.equal(shockEnergy('Defibrillate the 18 kg child at 3 J/kg', 'defibrillation', { age: 5 }), 54);
+});
+
+test('shock controls commit exactly once and replace the pending roll when SYNC was off', async () => {
+  const id = randomUUID(), ownerId = 'shock-test-browser-owner';
+  const s = restoreSession({ id, ownerId, seed: session().seed, turns: [] });
+  const route = router.stack.find(entry => entry.route?.path === '/:id/turn').route.stack[0].handle;
+  async function turn(body) {
+    let payload, status = 200;
+    const res = { status(code) { status = code; return this; }, json(value) { payload = value; return this; } };
+    await route({ params: { id }, headers: { cookie: `ems_owner=${ownerId}` }, body }, res);
+    return { status, payload };
+  }
+  try {
+    for (const [message, procedure, sync] of [
+      ['Synchronized cardioversion at 150 joules.', 'cardioversion', false],
+      ['Synchronized cardioversion at 200 joules.', 'cardioversion', true],
+      ['Defibrillate at 250 joules.', 'defibrillation', false],
+    ]) {
+      const operation_id = randomUUID();
+      const body = { message, operation_id, shock_interactive: true };
+      const { payload: { needs_confirmation } } = await turn(body);
+      assert.deepEqual(needs_confirmation.map(item => item.procedure_id), [procedure]);
+      const confirmed = { ...body, procs_resolved: true, proc_allow: needs_confirmation.map(item => item.key) };
+      const before = s.turns.length;
+      request = null;
+      const { payload: { needs_shock } } = await turn(confirmed);
+      const [pending] = needs_shock.rolls;
+      assert.equal(pending.shock_energy, Number(message.match(/\d+/)[0]));
+      assert.equal(s.turns.length, before);
+      assert.equal(request, null);
+      assert.deepEqual((await turn(confirmed)).payload.needs_shock.rolls, [pending]);
+      reply('The shock delivered. Reassess the rhythm.', '2:00');
+      const finalRequest = { ...confirmed, shock_sync: [sync] };
+      const result = await turn(finalRequest);
+      assert.equal(result.status, 200);
+      const [resolved] = result.payload.rolls;
+      assert.equal(resolved.shock_energy, pending.shock_energy);
+      assert.equal(resolved.shock_sync, sync);
+      if (procedure === 'cardioversion' && !sync) {
+        assert.equal(resolved.roll, 1);
+        assert.equal(resolved.outcome, 'COMPLICATION');
+        assert.match(request, /cardioversion — d20=1 vs DC .*COMPLICATION.*SYNC was off/);
+      } else {
+        assert.equal(resolved.roll, pending.roll);
+        assert.equal(resolved.outcome, pending.outcome);
+      }
+      assert.equal(s.turns.at(-1).rolls[0].roll, resolved.roll);
+      assert.equal((await turn(finalRequest)).payload.rolls[0].roll, resolved.roll);
+      assert.equal(s.turns.length, before + 1);
+    }
+  } finally {
+    deleteSession(id);
+  }
 });
 
 

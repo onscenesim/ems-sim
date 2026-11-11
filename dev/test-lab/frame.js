@@ -29,14 +29,24 @@
     ['resuscitative_thoracotomy','Resuscitative thoracotomy','resuscitative_thoracotomy'], ['perimortem_csection','Perimortem C-section','perimortem_csection'],
   ]) {
     const overlay = id === 'cardioversion' ? 'defib' : id === 'rsi' ? 'laryngoscope' : SCALPEL_PROCS.has(id) ? 'scalpel' : id;
-    add(id, name, overlay, o => animateProcedureScene(overlay, procedure, o.outcome), PROCEDURE_TIMING[overlay].hold);
+    const run = overlay === 'defib'
+      ? o => animateDefib(procedure, o.outcome, o.mode === 'play' ? (procedure === 'cardioversion' ? 100 : 200) : undefined, speed)
+      : overlay === 'laryngoscope'
+      ? o => animateLaryngoscope(procedure, o.outcome)
+      : o => animateProcedureScene(overlay, procedure, o.outcome);
+    add(id, name, overlay, run, PROCEDURE_TIMING[overlay].hold);
   }
+  add('goose', 'Goose honk', 'goose', () => animateGoose(), PROCEDURE_TIMING.goose.hold);
   add('io','IO drill','io', o => animateDrill(o.outcome),2200);
   add('iv','Peripheral IV','iv', o => animateIV(o.outcome),2500);
   add('thump','Precordial thump','thump', o => animateThorsHammer(o.outcome),1700);
   add('cpr','Manual CPR','cpr', o => animateCPR(o.outcome),1650);
   add('ncric','Needle cricothyrotomy','ncric', o => animateNCD(o.outcome,'needle_cricothyrotomy'),2600);
   add('ekg','12-lead acquisition','ekg', o => animateTwelveLead(o.outcome),2600);
+  for (const view of ['right', 'posterior', 'v4r']) {
+    const { label, procedure } = TwelveLead.catalog.views[view];
+    add(procedure, label, 'ekg', o => animateTwelveLead(o.outcome, procedure), 2600);
+  }
   add('medpush','IV medication push','medpush', o => animateMedPush(o.outcome),2500);
   add('medpush_io','IO medication push','medpush', o => animateMedPush(o.outcome,'IO','TEST MEDICATION'),2500);
   for (const [id,name,route,duration] of [['oralmed','Oral / sublingual medication','PO',2600],['immed','IM medication','IM',2600],['inmed','Intranasal medication','IN',2300],['nebmed','Nebulized medication','NEB',2800]]) {
@@ -52,7 +62,7 @@
   add('eightball','Magic 8-ball','eightball',()=>{ballOverlay.classList.add('visible');eightball.click();return new Promise(resolve=>setTimeout(()=>{ballOverlay.classList.remove('visible');resolve();},3000));},2900);
   const nativeTimeout = window.setTimeout.bind(window), nativeInterval = window.setInterval.bind(window);
   const timers = new Set(), intervals = new Set();
-  let tracking = false, speed = 1, generation = 0, activeOverlay;
+  let tracking = false, speed = 1, generation = 0, activeOverlay, followupObserver;
   const privacyStops = new Set();
   const privacyStart = PatientPrivacy.start.bind(PatientPrivacy);
   PatientPrivacy.start = (...args) => { const cleanup = privacyStart(...args); privacyStops.add(cleanup); return () => { cleanup(); privacyStops.delete(cleanup); }; };
@@ -70,7 +80,8 @@
   };
   function cancelTimers() { timers.forEach(clearTimeout); intervals.forEach(clearInterval); timers.clear(); intervals.clear(); }
   function stop() {
-    generation++; tracking = false; cancelTimers(); stopAllSounds(); privacyStops.forEach(fn => fn()); privacyStops.clear();
+    generation++; tracking = false; cancelActiveShock?.(); cancelTimers(); stopAllSounds(); privacyStops.forEach(fn => fn()); privacyStops.clear();
+    followupObserver?.disconnect();
     document.getAnimations().forEach(a => a.cancel());
     document.querySelectorAll('[id$="-overlay"]').forEach(el => { el.classList.remove('visible','is-fading','fade-out'); el.style.removeProperty('opacity'); el.style.removeProperty('transition'); el.setAttribute('aria-hidden','true'); });
     activeOverlay = null; document.body.classList.remove('lab-monitor'); stopRhythmStrip(); plethStrip.update(null); updateCapnography(null);
@@ -87,6 +98,7 @@
       const timing = PROCEDURE_TIMING[scene.overlay];
       const actionTime = scene.overlay === 'bvm' ? timing.start + timing.cycle * .5
         : scene.overlay === 'lucas' ? timing.start + timing.cycle * .45
+        : scene.overlay === 'defib' ? timing.result + 64
         : scene.overlay === 'cpr' ? 275 : scene.duration * .5;
       animation.currentTime = mode === 'start' ? 0 : mode === 'action' ? actionTime : Math.max(0, scene.duration - 1);
     }
@@ -133,7 +145,19 @@
       configureAirwayPatient(options.patient);
       speed = Number(options.speed) || 1; clockOrigin = nativeNow(); tracking = true;
       if (soundEnabled) unlockAudio();
-      const result=scene.run(options);
+      if (mode === 'play' && scene.overlay === 'laryngoscope' && options.outcome === 'COMPLICATION') {
+        const goose = document.getElementById('goose-overlay');
+        followupObserver = new MutationObserver(() => {
+          if (!goose.classList.contains('visible')) return;
+          followupObserver.disconnect();
+          activeOverlay.setAttribute('aria-hidden', 'true');
+          activeOverlay = goose;
+          goose.setAttribute('aria-hidden', 'false');
+          goose.getAnimations({ subtree: true }).forEach(a => a.updatePlaybackRate(speed));
+        });
+        followupObserver.observe(goose, { attributes: true, attributeFilter: ['class'] });
+      }
+      const result=scene.run({ ...options, mode });
       await new Promise(requestAnimationFrame);
       if(token!==generation)return;
       activeOverlay.setAttribute('aria-hidden','false');

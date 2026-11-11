@@ -106,6 +106,46 @@
       }
     }
     if(scene==='suction'){
+      const soft=document.createElementNS(ns,'g');soft.id='infant-soft-suction';
+      const ready='M152 71 C126 53 103 69 114 92 C120 107 134 102 145 110';
+      // The hose sleeve overlaps the orange barb along the same axis.
+      const hoseTail='C152 17 229 48 281 66 C299 72 318 72 340 72';
+      const hose=`M152 40 ${hoseTail}`;
+      soft.innerHTML=`<g class="infant-suction-hose" fill="none">
+          <path d="${hose}" stroke="#bfdce2" stroke-width="10" opacity=".62"/>
+          <path d="${hose}" stroke="#789fa7" stroke-width="7" opacity=".48"/>
+          <path d="${hose}" transform="translate(1.5 -1.5)" stroke="#effcff" stroke-width=".7" opacity=".55"/>
+          <path d="${hose}" transform="translate(-1.5 1.5)" stroke="#deeff2" stroke-width=".65" opacity=".35"/>
+        </g>
+        <path d="M328 67 H332 V66 H340 Q342 72 340 78 H332 V77 H328 Z" fill="#467b9b" stroke="#9ac8df" stroke-width=".8"/>
+        <path d="M330 67 V77 M333 69 H339" fill="none" stroke="#a6d0e4" stroke-width=".7"/>
+        <g fill="none" stroke-linecap="butt">
+          <path class="infant-suction-line" d="${ready}" stroke="#edf5f2" stroke-width="5.4"/>
+          <path class="infant-suction-line" d="${ready}" stroke="#a9bab8" stroke-width="3.6"/>
+          <path class="infant-suction-line" d="${ready}" stroke="#435c5c" stroke-width="4.7" stroke-dasharray=".65 7.35" opacity=".7"/>
+        </g>
+        <g id="infant-suction-end" transform="translate(145 110) rotate(36)">
+          <path d="M-3 -2.7 H.5 L3 -1.1 L1.2 2.7 H-3 Z" fill="#e4efeb" stroke="#a8bfba" stroke-width=".5"/>
+          <ellipse cx="1.55" cy=".3" rx=".75" ry="1.6" fill="#576f6e" stroke="none" transform="rotate(22 1.55 .3)"/>
+          <ellipse cx="-2.5" cy="-.7" rx=".9" ry=".65" fill="#576f6e" stroke="none"/>
+        </g>
+        <g id="infant-suction-connector">
+        <g fill="#e77b13" stroke="#ffb763" stroke-width=".65">
+          <path d="M148 74 Q152 76 156 74 V60 Q156 58 155 57 V48 H149 V57 Q148 58 148 60 Z"/>
+          <path d="M149 50 H155 M149 53 H155 M149 56 H155" fill="none" stroke="#ae4a0b" stroke-width=".9"/>
+          <path d="M148 62 H142 V58 Q139 57 138 60 V68 Q139 71 142 70 V66 H148 Z"/>
+          <ellipse cx="139.8" cy="64" rx="1" ry="3.3" fill="#983b08"/>
+          <path d="M140 59 Q134 55 136 49 Q137 46 140 46" fill="none" stroke="#f19437" stroke-width="1.2"/>
+          <path d="M139 44 H145 V48 H139 Q137 46 139 44 Z"/>
+          <path d="M150 61 V72" fill="none" stroke="#ffbd72" stroke-width="1"/>
+        </g>
+        <path d="M145 40 Q152 38 159 40 V49 Q159 52 157 54 H147 Q145 52 145 49 Z" fill="#467b9b" fill-opacity=".93" stroke="#9ac8df" stroke-width=".8"/>
+        <path d="M146 42 Q152 44 158 42 M147 50 H157" fill="none" stroke="#a6d0e4" stroke-width=".7"/>
+        </g>`;
+      gear.querySelector('#yankauer').after(soft);
+      const flow=gear.querySelector('#suction-flow');
+      const infantRoute=`C161 147 150 126 152 98 L152 40 ${hoseTail}`;
+      flow.style.setProperty('--infant-suction-flow', `path('M185 164 ${infantRoute}')`);
       // Keep the original staggered routes through the tip and hose, with the
       // initial debris clustered inside this model's smaller oral lumen.
       gear.querySelectorAll('.suction-particle').forEach(particle=>{
@@ -113,6 +153,7 @@
         if(!point)return;
         const x=185+(+point[1]-185)*.75,y=164+(+point[2]-164)*.25;
         particle.style.offsetPath=route.replace(point[0],`M${x} ${y}`);
+        particle.style.setProperty('--infant-suction-route', `path('M${x} ${y} L185 164 ${infantRoute}')`);
         particle.style.setProperty('--tip-distance',Math.hypot(x-185,y-164)+'px');
       });
     }

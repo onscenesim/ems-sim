@@ -3357,8 +3357,62 @@ body.light-mode .brief-options-note { color: #536159; }
   #nebmed-overlay.visible #nebmed-jet { animation: none; opacity: 0.55; }
 }
 
+#goose-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #223743 0%, #0b121beb 70%);
+  opacity: 0;
+  transition: opacity .22s ease;
+}
+#goose-overlay.visible { opacity: 1; }
+#goose-overlay.visible.is-fading { opacity: 0; }
+#goose-svg { width: min(320px, 90vw); max-height: 85vh; }
+#goose-svg :is(.goose-head-motion, #goose-jaw, #goose-near-wing, #goose-far-wing) { transform-box: view-box; }
+.goose-head-motion { transform-origin: 129px 145px; }
+#goose-jaw { transform-origin: 88px 61px; }
+#goose-near-wing { transform-origin: 132px 155px; }
+#goose-far-wing { transform-origin: 151px 149px; }
+#goose-honk-lines { opacity: 0; }
+#goose-overlay.visible .goose-head-motion { animation: gooseHead var(--goose-duration) ease both; }
+#goose-overlay.visible #goose-jaw { animation: gooseJaw var(--goose-duration) ease both; }
+#goose-overlay.visible #goose-honk-lines { animation: gooseHonkLines var(--goose-duration) ease both; }
+#goose-overlay.visible #goose-near-wing { animation: gooseFlap .52s ease-in-out .12s 3 both; }
+#goose-overlay.visible #goose-far-wing { animation: gooseFlap .52s ease-in-out .09s 3 both; }
+@keyframes gooseHead {
+  0%, 83%, 100% { transform: rotate(0deg); }
+  15%, 29%, 45%, 57% { transform: rotate(25deg); }
+  35% { transform: rotate(16deg); }
+}
+/* The clip plays at 160 ms. Its two honks start about 50 and 550 ms in. */
+@keyframes gooseJaw {
+  0%, 12%, 31%, 41%, 57%, 100% { transform: rotate(0deg); }
+  18%, 23%, 46%, 52% { transform: rotate(-20deg); }
+}
+@keyframes gooseHonkLines {
+  0%, 12%, 31%, 41%, 57%, 100% { opacity: 0; }
+  18%, 23%, 46%, 52% { opacity: 1; }
+}
+@keyframes gooseFlap {
+  0%, 100% { transform: rotate(0deg); }
+  42% { transform: rotate(-61deg); }
+  77% { transform: rotate(10deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #goose-overlay.visible #goose-svg * { animation: none; }
+  #goose-overlay.visible .goose-head-motion { transform: rotate(25deg); }
+}
+
 /* ── 12-lead EKG overlay ─────────────────────────────────────────────── */
 #ekg-overlay {
+  --ekg-side: 1;
+  --ekg-v4-side: var(--ekg-side);
+  --ekg-v4-y: 117px;
+  --ekg-v5-offset: 39px;
+  --ekg-v6-offset: 53px;
   position: fixed;
   inset: 0;
   z-index: 9500;
@@ -3373,6 +3427,7 @@ body.light-mode .brief-options-note { color: #536159; }
   transition: opacity 0.22s ease;
 }
 #ekg-overlay.visible { opacity: 1; }
+#ekg-overlay.visible.is-fading { opacity: 0; }
 #ekg-header {
   font-family: var(--font-block, monospace);
   font-size: 0.48rem;
@@ -3381,7 +3436,7 @@ body.light-mode .brief-options-note { color: #536159; }
   text-transform: uppercase;
 }
 #ekg-svg {
-  width: 230px;
+  width: min(270px, 100%);
   height: auto;
   color: rgba(235, 235, 235, 0.95);   /* torso line art */
 }
@@ -3392,6 +3447,39 @@ body.light-mode .brief-options-note { color: #536159; }
   font-weight: 700;
   text-anchor: middle;
 }
+#ekg-svg [data-lead="V2"] text { fill: #211a0a; }
+
+#ekg-overlay[data-patient-profile^="child-"] { --ekg-v6-offset: 51px; }
+#ekg-overlay[data-patient-profile="baby"] {
+  --ekg-v4-y: 115px;
+  --ekg-v5-offset: 38px;
+  --ekg-v6-offset: 49px;
+}
+#ekg-overlay[data-ecg-view="right"] { --ekg-side: -1; }
+#ekg-overlay[data-ecg-view="v4r"] { --ekg-v4-side: -1; }
+/* The level of V4–V6 wraps around the chest in this view. Measure X from
+   the sternum to mirror both the positions and the curve on the right. */
+#ekg-front [data-lead="V1"] { transform: translate(calc(110px - 10px * var(--ekg-side)), 90px); }
+#ekg-front [data-lead="V2"] { transform: translate(calc(110px + 10px * var(--ekg-side)), 90px); }
+#ekg-front [data-lead="V3"] { transform: translate(calc(110px + 16.5px * var(--ekg-side)), calc((90px + var(--ekg-v4-y)) / 2)); }
+#ekg-front [data-lead="V4"] { transform: translate(calc(110px + 26px * var(--ekg-v4-side)), var(--ekg-v4-y)); }
+#ekg-front [data-lead="V5"] { transform: translate(calc(110px + var(--ekg-v5-offset) * var(--ekg-side)), calc(var(--ekg-v4-y) - 5px)); }
+#ekg-front [data-lead="V6"] { transform: translate(calc(110px + var(--ekg-v6-offset) * var(--ekg-side)), calc(var(--ekg-v4-y) - 13px)); }
+#ekg-overlay[data-ecg-view="right"] #ekg-svg .ekg-lead text,
+#ekg-overlay[data-ecg-view="v4r"] #ekg-svg [data-lead="V4"] text { font-size: 7px; }
+
+.ekg-orientation {
+  display: none;
+  fill: currentColor;
+  opacity: .55;
+  font: 700 9px var(--font-block, monospace);
+  text-anchor: middle;
+}
+#ekg-overlay[data-ecg-view]:not([data-ecg-view="standard"]) .ekg-orientation { display: inline; }
+#ekg-back { display: none; opacity: 0; }
+.ekg-face { transform-box: view-box; transform-origin: 110px 120px; }
+#ekg-back [data-lead="V7"] { transform: translate(calc(110px - var(--ekg-v6-offset)), 109px); }
+
 /* Each lead pops on in sequence, V1 → V6 */
 .ekg-lead {
   transform-box: fill-box;
@@ -3400,14 +3488,29 @@ body.light-mode .brief-options-note { color: #536159; }
 }
 #ekg-overlay.visible .ekg-lead {
   animation: ekgPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  animation-delay: calc(0.25s + var(--i) * 0.16s);
+  animation-delay: calc(var(--ekg-placement-start, 0.25s) + var(--i) * 0.16s);
 }
 @keyframes ekgPop {
   0%   { opacity: 0; transform: scale(0.2); }
   70%  { opacity: 1; transform: scale(1.15); }
   100% { opacity: 1; transform: scale(1); }
 }
-/* Hold the check/X until all six leads have landed (ID specificity beats the
+#ekg-overlay[data-ecg-view="posterior"] #ekg-back { display: inline; }
+#ekg-overlay.visible[data-ecg-view="posterior"] #ekg-front { animation: ekgTurnAway .22s ease-in .28s forwards; }
+#ekg-overlay.visible[data-ecg-view="posterior"] #ekg-front .ekg-lead { animation: none; opacity: 1; }
+#ekg-overlay.visible[data-ecg-view="posterior"] #ekg-back {
+  animation: ekgTurnIn .22s ease-out .50s forwards;
+  --ekg-placement-start: .72s;
+}
+@keyframes ekgTurnAway { to { opacity: 0; transform: scaleX(var(--ekg-turn-scale, .72)); } }
+@keyframes ekgTurnIn {
+  from { opacity: 0; transform: scaleX(var(--ekg-turn-scale, .72)); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ekg-overlay { --ekg-turn-scale: 1; }
+}
+/* Hold the check/X until the leads have landed (ID specificity beats the
    shared .outcome-* shorthand, so only the delay is overridden here). */
 #ekg-overlay.visible .om-check,
 #ekg-overlay.visible .om-x1 { animation-delay: 1.5s; }
@@ -4919,6 +5022,42 @@ body.light-mode #lx-male-soft-tissue { --lx-tissue-edge: #925e65; }
 :is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).outcome-COMPLICATION { --result-color: #f38a62; }
 #chest_seal-svg, #pacing-svg, #defib-svg { width: min(330px, 85vw); height: min(360px, 65dvh); flex-shrink: 1; min-height: 0; }
 #chest_seal-header, #pacing-header, #defib-header { font: 11px var(--font-block, monospace); color: #b8cbd6; letter-spacing: 0.12em; text-align: center; }
+#defib-overlay.shock-interactive.visible { pointer-events: auto; gap: 10px; }
+#defib-control { display: none; }
+#defib-overlay.shock-interactive #defib-control {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px;
+  width: min(370px, 100%); padding: 10px; box-sizing: border-box;
+  background: #2a3c52; border: 1px solid #62768d; border-radius: 9px;
+}
+.defib-display {
+  display: grid; align-content: center; gap: 7px; padding: 8px 10px;
+  background: #c9e8eb; color: #172b43; border-radius: 4px;
+  font: 700 13px var(--font-ui, system-ui); font-variant-numeric: tabular-nums;
+}
+.defib-meter { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+#defib-charge { width: 100%; height: 13px; accent-color: #214e68; }
+#defib-current-energy { text-align: right; }
+.defib-buttons { display: grid; gap: 4px; }
+.defib-buttons button {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 34px; padding: 4px 12px; border: 1px solid #7b91a3; border-radius: 18px;
+  color: #fff; font: 800 12px var(--font-ui, system-ui); text-transform: uppercase; cursor: pointer;
+}
+#defib-shock {
+  justify-self: center; width: 44px; height: 44px; padding: 8px;
+  border: 2px solid #321c24; border-radius: 50%; color: #fff8ed;
+  background: radial-gradient(circle at 36% 27%, #f16847, #b72e27 72%);
+  box-shadow: inset 0 0 0 1px #ff9d7866;
+}
+#defib-shock:enabled { box-shadow: inset 0 0 0 1px #ffac8d, 0 0 9px #f0636377; }
+#defib-shock svg { width: 100%; height: 100%; }
+#defib-sync { background: #142236; }
+#defib-sync span { width: 7px; height: 7px; border-radius: 50%; background: #52687d; }
+#defib-sync[aria-pressed="true"] { color: #ccffe1; border-color: #68d898; }
+#defib-sync[aria-pressed="true"] span { background: #86f2a8; box-shadow: 0 0 7px #86f2a8; }
+.defib-buttons button:disabled { opacity: .63; cursor: default; }
+.defib-buttons button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+#defib-overlay.shock-interactive #defib-svg { height: min(330px, 51dvh); }
 #chest_seal-label, #pacing-label, #defib-label { font: 10px var(--font-block, monospace); color: var(--result-color); letter-spacing: 0.06em; text-align: center; min-height: 24px; }
 :is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).visible [id$="-label"] { animation: hemorrhageResult 180ms ease var(--procedure-result) both; }
 /* Dressing lands at 950ms, compresses, then the glove lifts off. */
@@ -4963,12 +5102,10 @@ body.light-mode #lx-male-soft-tissue { --lx-tissue-edge: #925e65; }
 .heart-after { opacity: 1; }
 .heart-after .heart-motion { filter: drop-shadow(0 0 5px #73cde566); }
 /* One whole-scene impact at discharge; leave the charge and recovery untouched. */
-#defib-overlay.visible { animation: defibImpact 100ms steps(1, end) var(--procedure-result); }
+#defib-overlay.visible:not(.shock-wait) { animation: defibImpact 100ms steps(1, end) var(--procedure-result); }
 @keyframes defibImpact {
-  0% { filter: invert(1); transform: translate(-5px, 2px) scale(1.025); }
-  50% { filter: invert(1); transform: translate(3px, -2px) scale(1.025); }
-  70% { filter: invert(0); transform: translate(-1px, 1px) scale(1.01); }
-  100% { filter: none; transform: none; }
+  0% { filter: invert(1) contrast(1.25); }
+  100% { filter: none; }
 }
 #defib-overlay.visible .heart-before { animation: heartBefore var(--procedure-result) step-end both; }
 #defib-overlay.visible .heart-before .heart-motion { animation: heartQuiver 100ms linear 48 both; }
@@ -4979,6 +5116,10 @@ body.light-mode #lx-male-soft-tissue { --lx-tissue-edge: #925e65; }
 #defib-overlay.outcome-MARGINAL.visible .heart-after .heart-motion { animation: heartTentative 1050ms ease calc(var(--procedure-result) + 400ms) 2 both; }
 #defib-overlay.outcome-FAILURE.visible .heart-after .heart-motion { animation: heartQuiver 100ms linear calc(var(--procedure-result) + 400ms) 26 both; }
 #defib-overlay.outcome-COMPLICATION.visible .heart-after .heart-motion { animation: heartLost 2600ms linear calc(var(--procedure-result) + 400ms) both; }
+#defib-overlay.visible.shock-wait :is(.electrical-patient, .shock-energy, .heart-before, .heart-after, #defib-label) { animation: none; }
+#defib-overlay.visible.shock-wait .heart-before { opacity: 1; }
+#defib-overlay.visible.shock-wait .heart-before .heart-motion { animation-iteration-count: infinite; }
+#defib-overlay.visible.shock-wait .heart-after { opacity: 0; }
 #pacing-overlay.visible .heart-before { animation: heartBefore var(--procedure-result) step-end both; }
 /* The initial heart is still; failed capture retains a slow intrinsic beat. */
 #pacing-overlay.visible .heart-before .heart-motion { animation: none; }
@@ -5017,7 +5158,12 @@ body.light-mode #lx-male-soft-tissue { --lx-tissue-edge: #925e65; }
 @keyframes pacingLost { from { transform: scale(1); opacity: 1; } to { transform: scale(.95); opacity: .45; } }
 @keyframes cardiacFlash { 0%, 100% { opacity: 0; } 12%, 40% { opacity: 1; } }
 @keyframes pacingPulse { 0%, 20%, 100% { opacity: 0; } 4%, 10% { opacity: .85; } }
-@keyframes cardiacJolt { 0%, 100% { transform: translateY(0); } 20% { transform: translateY(-4px) scale(1.02); } 55% { transform: translateY(2px); } }
+@keyframes cardiacJolt {
+  0%, 100% { transform: none; }
+  16% { transform: translate(-3px, -14px) rotate(-4deg) scale(1.045, .97); }
+  37% { transform: translate(2px, 4px) rotate(2deg); }
+  62% { transform: translateY(-3px) rotate(-.8deg); }
+}
 @media (prefers-reduced-motion: reduce) {
   #chest_seal-overlay, #pacing-overlay, #defib-overlay { transition: none; }
   #defib-overlay.visible, #pacing-overlay.visible { animation: none !important; }

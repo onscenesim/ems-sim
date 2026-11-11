@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=102">
+  <link rel="stylesheet" href="style.css?v=109">
   <link rel="stylesheet" href="monitor.css?v=9">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
@@ -1070,8 +1070,23 @@
       <div id="scalpel-label"></div>
     </div>
 
-    <div id="defib-overlay" aria-hidden="true">
+    <div id="defib-overlay" role="dialog" aria-labelledby="defib-header" aria-hidden="true">
       <div id="defib-header">DEFIBRILLATION</div>
+      <div id="defib-control">
+        <div class="defib-display">
+          <div id="defib-charge-status" aria-live="polite"></div>
+          <div class="defib-meter">
+            <progress id="defib-charge" aria-label="Charging energy" value="0" max="200"></progress>
+            <span id="defib-current-energy" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="defib-buttons">
+          <button type="button" id="defib-shock" aria-label="Shock" title="Shock" disabled>
+            <svg viewBox="0 0 28 28" aria-hidden="true"><path fill="currentColor" d="M12 3H23L13 14H21L12 23L14 25H9L8 21L14 17H5Z"/></svg>
+          </button>
+          <button type="button" id="defib-sync" aria-pressed="false" disabled><span aria-hidden="true"></span> Sync</button>
+        </div>
+      </div>
       <svg id="defib-svg" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <g class="patient-scene">
         <g class="electrical-patient" color="#a0b6c5">
@@ -1366,6 +1381,75 @@
         <line class="om-x2" x1="35" y1="9" x2="9" y2="35" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>
       </svg>
       <div id="obstruction-label"></div>
+    </div>
+    <div id="goose-overlay" aria-hidden="true">
+      <svg id="goose-svg" viewBox="0 0 300 260" role="img" aria-label="A white goose flaps its wings and honks upward">
+        <defs>
+          <!-- Outline the combined neck and body so the join stays seamless as the head lifts. -->
+          <filter id="goose-outline" filterUnits="userSpaceOnUse" x="40" y="0" width="220" height="220">
+            <feMorphology in="SourceAlpha" operator="dilate" radius="2" result="edge"/>
+            <feFlood flood-color="#202935"/>
+            <feComposite in2="edge" operator="in" result="outline"/>
+            <feMerge><feMergeNode in="outline"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <ellipse cx="150" cy="232" rx="78" ry="13" fill="#93afb9" opacity=".19"/>
+        <ellipse cx="160" cy="226" rx="18" ry="4" fill="#151f29" opacity=".45"/>
+        <g stroke="#202935" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+          <path fill="#c58a46" d="M164 191 L161 218 L144 225 Q157 231 174 225 L171 218 L177 194 Z"/>
+          <path fill="#f0ae54" d="M122 195 L120 224 L98 234 Q111 242 136 235 L130 223 L135 198 Z"/>
+          <path id="goose-far-wing" fill="#a7beca" d="M145 147 C163 114 209 92 243 103 Q251 108 242 114 L220 126 Q237 126 224 137 L205 146 Q221 147 205 158 Q173 172 145 147 Z"/>
+          <g fill="#edf3f2" stroke="none" filter="url(#goose-outline)">
+            <path d="M115 135 Q139 126 174 135 Q199 146 219 137 L243 123 Q250 124 244 134 L232 149 Q248 143 246 151 Q241 162 225 173 C210 201 170 216 133 208 C105 203 87 187 87 168 Q87 149 115 135 Z"/>
+            <path class="goose-head-motion" d="M99 156 Q91 143 100 125 Q121 89 105 72 Q100 67 94 67 C79 68 72 58 79 45 Q87 27 107 29 C129 31 141 51 140 76 Q137 119 151 140 Q157 153 145 162 Q124 174 99 156 Z"/>
+          </g>
+          <path fill="#bbcdd1" stroke="none" d="M91 169 Q112 190 148 191 Q185 194 223 173 Q203 204 156 206 C122 208 92 192 91 169 Z"/>
+          <g id="goose-head" class="goose-head-motion">
+            <path fill="#c4d4d8" stroke="none" d="M110 68 Q124 67 130 54 Q135 69 133 88 Q130 120 146 145 Q143 157 127 160 Q117 152 120 136 Q131 109 114 80 Z"/>
+            <path id="goose-jaw" fill="#eaa649" d="M86 55 Q76 61 58 61 Q62 69 80 70 Q88 69 94 65 Z"/>
+            <path fill="#f6b657" d="M85 44 Q77 47 70 53 Q64 56 55 57 Q48 59 53 63 Q57 66 67 64 L90 61 Q95 56 85 44 Z"/>
+            <ellipse cx="103" cy="46" rx="3.9" ry="5.2" fill="#000" stroke="none"/>
+            <path d="M74 55 L77 54" fill="none" stroke-width="2.1"/>
+            <g stroke-width="2.6">
+              <path fill="#24616a" d="M130 39 Q140 37 146 42 L141 46 L147 50 Q139 53 132 47 Z"/>
+              <path fill="#4ba99f" d="M78 41 Q77 33 85 27 Q101 17 120 25 Q132 30 136 45 Q125 39 109 36 Q94 34 78 41 Z"/>
+              <path fill="#307e7c" d="M78 41 Q94 34 109 36 Q125 39 136 45 L136 49 Q121 42 107 40 Q91 38 79 45 Z"/>
+              <path d="M88 29 Q98 24 108 26" fill="none" stroke="#81cbc0" stroke-width="1.2"/>
+            </g>
+          </g>
+          <g id="goose-near-wing">
+            <path fill="#f8faf6" d="M129 151 C150 134 186 141 220 148 Q230 151 222 158 L203 162 Q219 165 208 172 L189 176 Q201 180 190 185 Q175 195 153 185 Q131 177 129 165"/>
+            <g transform="translate(163 159) rotate(8)">
+              <path fill="#faf9f2" stroke="#244575" stroke-width="1.7" d="M-15 -8 Q0 -15 15 -8 Q14 9 0 17 Q-14 9 -15 -8 Z"/>
+              <text x="0" y="-4" text-anchor="middle" fill="#9e2735" stroke="none" font-family="sans-serif" font-size="4.5" font-weight="900">PARAMEDIC</text>
+              <path d="M0 -1 V12 M-5.6 2.3 L5.6 8.7 M5.6 2.3 L-5.6 8.7" fill="none" stroke="#244575" stroke-width="2.7" stroke-linecap="butt"/>
+              <path d="M0 1 V10 M1.4 2.2 Q-2 3.3 -.3 5.1 Q2 6.3 0 7.6" fill="none" stroke="#fff" stroke-width=".65"/>
+            </g>
+          </g>
+          <path id="goose-honk-lines" d="M61 26 Q50 22 40 23 M67 17 Q59 8 49 5 M77 15 Q75 7 71 3" fill="none" stroke="#f4c675"/>
+        </g>
+        <g aria-hidden="true">
+          <ellipse cx="65" cy="225" rx="43" ry="11" fill="#101923" opacity=".55"/>
+          <g transform="translate(55 232) scale(1 .68) rotate(-31) scale(.34) translate(-130 -145)" fill="none" stroke="#202935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#lx-mac-handle"/>
+            <rect x="122" y="129" width="17" height="10" rx="2" fill="url(#lx-steel)" stroke="#c8d7de"/>
+            <use href="#lx-mac-hinge"/>
+            <circle cx="127" cy="148" r="3.5" fill="#344c5b" stroke="#d7e0e3"/>
+            <use href="#lx-male-mac"/>
+          </g>
+          <path d="M110 251 Q132 256 154 252 T202 243" fill="none" stroke="#101923" stroke-width="9" stroke-linecap="round" opacity=".55"/>
+          <path d="M110 248 C135 255 160 250 198 239" fill="none" stroke="#253d4b" stroke-width="7" stroke-linecap="round"/>
+          <path d="M110 248 C135 255 160 250 198 239" fill="none" stroke="#afcacf" stroke-width="4.8" stroke-linecap="round"/>
+          <path d="M113 247 Q145 253 184 242" fill="none" stroke="#ecf3e9" stroke-width="1" stroke-linecap="round"/>
+          <path d="M130 249 L130 252 M138 249 L138 253 M146 249 L146 252 M154 248 L154 251" stroke="#42636c" stroke-width="1"/>
+          <path d="M111 245 L101 243 L99 249 L109 252 Z" fill="#8fa7b8" stroke="#263c4a" stroke-width="1.3" stroke-linejoin="round"/>
+          <ellipse cx="184" cy="243" rx="7.5" ry="4.5" transform="rotate(-16 184 243)" fill="#b4d3d3" fill-opacity=".68" stroke="#698e94" stroke-width="1"/>
+          <path d="M193 240 L200 237 L198 242 Z" fill="#d4e6e3" stroke="#52747d" stroke-width=".8"/>
+          <path d="M174 244 Q177 240 181 241 Q185 241 186 238 Q190 238 191 241 Q194 242 197 241 Q200 243 198 245 Q191 244 187 248 Q183 251 178 248 Q173 248 174 244 Z" fill="#a79550"/>
+          <path d="M178 244 L181 243 M188 244 L191 243" stroke="#d3bc76" stroke-width="1.2" stroke-linecap="round"/>
+          <g fill="#a79550"><ellipse cx="173" cy="251" rx="2.4" ry="1.4"/><ellipse cx="200" cy="248" rx="2.1" ry="1.2"/><circle cx="194" cy="251" r="1.2"/></g>
+        </g>
+      </svg>
     </div>
     <!-- Precordial thump — Thor's hammer animation overlay -->
     <div id="thump-overlay" aria-hidden="true">
@@ -2286,16 +2370,71 @@
       <!-- Match the overhead chest model used for the CPR animation so lead
            landmarks stay consistent across resuscitation procedures. -->
       <svg id="ekg-svg" viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <use href="#procedure-torso"/>
+        <g class="patient-scene">
+          <g id="ekg-front" class="ekg-face">
+            <use href="#procedure-torso"/>
+            <g class="ekg-orientation"><text x="41" y="39">R</text><text x="179" y="39">L</text></g>
+            <g data-lead="V1">
+              <g class="ekg-lead" style="--i:0">
+                <circle r="6.5" fill="#d63a3a"/><text y="3">V1</text>
+              </g>
+            </g>
+            <g data-lead="V2">
+              <g class="ekg-lead" style="--i:1">
+                <circle r="6.5" fill="#e6c12e"/><text y="3">V2</text>
+              </g>
+            </g>
+            <g data-lead="V3">
+              <g class="ekg-lead" style="--i:2">
+                <circle r="6.5" fill="#2fa14e"/><text y="3">V3</text>
+              </g>
+            </g>
+            <g data-lead="V4">
+              <g class="ekg-lead" style="--i:3">
+                <circle r="6.5" fill="#2f6dd0"/><text y="3">V4</text>
+              </g>
+            </g>
+            <g data-lead="V5">
+              <g class="ekg-lead" style="--i:4">
+                <circle r="6.5" fill="#8b5a2b"/><text y="3">V5</text>
+              </g>
+            </g>
+            <g data-lead="V6">
+              <g class="ekg-lead" style="--i:5">
+                <circle r="6.5" fill="#9333a8"/><text y="3">V6</text>
+              </g>
+            </g>
+          </g>
+          <g id="ekg-back" class="ekg-face">
+            <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <use href="#torso-outline"/>
+              <path class="torso-adult-male" d="M57 111 C59 136 66 149 65 174 Q62 198 64 216 M163 111 C161 136 154 149 155 174 Q158 198 156 216"/>
+              <path class="torso-adult-female" d="M58 111 C61 137 73 150 70 174 Q63 200 64 216 M162 111 C159 137 147 150 150 174 Q157 200 156 216"/>
+              <path class="torso-child" d="M61 111 Q63 137 70 157 Q65 184 67 211 M159 111 Q157 137 150 157 Q155 184 153 211"/>
+              <path class="torso-baby" d="M62 113 Q58 145 68 173 Q72 195 70 213 M158 113 Q162 145 152 173 Q148 195 150 213"/>
+              <path d="M110 32 Q108 69 110 108 T110 191" stroke-width="1.4" opacity=".45"/>
+              <path d="M65 58 Q79 49 98 63 Q96 89 77 117 Q68 101 65 78
+                M155 58 Q141 49 122 63 Q124 89 143 117 Q152 101 155 78" stroke-width="1.5" opacity=".6"/>
+              <path d="M68 145 Q84 154 96 153 M152 145 Q136 154 124 153" stroke-width="1.1" opacity=".35"/>
+            </g>
+            <g class="ekg-orientation"><text x="41" y="39">L</text><text x="179" y="39">R</text></g>
+            <g data-lead="V7">
+              <g class="ekg-lead" style="--i:0">
+                <circle r="6.5" fill="#2f6dd0"/><text y="3">V7</text>
+              </g>
+            </g>
+            <g data-lead="V8" transform="translate(77 117)">
+              <g class="ekg-lead" style="--i:1">
+                <circle r="6.5" fill="#8b5a2b"/><text y="3">V8</text>
+              </g>
+            </g>
+            <g data-lead="V9" transform="translate(99 120)">
+              <g class="ekg-lead" style="--i:2">
+                <circle r="6.5" fill="#9333a8"/><text y="3">V9</text>
+              </g>
+            </g>
+          </g>
         </g>
-        <!-- Precordial leads pop on in order V1→V6 -->
-        <g class="ekg-lead" style="--i:0"><circle cx="101" cy="96"  r="10" fill="#d63a3a"/><text x="101" y="99.5">V1</text></g>
-        <g class="ekg-lead" style="--i:1"><circle cx="119" cy="96"  r="10" fill="#e6c12e"/><text x="119" y="99.5">V2</text></g>
-        <g class="ekg-lead" style="--i:2"><circle cx="127" cy="109" r="10" fill="#2fa14e"/><text x="127" y="112.5">V3</text></g>
-        <g class="ekg-lead" style="--i:3"><circle cx="136" cy="123" r="10" fill="#2f6dd0"/><text x="136" y="126.5">V4</text></g>
-        <g class="ekg-lead" style="--i:4"><circle cx="157" cy="121" r="10" fill="#8b5a2b"/><text x="157" y="124.5">V5</text></g>
-        <g class="ekg-lead" style="--i:5"><circle cx="174" cy="111" r="10" fill="#9333a8"/><text x="174" y="114.5">V6</text></g>
       </svg>
       <svg class="outcome-mark" viewBox="0 0 44 44" aria-hidden="true">
         <path class="om-check" d="M7 22 L18 33 L37 10" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
@@ -2731,7 +2870,7 @@
   </dialog>
   <script src="monitor.js?v=5"></script>
   <script src="airway-scenes.js?v=3"></script>
-  <script src="app.js?v=122"></script>
+  <script src="app.js?v=128"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

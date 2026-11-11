@@ -15,10 +15,11 @@ const { REGIONS } = require('../../data/regions');
 const { DIFFICULTY_POOL } = require('../../data/config');
 const { PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed } = require('../../engine/roller');
 const { detectAllProcedures } = require('../../engine/dice');
+const { SHOCK_PROC_IDS, resolveShock } = require('../../engine/shock');
 const { hasCardiacMonitor, unavailableProcedure } = require('../../engine/equipment');
 const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
 
-const { operationsFor } = require('../../engine/operations');
+const { operationsFor, operationError } = require('../../engine/operations');
 const { currentPlayer } = require('./auth');
 const { recordScenarioStarted, recordScenarioCompleted, recordDebriefGenerated, recordGloveboxSorted, publicPlayer } = require('../playerStore');
 const { createGlovebox, gloveboxView, sortItem, CALL_XP } = require('../../engine/glovebox');
@@ -519,7 +520,7 @@ router.post('/:id/turn', async (req, res) => {
   const session = ownedSession(req, res);
   if (!session) return;
 
-  const { message, report_mode, skip_mode, proc_allow, proc_deny, procs_resolved, operation_id, ecg_ink } = req.body;
+  const { message, report_mode, skip_mode, proc_allow, proc_deny, procs_resolved, operation_id, ecg_ink, shock_interactive, shock_sync } = req.body;
   if (!validOperationId(operation_id)) return res.status(400).json({ error: 'invalid_operation_id', message: 'A unique operation_id is required.' });
   if (!message || typeof message !== 'string' || !message.trim() || message.length > 8000) {
     return res.status(400).json({ error: 'invalid_input', message: '`message` must contain 1–8000 characters.' });
@@ -571,14 +572,45 @@ router.post('/:id/turn', async (req, res) => {
   }
 
   try {
-    const payload = await operationsFor(session).run(operation_id, JSON.stringify({
+    const queue = operationsFor(session);
+    const turnRequest = {
       message: message.trim(), report_mode: report_mode === true, skipMode,
       proc_allow: proc_allow || [], proc_deny: proc_deny || [], ecg_ink,
+    };
+    const overrides = {
+      allow: Array.isArray(proc_allow) ? proc_allow : [],
+      deny: Array.isArray(proc_deny) ? proc_deny : [],
+    };
+    const shockKey = `shock:${operation_id}`;
+    const prepareFingerprint = JSON.stringify(turnRequest);
+    if (shock_interactive === true && shock_sync === undefined && !skipMode && !turnRequest.report_mode
+        && detectAllProcedures(turnRequest.message).some(e => SHOCK_PROC_IDS.has(e.proc.id) && !e.precharge)) {
+      const prepared = await queue.run(shockKey, prepareFingerprint, () => ({
+        rolls: session.prepareShocks(turnRequest.message, overrides), turnCount: session.turns.length,
+        moving: session.moving, patient_focus: session.patientFocus, patients: session.patientRecords,
+      }));
+      if (prepared.rolls.length) {
+        persistSession(req.params.id, session);
+        return res.json({ needs_shock: prepared });
+      }
+    }
+    const payload = await queue.run(operation_id, JSON.stringify({
+      ...turnRequest, ...(shock_sync === undefined ? {} : { shock_sync }),
     }), async signal => {
+      const preparation = queue.entries.get(shockKey);
+      const prepared = preparation?.result;
+      let shockRolls;
+      if (shock_sync !== undefined || prepared?.rolls.length) {
+        if (!prepared || preparation.fingerprint !== prepareFingerprint || prepared.turnCount !== session.turns.length
+            || !Array.isArray(shock_sync) || shock_sync.length !== prepared.rolls.length
+            || !shock_sync.every(value => typeof value === 'boolean')) {
+          throw operationError('shock_not_prepared', 'This shock order is no longer pending. Submit it again.');
+        }
+        shockRolls = prepared.rolls.map((roll, i) => resolveShock(roll, shock_sync[i]));
+      }
       const result = await session.send(message.trim(), report_mode === true, skipMode, {
-        allow: Array.isArray(proc_allow) ? proc_allow : [],
-        deny:  Array.isArray(proc_deny)  ? proc_deny  : [],
-      }, { signal, ecgInk:ecg_ink });
+        ...overrides,
+      }, { signal, ecgInk:ecg_ink, shockRolls });
 
       return {
         operation_id,

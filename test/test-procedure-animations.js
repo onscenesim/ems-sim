@@ -11,11 +11,11 @@ const scenes = source.slice(source.indexOf('const PROCEDURE_TIMING'), source.ind
 function fixture({ reduced = false, missing = false } = {}) {
   let now = 0;
   const timers = [], played = [], elements = new Map();
-  for (const scene of ['cpr', 'bvm', 'lucas', 'scalpel', 'laryngoscope', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib']) {
+  for (const scene of ['cpr', 'bvm', 'lucas', 'scalpel', 'laryngoscope', 'goose', 'npa', 'obstruction', 'sga', 'opa', 'suction', 'ncd', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'defib', 'ekg']) {
     for (const suffix of ['overlay', 'label', 'header']) {
       const classes = new Set(), properties = {}, attributes = {};
       elements.set(`${scene}-${suffix}`, {
-        textContent: '', offsetWidth: 100, properties, attributes,
+        textContent: '', offsetWidth: 100, properties, attributes, querySelectorAll: () => [],
         setAttribute: (key, value) => { attributes[key] = value; },
         set className(value) { classes.clear(); value.split(' ').filter(Boolean).forEach(c => classes.add(c)); },
         classList: { add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c) },
@@ -90,7 +90,7 @@ test('airway pediatric profiles use the loading age boundaries and share one inf
   }
 });
 
-test('resuscitation scenes share patient profiles, with child artwork as the infant LUCAS fallback', () => {
+test('chest scenes share patient profiles, with child artwork as the infant LUCAS fallback', () => {
   const f = fixture();
   f.context.window.TransportPatient = transportPatient;
   for (const [patient, profile] of [
@@ -99,7 +99,7 @@ test('resuscitation scenes share patient profiles, with child artwork as the inf
     [{age:2,sex:'male'}, 'baby'], [{age:35,sex:'male'}, 'male'], [{}, 'male'],
   ]) {
     f.context.configureAirwayPatient(patient);
-    for (const id of ['cpr', 'bvm', 'lucas', 'chest_seal', 'defib', 'pacing']) {
+    for (const id of ['cpr', 'bvm', 'lucas', 'chest_seal', 'defib', 'pacing', 'ekg']) {
       const expected = id === 'lucas' && profile === 'baby' ? 'child-male' : profile;
       assert.equal(f.elements.get(`${id}-overlay`).attributes['data-patient-profile'], expected, id);
       assert.equal(f.elements.get(`${id}-overlay`).attributes['data-airway-profile'], expected, id);
@@ -117,10 +117,12 @@ test('transport uses the latest focused patient, retains saved demographics, and
   assert.equal(transportPatient.variantFor(transportPatient.patientFor({ patient_focus: { id: 'patient_3' } }, previous)), 'adult');
 });
 
-test('12-lead EKG reuses the CPR torso model with all six precordial leads', () => {
+test('ECG scenes reuse the CPR torso and include the standard and posterior chest leads', () => {
   const ekg = html.slice(html.indexOf('<div id="ekg-overlay"'), html.indexOf('<!-- OPA', html.indexOf('<div id="ekg-overlay"')));
   assert.match(ekg, /<use href="#procedure-torso"\/>/);
-  assert.equal((ekg.match(/class="ekg-lead"/g) || []).length, 6);
+  const [front, back] = ekg.split('id="ekg-back"');
+  assert.deepEqual([...front.matchAll(/data-lead="([^"]+)"/g)].map(m => m[1]), ['V1', 'V2', 'V3', 'V4', 'V5', 'V6']);
+  assert.deepEqual([...back.matchAll(/data-lead="([^"]+)"/g)].map(m => m[1]), ['V7', 'V8', 'V9']);
   assert.doesNotMatch(ekg, /Bare torso|trapezius|costal margin hint/);
 });
 
@@ -226,9 +228,11 @@ test('the real roll loop defers only scene-owned sounds and waits for animations
 });
 
 
-test('intubation and RSI use the same anatomical scene with distinct outcome captions', async () => {
+test('the goose follows esophageal placement after the intubation or RSI scene fades', async () => {
   const f = fixture();
-  vm.runInContext(source.slice(source.indexOf('function animateLaryngoscope('), source.indexOf('function animateDepart(')), f.context);
+  f.context.loadSoundBuffer = () => {};
+  vm.runInContext(source.slice(source.indexOf('async function animateLaryngoscope('), source.indexOf('function animateDepart(')), f.context);
+  const goose = f.elements.get('goose-overlay');
   for (const procedure of ['intubation', 'rsi']) {
     for (const [outcome, caption] of [['SUCCESS', 'TUBE THROUGH THE CORDS'], ['MARGINAL', 'TRACHEAL PLACEMENT'], ['FAILURE', 'TUBE WITHDRAWN'], ['COMPLICATION', 'ESOPHAGEAL PLACEMENT']]) {
       const promise = f.context.animateLaryngoscope(procedure, outcome);
@@ -237,11 +241,24 @@ test('intubation and RSI use the same anatomical scene with distinct outcome cap
       f.advance(f.context.timing.laryngoscope.sound);
       assert.equal(f.played.at(-1).sound, 'intubation');
       assert.equal(f.elements.get('laryngoscope-overlay').classList.contains('visible'), true);
-      f.advance(f.context.timing.laryngoscope.hold - f.context.timing.laryngoscope.sound + 220); await promise;
+      f.advance(f.context.timing.laryngoscope.hold - f.context.timing.laryngoscope.sound + 219);
+      assert.equal(goose.classList.contains('visible'), false);
+      f.advance(1);
+      await Promise.resolve();
       assert.equal(f.elements.get('laryngoscope-overlay').classList.contains('visible'), false);
+      assert.equal(goose.classList.contains('visible'), outcome === 'COMPLICATION');
+      if (outcome === 'COMPLICATION') {
+        f.advance(f.context.timing.goose.sound - 1);
+        assert.equal(f.played.at(-1).sound, 'intubation');
+        f.advance(1);
+        assert.equal(f.played.at(-1).sound, 'goose_honk');
+        f.advance(f.context.timing.goose.hold - f.context.timing.goose.sound + 220);
+      }
+      await promise;
+      assert.equal(goose.classList.contains('visible'), false);
     }
   }
-  assert.equal(f.played.length, 8);
+  assert.equal(f.played.filter(cue => cue.sound === 'goose_honk').length, 2);
 });
 
 
@@ -374,7 +391,65 @@ test('cardioversion and defibrillation use identical animation clocks and sound,
   }
 });
 
-test('real fluid, blood and oxygen detection reaches the correct scene through the production roll loop', async () => {
+test('interactive shock waits at full charge, stops the ready tone, and distinguishes missed SYNC', async () => {
+  const f = fixture();
+  const makeControl = () => ({
+    disabled: false, attributes: {}, focus() {},
+    setAttribute(key, value) { this.attributes[key] = value; },
+  });
+  for (const suffix of ['shock', 'sync', 'charge', 'charge-status', 'current-energy']) {
+    f.elements.set(`defib-${suffix}`, makeControl());
+  }
+  const overlay = f.elements.get('defib-overlay');
+  overlay.contains = () => false;
+  const shock = f.elements.get('defib-shock');
+  const sync = f.elements.get('defib-sync');
+  const label = f.elements.get('defib-label');
+  const cues = [];
+  f.context.performance = { now: () => 0 };
+  f.context.soundEnabled = true;
+  f.context.playSound = (name, options) => {
+    const voice = { name, options, paused: false, pause() { this.paused = true; } };
+    cues.push(voice);
+    return voice;
+  };
+  f.context.setInterval = (fn, delay) => {
+    const interval = {};
+    const tick = () => { interval.timer = f.context.setTimeout(tick, delay); fn(); };
+    interval.timer = f.context.setTimeout(tick, delay);
+    return interval;
+  };
+  f.context.clearInterval = interval => f.context.clearTimeout(interval?.timer);
+  vm.runInContext(source.slice(source.indexOf('function animateDefib('), source.indexOf('function animateThorsHammer(')), f.context);
+  for (const [procedure, enableSync] of [['defibrillation', false], ['cardioversion', false], ['cardioversion', true]]) {
+    cues.length = 0;
+    const done = f.context.animateDefib(procedure, 'SUCCESS', 150);
+    assert.equal(shock.disabled, true);
+    assert.equal(sync.disabled, procedure === 'defibrillation');
+    shock.onclick();
+    f.advance(18000);
+    assert.equal(shock.disabled, false);
+    assert.equal(overlay.classList.contains('shock-wait'), true);
+    assert.equal(f.elements.get('defib-charge').value, 150);
+    const [readyTone, ...extraTones] = cues.filter(cue => cue.name === 'defib_ready');
+    assert.equal(readyTone.options.loop, true);
+    assert.equal(extraTones.length, 0, 'one continuous source plays throughout the wait');
+    if (enableSync) sync.onclick();
+    shock.onclick();
+    const cueCount = cues.length;
+    assert.equal(cues.at(-1).name, 'defib_outside');
+    assert.equal(cues.at(-2).paused, true);
+    assert.equal(overlay.classList.contains('shock-wait'), false);
+    if (procedure === 'cardioversion' && !enableSync) assert.match(label.textContent, /AUTOMATIC d20 = 1/);
+    else assert.equal(label.textContent, 'SUCCESS');
+    f.advance(10000);
+    assert.equal(await done, enableSync);
+    assert.equal(cues.length, cueCount);
+    assert.equal(f.timers.length, 0);
+  }
+});
+
+test('fluid, blood, oxygen and ECG orders reach their scenes through the production roll loop', async () => {
   const { detectWithConfirmation } = require('../src/engine/dice');
   const f=fixture(),events=[];
   f.elements.set('infusion-overlay',{dataset:{}});
@@ -383,7 +458,7 @@ test('real fluid, blood and oxygen detection reaches the correct scene through t
     console:{log(){}},
     animateDiceRoll:async id=>events.push(['dice',id]),
     animateRouteMedication:async(id,outcome)=>events.push(['scene',id,outcome]),
-    animateTwelveLead:async outcome=>events.push(['scene','ecg',outcome]),
+    animateTwelveLead:async (outcome,procedure)=>events.push(['scene',procedure,outcome]),
     animateMedPush:async()=>events.push(['wrong-scene']),
     showDrugPanel:()=>{},
   });
@@ -391,7 +466,7 @@ test('real fluid, blood and oxygen detection reaches the correct scene through t
   const start=source.indexOf('    for (const r of (data.rolls || [])) {');
   const end=source.indexOf('    for (const r of (data.rolls || [])) printRoll',start);
   vm.runInContext('async function runOrders(data) {\n'+source.slice(start,end)+'\n}',f.context);
-  for(const [order,scene,kind] of [['Give LR IV','infusion','fluid'],['Transfuse FFP','infusion','blood'],['Give oxygen via NRB','oxygen',null],['Once nebulizer is finished, switch to nonrebreather at 10','oxygen',null],['Obtain posterior ECG','ecg',null],['Obtain right sided ECG','ecg',null],['Obtain V4R','ecg',null]]){
+  for(const [order,scene,kind] of [['Give LR IV','infusion','fluid'],['Transfuse FFP','infusion','blood'],['Give oxygen via NRB','oxygen',null],['Once nebulizer is finished, switch to nonrebreather at 10','oxygen',null],['Obtain posterior ECG','posterior_ecg',null],['Obtain right sided ECG','right_sided_ecg',null],['Obtain V4R','v4r_ecg',null]]){
     events.length=0;
     const detected=detectWithConfirmation(order);
     await f.context.runOrders(detected);
@@ -409,7 +484,7 @@ test('legacy and route scenes align their sound to the action or result instead 
   for(const [fn,id,delay,proc] of [['animateIV','iv',100,'peripheral_iv'],['animateTwelveLead','ekg',1500,'twelve_lead'],['animateDrill','io',0,'io_access'],['animateCPR','cpr',0,'cpr']]){
     const f=fixture();
     for(const suffix of ['overlay','label']) f.elements.set(`${id}-${suffix}`,f.elements.get(`sga-${suffix}`));
-    vm.runInContext(source.match(new RegExp('function '+fn+'\\(outcome\\) \\{[\\s\\S]*?\\n\\}'))[0],f.context);
+    vm.runInContext(source.match(new RegExp('function '+fn+'\\(outcome[^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0],f.context);
     const done=f.context[fn]('SUCCESS');
     assert.equal(f.played.length,0);
     if(delay) {f.advance(delay-1);assert.equal(f.played.length,0);f.advance(1);}else f.advance(0);

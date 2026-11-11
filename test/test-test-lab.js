@@ -16,7 +16,7 @@ function fixture(overrides={}) {
     performance:{now:()=>0}, PatientPrivacy:{start:()=>()=>{}},
     eightball:node(),eightballResponse:node(),terminal:node(),
     SCALPEL_PROCS:new Set(['cricothyrotomy','finger_thoracostomy','resuscitative_thoracotomy','perimortem_csection']),
-    soundEnabled:false,DRUG_CARDS:[],TwelveLead:require('../public/twelve-lead'),Event:class {},
+    soundEnabled:false,cancelActiveShock:null,DRUG_CARDS:[],TwelveLead:require('../public/twelve-lead'),Event:class {},
     clearTimeout,clearInterval,...overrides,
   });
   vm.runInContext(source.slice(source.indexOf('const SOUNDS ='),source.indexOf('// One gesture-unlocked')),context);
