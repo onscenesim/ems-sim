@@ -25,6 +25,12 @@ The persistent files are:
 - `completed_runs.json` — the most recent completed run logs
 - `<session-id>.json` — resumable scenario snapshots (pruned after 30 days)
 
+Debug transcripts include the run's most recent 250 structured server log
+entries, including model warnings, retries, and operation timings. The same
+JSON entries appear in Render's service logs; search for the `session_id` from
+the export to correlate them. Capture starts with new activity after deployment.
+It does not fetch past Render logs or include logs from other runs.
+
 ## Node runtime and dependency updates
 
 Use Node.js **24.22.1** for development and deployment, as pinned in

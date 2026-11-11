@@ -9,6 +9,7 @@ const { randomUUID } = require('node:crypto');
 
 const { createSession, getSession, restoreSession, deleteSession } = require('../sessionStore');
 const persistence = require('../persistence');
+const { getRunConsole, withRunConsole } = require('../runConsole');
 const { initialPatientRecords } = require('../../engine/patient-records');
 const { CREW } = require('../../data/crew');
 const { REGIONS } = require('../../data/regions');
@@ -94,6 +95,7 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     patientOutcome:       session.patientOutcome || null,
     learningReview: session.learningReview || null,
     operationResults:     operationsFor(session).snapshot(),
+    renderConsole:        getRunConsole(session),
     meta,
     crew,
   };
@@ -254,6 +256,7 @@ function persistSession(id, session) {
     debriefCredited: session.debriefCredited || false,
     glovebox: session.glovebox || null,
     operationResults: operationsFor(session).snapshot(),
+    renderConsole: getRunConsole(session),
   });
 }
 
@@ -431,7 +434,7 @@ router.post('/new', async (req, res) => {
     session.debriefCredited = false;
 
     // Fire the dispatch turn
-    const result = await session.send('begin');
+    const result = await withRunConsole(session, 'dispatch', () => session.send('begin'));
 
     const partnerRec = seed.custom_partner || crewRecord(seed.crew_partner);
     const captainRec = seed.custom_captain || crewRecord(seed.crew_captain);
@@ -596,7 +599,7 @@ router.post('/:id/turn', async (req, res) => {
     }
     const payload = await queue.run(operation_id, JSON.stringify({
       ...turnRequest, ...(shock_sync === undefined ? {} : { shock_sync }),
-    }), async signal => {
+    }), signal => withRunConsole(session, 'turn', async () => {
       const preparation = queue.entries.get(shockKey);
       const prepared = preparation?.result;
       let shockRolls;
@@ -638,7 +641,7 @@ router.post('/:id/turn', async (req, res) => {
         decompensating: session.seed.decompensation_clock !== null &&
                         session.sceneMinute >= session.seed.decompensation_clock,
       };
-    });
+    }));
     if (session.closed && session.playerId && !session.completionCredited) {
       recordScenarioCompleted(session.playerId, session.seed, req.params.id);
       session.completionCredited = true;
@@ -646,6 +649,7 @@ router.post('/:id/turn', async (req, res) => {
     persistSession(req.params.id, session);
     return res.json({ ...payload, ...(session.closed ? { completionXP: CALL_XP[session.seed.difficulty] || CALL_XP.NORMAL, progressScope: session.playerId ? 'player' : 'guest' } : {}) });
   } catch (err) {
+    persistence.update(req.params.id, { renderConsole: getRunConsole(session) });
     console.error('[scenario/turn]', err.message);
     return sendOperationError(res, err);
   }
@@ -669,7 +673,7 @@ router.post('/:id/debrief', async (req, res) => {
   }
 
   try {
-    const payload = await operationsFor(session).run(operation_id, 'debrief', async signal => {
+    const payload = await operationsFor(session).run(operation_id, 'debrief', signal => withRunConsole(session, 'debrief', async () => {
       await session.debrief({ signal });
       return {
         operation_id, debrief: reviewText(session),
@@ -677,7 +681,7 @@ router.post('/:id/debrief', async (req, res) => {
         learning: currentLearningReview(session),
         practice: { available: !!session.initialSeed, caseId: session.seed.case_id || null, randomSeed: session.seed.random_seed || null },
       };
-    });
+    }));
     if (session.playerId && !session.debriefCredited) {
       recordDebriefGenerated(session.playerId);
       session.debriefCredited = true;
@@ -686,6 +690,7 @@ router.post('/:id/debrief', async (req, res) => {
     persistence.markDebriefed(req.params.id);
     return res.json({ ...payload, comparison: runComparison(req, session) });
   } catch (err) {
+    persistence.update(req.params.id, { renderConsole: getRunConsole(session) });
     console.error('[scenario/debrief]', err.message);
     return sendOperationError(res, err);
   }
@@ -699,7 +704,7 @@ router.post('/:id/debrief', async (req, res) => {
 router.get('/:id/transcript', (req, res) => {
   const session = ownedSession(req, res);
   if (!session) return;
-  return res.json(session.getTranscriptData());
+  return res.json({ ...session.getTranscriptData(), renderConsole: getRunConsole(session) });
 });
 
 module.exports = router;

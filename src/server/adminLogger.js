@@ -3,6 +3,11 @@
 const fs = require('fs');
 const path = require('path');
 const { DATA_DIR } = require('./storagePath');
+const { writeRunConsole } = require('./runConsole');
+
+function logSummary(event, fields) {
+  if (!writeRunConsole(event, fields)) console.log(JSON.stringify({ event, ...fields }));
+}
 
 // ---------------------------------------------------------------------------
 // Durable run log backed by the configured data directory.
@@ -100,8 +105,7 @@ function logRun(sessionId, seed, messages) {
 
   // Write a one-line summary to stdout (captured by Render / Railway logs)
   const procEvents = (seed.events || []).filter(e => e.event_type === 'procedure' && e.outcome !== 'NO_ROLL');
-  console.log(JSON.stringify({
-    event:          'SCENARIO_COMPLETE',
+  logSummary('SCENARIO_COMPLETE', {
     session_id:     sessionId,
     scenario_id:    seed.scenario_id,
     category:       seed.category,
@@ -113,7 +117,7 @@ function logRun(sessionId, seed, messages) {
     rolls:          procEvents.length,
     complications:  procEvents.filter(e => e.outcome === 'COMPLICATION').length,
     timestamp:      run.logged_at,
-  }));
+  });
 }
 
 /**
@@ -124,11 +128,10 @@ function updateRunDebrief(sessionId, debriefText) {
   if (run) {
     run.debrief = debriefText;
     saveRuns();
-    console.log(JSON.stringify({
-      event:      'DEBRIEF_COMPLETE',
+    logSummary('DEBRIEF_COMPLETE', {
       session_id: sessionId,
       timestamp:  new Date().toISOString(),
-    }));
+    });
   }
 }
 

@@ -7,6 +7,33 @@ const { createRandom } = require('../src/engine/random');
 const { SCENARIO_POOLS } = require('../src/data/scenarios');
 const { catalog, prepareInstructor } = require('../src/engine/instructor');
 const { rollScenario } = require('../src/engine/roller');
+const { assembleSeedBlock } = require('../src/engine/assembler');
+
+test('five individually selectable vision cases add one ticket to each of medical and trauma', () => {
+  const seen = new Set();
+  for (const [category, count] of [['medical', 3], ['trauma', 2]]) {
+    const entries = SCENARIO_POOLS[category];
+    const variants = entries.filter(entry => entry.vision_emergency);
+    assert.equal(variants.length, count);
+    assert.equal(presentationGroups(entries).length,
+      presentationGroups(entries.filter(entry => !entry.vision_emergency)).length + 1);
+    for (const entry of variants) {
+      seen.add(entry.case_id);
+      const seed = rollScenario({
+        difficulty: 'BLACK_CLOUD', random_seed: 'vision-test',
+        instructor: prepareInstructor({ case_id: entry.case_id }),
+      });
+      assert.equal(seed.category, category);
+      assert.equal(seed.trajectory, 'stable');
+      assert.equal(seed.decompensation_clock, null);
+      assert.equal(seed.hint, entry.hint);
+      const prompt = assembleSeedBlock(seed);
+      assert.match(prompt, /BLACK CLOUD VISION SCENE/);
+      assert.doesNotMatch(prompt, /INEVITABLE DECLINE/);
+    }
+  }
+  assert.equal(seen.size, 5);
+});
 
 test('a family has one parent ticket independent of variant count; its second roll reaches every variant', () => {
   const cases = [

@@ -36,6 +36,7 @@ const SPECIFIC_EQUIPMENT = new Set([         // known brand/equipment names exem
   'yankauer', 'lucas', 'autopulse', 'ezio', 'fast1', 'king', 'igel',
   'lma', 'bvm', 'aed', 'narcan', 'epipen', 'zofran',
   'mainstem',
+  'canthotomy', 'cantholysis',
   // Hemorrhage-control equipment and the common spellings users type for it.
   'tourniquet', 'tourniqet', 'tournquet', 'torniket', 'tourniquite',
   'tourniket', 'torniquet', 'turniquet',
@@ -293,7 +294,7 @@ const INTERROG_BEFORE_IF_RE = /\b(?:ask(?:s|ed|ing)?|know|knows|knew|wonder(?:s|
 
 // Past-tense / reporting context words that indicate the player is describing
 // something already done rather than ordering it now.
-const PAST_CONTEXT_RE = /\b(gave|administered|was\s+given|had\s+received|received|already\s+(?:gave|given|pushed|administered|established|placed|started)|after\s+\d[\d.]*\s*(?:mg|ml|mcg|g|mEq)|was\s+(?:doing|performing|in|on)|had\s+(?:been|started)|were\s+(?:doing|performing|on)|had\s+CPR|did\s+CPR|performed\s+CPR|did\s+compressions|were\s+doing\s+compressions)\b/i;
+const PAST_CONTEXT_RE = /\b(gave|administered|was\s+given|had\s+received|received|already\s+(?:gave|given|pushed|administered|established|placed|started|performed)|after\s+\d[\d.]*\s*(?:mg|ml|mcg|g|mEq)|was\s+(?:doing|performing|in|on)|had\s+(?:been|started)|were\s+(?:doing|performing|on)|had\s+CPR|did\s+CPR|performed\s+CPR|did\s+compressions|were\s+doing\s+compressions)\b/i;
 
 /**
  * Returns true if the procedure match at matchStart is inside a sentence that
@@ -415,6 +416,9 @@ const NOUN_MENTION_KEYS = new Set([
   'advanced airway', 'definitive airway management', 'oral intubation',
   'orotracheal intubation', 'needle decompression', 'ncd', 'cardioversion',
   'defibrillation', 'cricothyrotomy', 'needle cricothyrotomy',
+  'lateral_canthotomy', 'lateral canthotomy with inferior cantholysis',
+  'lateral canthotomy and cantholysis', 'lateral canthotomy',
+  'canthotomy', 'inferior cantholysis', 'cantholysis', 'lcic',
 ]);
 const PERFORMANCE_VERB_RE = /\b(?:perform|proceed(?:ing)? with|attempt(?:ing)?|do(?:ing)?(?: the| an?)?|start(?:ing)?|begin(?:ning)?|go(?:ing)? (?:ahead|for)|carry out|execut\w+|intubate|tube|drop(?:ping)?|pass(?:ing)?|plac(?:e|ing)|deliver(?:ing)?|shock|cardiovert|defibrillate|decompress|cric|cut|drill|paralyze|induce|sedate and|push(?:ing)?|giv(?:e|ing)|administer(?:ing)?|now\b)\b/i;
 
@@ -519,6 +523,9 @@ function selectDC(proc, contextFlags = {}) {
       // DC 12 on scene or stationary.
       selectedDC = moving ? dcs[1] : dcs[0];
       break;
+    case 'lateral_canthotomy':
+      selectedDC = (contextFlags.canthotomy_moving ?? moving) ? dcs[1] : dcs[0];
+      break;
     case 'medication_push':
       selectedDC = dcs[0];
       break;
@@ -577,7 +584,7 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
   let dc = selectDC(proc, contextFlags);
   if (!dc) dc = proc.dc[0];
 
-  const penalty = proc.nat_one_only ? 0 : difficulty === 'BLACK_CLOUD' ? BLACK_CLOUD_DC_PENALTY
+  const penalty = (proc.nat_one_only || proc.fixed_dc) ? 0 : difficulty === 'BLACK_CLOUD' ? BLACK_CLOUD_DC_PENALTY
                 : difficulty === 'HARD'        ? HARD_MODE_DC_PENALTY
                 : 0;
   // BLACK_CLOUD: every roll is at DISADVANTAGE — roll twice, take the lower.
@@ -616,7 +623,8 @@ function rollProcedure(procedureOrId, contextFlags = {}, difficulty = 'NORMAL') 
   let roll, bothRolls;
   if (useDis) { const d2 = rollD20Disadvantage(); roll = d2.result; bothRolls = d2.both; }
   else        { roll = rollD20(); }
-  const outcome = proc.nat_one_only ? (roll === 1 ? 'COMPLICATION' : 'SUCCESS') : calcOutcome(roll, adjustedDC, difficulty);
+  const outcome = proc.nat_one_only ? (roll === 1 ? 'COMPLICATION' : 'SUCCESS')
+    : calcOutcome(roll, adjustedDC, proc.fixed_dc ? 'NORMAL' : difficulty);
 
   return {
     procedure_id: proc.id,

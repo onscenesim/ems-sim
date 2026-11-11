@@ -136,24 +136,33 @@ test('adult male i-gel preserves the exact original tongue anatomy without defor
  assert.ok(!fs.readFileSync(path.join(__dirname,'../public/airway-scenes.js'),'utf8').includes('sga-reference-epiglottis'),'do not add a separate epiglottis');
 });
 
-test('adult male cuff follows the pink outline with green exclusively inside the upper wedge',()=>{
+test('success profiles share a rounded cuff and a matching lumen clip',()=>{
+ const scope='#sga-overlay[data-refined-procedure][data-airway-profile].outcome-SUCCESS';
  const block=pediatric.split('/* BEGIN ADULT MALE IGEL REFERENCE */')[1];
- const rim=block.match(/#sga-seal \{d:path\('([^']+)'\);([^}]+)/);
- assert.ok(rim);assert.ok(rim[1].trim().endsWith('Z'),'green must be a filled region');
- assert.match(rim[2],/fill:var\(--igel-cuff-color\);/);assert.match(rim[2],/stroke:none;/);
- const a=(60*130+78*117)/(60*60+78*78),b=(60*117-78*130)/(60*60+78*78);
- const convert=d=>{const ns=numbers(d),ps=[];for(let i=0;i<ns.length;i+=2)ps.push([a*(ns[i]-156)-b*(ns[i+1]-120)+155,b*(ns[i]-156)+a*(ns[i+1]-120)+188]);return ps;};
- const cuff=convert(block.match(/#sga-bulb \{d:path\('([^']+)'/)[1]);
- for(const guide of [[235,280.5],[253,268],[310,269],[310,270.5],[277.75,290.625],[235,305.5]])assert.ok(Math.min(...cuff.map(p=>Math.hypot(p[0]-guide[0],p[1]-guide[1])))<.1,'cuff misses pink guide '+guide);
- for(const p of convert(rim[1]))assert.ok(p[1]<=280.5+(270.5-280.5)*(p[0]-235)/75+.001,'green spills onto the gray underside');
- const edge=block.match(/#sga-bulb-outline \{d:path\('([^']+)'\);([^}]+)/);
- assert.match(edge[2],/stroke:var\(--igel-spine\);/);
- assert.ok(!edge[1].trim().endsWith('Z'),'bright edge must not cross the interior chord');
- const underside=convert(edge[1]);
- assert.ok(Math.hypot(underside[0][0]-235,underside[0][1]-305.5)<.001,'blue border must join the posterior tube wall');
- assert.ok(Math.hypot(underside.at(-1)[0]-310,underside.at(-1)[1]-270.5)<.001,'blue border must reach the cuff tip');
- assert.ok(underside.some(p=>Math.hypot(p[0]-277.75,p[1]-290.625)<.1),'blue border must follow the curved underside');
- const upper=block.match(/#sga-seal-border \{display:inline;d:path\('([^']+)'/);assert.ok(upper);assert.ok(!upper[1].trim().endsWith('Z'),'upper outline must not close across the lower chord');
+ const ruleFor=selector=>{
+  const rule=block.split('\n').find(line=>line.startsWith(scope+' '+selector+' {'));
+  assert.ok(rule,selector);
+  return rule;
+ };
+ const points=d=>{
+  const coordinates=numbers(d);
+  return Array.from({length:coordinates.length/2},(_,i)=>coordinates.slice(2*i,2*i+2));
+ };
+ const pathFor=selector=>ruleFor(selector).match(/d:path\('([^']+)'\)/)[1];
+ const seal=points(pathFor('#sga-seal')),clip=points(pathFor('#sga-shell-clip path:first-child'));
+ assert.match(ruleFor('#sga-seal'),/fill:var\(--igel-cuff-color\);/);
+ assert.ok(pathFor('#sga-seal').endsWith('Z'),'the cuff must be a closed shape');
+ const upper=points(pathFor('#sga-seal-border')),underside=points(pathFor('#sga-bulb-outline'));
+ assert.ok(!pathFor('#sga-seal-border').endsWith('Z'),'the upper rim follows the outer edge only');
+ assert.match(ruleFor('#sga-bulb-outline'),/stroke:var\(--igel-spine\);/);
+ assert.deepEqual(upper.at(-1),underside.at(-1),'both rims must meet at the seated tip');
+ assert.deepEqual(seal.slice(0,upper.length),upper,'the upper rim must follow the cuff');
+ const seam=[seal[0],...seal.slice(upper.length-1).reverse()];
+ assert.deepEqual(seam,clip.slice(0,seam.length),'the lumen clip must follow the curved seam');
+ assert.deepEqual(clip.slice(seam.length),underside.slice(0,-1).reverse(),'the lumen clip must follow the posterior rim');
+ const [x,y]=seam[0],[tipX,tipY]=seam.at(-1);
+ const bulge=([px,py])=>((tipX-x)*(py-y)-(tipY-y)*(px-x))/Math.hypot(tipX-x,tipY-y);
+ assert.ok(Math.max(...seam.map(bulge))>3,'the cuff should bow out from the shaft-to-tip chord');
 });
 
 test('adult male hard palate stays fixed while only the posterior throat yields',()=>{

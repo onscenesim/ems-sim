@@ -280,10 +280,10 @@ function waitForSound(voice, event = 'ended') {
   });
 }
 const SURGICAL_PROCS = new Set(['cricothyrotomy', 'needle_decompression',
-  'finger_thoracostomy', 'resuscitative_thoracotomy', 'perimortem_csection']);
+  'finger_thoracostomy', 'resuscitative_thoracotomy', 'perimortem_csection', 'lateral_canthotomy']);
 // Subset that triggers the scalpel animation — excludes NCD (needle decompression)
 const SCALPEL_PROCS = new Set(['cricothyrotomy', 'finger_thoracostomy',
-  'resuscitative_thoracotomy', 'perimortem_csection']);
+  'resuscitative_thoracotomy', 'perimortem_csection', 'lateral_canthotomy']);
 // Triggers the laryngoscope animation with pass/fail outcome
 const OBSTRUCTION_PROCS = new Set(['foreign_body_removal', 'abdominal_thrusts']);
 const LARYNGOSCOPE_PROCS = new Set(['intubation', 'rsi']);
@@ -730,6 +730,12 @@ monitorInterpretToggle.addEventListener('change', () => {
   monitorAutoInterpret = monitorInterpretToggle.checked;
   localStorage.setItem('ems_monitor_auto_interpret', monitorAutoInterpret ? 'on' : 'off');
   ecgViewer.setAutoInterpret(monitorAutoInterpret);
+});
+
+const manualShockToggle = document.getElementById('manual-shock-toggle');
+manualShockToggle.checked = localStorage.getItem('ems_manual_shock') !== 'off';
+manualShockToggle.addEventListener('change', () => {
+  localStorage.setItem('ems_manual_shock', manualShockToggle.checked ? 'on' : 'off');
 });
 
 const briefingToggle = document.getElementById('briefing-toggle');
@@ -1349,7 +1355,8 @@ async function sendTurn(msg, opts = {}) {
   const skipMode = opts.skipMode || null;
   const isReport = opts.isReport !== undefined ? opts.isReport : (reportMode && !skipMode);
   const ecgInk=opts.ecgInk||window.EMSCosmetics?.ink()||'#283a57';
-  const retryOpts = { ...opts, ecgInk, isReport, operationId, resend: true };
+  const manualShock = opts.manualShock ?? (document.getElementById('manual-shock-toggle')?.checked !== false);
+  const retryOpts = { ...opts, ecgInk, isReport, operationId, manualShock, resend: true };
 
   if (!opts.resend) {
     addHistory(msg);
@@ -1371,6 +1378,7 @@ async function sendTurn(msg, opts = {}) {
       proc_allow: opts.procAllow || [],
       proc_deny: opts.procDeny || [],
       procs_resolved: !!opts.resolved,
+      // Both modes use the prepared shock's energy, roll, and device state.
       shock_interactive: true,
     };
     if (opts.shockSync) body.shock_sync = opts.shockSync;
@@ -1397,7 +1405,7 @@ async function sendTurn(msg, opts = {}) {
       body.shock_sync = [];
       for (const r of prepared.rolls) {
         await animateDiceRoll(r.procedure_id, r.roll, r.dc, r.outcome, r.target);
-        const sync = await animateDefib(r.procedure_id, r.outcome, r.shock_energy);
+        const sync = await animateDefib(r.procedure_id, r.outcome, r.shock_energy, 1, manualShock);
         if (sync === null) throw Object.assign(new Error('Shock cancelled.'), { code: 'operation_cancelled' });
         body.shock_sync.push(sync);
       }
@@ -2850,7 +2858,7 @@ function animateScalpel(procedureId, outcome) {
 }
 
 let cancelActiveShock = null;
-function animateDefib(procedureId, outcome, energy, playbackRate = 1) {
+function animateDefib(procedureId, outcome, energy, playbackRate = 1, manual = true) {
   // Still poses and old recordings use the same shock artwork on a fixed clock.
   if (energy == null) return animateProcedureScene('defib', procedureId, outcome);
   const overlay = document.getElementById('defib-overlay');
@@ -2863,6 +2871,7 @@ function animateDefib(procedureId, outcome, energy, playbackRate = 1) {
   if (!overlay || !syncButton || !shockButton || !charge || !status || !current || !label) return Promise.resolve(null);
   cancelActiveShock?.();
   const needsSync = procedureId === 'cardioversion';
+  let synchronized = !manual && needsSync;
   const CHARGE_MS = 2800;
   const RECOVERY_MS = 3800;
   const focusBefore = document.activeElement;
@@ -2876,16 +2885,15 @@ function animateDefib(procedureId, outcome, energy, playbackRate = 1) {
   charge.max = energy;
   charge.value = 0;
   current.textContent = '0 J';
-  syncButton.disabled = !needsSync;
-  syncButton.setAttribute('aria-pressed', 'false');
+  syncButton.disabled = !manual || !needsSync;
+  syncButton.setAttribute('aria-pressed', String(synchronized));
   shockButton.disabled = true;
   void overlay.offsetWidth;
   overlay.classList.add('visible');
-  if (needsSync) syncButton.focus();
+  if (manual && needsSync) syncButton.focus();
 
   return new Promise(resolve => {
     let readyTimer, recoveryTimer, fadeTimer, readyVoice, shockVoice;
-    let synchronized = false;
     const chargeVoice = playSound('defib_charge');
     const start = performance.now();
     const updateCharge = () => {
@@ -2900,9 +2908,13 @@ function animateDefib(procedureId, outcome, energy, playbackRate = 1) {
       charge.value = energy;
       current.textContent = `${energy} J`;
       status.textContent = `Charged to ${energy} J`;
+      chargeVoice?.pause();
+      if (!manual) {
+        discharge();
+        return;
+      }
       shockButton.disabled = false;
       if (document.activeElement !== syncButton) shockButton.focus();
-      chargeVoice?.pause();
       const keepReadyTone = () => {
         if (!soundEnabled || document.hidden || (readyVoice && !readyVoice.paused && !readyVoice.ended)) return;
         readyVoice = playSound('defib_ready', { loop: true });
@@ -2929,12 +2941,16 @@ function animateDefib(procedureId, outcome, energy, playbackRate = 1) {
       resolve(result);
     };
     cancelActiveShock = () => finish(null);
-    syncButton.onclick = () => {
-      synchronized = !synchronized;
-      syncButton.setAttribute('aria-pressed', String(synchronized));
-    };
-    shockButton.onclick = () => {
-      if (shockButton.disabled) return;
+    if (manual) {
+      syncButton.onclick = () => {
+        synchronized = !synchronized;
+        syncButton.setAttribute('aria-pressed', String(synchronized));
+      };
+      shockButton.onclick = () => {
+        if (!shockButton.disabled) discharge();
+      };
+    }
+    function discharge() {
       shockButton.disabled = syncButton.disabled = true;
       clearInterval(readyTimer);
       readyVoice?.pause();
@@ -2952,7 +2968,7 @@ function animateDefib(procedureId, outcome, energy, playbackRate = 1) {
         overlay.classList.add('is-fading');
         fadeTimer = setTimeout(() => finish(synchronized), PROCEDURE_FADE_MS);
       }, RECOVERY_MS);
-    };
+    }
   });
 }
 
@@ -3479,6 +3495,15 @@ function formatTranscript(t, backend, { debug = false } = {}) {
   // ── Backend data (ground truth + engine log) ─────────────────────────────
   if (debug) {
     if (backend?.debriefText) lines.push('DEVELOPER DEBRIEF', backend.debriefText, '');
+    const renderConsole = backend?.renderConsole;
+    lines.push('[RENDER CONSOLE — server diagnostics for this run]');
+    if (renderConsole?.entries?.length) {
+      if (renderConsole.dropped) lines.push(`(${renderConsole.dropped} older entries omitted)`);
+      for (const entry of renderConsole.entries) lines.push(JSON.stringify(entry));
+    } else {
+      lines.push('(No server console entries were captured for this export.)');
+    }
+    lines.push('');
     lines.push(...formatBackendSection(t, backend));
   }
 

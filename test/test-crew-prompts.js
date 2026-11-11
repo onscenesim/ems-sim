@@ -127,7 +127,12 @@ test('stroke and CPR mandates use the shared precedence instead of overriding se
         assert.match(prompt, /mechanical CPR only if the unit carries it/);
         assert.doesNotMatch(prompt, /must be prompted to obtain LAST KNOWN WELL|partner explicitly calling out unnecessary delay|encourage pulling over or deploying LUCAS|NOT prompt the student to call ahead under any circumstances/);
         if (category === 'neuro') assert.match(prompt, /follow ONLY the STROKE event permissions by difficulty/);
-        if (category === 'arrest') assert.match(prompt, /checkpoint\/rotation cue under the CPR event permission/);
+        if (category === 'arrest') {
+          assert.doesNotMatch(prompt, /I am available to help|PARTNER CLOCK CALLS/);
+          assert.match(prompt, /in transport, use the partner if in back, otherwise the captain if in back/);
+          assert.match(prompt, /announce the observed stoppage once as a fault alert, without a checkpoint call/);
+          assert.match(prompt, /No checkpoint cue while compressions are stopped; count the next cycle from actual resumption/);
+        }
       }
     }
   }

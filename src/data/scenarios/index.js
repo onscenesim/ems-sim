@@ -15,6 +15,7 @@ const { CURVEBALLS } = require('./curveballs');
 const { FREQUENT_CALLERS } = require('./frequent-callers');
 const { LOW_ACUITY_CALLS } = require('./low-acuity');
 const { applyToxicologyGroups } = require('./toxicology-groups');
+const { VISION_EMERGENCIES } = require('./vision-emergencies');
 
 const SCENARIO_POOLS = {
   cardiac:     CARDIAC,
@@ -35,6 +36,14 @@ for (const [category, entries] of Object.entries(FREQUENT_CALLERS)) {
   SCENARIO_POOLS[category].push(...entries);
 }
 for (const entry of LOW_ACUITY_CALLS) SCENARIO_POOLS[entry.category].push(entry);
+for (const [category, entries] of Object.entries(VISION_EMERGENCIES)) {
+  SCENARIO_POOLS[category].push(...entries.map(entry => ({
+    ...entry,
+    selection_group: `vision_${category}`,
+    vision_emergency: true,
+    trajectory_override: 'stable',
+  })));
+}
 
 applyToxicologyGroups(SCENARIO_POOLS.toxicology);
 

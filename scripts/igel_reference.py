@@ -1,4 +1,4 @@
-"""Adult male success: a rigid mask fed through one throat bend.
+"""Successful i-gel placement: a rigid mask fed through one throat bend.
 
 All measurements use the reviewed anatomy's SVG frame. The shaft has fixed
 material length: a straight proximal segment feeds a single circular bend.
@@ -16,12 +16,13 @@ SEATED_TIP = np.array([308.0437472546, 307.0662023187])
 SEATED_ANGLE = 21.
 ENTRY_X = 155.5
 HALF_WIDTH = 12.5
-# Trace the pink outline in the cuff's rigid frame. The first tangent is the
-# shaft's exact tangent; there is no raised heel or separate cap on the spine.
-FRONT = np.array([[235., 280.5], [247., 280.5], [250., 273.5], [253., 268.]])
-SPINE = np.array([[253., 268.], [268., 269.], [287., 270.8], [310., 269.]])
-BACK = np.array([[235., 305.5], [266., 298.], [293., 285.], [310., 270.5]])
-NOSE = np.array([SPINE[-1], [311., 269.1], [311., 270.1], BACK[-1]])
+# The rounded cuff begins along the shaft tangent and ends at the seated tip.
+FRONT = np.array([[235., 280.5], [247., 280.5], [249., 266.5], [254., 266.5]])
+SPINE = np.array([FRONT[-1], [266., 266.5], [287., 264.3], [310., 266.6]])
+NOSE = np.array([SPINE[-1], [312., 266.8], [312., 269.3], TIP])
+BACK = np.array([[235., 305.5], [266., 298.], [293., 285.], TIP])
+SEAL_RETURN = np.array([FRONT[0], [260., 280.5], [285., 289.], TIP])
+
 
 
 def smooth(t):
@@ -104,44 +105,22 @@ def build(root):
     xy = lambda p: ' '.join(f'{v:.4f}' for v in ref(p))
     poly = lambda ps: 'M' + ' L'.join(xy(p) for p in ps) + ' Z'
     anatomy = lambda ps: 'M' + ' L'.join(' '.join(f'{v:.4f}' for v in p) for p in ps)
-    front = [bezier(FRONT, t) for t in np.linspace(0, 1, 41)] + [bezier(SPINE, t) for t in np.linspace(0, 1, 41)[1:]]
+    front = (
+        [bezier(FRONT, t) for t in np.linspace(0, 1, 41)]
+        + [bezier(SPINE, t) for t in np.linspace(0, 1, 41)[1:]]
+        + [bezier(NOSE, t) for t in np.linspace(0, 1, 17)[1:]]
+    )
     back = [back_at(t) for t in np.linspace(0, 1, 81)]
-    cap = [bezier(NOSE, t) for t in np.linspace(0, 1, 17)[1:-1]]
-    bulb = poly(front + cap + back[::-1])
-    # The latest blue triangle bounds the upper wedge exclusively. Its inner
-    # edge is the straight chord from the shaft's top to the tapered tip.
-    # The shaped underside of the cuff stays gray.
-    green = front + cap + [BACK[-1]]
-    # Continue the posterior tube wall along the cuff's underside. The user's
-    # blue mark follows this lower contour, not the rising anterior shoulder.
+    lower_edge = [bezier(SEAL_RETURN, t) for t in np.linspace(0, 1, 81)]
+    green = front + lower_edge[-2:0:-1]
+    bulb = poly(front + back[-2::-1])
     blue_edge = poly(back).removesuffix(' Z')
-    green_edge = poly(front + cap + [BACK[-1]]).removesuffix(' Z')
-    # Clip the fill to the straight blue chord, including the tiny tangent
-    # overlap where the unbroken spine first enters the wedge.
-    signed = lambda p: p[1] - (FRONT[0,1] + (TIP[1]-FRONT[0,1])*(p[0]-FRONT[0,0])/(TIP[0]-FRONT[0,0]))
-    clipped = []
-    for previous, current in zip(green[-1:] + green[:-1], green):
-        vp, vc = signed(previous), signed(current)
-        if (vp <= 0) != (vc <= 0):
-            clipped.append(np.asarray(previous) + (np.asarray(current)-previous)*vp/(vp-vc))
-        if vc <= 0:clipped.append(current)
-    green = clipped
-    green_path = poly(green)
-    green_edge = poly(front + cap + [BACK[-1]]).removesuffix(' Z')
+    green_edge = poly(front).removesuffix(' Z')
+    # The lumen and gastric channel are drawn above the cuff. Clip both to
+    # the gray shell so the curved seam and green fill remain visible.
+    lumen_clip = poly(lower_edge + back[-2::-1])
     to_world = lambda q: END_NECK + rotation(SEATED_ANGLE) @ (np.asarray(q) - NECK)
     channel = [NECK + [14.,0.], NECK + rotation(-SEATED_ANGLE) @ (np.array([280.,290.])-END_NECK), NECK + rotation(-SEATED_ANGLE) @ (np.array([292.,282.])-END_NECK)]
-    # End the gastric channel exactly at the gray/green boundary. Subdivide
-    # the rigid channel cubic there, so no line continues through the cuff.
-    gastric_curve=np.array([NECK]+channel)
-    low,high=0.,1.
-    for _ in range(32):
-        middle=(low+high)/2
-        if signed(bezier(gastric_curve,middle))>0:low=middle
-        else:high=middle
-    cut=(low+high)/2
-    a1=(1-cut)*gastric_curve[:-1]+cut*gastric_curve[1:]
-    a2=(1-cut)*a1[:-1]+cut*a1[1:]
-    gastric_end=[a1[0],a2[0],(1-cut)*a2[0]+cut*a2[1]]
     frames = [0, 24] + list(range(25, 65)) + [100]
     scope = '#sga-overlay[data-refined-procedure][data-airway-profile].outcome-SUCCESS'
     css = ['/* BEGIN ADULT MALE IGEL REFERENCE */',
@@ -159,22 +138,16 @@ def build(root):
 
     def body_at(pc):
         p, n, _, _ = geometry(pc)
-        return poly(list(p + n*HALF_WIDTH) + front[1:] + cap + back[::-1] + list((p - n*HALF_WIDTH)[::-1]))
+        return poly(list(p + n*HALF_WIDTH) + front[1:] + back[-2::-1] + list((p - n*HALF_WIDTH)[::-1]))
 
     def lumen_at(pc):
         p, _, _, _ = geometry(pc)
         return 'M' + ' L'.join(xy(q) for q in p) + ' C' + ' '.join(xy(q) for q in channel)
 
-    def gastric_at(pc):
-        p,_,_,_=geometry(pc)
-        return 'M'+' L'.join(xy(q) for q in p)+' C'+' '.join(xy(q) for q in gastric_end)
-
     animation('.visible #sga-stem', 'flexibleIgelMaleSuccessBody',
               [(pc, f"d:path('{body_at(pc)}');") for pc in frames])
-    animation('.visible #sga-lumen', 'flexibleIgelMaleSuccessLumen',
+    animation('.visible :is(#sga-lumen,#sga-gastric-channel)', 'flexibleIgelMaleSuccessLumen',
               [(pc, f"d:path('{lumen_at(pc)}');") for pc in frames])
-    animation('.visible #sga-gastric-channel', 'flexibleIgelMaleSuccessGastric',
-              [(pc, f"d:path('{gastric_at(pc)}');") for pc in frames])
     # Selectors must attach .visible to the overlay, not to a descendant.
     css = [row.replace(scope + ' .visible', scope + '.visible') for row in css]
     origin = np.array([153., 86.])
@@ -204,9 +177,9 @@ def build(root):
     rule('#sga-cuff-edge-clip path', f"d:path('{bulb}');")
     edge_style=f'stroke-width:{4/math.hypot(a,b):.4f};stroke-linejoin:round;stroke-linecap:butt;clip-path:url(#sga-cuff-edge-clip);'
     rule('#sga-bulb-outline', f"d:path('{blue_edge}');stroke:var(--igel-spine);{edge_style}")
-    rule('#sga-seal', f"d:path('{green_path}');fill:var(--igel-cuff-color);fill-opacity:1;stroke:none;")
+    rule('#sga-seal', f"d:path('{poly(green)}');fill:var(--igel-cuff-color);fill-opacity:1;stroke:none;")
     rule('#sga-seal-border', f"display:inline;d:path('{green_edge}');stroke:var(--igel-cuff-edge);stroke-width:{2.4/math.hypot(a,b):.4f};stroke-linejoin:round;stroke-linecap:butt;clip-path:url(#sga-cuff-edge-clip);")
-    rule('#sga-shell-clip path:first-child', f"d:path('{bulb}');")
+    rule('#sga-shell-clip path:first-child', f"d:path('{lumen_clip}');")
     rule('#sga-shell-clip path:last-child', f"d:path('{poly([[-1000,-1000],[235,-1000],[235,1000],[-1000,1000]])}');")
     tip = ref(TIP)
     rule('#sga-tip', f'cx:{tip[0]:.4f}px;cy:{tip[1]:.4f}px;opacity:0;')
@@ -215,6 +188,7 @@ def build(root):
     rule('.reference-airway-flow', f"d:path('{flow}');")
     mask = anatomy([to_world(q) for q in green]) + ' Z'
     rule('#sga-seal-flow-mask path', f"d:path('{mask}');fill:black;stroke:none;")
+
     tongue = re.search('id="lx-male-tongue" d="([^"]+)"', html)[1]
     rule('.visible .ra-tongue', f"animation:none;d:var(--lx-contour-rest,path('{tongue}'));")
     palate = re.search('id="lx-palate" d="([^"]+)"', html)[1]
@@ -232,7 +206,7 @@ def build(root):
     # Use the actual body silhouette, rather than a pre-timed clearance morph.
     rest_floor = np.array([[274.,309.],[253.,300.],[229.,298.],[203.,305.]])
     floor = np.array([bezier(rest_floor,t) for t in np.linspace(0,1,201)])[::-1]
-    cuff_points = np.array(front + cap + back)
+    cuff_points = np.array(front + back)
     def pressure(pc):
         p,n,neck,beta = geometry(pc)
         body = np.vstack([p+n*HALF_WIDTH,p-n*HALF_WIDTH,cuff_points])
@@ -266,8 +240,7 @@ def build(root):
     css = [row.replace(scope + ' .visible', scope + '.visible') for row in css]
     css.append('@media(prefers-reduced-motion:reduce) {')
     rule('.visible #sga-stem', f"d:path('{body_at(100)}');")
-    rule('.visible #sga-lumen', f"d:path('{lumen_at(100)}');")
-    rule('.visible #sga-gastric-channel', f"d:path('{gastric_at(100)}');")
+    rule('.visible :is(#sga-lumen,#sga-gastric-channel)', f"d:path('{lumen_at(100)}');")
     rule('.visible #sga-device', poses[-1][1])
     rule('.visible #sga-proximal', connectors[-1][1])
     rule('.visible .ra-tongue', f"d:var(--lx-contour-rest,path('{tongue}'));")
@@ -277,4 +250,4 @@ def build(root):
     css = [row.replace(scope + ' .visible', scope + '.visible') for row in css]
     css.append('/* END ADULT MALE IGEL REFERENCE */')
     file.write_text(source + '\n' + '\n'.join(css) + '\n')
-    print(f'Generated adult male reference: one bend, rigid mask; posterior wall contact at {contact:.2f}%.')
+    print(f'Generated i-gel success reference: one bend, rigid mask; posterior wall contact at {contact:.2f}%.')

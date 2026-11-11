@@ -27,6 +27,7 @@
     ['suction','Suction','suction'], ['opa','Oropharyngeal airway','oropharyngeal_airway'],
     ['scalpel','Cricothyrotomy','cricothyrotomy'], ['finger_thoracostomy','Finger thoracostomy','finger_thoracostomy'],
     ['resuscitative_thoracotomy','Resuscitative thoracotomy','resuscitative_thoracotomy'], ['perimortem_csection','Perimortem C-section','perimortem_csection'],
+    ['lateral_canthotomy','Lateral canthotomy','lateral_canthotomy'],
   ]) {
     const overlay = id === 'cardioversion' ? 'defib' : id === 'rsi' ? 'laryngoscope' : SCALPEL_PROCS.has(id) ? 'scalpel' : id;
     const run = overlay === 'defib'

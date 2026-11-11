@@ -71,6 +71,7 @@ const PROC_TERMS = {
   cpr: ['cpr', 'compression'],
   bvm: ['bag-valve', 'bag valve', 'bvm', 'bagging', 'ventilat'],
   needle_decompression: ['decompress', 'needle'],
+  lateral_canthotomy: ['canthotomy', 'cantholysis', 'lcic'],
   foreign_body_removal: ['back blow', 'back slap', 'thrust', 'heimlich', 'magill', 'macgill', 'choking', 'obstruction', 'mainstem', 'main stem', 'foreign body', 'reposition', 'withdraw', 'tube'],
   tourniquet: ['tourniquet', 'tq', 'cat'],
   bleeding_control: ['bleeding', 'hemorrhage', 'pressure', 'packing', 'gauze', 'dressing'],
@@ -695,6 +696,9 @@ class Session {
     const rollContext = buildTurnContextFlags(
       this.seed, this.contextFlags, this.lastVitals, userText, this.moving
     );
+    const transportParked = this.moving && !this.arrivedAtHospital
+      && this.crewStatus?.partner === 'on_scene' && !this.crewStatus.driver;
+    rollContext.canthotomy_moving = this.moving && !this.arrivedAtHospital && !transportParked;
     rollContext.managed_hemorrhage = this.wounds.length > 0;
     const woundStartMinute = this.sceneMinute;
     const woundPlan = !reportMode && !skipMode && rollContext.managed_hemorrhage
@@ -839,7 +843,9 @@ class Session {
     }
     // Inject transport lock when the unit is already moving so the model never
     // asks about destination again or invents a phantom driver.
-    if (this.moving) {
+    if (transportParked && !skipMode) {
+      messageText += '\n\n[SYSTEM NOTE: The unit is stopped during transport. Keep the selected destination and keep the unit stopped until the provider orders transport to resume. Emit [EN_ROUTE] when the unit starts moving again.]';
+    } else if (this.moving) {
       messageText += '\n\n[SYSTEM NOTE: EN_ROUTE LOCKED — the unit is already moving. Destination is set. Do NOT ask where to go. Do NOT invent a new crew member to drive. The assigned driver is driving.]';
     }
     // Deterministic load directive — force the model to resolve loading atomically
@@ -873,8 +879,13 @@ class Session {
       messageText += '\n\n' + rollLines.join('\n');
       if (rolls.some(r => r.target)) messageText += '\n[SYSTEM NOTE: Each labeled target is an independent attempt. Honor and describe each target’s own outcome; one successful side does not make a failed side successful. Only SUCCESS or MARGINAL IV/IO placements create usable access. Do not invent extra access sites.]';
     }
+    const canthotomy = rolls.find(r => r.procedure_id === 'lateral_canthotomy');
+    if (canthotomy) {
+      messageText += '\n[SYSTEM NOTE: Lateral canthotomy is an ALS simulation procedure for a trained, authorized clinician with an indication for orbital decompression. Evaluate indication and scope independently of the roll. In a suspected open globe or without orbital compartment syndrome, flag the concern and hold the procedure. On an appropriate order, treat canthotomy as including inferior cantholysis unless the provider specifies otherwise. Effective decompression reduces orbital tension and may preserve remaining vision. For any roll above a natural 1, limit procedural morbidity to minor local effects. Distinguish ongoing vision loss from uncontrolled orbital pressure from a new injury caused by the procedure.]';
+      if (canthotomy.dc === 15) messageText += '\n[SYSTEM NOTE: Explain briefly that the higher canthotomy DC reflects the moving ambulance.]';
+    }
     for (const r of rolls.filter(r => SHOCK_PROC_IDS.has(r.procedure_id) && r.shock_energy != null)) {
-      messageText += `\n[SYSTEM NOTE: The player pressed SHOCK at ${r.shock_energy} J with SYNC ${r.shock_sync ? 'on' : 'off'}. Use this device state and energy for the shock.]`;
+      messageText += `\n[SYSTEM NOTE: The device delivered a shock at ${r.shock_energy} J with SYNC ${r.shock_sync ? 'on' : 'off'}. Use this device state and energy for the shock.]`;
     }
 
     const glucagon = rolls.find(r => r.medication_name === 'Glucagon');

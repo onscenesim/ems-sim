@@ -5053,7 +5053,7 @@ body.light-mode #lx-male-soft-tissue { --lx-tissue-edge: #925e65; }
 #defib-shock svg { width: 100%; height: 100%; }
 #defib-sync { background: #142236; }
 #defib-sync span { width: 7px; height: 7px; border-radius: 50%; background: #52687d; }
-#defib-sync[aria-pressed="true"] { color: #ccffe1; border-color: #68d898; }
+#defib-sync[aria-pressed="true"] { color: #ccffe1; border-color: #68d898; opacity: 1; }
 #defib-sync[aria-pressed="true"] span { background: #86f2a8; box-shadow: 0 0 7px #86f2a8; }
 .defib-buttons button:disabled { opacity: .63; cursor: default; }
 .defib-buttons button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }

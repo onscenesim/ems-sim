@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=109">
+  <link rel="stylesheet" href="style.css?v=110">
   <link rel="stylesheet" href="monitor.css?v=9">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="tutorial.css?v=1">
   <script src="/analytics-config.js"></script>
   <script src="/analytics.js?v=1"></script>
-  <link rel="stylesheet" href="airway-scenes.css?v=4">
+  <link rel="stylesheet" href="airway-scenes.css?v=6">
 </head>
 <body>
 
@@ -595,6 +595,7 @@
         <span id="briefing-save-status" role="status">Saved on this device for guests.</span>
         <label class="option-row"><input id="instructor-toggle" type="checkbox"> Instructor mode</label>
         <label class="option-row"><input id="monitor-interpret-toggle" type="checkbox" checked> Monitor Auto Interprets 12 leads</label>
+        <label class="option-row"><input id="manual-shock-toggle" type="checkbox" checked> Manual cardioversion and defibrillation</label>
         <label class="option-row"><input id="detailed-colors-toggle" type="checkbox" checked> Detailed text color coding</label>
         <p class="color-key">Crew: gold · Patient: blue · Bystanders: red · You: green · Description: white · Care: purple. Turn off to restore the original colors. Saved on this device.</p>
         <label class="option-row"><input id="sound-toggle" type="checkbox" checked> Sound effects</label>
@@ -1082,7 +1083,7 @@
         </div>
         <div class="defib-buttons">
           <button type="button" id="defib-shock" aria-label="Shock" title="Shock" disabled>
-            <svg viewBox="0 0 28 28" aria-hidden="true"><path fill="currentColor" d="M12 3H23L13 14H21L12 23L14 25H9L8 21L14 17H5Z"/></svg>
+            <svg viewBox="0 0 28 28" aria-hidden="true"><path fill="currentColor" d="M15 4L24 7L12 12L19 15L9 21L10 23L5 22L7 17L8 19L12 15L4 13Z"/></svg>
           </button>
           <button type="button" id="defib-sync" aria-pressed="false" disabled><span aria-hidden="true"></span> Sync</button>
         </div>
@@ -2870,7 +2871,7 @@
   </dialog>
   <script src="monitor.js?v=5"></script>
   <script src="airway-scenes.js?v=3"></script>
-  <script src="app.js?v=128"></script>
+  <script src="app.js?v=130"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

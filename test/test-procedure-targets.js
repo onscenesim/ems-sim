@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { detectWithConfirmation, detectAllAndRoll, detectAllProcedures } = require('../src/engine/dice');
+const { detectWithConfirmation, detectAllAndRoll, detectAllProcedures, rollProcedure } = require('../src/engine/dice');
 let sentOrder = '';
 require.cache[require.resolve('../src/engine/api')] = { exports: {
   sendDebrief: async () => '',
@@ -23,6 +23,39 @@ function withDice(values, work) {
   Math.random = () => ((values[index++ % values.length] - 0.5) / 20);
   try { return work(); } finally { Math.random = original; }
 }
+
+test('canthotomy has fixed stationary and moving DCs with serious complications only on a natural 1', () => {
+  for (const difficulty of ['EASY', 'NORMAL', 'HARD', 'BLACK_CLOUD']) {
+    for (const moving of [false, true]) {
+      const dc = moving ? 15 : 7;
+      for (const [die, expected] of [[1, 'COMPLICATION'], [2, 'FAILURE'], [dc - 1, 'MARGINAL'], [dc, 'SUCCESS']]) {
+        const roll = withDice([die], () => rollProcedure('lateral_canthotomy', { moving }, difficulty));
+        assert.equal(roll.dc, dc);
+        assert.equal(roll.outcome, expected);
+      }
+    }
+  }
+  for (const order of ['Perform lateral canthotomy', 'Perform lateral canthotomy and inferior cantholysis', 'LCIC']) {
+    assert.deepEqual(detectWithConfirmation(order).rolls.map(r => r.procedure_id), ['lateral_canthotomy'], order);
+  }
+  for (const mention of ['Consider a lateral canthotomy', 'Do not perform canthotomy', 'We already performed canthotomy']) {
+    assert.deepEqual(detectWithConfirmation(mention).rolls, [], mention);
+  }
+});
+
+test('the live turn uses the higher canthotomy DC during movement and the stationary DC after a stop', async () => {
+  const session = new Session(rollScenario({ provider_level: 'ALS', difficulty: 'NORMAL', random_seed: 'vision-turn' }));
+  session.moving = true;
+  session.hasLoaded = true;
+  session.crewStatus = { partner: 'driving', captain: 'not_on_scene' };
+  const moving = await session.send('Perform lateral canthotomy');
+  assert.equal(moving.rolls[0].dc, 15);
+  assert.match(sentOrder, /higher canthotomy DC reflects the moving ambulance/);
+  session.crewStatus.partner = 'on_scene';
+  const stopped = await session.send('Perform lateral canthotomy');
+  assert.equal(stopped.rolls[0].dc, 7);
+  assert.match(sentOrder, /limit procedural morbidity to minor local effects/);
+});
 
 test('every site-procedure synonym accepts bilateral modifiers at every word boundary', () => {
   for (const proc of INTERVENTIONS.filter(p => SITE_PROCEDURES.has(p.id))) {

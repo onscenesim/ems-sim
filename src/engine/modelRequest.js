@@ -1,6 +1,7 @@
 'use strict';
 
 const { operationError } = require('./operations');
+const { writeRunConsole } = require('../server/runConsole');
 const REQUEST_TIMEOUT_MS = 90_000;
 
 // The deadline covers the entire request, including retries and backoff. The
@@ -33,6 +34,7 @@ async function requestModel(generate, params, { signal, timeoutMs = REQUEST_TIME
         controller.signal.throwIfAborted();
         const transient = /429|503|quota|too many requests/i.test(String(error));
         if (!transient || attempt === maxAttempts) throw error;
+        writeRunConsole('MODEL_REQUEST_RETRY', { attempt: attempt + 1, delay_ms: attempt * 2000 }, 'warn');
         await Promise.race([new Promise(resolve => { backoffTimer = setTimeout(resolve, attempt * 2000); }), aborted]);
       }
     }

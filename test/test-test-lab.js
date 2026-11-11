@@ -15,11 +15,11 @@ function fixture(overrides={}) {
     document:{createElement:node,head:{append(){}},querySelectorAll:()=>[]},
     performance:{now:()=>0}, PatientPrivacy:{start:()=>()=>{}},
     eightball:node(),eightballResponse:node(),terminal:node(),
-    SCALPEL_PROCS:new Set(['cricothyrotomy','finger_thoracostomy','resuscitative_thoracotomy','perimortem_csection']),
     soundEnabled:false,cancelActiveShock:null,DRUG_CARDS:[],TwelveLead:require('../public/twelve-lead'),Event:class {},
     clearTimeout,clearInterval,...overrides,
   });
   vm.runInContext(source.slice(source.indexOf('const SOUNDS ='),source.indexOf('// One gesture-unlocked')),context);
+  vm.runInContext(source.slice(source.indexOf('const SCALPEL_PROCS'),source.indexOf('// Triggers the laryngoscope')),context);
   vm.runInContext(source.slice(source.indexOf('const TRANSPORT_TIMING ='),source.indexOf('function animateTransportScene')),context);
   vm.runInContext(source.slice(source.indexOf('const PROCEDURE_TIMING ='),source.indexOf('const PROCEDURE_FADE_MS')),context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../dev/test-lab/frame.js'),'utf8'),context);
@@ -32,6 +32,7 @@ test('lab registers every production animation overlay, with unique IDs and real
   assert.equal(new Set(api.scenes.map(s=>s.id)).size,api.scenes.length);
   for(const scene of api.scenes)assert.ok(scene.duration>0,scene.id);
   for(const id of ['cardioversion','rsi','medpush_io','blood_IO','fluid_IV'])assert.ok(api.scenes.some(s=>s.id===id));
+  assert.equal(api.scenes.find(s=>s.id==='lateral_canthotomy')?.overlay,'scalpel');
   for(const cue of api.sounds)assert.ok(fs.existsSync(path.join(__dirname,'../public',cue.src)),cue.src);
 });
 test('lab quality control reaches the production paper independently of pleth quality',()=>{

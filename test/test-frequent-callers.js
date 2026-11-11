@@ -87,7 +87,7 @@ test('unconfirmed arrest/death dispatches do not force resuscitation or death ru
     assert.equal(!!seed.arrest_rhythm, actualArrest);
     assert.equal(seed.obvious_death_signs, null);
     const prompt = assembleSeedBlock(seed);
-    assert.equal(prompt.includes('PARTNER CLOCK CALLS'), actualArrest);
+    assert.equal(prompt.includes('CPR CYCLES: Rhythm and pulse checks'), actualArrest);
     if (!actualArrest) assert.ok(seed.dispatch_category);
   }
 });

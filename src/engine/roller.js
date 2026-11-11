@@ -377,7 +377,7 @@ function rollScenario(opts = {}) {
   const decompensationClock = category === 'doa' || sceneChallenge ? null : rollDecompensationClock(difficulty, trajectory);
   const complication = rollComplication(difficulty);
   // Preserve fixed case truths and honest exposure history, even on BLACK_CLOUD.
-  if ((presentation.frequent_caller?.variant === 'stable' || sceneChallenge || presentation.chemical_exposure || stableLowAcuity)
+  if ((presentation.frequent_caller?.variant === 'stable' || sceneChallenge || presentation.chemical_exposure || presentation.vision_emergency || stableLowAcuity)
     && (['clinical_curveball', 'all'].includes(complication.type)
       || (sceneChallenge && ['unreliable_bystander', 'er_divert'].includes(complication.type)))) {
     complication.type = 'equipment_failure';
@@ -437,6 +437,7 @@ function rollScenario(opts = {}) {
     ...(presentation.hemorrhage_wounds ? { hemorrhage_wounds: structuredClone(presentation.hemorrhage_wounds) } : {}),
     ...(sceneChallenge ? { scene_challenge: sceneChallenge } : {}),
     ...(presentation.chemical_exposure ? { chemical_exposure: structuredClone(presentation.chemical_exposure) } : {}),
+    ...(presentation.vision_emergency ? { vision_emergency: true } : {}),
     ...(presentation.frequent_caller ? { frequent_caller: structuredClone(presentation.frequent_caller) } : {}),
     ...(lowAcuity ? { low_acuity_call: structuredClone(lowAcuity) } : {}),
     patient_name: patientName,

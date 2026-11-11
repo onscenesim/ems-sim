@@ -47,7 +47,7 @@ test('toxicology dispatch activates arrest timing, PEA and absent-perfusion moni
     assert.equal(seed.category, 'arrest');
     assert.match(seed.arrest_rhythm, /PEA/);
     const prompt = assembleSeedBlock(seed);
-    assert.match(prompt, /PARTNER CLOCK CALLS/);
+    assert.match(prompt, /CPR CYCLES: Rhythm and pulse checks/);
     assert.doesNotMatch(prompt, /Patient is stable\. No decompensation clock/);
     assert.equal(derivePulseOx({ Rhythm: 'PEA', HR: 36, SpO2: 98, Perfusion: 'absent' }, null, seed).displayedSpO2, null);
     if (provider_level === 'BLS') assert.match(prompt, /BLS ARREST MEDICATIONS/);
@@ -62,7 +62,7 @@ test('stable police patient never receives arrest or inevitable-death instructio
     assert.equal(seed.crew_partner, partner_name);
     assert.equal(seed.arrest_rhythm, null);
     assert.match(prompt, /BLACK CLOUD STABLE SCENE/);
-    assert.doesNotMatch(prompt, /INEVITABLE DECLINE|PARTNER CLOCK CALLS/);
+    assert.doesNotMatch(prompt, /INEVITABLE DECLINE|CPR CYCLES: Rhythm and pulse checks/);
   }
 });
 

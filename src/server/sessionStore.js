@@ -4,6 +4,7 @@ const fs             = require('fs');
 const path           = require('path');
 const { randomUUID: uuidv4 } = require('node:crypto');
 const { DATA_DIR }    = require('./storagePath');
+const { restoreRunConsole } = require('./runConsole');
 const { Session }     = require('../engine/session');
 const { initialPatientRecords, ensurePatientRecord } = require('../engine/patient-records');
 const { rollScenario } = require('../engine/roller');
@@ -177,6 +178,7 @@ function deleteSession(id) {
  */
 function restoreSession(snapshot) {
   const session = new Session(snapshot.seed, snapshot.id);
+  restoreRunConsole(session, snapshot.renderConsole);
   session.operationResults = snapshot.operationResults || [];
   session.ownerId = snapshot.ownerId || null;
   session.initialSeed = snapshot.initialSeed || null;

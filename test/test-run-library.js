@@ -9,7 +9,9 @@ const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-library-tests-'));
 process.env.EMS_DATA_DIR = dataDir;
 const apiPath = require.resolve('../src/engine/api');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: {
-  sendTurn: async () => 'Test dispatch. [TIME: 1:00]',
+  sendTurn: async (_prompt, messages) => messages.at(-1)?.content.startsWith('Simulate model failure')
+    ? require('../src/engine/modelResponse').extractText({ promptFeedback: { blockReason: 'SAFETY' } })
+    : 'Test dispatch. [TIME: 1:00]',
   sendDebrief: async () => 'Test debrief.\n[PATIENT_OUTCOME: Discharged home on September 26, 2026]',
 } };
 const { buildDebriefPrompt, parseDebriefResponse } = require('../src/engine/prompts/debrief');
@@ -129,6 +131,33 @@ test('guest replay requires the browser owner and legacy/incomplete calls cannot
   assert.equal((await route('/new', { method: 'post', body: { replay_of: run.id }, cookie })).status, 200);
   persistence.update(run.id, { initialSeed: null });
   assert.equal((await route('/new', { method: 'post', body: { replay_of: run.id }, cookie })).status, 409);
+});
+test('debug export retains run-scoped Render diagnostics for failed turns after restore', async () => {
+  const [first, second] = await Promise.all([route('/new', { method: 'post' }), route('/new', { method: 'post' })]);
+  assert.equal(first.status, 200);
+  assert.equal(second.status, 200);
+  const id = first.body.session_id;
+  const cookieFor = response => response.headers['Set-Cookie'].map(value => value.split(';')[0]).join('; ');
+  const failed = await route('/:id/turn', {
+    method: 'post', params: { id }, cookie: cookieFor(first),
+    body: { message: 'Simulate model failure with private text', operation_id: randomUUID(), procs_resolved: true },
+  });
+  assert.equal(failed.body.error, 'model_content_filtered');
+  deleteSession(id);
+  const debug = await route('/:id/transcript', { params: { id }, cookie: cookieFor(first) });
+  assert.equal(debug.body.turns.length, 1);
+  const entries = debug.body.renderConsole.entries;
+  assert.deepEqual(entries.map(entry => [entry.phase, entry.event]), [
+    ['dispatch', 'RUN_OPERATION_STARTED'], ['dispatch', 'RUN_OPERATION_FINISHED'],
+    ['turn', 'RUN_OPERATION_STARTED'], ['turn', 'MODEL_RESPONSE_UNAVAILABLE'],
+    ['turn', 'RUN_OPERATION_FAILED'],
+  ]);
+  assert.equal(entries.at(-1).code, 'model_content_filtered');
+  assert.ok(entries.every(entry => entry.session_id === id));
+  assert.doesNotMatch(JSON.stringify(entries), /private text/);
+  const unrelated = await route('/:id/transcript', { params: { id: second.body.session_id }, cookie: cookieFor(second) });
+  assert.ok(unrelated.body.renderConsole.entries.every(entry => entry.phase === 'dispatch' && entry.session_id === second.body.session_id));
+  assert.equal((await route('/:id/transcript', { params: { id }, cookie: cookieFor(second) })).status, 403);
 });
 test('completed player calls survive expiry and restart; old guest calls expire', () => {
   const retained = snapshot('durable-player');

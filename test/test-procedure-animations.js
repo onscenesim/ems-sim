@@ -217,11 +217,11 @@ test('the real roll loop defers only scene-owned sounds and waits for animations
   const a = source.indexOf('    for (const r of (data.rolls || [])) {');
   const b = source.indexOf('    for (const r of (data.rolls || [])) printRoll', a);
   vm.runInContext('async function rolls(data) {\n' + source.slice(a, b) + '\n}', c);
-  const p = c.rolls({ rolls: ['bvm', 'lucas', 'cricothyrotomy', 'resuscitative_thoracotomy', 'intubation', 'rsi', 'nasopharyngeal_airway', 'foreign_body_removal', 'abdominal_thrusts', 'supraglottic_airway', 'oropharyngeal_airway', 'suction', 'needle_decompression', 'needle_cricothyrotomy', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'cpr', 'defibrillation'].map(procedure_id => ({ procedure_id, outcome: 'SUCCESS', roll: 18, dc: 12 })) });
+  const p = c.rolls({ rolls: ['bvm', 'lucas', 'cricothyrotomy', 'resuscitative_thoracotomy', 'lateral_canthotomy', 'intubation', 'rsi', 'nasopharyngeal_airway', 'foreign_body_removal', 'abdominal_thrusts', 'supraglottic_airway', 'oropharyngeal_airway', 'suction', 'needle_decompression', 'needle_cricothyrotomy', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'cpr', 'defibrillation'].map(procedure_id => ({ procedure_id, outcome: 'SUCCESS', roll: 18, dc: 12 })) });
   await started;
   assert.deepEqual(events, ['dice:bvm', 'bvm']);
   release(); await p;
-  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'dice:cpr', 'cpr', 'dice:defibrillation', 'defib']);
+  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:lateral_canthotomy', 'lateral_canthotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'dice:cpr', 'cpr', 'dice:defibrillation', 'defib']);
   events.length = 0;
   await c.rolls({ rolls: [{ procedure_id: 'lucas', outcome: 'FAILURE', multi_roll: true }, { procedure_id: 'bvm', no_roll: true }] });
   assert.deepEqual(events, ['fail', 'lucas'], 'legacy multi-roll keeps feedback and action; no-roll has no dice cue');
@@ -391,7 +391,7 @@ test('cardioversion and defibrillation use identical animation clocks and sound,
   }
 });
 
-test('interactive shock waits at full charge, stops the ready tone, and distinguishes missed SYNC', async () => {
+test('manual shocks wait for input and automatic shocks fire at full charge with the correct SYNC state', async () => {
   const f = fixture();
   const makeControl = () => ({
     disabled: false, attributes: {}, focus() {},
@@ -445,6 +445,26 @@ test('interactive shock waits at full charge, stops the ready tone, and distingu
     f.advance(10000);
     assert.equal(await done, enableSync);
     assert.equal(cues.length, cueCount);
+    assert.equal(f.timers.length, 0);
+  }
+  for (const procedure of ['cardioversion', 'defibrillation']) {
+    cues.length = 0;
+    const synchronized = procedure === 'cardioversion';
+    const done = f.context.animateDefib(procedure, 'SUCCESS', 150, 1, false);
+    assert.equal(sync.attributes['aria-pressed'], String(synchronized));
+    assert.equal(sync.disabled, true);
+    assert.equal(shock.disabled, true);
+    assert.equal(overlay.classList.contains('visible'), true);
+    f.advance(2799);
+    assert.equal(overlay.classList.contains('shock-wait'), true);
+    f.advance(1);
+    assert.equal(f.elements.get('defib-charge').value, 150);
+    assert.equal(overlay.classList.contains('shock-wait'), false);
+    assert.equal(label.textContent, 'SUCCESS');
+    assert.equal(shock.disabled, true);
+    assert.deepEqual(cues.map(cue => cue.name), ['defib_charge', 'defib_outside']);
+    f.advance(10000);
+    assert.equal(await done, synchronized);
     assert.equal(f.timers.length, 0);
   }
 });
@@ -557,6 +577,7 @@ test('procedure sound audit keeps explicit recordings for every outcome and ambu
     precordial_thump: 'thump', lucas: 'lucas', needle_decompression: 'hiss', needle_cricothyrotomy: 'hiss',
     cpr: 'cpr_outside', io_access: 'io', medication_push: 'healing', peripheral_iv: 'healing',
     cricothyrotomy: 'sword', finger_thoracostomy: 'sword', resuscitative_thoracotomy: 'surgical', perimortem_csection: 'surgical',
+    lateral_canthotomy: 'surgical',
     intubation: 'intubation', rsi: 'intubation', suction: 'suction',
     oropharyngeal_airway: 'airway_gulp', supraglottic_airway: 'airway_gulp', nasopharyngeal_airway: 'airway_gulp',
     foreign_body_removal: 'airway_gulp', abdominal_thrusts: 'airway_gulp',
