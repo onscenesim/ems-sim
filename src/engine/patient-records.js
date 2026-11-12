@@ -58,4 +58,15 @@ function updatePatientRecords(records, patches) {
   return records;
 }
 
-module.exports = { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords };
+function patientFor(source, focus = 'patient_1', records = []) {
+  const explicit = /\bpatient[ _]([1-9]\d*)\b/i.exec(source);
+  if (explicit) return `patient_${explicit[1]}`;
+  if (/\b(?:second|other|intoxicated|drunk|loud) patient\b|\bpatient two\b/i.test(source)) return 'patient_2';
+  if (/\b(?:first|quiet|quieter|primary) patient\b|\bpatient one\b/i.test(source)) return 'patient_1';
+  const lower = source.toLowerCase();
+  const matched = records.filter(record => [record.label, record.name]
+    .some(name => name?.length > 3 && lower.includes(name.toLowerCase())));
+  return matched.length === 1 ? matched[0].id : focus;
+}
+
+module.exports = { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords, patientFor };

@@ -62,6 +62,24 @@ test('a successful application persists through maintenance and reassessment wit
   assert.equal(w[1].status,'uncontrolled');
 });
 
+test('a secured dressing or tourniquet only protects its own wound from repeat rolls', () => {
+  for (const treatment of ['pressure dressing', 'tourniquet']) {
+    const w = ['left forearm', 'right forearm'].map((site, index) => ({
+      id: `wound-${index}`, patientId: 'patient_1', site, discovered: true,
+      status: 'uncontrolled', holder: null, method: null, attempts: 0,
+    }));
+    const resolve = (site, roll) => H.resolvePlan(
+      plan(w, `Apply a ${treatment} to the ${site} wound.`).plan, roll, {}, 'NORMAL', 1,
+    );
+    assert.equal(resolve('left forearm', success).rolls.length, 1);
+    assert.equal(resolve('left forearm', () => assert.fail('Secured wound rerolled')).events[0].action, 'maintain');
+    assert.equal(resolve('right forearm', success).rolls.length, 1);
+    assert.deepEqual(w.map(wound => [wound.status, wound.attempts]), [
+      ['controlled_secured', 1], ['controlled_secured', 1],
+    ]);
+  }
+});
+
 test('retries, adjustments and meaningful method changes roll; failed securing retains existing pressure',()=>{
   const w=wounds();
   H.resolvePlan(plan(w,'Apply direct pressure').plan,success,{},'HARD',1);

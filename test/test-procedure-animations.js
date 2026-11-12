@@ -7,7 +7,8 @@ const source = fs.readFileSync(require.resolve('../public/app.js'), 'utf8');
 const html = fs.readFileSync(require.resolve('../public/index.html'), 'utf8');
 const transportPatient = require('../public/transport-patient');
 const sounds = source.slice(source.indexOf('const SURGICAL_PROCS'), source.indexOf('// ── Mobile audio unlock'));
-const scenes = source.slice(source.indexOf('const PROCEDURE_TIMING'), source.indexOf('function animateDefib'));
+const rollPlayback = source.slice(source.indexOf('function orderRollsForPlayback('), source.indexOf('async function sendTurn('));
+const scenes = source.slice(source.indexOf('const PROCEDURE_TIMING'), source.indexOf('let cancelActiveShock'));
 function fixture({ reduced = false, missing = false } = {}) {
   let now = 0;
   const timers = [], played = [], elements = new Map();
@@ -25,6 +26,7 @@ function fixture({ reduced = false, missing = false } = {}) {
   }
   const context = vm.createContext({
     TwelveLead:require('../public/twelve-lead'),
+    performance: { now: () => now },
     window: { matchMedia: () => ({ matches: reduced }) }, localTranscript: null,
     document: { getElementById: id => missing ? null : elements.get(id) },
     playSound: sound => { played.push({ sound, time: now }); },
@@ -206,7 +208,10 @@ test('the real roll loop defers only scene-owned sounds and waits for animations
     animateLUCAS: async () => events.push('lucas'),
     animateScalpel: async id => events.push(id),
     animateLaryngoscope: async id => events.push(id),
-    animateDefib: async () => events.push('defib'),
+    animateDefib: async id => {
+      events.push(id);
+      return id === 'cardioversion';
+    },
     animateCPR: async () => events.push('cpr'),
     animateSGA: async () => events.push('sga'),
     animateOPA: async () => events.push('opa'),
@@ -214,16 +219,15 @@ test('the real roll loop defers only scene-owned sounds and waits for animations
     animateProcedureScene: async id => events.push(id),
     animateNCD: async (outcome, id) => events.push(id),
   });
-  const a = source.indexOf('    for (const r of (data.rolls || [])) {');
-  const b = source.indexOf('    for (const r of (data.rolls || [])) printRoll', a);
-  vm.runInContext('async function rolls(data) {\n' + source.slice(a, b) + '\n}', c);
-  const p = c.rolls({ rolls: ['bvm', 'lucas', 'cricothyrotomy', 'resuscitative_thoracotomy', 'lateral_canthotomy', 'intubation', 'rsi', 'nasopharyngeal_airway', 'foreign_body_removal', 'abdominal_thrusts', 'supraglottic_airway', 'oropharyngeal_airway', 'suction', 'needle_decompression', 'needle_cricothyrotomy', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'cpr', 'defibrillation'].map(procedure_id => ({ procedure_id, outcome: 'SUCCESS', roll: 18, dc: 12 })) });
+  vm.runInContext(rollPlayback, c);
+  const p = c.playTurnRolls(['defibrillation', 'cardioversion', 'bvm', 'lucas', 'cricothyrotomy', 'resuscitative_thoracotomy', 'lateral_canthotomy', 'intubation', 'rsi', 'nasopharyngeal_airway', 'foreign_body_removal', 'abdominal_thrusts', 'supraglottic_airway', 'oropharyngeal_airway', 'suction', 'needle_decompression', 'needle_cricothyrotomy', 'bleeding_control', 'tourniquet', 'chest_seal', 'pacing', 'cpr'].map(procedure_id => ({ procedure_id, outcome: 'SUCCESS', roll: 18, dc: 12 })));
   await started;
   assert.deepEqual(events, ['dice:bvm', 'bvm']);
-  release(); await p;
-  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:lateral_canthotomy', 'lateral_canthotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'dice:cpr', 'cpr', 'dice:defibrillation', 'defib']);
+  release();
+  assert.deepEqual(Array.from(await p), [false, true], 'SYNC states follow the server order');
+  assert.deepEqual(events, ['dice:bvm', 'bvm', 'dice:lucas', 'lucas', 'dice:cricothyrotomy', 'cricothyrotomy', 'dice:resuscitative_thoracotomy', 'resuscitative_thoracotomy', 'dice:lateral_canthotomy', 'lateral_canthotomy', 'dice:intubation', 'intubation', 'dice:rsi', 'rsi', 'dice:nasopharyngeal_airway', 'npa', 'dice:foreign_body_removal', 'obstruction', 'dice:abdominal_thrusts', 'obstruction', 'dice:supraglottic_airway', 'sga', 'dice:oropharyngeal_airway', 'opa', 'dice:suction', 'suction', 'dice:needle_decompression', 'needle_decompression', 'dice:needle_cricothyrotomy', 'needle_cricothyrotomy', 'dice:bleeding_control', 'bleeding_control', 'dice:tourniquet', 'tourniquet', 'dice:chest_seal', 'chest_seal', 'dice:pacing', 'pacing', 'dice:cpr', 'cpr', 'dice:cardioversion', 'cardioversion', 'dice:defibrillation', 'defibrillation']);
   events.length = 0;
-  await c.rolls({ rolls: [{ procedure_id: 'lucas', outcome: 'FAILURE', multi_roll: true }, { procedure_id: 'bvm', no_roll: true }] });
+  await c.playTurnRolls([{ procedure_id: 'lucas', outcome: 'FAILURE', multi_roll: true }, { procedure_id: 'bvm', no_roll: true }]);
   assert.deepEqual(events, ['fail', 'lucas'], 'legacy multi-roll keeps feedback and action; no-roll has no dice cue');
 });
 
@@ -373,11 +377,11 @@ test('NCD routes to the chest scene while needle cric synchronizes its existing 
 test('cardioversion and defibrillation use identical animation clocks and sound, retaining their headers', async () => {
   const f = fixture();
   const traces = new Map();
-  vm.runInContext(source.slice(source.indexOf('function animateDefib('), source.indexOf('function animateThorsHammer(')), f.context);
+  vm.runInContext(source.slice(source.indexOf('let cancelActiveShock'), source.indexOf('function animateThorsHammer(')), f.context);
   for (const procedure of ['cardioversion', 'defibrillation']) {
     for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
       const before = f.played.length;
-      const p = f.context.animateDefib(procedure, outcome);
+      const p = f.context.animateProcedureScene('defib', procedure, outcome);
       const overlay = f.elements.get('defib-overlay');
       assert.equal(overlay.classList.contains('is-cardioversion'), false);
       const trace = { properties: {...overlay.properties}, label: f.elements.get('defib-label').textContent };
@@ -391,13 +395,13 @@ test('cardioversion and defibrillation use identical animation clocks and sound,
   }
 });
 
-test('manual shocks wait for input and automatic shocks fire at full charge with the correct SYNC state', async () => {
+test('manual shocks keep their controls and the charging bar fills without a joule counter', async () => {
   const f = fixture();
   const makeControl = () => ({
     disabled: false, attributes: {}, focus() {},
     setAttribute(key, value) { this.attributes[key] = value; },
   });
-  for (const suffix of ['shock', 'sync', 'charge', 'charge-status', 'current-energy']) {
+  for (const suffix of ['shock', 'sync', 'charge', 'charge-status']) {
     f.elements.set(`defib-${suffix}`, makeControl());
   }
   const overlay = f.elements.get('defib-overlay');
@@ -406,7 +410,6 @@ test('manual shocks wait for input and automatic shocks fire at full charge with
   const sync = f.elements.get('defib-sync');
   const label = f.elements.get('defib-label');
   const cues = [];
-  f.context.performance = { now: () => 0 };
   f.context.soundEnabled = true;
   f.context.playSound = (name, options) => {
     const voice = { name, options, paused: false, pause() { this.paused = true; } };
@@ -420,17 +423,25 @@ test('manual shocks wait for input and automatic shocks fire at full charge with
     return interval;
   };
   f.context.clearInterval = interval => f.context.clearTimeout(interval?.timer);
-  vm.runInContext(source.slice(source.indexOf('function animateDefib('), source.indexOf('function animateThorsHammer(')), f.context);
+  vm.runInContext(source.slice(source.indexOf('let cancelActiveShock'), source.indexOf('function animateThorsHammer(')), f.context);
+  const status = f.elements.get('defib-charge-status');
+  const charge = f.elements.get('defib-charge');
   for (const [procedure, enableSync] of [['defibrillation', false], ['cardioversion', false], ['cardioversion', true]]) {
     cues.length = 0;
-    const done = f.context.animateDefib(procedure, 'SUCCESS', 150);
+    const done = f.context.animateDefib(procedure, 'SUCCESS', { manual: true });
     assert.equal(shock.disabled, true);
     assert.equal(sync.disabled, procedure === 'defibrillation');
+    assert.equal(status.textContent, 'Charging');
+    assert.equal(charge.value, 0);
     shock.onclick();
-    f.advance(18000);
+    f.advance(1400);
+    assert.equal(charge.value, 0.5);
+    assert.equal(shock.disabled, true);
+    f.advance(16600);
     assert.equal(shock.disabled, false);
     assert.equal(overlay.classList.contains('shock-wait'), true);
-    assert.equal(f.elements.get('defib-charge').value, 150);
+    assert.equal(status.textContent, 'Charged');
+    assert.equal(charge.value, 1);
     const [readyTone, ...extraTones] = cues.filter(cue => cue.name === 'defib_ready');
     assert.equal(readyTone.options.loop, true);
     assert.equal(extraTones.length, 0, 'one continuous source plays throughout the wait');
@@ -450,15 +461,16 @@ test('manual shocks wait for input and automatic shocks fire at full charge with
   for (const procedure of ['cardioversion', 'defibrillation']) {
     cues.length = 0;
     const synchronized = procedure === 'cardioversion';
-    const done = f.context.animateDefib(procedure, 'SUCCESS', 150, 1, false);
+    const done = f.context.animateDefib(procedure, 'SUCCESS', { manual: false });
     assert.equal(sync.attributes['aria-pressed'], String(synchronized));
     assert.equal(sync.disabled, true);
     assert.equal(shock.disabled, true);
     assert.equal(overlay.classList.contains('visible'), true);
+    assert.equal(status.textContent, 'Charging');
     f.advance(2799);
     assert.equal(overlay.classList.contains('shock-wait'), true);
     f.advance(1);
-    assert.equal(f.elements.get('defib-charge').value, 150);
+    assert.equal(status.textContent, 'Shock delivered');
     assert.equal(overlay.classList.contains('shock-wait'), false);
     assert.equal(label.textContent, 'SUCCESS');
     assert.equal(shock.disabled, true);
@@ -483,20 +495,18 @@ test('fluid, blood, oxygen and ECG orders reach their scenes through the product
     showDrugPanel:()=>{},
   });
   vm.runInContext(source.slice(source.indexOf('async function animateMedicationAdministration('),source.indexOf('function animateRouteMedication(')),f.context);
-  const start=source.indexOf('    for (const r of (data.rolls || [])) {');
-  const end=source.indexOf('    for (const r of (data.rolls || [])) printRoll',start);
-  vm.runInContext('async function runOrders(data) {\n'+source.slice(start,end)+'\n}',f.context);
+  vm.runInContext(rollPlayback, f.context);
   for(const [order,scene,kind] of [['Give LR IV','infusion','fluid'],['Transfuse FFP','infusion','blood'],['Give oxygen via NRB','oxygen',null],['Once nebulizer is finished, switch to nonrebreather at 10','oxygen',null],['Obtain posterior ECG','posterior_ecg',null],['Obtain right sided ECG','right_sided_ecg',null],['Obtain V4R','v4r_ecg',null]]){
     events.length=0;
     const detected=detectWithConfirmation(order);
-    await f.context.runOrders(detected);
+    await f.context.playTurnRolls(detected.rolls);
     assert.equal(events[0][0],'dice',order);
     assert.deepEqual(events[1],['scene',scene,detected.rolls[0].outcome],order);
     assert.equal(f.played.length,0,'scene owns sound; no premature cue before dice');
     if(kind)assert.equal(f.elements.get('infusion-overlay').dataset.fluid,kind);
   }
   events.length=0;
-  await f.context.runOrders(detectWithConfirmation('ETCO2 NC'));
+  await f.context.playTurnRolls(detectWithConfirmation('ETCO2 NC').rolls);
   assert.deepEqual(events,[],'sampling cannula does not play an oxygen scene or roll dice');
 });
 
@@ -603,8 +613,8 @@ test('CPR, LUCAS, shock and thump recordings survive their shorter overlays', as
   for (const [fn, scene, args, sound, duration] of [
     ['animateCPR', 'cpr', ['SUCCESS'], 'cpr_outside', 8.052],
     ['animateLUCAS', 'lucas', ['FAILURE'], 'lucas', 5.604],
-    ['animateDefib', 'defib', ['defibrillation', 'SUCCESS'], 'defib_outside', 9.426],
-    ['animateDefib', 'defib', ['cardioversion', 'FAILURE'], 'defib_outside', 9.426],
+    ['animateProcedureScene', 'defib', ['defib', 'defibrillation', 'SUCCESS'], 'defib_outside', 9.426],
+    ['animateProcedureScene', 'defib', ['defib', 'cardioversion', 'FAILURE'], 'defib_outside', 9.426],
     ['animateThorsHammer', 'thump', ['FAILURE'], 'thump', 14.420],
   ]) {
     const f = fixture(), nodes = [];
@@ -620,7 +630,7 @@ test('CPR, LUCAS, shock and thump recordings survive their shorter overlays', as
     vm.runInContext(source.slice(source.indexOf('function animateDefib('), source.indexOf('function animateIV(')), f.context);
     const done = f.context[fn](...args);
     f.advance(10000); await new Promise(resolve => setImmediate(resolve)); await done;
-    assert.equal(f.context.getProcedureSound(scene === 'thump' ? 'precordial_thump' : scene === 'defib' ? args[0] : scene, args.at(-1)), sound);
+    assert.equal(f.context.getProcedureSound(scene === 'thump' ? 'precordial_thump' : scene === 'defib' ? args[1] : scene, args.at(-1)), sound);
     assert.equal(nodes.length, 1, `${fn}: one physical recording`);
     assert.equal(nodes[0].buffer.duration, duration);
     assert.equal(nodes[0].started, true);
@@ -640,10 +650,8 @@ test('multi-roll pacing waits for the outcome tail before starting its scene', a
     animateDiceRoll: async () => events.push('unexpected dice'),
     animateProcedureScene: async (scene, id, outcome) => events.push([scene, id, outcome]),
   });
-  const start = source.indexOf('    for (const r of (data.rolls || [])) {');
-  const end = source.indexOf('    for (const r of (data.rolls || [])) printRoll', start);
-  vm.runInContext('async function runOrders(data) {\n' + source.slice(start, end) + '\n}', f.context);
-  const done = f.context.runOrders({ rolls: [{ procedure_id: 'pacing', outcome: 'FAILURE', multi_roll: true, dc: [10, 12] }] });
+  vm.runInContext(rollPlayback, f.context);
+  const done = f.context.playTurnRolls([{ procedure_id: 'pacing', outcome: 'FAILURE', multi_roll: true, dc: [10, 12] }]);
   assert.deepEqual(events, ['fail'], 'no physical cue during the result tail');
   finishFeedback(); await done;
   assert.deepEqual(events, ['fail', ['pacing', 'pacing', 'FAILURE']]);

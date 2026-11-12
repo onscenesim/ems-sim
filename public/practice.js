@@ -77,7 +77,8 @@ const PracticeUI = (() => {
     const parts = [];
     if (procedure.id === 'medication_push') parts.push('Medication');
     if (procedure.administrationRoute) parts.push(`Route ${procedure.administrationRoute}`);
-    if (procedure.noRoll) parts.push('No skill check');
+    if (procedure.continued) parts.push('Established care continued');
+    else if (procedure.noRoll) parts.push('No skill check');
     else if (procedure.attempts?.length) {
       parts.push(procedure.attempts.map((attempt, index) => `Check ${index + 1}: d20 ${valueText(attempt.roll)} vs DC ${valueText(attempt.dc)} · ${attempt.outcome || 'outcome not recorded'}`).join(' | '));
     } else if (procedure.roll !== null && procedure.roll !== undefined) {
@@ -338,7 +339,8 @@ const PracticeUI = (() => {
         lines.push(heading);
         for (const procedure of procedures) {
           const name = titleCase(procedureName(procedure));
-          const result = !procedure.noRoll && procedure.outcome ? ` · ${procedure.outcome}` : '';
+          const result = procedure.continued ? ' · Care continued'
+            : !procedure.noRoll && procedure.outcome ? ` · ${procedure.outcome}` : '';
           const meta = debug ? procedureMeta(procedure) : (procedure.administrationRoute ? `Route ${procedure.administrationRoute}` : '');
           lines.push(`  ${name}${result} · ${patientName(procedure.patient)}${meta ? ` · ${meta}` : ''}`);
         }

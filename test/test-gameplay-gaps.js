@@ -17,8 +17,8 @@ require.cache[require.resolve('../src/server/adminLogger')] = { exports: { logRu
 const { Session } = require('../src/engine/session');
 const { rollScenario } = require('../src/engine/roller');
 const { restoreSession, deleteSession } = require('../src/server/sessionStore');
-const { detectWithConfirmation } = require('../src/engine/dice');
-const { shockEnergy } = require('../src/engine/shock');
+const { detectWithConfirmation, rollProcedure } = require('../src/engine/dice');
+const { careSeconds } = require('../src/engine/care-timing');
 const { acquireTwelveLeads } = require('../src/engine/twelve-lead');
 const { hasCardiacMonitor } = require('../src/engine/equipment');
 const router = require('../src/server/routes/scenario');
@@ -32,6 +32,242 @@ function session(level = 'ALS', legacy = false) {
 function reply(text, time, tags = '') {
   response = `${text}\n${tags}\n[CREW_STATUS: partner=on_scene captain=not_on_scene]\n[TIME: ${time}]`;
 }
+
+test('an assessment returns its findings before an outcome-dependent order can execute', async () => {
+  for (const order of [
+    'Check blood pressure. If the systolic is under 90, start an IV.',
+    'Check blood pressure and start an IV if the systolic is under 90.',
+  ]) {
+    const s = session();
+    reply('The manual blood pressure is 78/46.', '0:05', '[VITALS: BP=78/46]');
+    const result = await s.send(order);
+    assert.deepEqual(result.rolls.map(r => r.procedure_id), ['vitals_manual']);
+    assert.doesNotMatch(request, /start an IV|SYSTEM ROLL:/i);
+    assert.match(result.reply, /Paused for reassessment/);
+    assert.equal(s.turns.at(-1).user, order);
+    assert.equal(s.sceneMinute, 0.75);
+  }
+});
+
+test('sequential care costs the same scene time in one message or separate messages', async () => {
+  const bundled = session();
+  const split = session();
+  reply('The crew follows the order.', '0:00');
+  await bundled.send('Suction the airway, then start an IV.');
+  await split.send('Suction the airway.');
+  await split.send('Start an IV.');
+  assert.equal(bundled.sceneMinute, 2);
+  assert.equal(split.sceneMinute, bundled.sceneMinute);
+  assert.match(bundled.messages.at(-1).content, /\[TIME: 2:00\]$/);
+});
+
+test('assigned care can overlap with an available partner and serializes when the partner is driving', async () => {
+  for (const [partner, expected] of [['on_scene', 1.5], ['driving', 2]]) {
+    const s = session();
+    s.crewStatus = { partner, captain: 'not_on_scene' };
+    s.moving = partner === 'driving';
+    response = 'The available crew completes the work. [CREW_STATUS: partner=' + partner + ' captain=not_on_scene]';
+    await s.send('My partner suctions the airway while I start an IV.');
+    assert.equal(s.sceneMinute, expected);
+  }
+});
+
+test('the bundled airway technique retains its bonus and scheduled time', async () => {
+  const s = session();
+  s.contextFlags.difficult_airway = false;
+  const random = Math.random;
+  Math.random = () => 0.95;
+  try {
+    reply('Suction clears secretions during intubation.', '0:05');
+    const { rolls } = await s.send('Suction and intubate.');
+    assert.deepEqual(rolls.map(r => [r.procedure_id, r.dc]), [['suction', 5], ['intubation', 8]]);
+    assert.equal(s.sceneMinute, 1.5);
+  } finally {
+    Math.random = random;
+  }
+});
+
+test('bundled suction adds no scene time when the suction attempt complicates', async () => {
+  const s = session();
+  const random = Math.random;
+  Math.random = () => 0;
+  try {
+    reply('The suction jams while the airway attempt is in progress.', '0:05');
+    const { rolls } = await s.send('Intubate while using suction.');
+    assert.deepEqual(rolls.map(r => [r.procedure_id, r.outcome]), [
+      ['intubation', 'COMPLICATION'], ['suction', 'COMPLICATION'],
+    ]);
+    assert.equal(s.sceneMinute, 1.5);
+  } finally {
+    Math.random = random;
+  }
+});
+
+test('every suction dice combination retains the SALAD time and matching-patient bonus', () => {
+  const s = session();
+  const order = 'Suction and intubate patient 2.';
+  const ongoingCare = s.ongoingCareFor(order);
+  const random = Math.random;
+  try {
+    for (const difficulty of ['EASY', 'NORMAL', 'HARD', 'BLACK_CLOUD']) {
+      for (let first = 1; first <= 20; first++) {
+        for (let second = 1; second <= (difficulty === 'BLACK_CLOUD' ? 20 : 1); second++) {
+          const faces = difficulty === 'BLACK_CLOUD' ? [first, second] : [first];
+          Math.random = () => ((faces.shift() ?? 20) - 0.5) / 20;
+          const { rolls } = detectWithConfirmation(order, {}, difficulty, {}, { ongoingCare });
+          assert.deepEqual(rolls.map(r => r.patient), ['patient_2', 'patient_2']);
+          assert.equal(rolls[1].base_dc, 8);
+          assert.equal(careSeconds(order, rolls), 90);
+        }
+      }
+    }
+  } finally {
+    Math.random = random;
+  }
+});
+
+test('suction on a different patient contributes neither a bonus nor shared procedure time', async () => {
+  const s = session();
+  s.contextFlags.difficult_airway = false;
+  reply('The crew performs the separate airway procedures.', '0:05');
+  const { rolls } = await s.send('Suction the airway of patient 1. Intubate patient 2.');
+  assert.deepEqual(rolls.map(r => [r.procedure_id, r.patient, r.dc]), [
+    ['suction', 'patient_1', 5], ['intubation', 'patient_2', 10],
+  ]);
+  assert.equal(s.sceneMinute, 2);
+  assert.doesNotMatch(request, /Bundled suction takes place/);
+});
+
+test('successful ongoing care repeats without dice or a second placement', async () => {
+  const orders = [
+    ['Start CPR.', 'Continue CPR.', 'cpr'],
+    ['Ventilate with a BVM.', 'Continue bagging.', 'bvm'],
+    ['Place an i-gel.', 'Keep the i-gel in place.', 'supraglottic_airway'],
+    ['Intubate.', 'Intubate.', 'intubation'],
+    ['Suction the airway.', 'Continue suctioning.', 'suction'],
+    ['Place an OPA.', 'Keep the OPA in place.', 'oropharyngeal_airway'],
+    ['Maintain C-spine.', 'Maintain C-spine.', 'spinal_motion_restriction'],
+    ['Apply the LUCAS.', 'Continue with LUCAS.', 'lucas'],
+    ['Place an NPA.', 'Keep the NPA in place.', 'nasopharyngeal_airway'],
+    ['Apply CPAP.', 'Continue CPAP.', 'cpap'],
+    ['Apply oxygen.', 'Continue oxygen.', 'oxygen'],
+  ];
+  const random = Math.random;
+  try {
+    for (const difficulty of ['EASY', 'NORMAL', 'HARD', 'BLACK_CLOUD']) {
+      for (const [initial, continued, id] of orders) {
+        const s = session();
+        s.seed.difficulty = difficulty;
+        Math.random = () => 0.99;
+        reply('The crew performs the ordered procedure.', '0:05');
+        assert.ok((await s.send(initial)).rolls.some(r => r.procedure_id === id && r.roll === 20), initial);
+        Math.random = () => { throw new Error('Continuation consumed a die'); };
+        reply('The crew continues the existing care.', '2:15');
+        const { rolls } = await s.send(continued);
+        assert.deepEqual(rolls.map(r => [r.procedure_id, r.outcome, r.continued, r.roll]), [[id, 'SUCCESS', true, null]], continued);
+        assert.match(request, /ESTABLISHED CARE/);
+        assert.doesNotMatch(request, /\[SYSTEM ROLL:/);
+      }
+    }
+  } finally {
+    Math.random = random;
+  }
+});
+
+test('a restored call confirms only the new action in a mixed care order and commits the turn once', async () => {
+  const id = randomUUID(), ownerId = 'ongoing-care-browser-owner';
+  const patientFocus = { id: 'patient_2', label: 'Second patient' };
+  const s = restoreSession({
+    id, ownerId, seed: session().seed, patientFocus, sceneMinute: 2,
+    turns: [{ patientFocus, rolls: [{ procedure_id: 'bvm', patient: 'primary', outcome: 'SUCCESS', roll: 20 }] }],
+  });
+  const route = router.stack.find(entry => entry.route?.path === '/:id/turn').route.stack[0].handle;
+  async function turn(body) {
+    let payload;
+    const res = { status() { return this; }, json(value) { payload = value; return this; } };
+    await route({ params: { id }, headers: { cookie: `ems_owner=${ownerId}` }, body }, res);
+    return payload;
+  }
+  const random = Math.random;
+  try {
+    const body = { message: 'Continue bagging and start an IV.', operation_id: randomUUID() };
+    const { needs_confirmation } = await turn(body);
+    assert.deepEqual(needs_confirmation.map(row => row.procedure_id), ['peripheral_iv']);
+    assert.equal(s.turns.length, 1);
+    let dice = 0;
+    Math.random = () => { dice++; return 0.99; };
+    reply('Ventilations continue and the IV flushes.', '2:05', '[PATIENT_FOCUS: patient_2 | Second patient]');
+    const confirmed = { ...body, procs_resolved: true, proc_allow: [needs_confirmation[0].key] };
+    const result = await turn(confirmed);
+    assert.deepEqual(result.rolls.map(r => [r.procedure_id, r.continued || false]), [['bvm', true], ['peripheral_iv', false]]);
+    assert.equal(result.rolls[0].patient, 'patient_2');
+    assert.equal(result.scene_minute, 4);
+    assert.deepEqual(await turn(confirmed), result);
+    assert.equal(s.turns.length, 2);
+    assert.equal(dice, 1);
+  } finally {
+    Math.random = random;
+    deleteSession(id);
+  }
+});
+
+test('a marginal result and care for another patient still require fresh dice', async () => {
+  const s = session();
+  const random = Math.random;
+  try {
+    reply('The crew bags the patient.', '0:30');
+    Math.random = () => 0.25;
+    assert.equal((await s.send('BVM patient 1.')).rolls[0].outcome, 'MARGINAL');
+    Math.random = () => 0.95;
+    assert.equal((await s.send('Continue BVM for patient 1.')).rolls[0].roll, 20);
+    Math.random = () => 0;
+    const other = (await s.send('BVM patient 2.')).rolls[0];
+    assert.equal(other.patient, 'patient_2');
+    assert.equal(other.outcome, 'COMPLICATION');
+    assert.equal((await s.send('Continue BVM for patient 1.')).rolls[0].continued, true);
+  } finally {
+    Math.random = random;
+  }
+});
+
+test('a same-turn medication waits for usable access and a failed attempt leaves the medication unrolled', async () => {
+  const random = Math.random;
+  try {
+    for (const [face, expected] of [[0.05, ['peripheral_iv']], [0.95, ['peripheral_iv', 'medication_push']]]) {
+      Math.random = () => face;
+      const s = session();
+      reply('The crew acts on the order.', '0:05');
+      const { rolls, suppressed } = await s.send('Try an IV in the left arm, then give epinephrine IV.');
+      assert.deepEqual(rolls.map(r => r.procedure_id), expected);
+      assert.equal(suppressed.some(item => item.held), expected.length === 1);
+      assert.equal(s.sceneMinute, expected.length === 1 ? 1.5 : 2);
+    }
+  } finally {
+    Math.random = random;
+  }
+});
+
+test('a narrated refusal of placement keeps the dependent medication out of the committed turn', async () => {
+  const s = session();
+  const random = Math.random;
+  Math.random = () => 0.95;
+  try {
+    reply('The IV is not indicated. The patient withdraws their arm.', '0:15');
+    const { rolls, suppressed } = await s.send('Start an IV, then give epinephrine IV.');
+    assert.deepEqual(rolls, []);
+    assert.deepEqual(s.access, []);
+    assert.ok(suppressed.some(item => item.held));
+  } finally {
+    Math.random = random;
+  }
+});
+
+test('hypotension alone adds two to the IV DC, with movement and difficult access still represented', () => {
+  assert.equal(rollProcedure('peripheral_iv').dc, 8);
+  assert.equal(rollProcedure('peripheral_iv', { hypotensive: true }).dc, 10);
+  assert.equal(rollProcedure('peripheral_iv', { hypotensive: true, moving: true }).dc, 12);
+  assert.equal(rollProcedure('peripheral_iv', { hypotensive: true, pediatric: true }).dc, 14);
+});
 
 test('legacy runs: every ECG view is blocked before rolling and filing on an unequipped BLS unit', async () => {
   const s = session('BLS', true);
@@ -162,18 +398,7 @@ test('legacy runs: the real turn route returns unavailable equipment during conf
   deleteSession(id);
 });
 
-test('shock energy uses the typed dose, patient weight, rhythm, and prior shocks', () => {
-  const adult = { age: 40 };
-  assert.equal(shockEnergy('Defibrillate at 150J.', 'defibrillation', adult), 150);
-  assert.equal(shockEnergy('Defibrillate', 'defibrillation', adult), 200);
-  assert.equal(shockEnergy('Defibrillate', 'defibrillation', adult, null, { outcome: 'FAILURE', shock_energy: 200 }), 300);
-  assert.equal(shockEnergy('Cardiovert', 'cardioversion', adult, { Rhythm: 'atrial_flutter' }), 200);
-  assert.equal(shockEnergy('Cardiovert', 'cardioversion', adult, { Rhythm: 'SVT' }), 100);
-  assert.equal(shockEnergy('Defibrillate', 'defibrillation', { age: 5, weight_kg: 18 }), 36);
-  assert.equal(shockEnergy('Defibrillate the 18 kg child at 3 J/kg', 'defibrillation', { age: 5 }), 54);
-});
-
-test('shock controls commit exactly once and replace the pending roll when SYNC was off', async () => {
+test('shock sets are staged once without joules and cardioversion still honors SYNC', async () => {
   const id = randomUUID(), ownerId = 'shock-test-browser-owner';
   const s = restoreSession({ id, ownerId, seed: session().seed, turns: [] });
   const route = router.stack.find(entry => entry.route?.path === '/:id/turn').route.stack[0].handle;
@@ -184,21 +409,20 @@ test('shock controls commit exactly once and replace the pending roll when SYNC 
     return { status, payload };
   }
   try {
-    for (const [message, procedure, sync] of [
-      ['Synchronized cardioversion at 150 joules.', 'cardioversion', false],
-      ['Synchronized cardioversion at 200 joules.', 'cardioversion', true],
-      ['Defibrillate at 250 joules.', 'defibrillation', false],
+    for (const [message, sync] of [
+      ['Synchronized cardioversion at 150 joules.', false],
+      ['Synchronized cardioversion at 200 joules.', true],
     ]) {
       const operation_id = randomUUID();
       const body = { message, operation_id, shock_interactive: true };
       const { payload: { needs_confirmation } } = await turn(body);
-      assert.deepEqual(needs_confirmation.map(item => item.procedure_id), [procedure]);
+      assert.deepEqual(needs_confirmation.map(item => item.procedure_id), ['cardioversion']);
       const confirmed = { ...body, procs_resolved: true, proc_allow: needs_confirmation.map(item => item.key) };
       const before = s.turns.length;
       request = null;
       const { payload: { needs_shock } } = await turn(confirmed);
       const [pending] = needs_shock.rolls;
-      assert.equal(pending.shock_energy, Number(message.match(/\d+/)[0]));
+      assert.ok(!('shock_energy' in pending));
       assert.equal(s.turns.length, before);
       assert.equal(request, null);
       assert.deepEqual((await turn(confirmed)).payload.needs_shock.rolls, [pending]);
@@ -207,9 +431,9 @@ test('shock controls commit exactly once and replace the pending roll when SYNC 
       const result = await turn(finalRequest);
       assert.equal(result.status, 200);
       const [resolved] = result.payload.rolls;
-      assert.equal(resolved.shock_energy, pending.shock_energy);
+      assert.ok(!('shock_energy' in resolved));
       assert.equal(resolved.shock_sync, sync);
-      if (procedure === 'cardioversion' && !sync) {
+      if (!sync) {
         assert.equal(resolved.roll, 1);
         assert.equal(resolved.outcome, 'COMPLICATION');
         assert.match(request, /cardioversion — d20=1 vs DC .*COMPLICATION.*SYNC was off/);
@@ -221,6 +445,30 @@ test('shock controls commit exactly once and replace the pending roll when SYNC 
       assert.equal((await turn(finalRequest)).payload.rolls[0].roll, resolved.roll);
       assert.equal(s.turns.length, before + 1);
     }
+    const body = { message: 'Defibrillate at 250 joules. Start chest compressions.', operation_id: randomUUID(), shock_interactive: true };
+    const { payload: { needs_confirmation } } = await turn(body);
+    assert.ok(needs_confirmation.some(item => item.procedure_id === 'defibrillation'));
+    const confirmed = { ...body, procs_resolved: true, proc_allow: needs_confirmation.map(item => item.key) };
+    const before = s.turns.length;
+    request = null;
+    const { payload: { needs_shock } } = await turn(confirmed);
+    assert.deepEqual(needs_shock.rolls.map(r => r.procedure_id).sort(), ['cpr', 'defibrillation']);
+    assert.equal(s.turns.length, before);
+    assert.equal(request, null);
+    reply('The shock delivered. Chest compressions resume.', '3:00');
+    const finalRequest = { ...confirmed, shock_sync: [false] };
+    const { status, payload } = await turn(finalRequest);
+    assert.equal(status, 200);
+    assert.equal(payload.rolls.length, needs_shock.rolls.length);
+    for (const staged of needs_shock.rolls) {
+      const committed = payload.rolls.find(r => r.procedure_id === staged.procedure_id);
+      assert.equal(committed.roll, staged.roll);
+      assert.equal(committed.outcome, staged.outcome);
+      assert.ok(!('shock_energy' in committed));
+    }
+    assert.doesNotMatch(request, /The device delivered a shock at/);
+    assert.deepEqual((await turn(finalRequest)).payload.rolls, payload.rolls);
+    assert.equal(s.turns.length, before + 1);
   } finally {
     deleteSession(id);
   }

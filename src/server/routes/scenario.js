@@ -15,7 +15,7 @@ const { CREW } = require('../../data/crew');
 const { REGIONS } = require('../../data/regions');
 const { DIFFICULTY_POOL } = require('../../data/config');
 const { PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed } = require('../../engine/roller');
-const { detectAllProcedures } = require('../../engine/dice');
+const { detectAllProcedures, splitCareCheckpoint } = require('../../engine/dice');
 const { SHOCK_PROC_IDS, resolveShock } = require('../../engine/shock');
 const { hasCardiacMonitor, unavailableProcedure } = require('../../engine/equipment');
 const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
@@ -539,10 +539,13 @@ router.post('/:id/turn', async (req, res) => {
   // No clock or clinical state change. Unfamiliar wound-care wording may use
   // the constrained interpretation pass before presenting confirmation.
   if (!skipMode && report_mode !== true && procs_resolved !== true) {
-    const msg = message.trim();
+    const msg = splitCareCheckpoint(message.trim()).now;
     const managedWounds = session.wounds?.length > 0;
+    const ongoingCare = session.ongoingCareFor(msg);
     const items = detectAllProcedures(msg)
       .filter(e => !e.proc.no_roll && !e.precharge && !(managedWounds && ['bleeding_control','tourniquet'].includes(e.proc.id)))
+      .filter(e => e.uncertain || !ongoingCare(e)?.continued)
+      .sort((a, b) => a.orderIndex - b.orderIndex)
       .map(e => ({
         key:          e.key,
         procedure_id: e.proc.id,
@@ -586,15 +589,22 @@ router.post('/:id/turn', async (req, res) => {
     };
     const shockKey = `shock:${operation_id}`;
     const prepareFingerprint = JSON.stringify(turnRequest);
+    const isShock = roll => !roll.no_roll && SHOCK_PROC_IDS.has(roll.procedure_id);
     if (shock_interactive === true && shock_sync === undefined && !skipMode && !turnRequest.report_mode
-        && detectAllProcedures(turnRequest.message).some(e => SHOCK_PROC_IDS.has(e.proc.id) && !e.precharge)) {
-      const prepared = await queue.run(shockKey, prepareFingerprint, () => ({
-        rolls: session.prepareShocks(turnRequest.message, overrides), turnCount: session.turns.length,
-        moving: session.moving, patient_focus: session.patientFocus, patients: session.patientRecords,
-      }));
-      if (prepared.rolls.length) {
+        && detectAllProcedures(splitCareCheckpoint(turnRequest.message).now).some(e =>
+          SHOCK_PROC_IDS.has(e.proc.id) && !e.precharge && !overrides.deny.includes(e.key)
+          && (!e.uncertain || overrides.allow.includes(e.key)))) {
+      const prepared = await queue.run(shockKey, prepareFingerprint, async signal => {
+        const care = await session.prepareShockTurn(turnRequest.message, overrides, signal);
+        signal.throwIfAborted();
+        if (!care?.rolls.some(isShock)) return null;
+        return { care, turnCount: session.turns.length,
+          moving: session.moving, patient_focus: session.patientFocus, patients: session.patientRecords };
+      });
+      if (prepared) {
+        const { care, ...view } = prepared;
         persistSession(req.params.id, session);
-        return res.json({ needs_shock: prepared });
+        return res.json({ needs_shock: { ...view, rolls: care.rolls } });
       }
     }
     const payload = await queue.run(operation_id, JSON.stringify({
@@ -602,18 +612,21 @@ router.post('/:id/turn', async (req, res) => {
     }), signal => withRunConsole(session, 'turn', async () => {
       const preparation = queue.entries.get(shockKey);
       const prepared = preparation?.result;
-      let shockRolls;
-      if (shock_sync !== undefined || prepared?.rolls.length) {
-        if (!prepared || preparation.fingerprint !== prepareFingerprint || prepared.turnCount !== session.turns.length
-            || !Array.isArray(shock_sync) || shock_sync.length !== prepared.rolls.length
+      let preparedCare;
+      if (shock_sync !== undefined || prepared?.care) {
+        if (!prepared?.care || preparation.fingerprint !== prepareFingerprint || prepared.turnCount !== session.turns.length
+            || !Array.isArray(shock_sync) || shock_sync.length !== prepared.care.rolls.filter(isShock).length
             || !shock_sync.every(value => typeof value === 'boolean')) {
           throw operationError('shock_not_prepared', 'This shock order is no longer pending. Submit it again.');
         }
-        shockRolls = prepared.rolls.map((roll, i) => resolveShock(roll, shock_sync[i]));
+        preparedCare = structuredClone(prepared.care);
+        let shockIndex = 0;
+        preparedCare.rolls = preparedCare.rolls.map(roll => isShock(roll)
+          ? resolveShock(roll, shock_sync[shockIndex++]) : roll);
       }
       const result = await session.send(message.trim(), report_mode === true, skipMode, {
         ...overrides,
-      }, { signal, ecgInk:ecg_ink, shockRolls });
+      }, { signal, ecgInk:ecg_ink, preparedCare });
 
       return {
         operation_id,

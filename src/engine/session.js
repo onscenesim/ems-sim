@@ -6,8 +6,10 @@ const { prepareIncident, reconcileIncident, enforceIncidentState } = require('./
 const { reviewText } = require('./instructor');
 const { REGIONS } = require('../data/regions');
 const { logEvent, closeScenario } = require('./logger');
-const { detectWithConfirmation, getProcedure, rollProcedure, PRECHARGE_RE } = require('./dice');
-const { SHOCK_PROC_IDS, shockEnergy } = require('./shock');
+const { detectWithConfirmation, splitCareCheckpoint, getProcedure, rollProcedure, PRECHARGE_RE } = require('./dice');
+const { careSeconds, clockStamp, hasBundledSuction } = require('./care-timing');
+const { ongoingCareFor } = require('./ongoing-care');
+const { SHOCK_PROC_IDS } = require('./shock');
 const hemorrhage = require('./hemorrhage');
 const { evaluateObjectives } = require('./learning');
 const sceneAPI = require('./api');
@@ -66,6 +68,8 @@ const DRUG_ALIASES = {
   ativan: ['lorazepam'], zofran: ['ondansetron'], ondansetron: ['zofran'], lasix: ['furosemide'],
 };
 const PROC_TERMS = {
+  peripheral_iv: ['iv', 'intravenous'],
+  io_access: ['io', 'intraosseous'],
   emergency_delivery: ['deliver', 'delivery', 'crowning', 'the baby'],
   newborn_resuscitation: ['newborn', 'infant', 'neonate', 'the baby'],
   cpr: ['cpr', 'compression'],
@@ -104,7 +108,7 @@ function reconcileRolls(rolls, reply) {
   const sentences = reply.split(/(?<=[.;!?])\s+/);
   const noMeds = medNotGiven(reply);
   return rolls.filter(r => {
-    if (r.no_roll || r.shock_energy != null) return true; // routine action or a shock already delivered by the player
+    if ((r.no_roll && !r.continued) || typeof r.shock_sync === 'boolean') return true; // routine action or a shock already delivered by the player
     const isMed = r.procedure_id === 'medication_push';
     if (isMed && noMeds) return false;                // no route / nothing given
     const terms = rollSearchTerms(r);
@@ -115,7 +119,7 @@ function reconcileRolls(rolls, reply) {
         const opposite = side === 'left' ? 'right' : 'left';
         if (sl.includes(opposite) && !sl.includes(side)) continue;
       }
-      if (terms.some(t => sl.includes(t)) && REFUSAL_RE.test(sent)) return false;
+      if (terms.some(t => t.length === 2 ? new RegExp(`\\b${t}\\b`, 'i').test(sent) : sl.includes(t)) && REFUSAL_RE.test(sent)) return false;
     }
     return true;
   });
@@ -617,28 +621,45 @@ class Session {
     return result;
   }
 
-  prepareShocks(userText, overrides) {
-    if (this.closed || isDebriefTrigger(userText)) return [];
-    const context = buildTurnContextFlags(this.seed, this.contextFlags, this.lastVitals, userText, this.moving);
-    context.monitor_available = hasCardiacMonitor(this.seed, this.backupStatus);
-    const { rolls } = detectWithConfirmation(userText, context, this.seed.difficulty, overrides, { only: true });
-    const patientId = this.patientFocus?.id || 'patient_1';
-    const record = this.patientRecords.find(patient => patient.id === patientId) || {};
-    const patient = patientId === 'patient_1' ? { age: this.seed.patient_age, ...record } : record;
-    const vitals = this.patientVitals?.[patientId] || this.lastVitals;
-    return rolls.map(roll => {
-      let previous;
-      for (let i = this.turns.length - 1; i >= 0 && !previous; i--) {
-        const turn = this.turns[i];
-        previous = (turn.rolls || []).find(r => r.procedure_id === roll.procedure_id
-          && (r.shock_patient_id || turn.patientFocus?.id || 'patient_1') === patientId);
-      }
-      return {
-        ...roll,
-        shock_energy: shockEnergy(userText, roll.procedure_id, patient, vitals, previous),
-        shock_patient_id: patientId,
-      };
-    });
+  ongoingCareFor(text) {
+    return ongoingCareFor(this.turns, text, this.patientFocus?.id, this.patientRecords);
+  }
+
+  async prepareShockTurn(userText, overrides, signal) {
+    userText = splitCareCheckpoint(userText).now;
+    if (this.closed || isDebriefTrigger(userText)) return null;
+    // Stage the whole set on a draft. Wound attempts mutate their own ledger.
+    const draft = Object.assign(Object.create(Object.getPrototypeOf(this)), structuredClone(this));
+    return draft._prepareCare(userText, false, null, overrides, { signal });
+  }
+
+  async _prepareCare(userText, reportMode, skipMode, procOverrides, options) {
+    // Detect and roll ALL procedures mentioned in the user's message.
+    // Skip entirely when the player is giving a radio report, handoff, or a time-skip.
+    const rollContext = buildTurnContextFlags(
+      this.seed, this.contextFlags, this.lastVitals, userText, this.moving
+    );
+    const transportParked = this.moving && !this.arrivedAtHospital
+      && this.crewStatus?.partner === 'on_scene' && !this.crewStatus.driver;
+    rollContext.canthotomy_moving = this.moving && !this.arrivedAtHospital && !transportParked;
+    rollContext.managed_hemorrhage = this.wounds.length > 0;
+    const woundPlan = !reportMode && !skipMode && rollContext.managed_hemorrhage
+      ? await this.hemorrhagePlanFor(userText, procOverrides.deny || [], options) : {plan:[],notes:[]};
+    // Freeze resource eligibility before this order. A crew arriving in the
+    // response cannot retroactively authorize an acquisition already attempted.
+    const monitorBackup = this.backupStatus ? { ...this.backupStatus } : null;
+    rollContext.monitor_available = hasCardiacMonitor(this.seed, monitorBackup);
+    const detection = (reportMode || skipMode)
+      ? { rolls: [], suppressed: [] }
+      : detectWithConfirmation(userText, rollContext, this.seed.difficulty, procOverrides, {
+        access: this.access, ongoingCare: this.ongoingCareFor(userText),
+      });
+    const rolls = detection.rolls;
+    const suppressed = detection.suppressed;
+    const woundResult = hemorrhage.resolvePlan(woundPlan.plan, rollProcedure, rollContext, this.seed.difficulty, this.sceneMinute);
+    rolls.push(...woundResult.rolls);
+    return { rollContext, transportParked, monitorBackup, rolls, suppressed,
+      woundNotes: woundPlan.notes, woundResult, wounds: this.wounds };
   }
 
   /**
@@ -667,6 +688,10 @@ class Session {
       return { reply: '[Scenario is closed. Start a new scenario.]', rolls: [], closed: true };
     }
 
+    const originalOrder = userText;
+    const checkpoint = reportMode || skipMode ? { now: userText, pending: '' } : splitCareCheckpoint(userText);
+    userText = checkpoint.now;
+
     // CLOSE COMMAND — no model turn. The END CALL button (and typed close phrases
     // like "end scenario") end the call directly. If we let the model respond to
     // the close turn it generates its own after-action/"debrief", so the user saw
@@ -691,29 +716,11 @@ class Session {
       };
     }
 
-    // Detect and roll ALL procedures mentioned in the user's message.
-    // Skip entirely when the player is giving a radio report, handoff, or a time-skip.
-    const rollContext = buildTurnContextFlags(
-      this.seed, this.contextFlags, this.lastVitals, userText, this.moving
-    );
-    const transportParked = this.moving && !this.arrivedAtHospital
-      && this.crewStatus?.partner === 'on_scene' && !this.crewStatus.driver;
-    rollContext.canthotomy_moving = this.moving && !this.arrivedAtHospital && !transportParked;
-    rollContext.managed_hemorrhage = this.wounds.length > 0;
     const woundStartMinute = this.sceneMinute;
-    const woundPlan = !reportMode && !skipMode && rollContext.managed_hemorrhage
-      ? await this.hemorrhagePlanFor(userText, procOverrides.deny || [], options) : {plan:[],notes:[]};
-    // Freeze resource eligibility before this order. A crew arriving in the
-    // response cannot retroactively authorize an acquisition already attempted.
-    const monitorBackup = this.backupStatus ? { ...this.backupStatus } : null;
-    rollContext.monitor_available = hasCardiacMonitor(this.seed, monitorBackup);
-    const detection = (reportMode || skipMode)
-      ? { rolls: [], suppressed: [] }
-      : detectWithConfirmation(userText, rollContext, this.seed.difficulty, procOverrides, { rolls: options.shockRolls });
-    const rolls = detection.rolls;
-    const suppressed = detection.suppressed;
-    const woundResult = hemorrhage.resolvePlan(woundPlan.plan, rollProcedure, rollContext, this.seed.difficulty, this.sceneMinute);
-    rolls.push(...woundResult.rolls);
+    const prepared = options.preparedCare
+      ?? await this._prepareCare(userText, reportMode, skipMode, procOverrides, options);
+    const { rollContext, transportParked, monitorBackup, rolls, suppressed, woundNotes, woundResult } = prepared;
+    this.wounds = prepared.wounds;
     // NOTE: rolls are logged AFTER the model narrates (see reconcileRolls below),
     // not here — so an order the model declines as wrong/impossible doesn't get
     // logged as if it happened. The full `rolls` set is still injected into the
@@ -722,11 +729,14 @@ class Session {
     // Inject all real roll results into the user message so Claude knows every outcome.
     // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
     let messageText = userText;
+    if (checkpoint.pending) {
+      messageText += '\n\n[SYSTEM NOTE: Resolve only the order above. Return the findings and state at the decision point, then pause for the provider.]';
+    }
     const departing = this.moving || skipMode === 'to_hospital' || skipMode === 'to_arrival';
     if (departing && this.crewStatus?.driver !== 'anonymous' && this.seed.crew_transport_driver === this.seed.crew_partner) {
       woundResult.events.push(...hemorrhage.pressureInterruptions(this.wounds, true));
     }
-    messageText += hemorrhage.woundContext(this.wounds,woundPlan.notes,woundResult.events);
+    messageText += hemorrhage.woundContext(this.wounds,woundNotes,woundResult.events);
     if (rolls.some(r => r.procedure_id === 'capillary_refill')) {
       messageText += '\n\n[SYSTEM NOTE: Explicit capillary refill assessment requested. Perform it for the patient being assessed and state the measured duration numerically in seconds. Include CapRefill=<seconds>@T+M:SS in the VITALS tag, using this assessment time. Do not report only "brisk", "normal", or "delayed". If the assessment cannot be performed, state that and omit the reading.]';
     }
@@ -770,6 +780,22 @@ class Session {
     const incidentTurnStart = this.sceneMinute;
     const incidentContext = prepareIncident(this, userText, reportMode, skipMode, wantsLoad);
     skipMode = incidentContext.skipMode;
+    const arrestWindow = this.seed.category === 'arrest'
+      && rolls.some(r => ['cpr', 'lucas', 'pulse_check', 'rhythm_check', ...SHOCK_PROC_IDS].includes(r.procedure_id));
+    const timeCare = !reportMode && !skipMode && !arrestWindow && !this.incident?.bedAvailableMinute;
+    const timingCrew = {
+      partner: ['on_scene', 'in_back'].includes(this.crewStatus?.partner) || (!this.crewStatus && !this.moving)
+        ? this.seed.crew_partner || 'partner' : null,
+      captain: captainPresent(this.seed, this.backupStatus, this.crewStatus) ? this.seed.crew_captain : null,
+    };
+    const minimumObservationSeconds = checkpoint.pending ? 30 : 0;
+    const plannedSeconds = timeCare ? Math.max(minimumObservationSeconds, careSeconds(userText, rolls, timingCrew)) : 0;
+    if (plannedSeconds) {
+      messageText += `\n\n[SYSTEM NOTE: If all the ordered care occurs, the scheduled clock is T+${clockStamp(incidentTurnStart + plannedSeconds / 60)}. Use that time, accounting for any care that is held, declined or delayed and any additional work such as packaging. Do not shorten the elapsed time just because several orders appeared together. Honor explicit sequence and overlap only work that available crew can do concurrently.]`;
+    }
+    if (hasBundledSuction(rolls)) {
+      messageText += '\n\n[SYSTEM NOTE: Bundled suction takes place during the intubation attempt. It adds zero separate scene time at every suction outcome.]';
+    }
     const incidentBlocksLoad = () => this.incident && !this.incident.resolved
       && ['cot_wont_load', 'patient_dropped'].includes(this.incident.id);
     // Time-skip directive — fast-forward an uneventful transport leg, assuming the
@@ -860,9 +886,14 @@ class Session {
       messageText += '\n\n[SYSTEM NOTE: The provider\'s message mentions moving the patient to the ambulance, but the provider confirmed the patient is NOT being loaded this turn. Do NOT narrate packaging or loading, and do NOT emit [LOADING].]';
     }
 
+    const continuing = rolls.filter(r => r.continued);
+    if (continuing.length) {
+      messageText += '\n\n[SYSTEM NOTE: ESTABLISHED CARE — ' + continuing.map(r => r.procedure_id + ' for ' + r.patient).join(', ')
+        + '. Each ordered continuation succeeds automatically using the previously successful setup or technique. Continue it where still indicated and available. Describe ongoing care and patient response. Do not repeat a placement, invent a new attempt or create a new failure from this order. Honor any actual interruption already established in the scene. Continue any ordered CPR cycle on its existing schedule.]';
+    }
     const rollLines = rolls.filter(r => !r.no_roll).map(r => {
       const guide = r.shock_sync_missed
-        ? 'SYNC was off when the player pressed SHOCK. An unsynchronized shock delivered at the selected energy. Honor this automatic natural 1 and narrate the resulting rhythm deterioration.'
+        ? 'SYNC was off when the player pressed SHOCK. An unsynchronized shock was delivered. Honor this automatic natural 1 and narrate the resulting rhythm deterioration.'
         : r.hemorrhage_managed && ['FAILURE','COMPLICATION'].includes(r.outcome)
         ? `The ${r.hemorrhage_method} attempt does not establish the intended new control. Honor retained prior pressure if the state records it. Do not invent another attempt, a different method, injury from an unperformed method, or provider negligence.`
         : outcomeGuidance(r.procedure_id, r.outcome);
@@ -878,14 +909,15 @@ class Session {
     if (rollLines.length > 0) {
       messageText += '\n\n' + rollLines.join('\n');
       if (rolls.some(r => r.target)) messageText += '\n[SYSTEM NOTE: Each labeled target is an independent attempt. Honor and describe each target’s own outcome; one successful side does not make a failed side successful. Only SUCCESS or MARGINAL IV/IO placements create usable access. Do not invent extra access sites.]';
+      if (rolls.some(r => r.requiredRoute)) messageText += '\n[SYSTEM NOTE: A medication ordered through newly established access can only be administered after the ordered line is placed and usable. If placement is declined, hold that medication and state the reason.]';
     }
     const canthotomy = rolls.find(r => r.procedure_id === 'lateral_canthotomy');
     if (canthotomy) {
       messageText += '\n[SYSTEM NOTE: Lateral canthotomy is an ALS simulation procedure for a trained, authorized clinician with an indication for orbital decompression. Evaluate indication and scope independently of the roll. In a suspected open globe or without orbital compartment syndrome, flag the concern and hold the procedure. On an appropriate order, treat canthotomy as including inferior cantholysis unless the provider specifies otherwise. Effective decompression reduces orbital tension and may preserve remaining vision. For any roll above a natural 1, limit procedural morbidity to minor local effects. Distinguish ongoing vision loss from uncontrolled orbital pressure from a new injury caused by the procedure.]';
       if (canthotomy.dc === 15) messageText += '\n[SYSTEM NOTE: Explain briefly that the higher canthotomy DC reflects the moving ambulance.]';
     }
-    for (const r of rolls.filter(r => SHOCK_PROC_IDS.has(r.procedure_id) && r.shock_energy != null)) {
-      messageText += `\n[SYSTEM NOTE: The device delivered a shock at ${r.shock_energy} J with SYNC ${r.shock_sync ? 'on' : 'off'}. Use this device state and energy for the shock.]`;
+    for (const r of rolls.filter(r => typeof r.shock_sync === 'boolean')) {
+      messageText += `\n[SYSTEM NOTE: The device delivered a shock with SYNC ${r.shock_sync ? 'on' : 'off'}. Use this device state for the shock.]`;
     }
 
     const glucagon = rolls.find(r => r.medication_name === 'Glucagon');
@@ -901,7 +933,10 @@ class Session {
     for (const item of unavailable) {
       messageText += `\n\n[SYSTEM NOTE: ${item.procedure_id} CANNOT be performed: ${item.reason} No roll occurred. Explain the unavailable equipment briefly; do not place electrodes, acquire a tracing, file a printout, or invent an equipped crew.]`;
     }
-    const plainSuppressed     = suppressed.filter(s => !s.precharge && !s.unavailable);
+    const plainSuppressed     = suppressed.filter(s => !s.precharge && !s.unavailable && !s.held);
+    for (const held of suppressed.filter(s => s.held)) {
+      messageText += `\n\n[SYSTEM NOTE: ${held.reason} Leave this medication unadministered. No medication roll occurred for this order.]`;
+    }
     if (plainSuppressed.length > 0) {
       const names = plainSuppressed.map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
       const plural = names.length > 1;
@@ -1065,8 +1100,29 @@ class Session {
 
     // Reconcile dice against the narration: drop any roll the model declined or
     // showed didn't happen, so the debrief/log and client only see real events.
+    const completedPlacements = new Set();
     const reconciledRolls = reconcileRolls(rolls.filter(r => !r.hemorrhage_managed), reply)
+      .filter(roll => {
+        if (roll.requiredRoute && !completedPlacements.has(roll.requiredRoute)) {
+          suppressed.push({ procedure_id: roll.procedure_id, matchedKey: roll.matched_drug, held: true,
+            reason: `${roll.medication_name || roll.matched_drug} held pending usable ${roll.requiredRoute} access.` });
+          return false;
+        }
+        if (['SUCCESS', 'MARGINAL'].includes(roll.outcome)) {
+          if (roll.procedure_id === 'peripheral_iv') completedPlacements.add('IV');
+          if (roll.procedure_id === 'io_access') completedPlacements.add('IO');
+        }
+        return true;
+      })
       .concat(rolls.filter(r => r.hemorrhage_managed));
+    const elapsedCareSeconds = timeCare ? Math.max(minimumObservationSeconds, careSeconds(userText, reconciledRolls, timingCrew)) : 0;
+    for (const roll of reconciledRolls) {
+      delete roll.orderIndex;
+      delete roll.requiredRoute;
+    }
+    if (checkpoint.pending) {
+      reply += '\n\nPaused for reassessment. The conditional follow-up is pending your next order.';
+    }
     reply = stripTwelveLeadNarration(reply, reconciledRolls.some(r => isECGProcedure(r.procedure_id)),
       suppressed.some(s => s.unavailable && isECGProcedure(s.procedure_id)));
     if (unavailable.length) {
@@ -1251,10 +1307,18 @@ class Session {
       }
       if (maxTMin !== null && maxTMin > this.sceneMinute) {
         this.sceneMinute = maxTMin;
-      } else if (this.turns.length > 0) {
+      } else if (!elapsedCareSeconds && !reconciledRolls.some(r => r.continued) && this.turns.length > 0) {
         // Opening dispatch establishes T+0; later care turns use a fallback.
         this.sceneMinute += 2;
       }
+    }
+
+    const minimumCareTime = incidentTurnStart + elapsedCareSeconds / 60;
+    if (elapsedCareSeconds && (this.sceneMinute < minimumCareTime || timeMinutes === null)) {
+      this.sceneMinute = Math.max(this.sceneMinute, minimumCareTime);
+      const message = this.messages.at(-1);
+      message.content = `${parseTimeTag(message.content).cleanedReply}\n[TIME: ${clockStamp(this.sceneMinute)}]`;
+      this.lastReplyHadTime = true;
     }
 
     if (woundResult.rolls.length && this.sceneMinute < woundStartMinute + 0.5) {
@@ -1289,7 +1353,7 @@ class Session {
     // snapshot at that moment. The debrief is built from THIS structured log
     // (seed + actions + vitals) rather than re-reading the narrated scene prose.
     this.turns.push({
-      user: userText,
+      user: originalOrder,
       assistant: reply,
       rolls: reconciledRolls,
       woundEvents: woundResult.events,

@@ -10,6 +10,7 @@ const { MEDICATION_ALIASES } = require('../../public/medication-aliases');
 const MEDICATION_NAMES = new Map(Object.entries(MEDICATION_ALIASES).flatMap(
   ([name, aliases]) => aliases.map(alias => [alias.toLowerCase(), name])));
 const { HARD_MODE_DC_PENALTY, BLACK_CLOUD_DC_PENALTY } = require('../data/config');
+const ACCESS_ROUTES = new Map([['peripheral_iv', 'IV'], ['io_access', 'IO']]);
 
 // ---------------------------------------------------------------------------
 // Build detection index at startup.
@@ -485,7 +486,7 @@ function selectDC(proc, contextFlags = {}) {
 
   switch (proc.id) {
     case 'peripheral_iv':
-      selectedDC = (hypotensive || obese || pediatric) ? dcs[1] : dcs[0];
+      selectedDC = obese || pediatric ? dcs[1] : dcs[0] + (hypotensive ? 2 : 0);
       break;
     case 'intubation':
       selectedDC = difficult_airway ? dcs[dcs.length - 1] : dcs[0];
@@ -804,6 +805,7 @@ function detectAllProcedures(userText) {
         distinctEntries.add(procEntryKey(proc.id, medication || proc.id));
         found.push({
           proc,
+          orderIndex: bestMatchIndex,
           ...(SITE_PROCEDURES.has(proc.id) ? { targets: procedureTargets(normalized, bestMatchIndex, bestMatch.matchLen, proc.id) } : {}),
           matchedKey,
           ...(proc.id === 'medication_push'
@@ -866,10 +868,32 @@ function detectAllProcedures(userText) {
     if (found.some(e => e.proc.id === id || ['epistaxis_control','chest_seal'].includes(e.proc.id))) continue;
     if (found.length && !/\b(?:wound|bleed\w*|hemorrhag\w*|gauze|towel|laceration|armpit|axill\w*|(?:direct|manual|sustained) pressure)\b/i.test(action.source)) continue;
     const proc = INTERVENTIONS.find(p => p.id === id);
-    found.push({ proc, matchedKey:action.source.toLowerCase(), sentence:action.source,
+    found.push({ proc, orderIndex: context.indexOf(action.source.toLowerCase()), matchedKey:action.source.toLowerCase(), sentence:action.source,
       targets:procedureTargets(action.source,0,action.source.length,id), uncertain:false, reason:null, key:procEntryKey(id,action.source.toLowerCase()) });
   }
   return found;
+}
+
+function splitCareCheckpoint(text) {
+  // An observation-dependent branch belongs to the next decision window.
+  // Keep the exact order on either side so confirmation and narration agree.
+  const boundaries = /[;.!?\n,]\s*(?:(?:and\s+then|and|then)\s+)?|\s+(?:and\s+then|and|then)\s+/gi;
+  const breaks = [...text.matchAll(boundaries)];
+  for (const [index, match] of breaks.entries()) {
+    const start = match.index + match[0].length;
+    const clause = text.slice(start, breaks[index + 1]?.index).trim();
+    const condition = /\bif\b/i.exec(clause);
+    if (!condition) continue;
+    const action = clause.slice(0, condition.index);
+    if (action && (INTERROG_BEFORE_IF_RE.test(action) || !detectAllProcedures(action).length)) continue;
+    const now = text.slice(0, match.index).replace(/[\s,]+$/, '');
+    const pending = text.slice(start).trim();
+    if (detectAllProcedures(now).some(entry => !entry.uncertain && !entry.precharge)
+        || /^(?:assess|reassess|check|inspect|look|listen)\b/i.test(now)) {
+      return { now, pending };
+    }
+  }
+  return { now: text, pending: '' };
 }
 
 function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
@@ -905,18 +929,21 @@ function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
 function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMAL', overrides = {}, shock = {}) {
   const allow = new Set(overrides.allow || []);
   const deny  = new Set(overrides.deny  || []);
-  const entries = detectAllProcedures(userText);
+  const entries = detectAllProcedures(userText).sort((a, b) => a.orderIndex - b.orderIndex);
+  const plannedRoutes = new Set(entries.map(entry => ACCESS_ROUTES.get(entry.proc.id)).filter(Boolean));
+  const existingRoutes = new Set((shock.access || []).filter(line => ['patent', 'marginal'].includes(line.status)).map(line => line.kind));
+  const usableRoutes = new Set(existingRoutes);
   // The benefit comes from suction being attempted in this turn, not from its
   // outcome. Respect confirmation choices so a rejected/uncertain suction
   // mention cannot lower an unrelated intubation roll.
-  const suction_assisted = entries.some(entry =>
+  const ongoingByEntry = new Map(entries.map(entry => [entry, shock.ongoingCare?.(entry)]));
+  const suctionEntries = entries.filter(entry =>
     entry.proc.id === 'suction' && !entry.precharge && !deny.has(entry.key)
     && (!entry.uncertain || allow.has(entry.key)));
   const rolls = [];
   const suppressed = [];
   for (const entry of entries) {
     const { proc, matchedKey, uncertain, reason, precharge, key } = entry;
-    if (shock.only && !SHOCK_PROC_IDS.has(proc.id)) continue;
     if (contextFlags.managed_hemorrhage && ['bleeding_control','tourniquet'].includes(proc.id)) continue;
     // Pre-charge is a forced suppression — deterministic, not overridable by a
     // confirm click: the wording itself says "charge, don't shock."
@@ -937,12 +964,26 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
       suppressed.push({ procedure_id: proc.id, matchedKey, reason });
       continue;
     }
-    const prepared = shock.rolls?.find(result => result.procedure_id === proc.id);
-    if (prepared) {
-      rolls.push(prepared);
+    const ongoing = ongoingByEntry.get(entry);
+    if (ongoing?.continued) {
+      rolls.push({ procedure_id: proc.id, patient: ongoing.patient, continued: true,
+        outcome: 'SUCCESS', no_roll: true, dc: null, roll: null, orderIndex: entry.orderIndex });
       continue;
     }
+    const requiredRoute = shock.access && proc.id === 'medication_push' && plannedRoutes.has(entry.administration_route)
+      && !existingRoutes.has(entry.administration_route) ? entry.administration_route : null;
+    if (requiredRoute && !usableRoutes.has(requiredRoute)) {
+      suppressed.push({ procedure_id: proc.id, matchedKey, held: true,
+        reason: `${entry.medication_name || matchedKey} held pending usable ${entry.administration_route} access.` });
+      continue;
+    }
+    const suction_assisted = proc.id === 'intubation'
+      && suctionEntries.some(suction => ongoingByEntry.get(suction)?.patient === ongoing?.patient);
     const results = rollEntry(entry, { ...contextFlags, suction_assisted }, difficulty, rollProcedure);
+    const placedRoute = ACCESS_ROUTES.get(proc.id);
+    if (placedRoute && results.some(result => ['SUCCESS', 'MARGINAL'].includes(result.outcome))) {
+      usableRoutes.add(placedRoute);
+    }
     const result = results[0];
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
@@ -952,7 +993,8 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
       if (entry.administration_route) result.administration_route = entry.administration_route;
       if (entry.medication_animation_route) result.medication_animation_route = entry.medication_animation_route;
     }
-    rolls.push(...results);
+    rolls.push(...results.map(result => ({ ...result, orderIndex: entry.orderIndex,
+      ...(ongoing ? { patient: ongoing.patient } : {}), ...(requiredRoute ? { requiredRoute } : {}) })));
   }
   return { rolls, suppressed };
 }
@@ -961,4 +1003,4 @@ function getProcedure(id) {
   return INTERVENTIONS.find(p => p.id === id) || null;
 }
 
-module.exports = { detectProcedure, detectAllProcedures, rollProcedure, detectAndRoll, detectAllAndRoll, detectWithConfirmation, getProcedure, calcOutcome, rollD20, normalizeForDetection, PRECHARGE_RE };
+module.exports = { detectProcedure, detectAllProcedures, rollProcedure, detectAndRoll, detectAllAndRoll, detectWithConfirmation, splitCareCheckpoint, getProcedure, calcOutcome, rollD20, normalizeForDetection, PRECHARGE_RE };

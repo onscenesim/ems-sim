@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=110">
+  <link rel="stylesheet" href="style.css?v=112">
   <link rel="stylesheet" href="monitor.css?v=9">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="tutorial.css?v=1">
   <script src="/analytics-config.js"></script>
   <script src="/analytics.js?v=1"></script>
-  <link rel="stylesheet" href="airway-scenes.css?v=6">
+  <link rel="stylesheet" href="airway-scenes.css?v=7">
 </head>
 <body>
 
@@ -1075,11 +1075,8 @@
       <div id="defib-header">DEFIBRILLATION</div>
       <div id="defib-control">
         <div class="defib-display">
-          <div id="defib-charge-status" aria-live="polite"></div>
-          <div class="defib-meter">
-            <progress id="defib-charge" aria-label="Charging energy" value="0" max="200"></progress>
-            <span id="defib-current-energy" aria-hidden="true"></span>
-          </div>
+          <div id="defib-charge-status" role="status"></div>
+          <progress id="defib-charge" aria-label="Charging progress" value="0" max="1"></progress>
         </div>
         <div class="defib-buttons">
           <button type="button" id="defib-shock" aria-label="Shock" title="Shock" disabled>
@@ -2871,7 +2868,7 @@
   </dialog>
   <script src="monitor.js?v=5"></script>
   <script src="airway-scenes.js?v=3"></script>
-  <script src="app.js?v=130"></script>
+  <script src="app.js?v=133"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

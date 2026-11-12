@@ -87,7 +87,7 @@
     try {
       window.setTimeout=()=>0;
       if(pacing) animateProcedureScene('pacing','pacing',panel.querySelector('#qa-outcome').value);
-      else animateDefib(panel.querySelector('#qa-scene').value==='cardioversion'?'cardioversion':'defibrillation',panel.querySelector('#qa-outcome').value);
+      else animateProcedureScene('defib',panel.querySelector('#qa-scene').value==='cardioversion'?'cardioversion':'defibrillation',panel.querySelector('#qa-outcome').value);
     } finally { window.setTimeout=timer; }
     const overlay=document.getElementById(pacing?'pacing-overlay':'defib-overlay');
     overlay.getAnimations({subtree:true}).forEach(animation=>{animation.pause();animation.currentTime=frame;});

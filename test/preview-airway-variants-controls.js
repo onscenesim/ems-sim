@@ -61,7 +61,8 @@ document.getElementById('audit').onclick=async()=>{
     seek(99.99);if(+getComputedStyle(document.getElementById('lx-mac')).opacity!==0)issues.push(profile+': blade remains');
    }else{
     seek(75);
-    const key={sga:['sga-tip',+document.getElementById('sga-tip').getAttribute('cx'),+document.getElementById('sga-tip').getAttribute('cy'),309,317],opa:['opa-tip',194,173,234,276],npa:['npa-device',200,184,215,289],suction:['suction-tip',185,164,216,276]}[scene];
+    const tipStyle=scene==='sga'?getComputedStyle(document.getElementById('sga-tip')):null;
+    const key=scene==='sga'?['sga-tip',parseFloat(tipStyle.cx),parseFloat(tipStyle.cy),308.0437,307.0662]:{opa:['opa-tip',194,173,234,276],npa:['npa-device',200,184,215,289],suction:['suction-tip',185,164,216,276]}[scene];
     if(key){const p=scenePoint(document.getElementById(key[0]),key[1],key[2]);if(Math.hypot(p.x-key[3],p.y-key[4])>1)issues.push(`${scene}/${profile}: device not seated`);}
     seek(99.99);
     if(scene==='suction'&&[...svg.querySelectorAll('.suction-particle')].some(e=>+getComputedStyle(e).opacity>.01))issues.push(`${scene}/${profile}: debris remains`);

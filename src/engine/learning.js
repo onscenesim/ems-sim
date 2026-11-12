@@ -25,6 +25,7 @@ function procedureRecord(roll, fallbackPatient) {
     outcome: roll.outcome || null,
     intervention: !OBSERVATION_PROCEDURES.has(id),
     noRoll: !!roll.no_roll,
+    ...(roll.continued ? { continued: true } : {}),
     roll: Number.isFinite(roll.roll) ? roll.roll : null,
     dc: Array.isArray(roll.dc) ? roll.dc : (Number.isFinite(roll.dc) ? roll.dc : null),
     disadvantage: !!roll.disadvantage,

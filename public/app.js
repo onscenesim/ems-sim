@@ -550,6 +550,10 @@ function printReply(text) {
 }
 
 function printRoll(roll) {
+  if (roll?.continued) {
+    print(`[Care continued: ${roll.procedure_id.replace(/_/g, ' ')}]`, 'system');
+    return;
+  }
   if (!roll || roll.no_roll) return;
   const disSuffix = (roll.target ? ` [${roll.target}]` : '') + (roll.disadvantage ? ' (dis)' : '')
     + (roll.shock_sync_missed ? ' (SYNC OFF · AUTOMATIC 1)' : '');
@@ -1345,6 +1349,61 @@ async function startScenario(replayOf = null) {
 
 // ── Send turn ────────────────────────────────────────────────────────────
 
+// Play shocks after other procedures, with defibrillation last if both are ordered.
+function orderRollsForPlayback(rolls) {
+  const priority = { cardioversion: 1, defibrillation: 2 };
+  return [...rolls].sort((a, b) => (priority[a.procedure_id] ?? 0) - (priority[b.procedure_id] ?? 0));
+}
+
+async function playTurnRolls(rolls, { manualShock = false } = {}) {
+  const shockStates = new Map();
+  for (const r of orderRollsForPlayback(rolls)) {
+    if (r.no_roll) {
+      if (r.procedure_id === 'medication_push') await animateMedicationAdministration(r);
+      continue;
+    }
+    const procSound = getProcedureSound(r.procedure_id, r.outcome);
+    console.log('[roll]', r.procedure_id, r.outcome, '→ sound:', procSound);
+    // Dice own outcome feedback; every procedure scene owns its physical cue.
+    // Shocks roll visibly before the charging and discharge scene.
+    if (DEFIB_PROCS.has(r.procedure_id)) {
+      await animateDiceRoll(r.procedure_id, r.roll, r.dc, r.outcome, r.target);
+      const sync = await animateDefib(r.procedure_id, r.outcome, { manual: manualShock });
+      if (sync === null) throw Object.assign(new Error('Shock cancelled.'), { code: 'operation_cancelled' });
+      shockStates.set(r, sync);
+      continue;
+    }
+    const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
+    if (r.multi_roll) await waitForSound(playSound(getOutcomeSound(r.outcome)));
+    else await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome, r.target);
+    if (procSound && !hasProcedureAnimationSound(r.procedure_id)) playSound(procSound);
+    if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id, r.outcome);
+    if (r.procedure_id === 'nasopharyngeal_airway') await animateProcedureScene('npa', r.procedure_id, r.outcome);
+    if (OBSTRUCTION_PROCS.has(r.procedure_id)) await animateProcedureScene('obstruction', r.procedure_id, r.outcome);
+    if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
+    if (THUMP_PROCS.has(r.procedure_id)) await animateThorsHammer(r.outcome);
+    if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
+    if (r.procedure_id === 'cpr') await animateCPR(r.outcome);
+    if (['bleeding_control', 'tourniquet', 'chest_seal', 'pacing'].includes(r.procedure_id)) await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
+    if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
+    if (r.procedure_id === 'cpap') await animateNIV(r);
+    if (r.procedure_id === 'oxygen') await animateRouteMedication('oxygen', r.outcome, 3200);
+    if (r.procedure_id === 'lucas') await animateLUCAS(r.outcome);
+    if (r.procedure_id === 'suction') await animateSuction(r.outcome);
+    if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
+    if (r.procedure_id === 'peripheral_iv') await animateIV(r.outcome);
+    if (ECG_PROCS.has(r.procedure_id)) await animateTwelveLead(r.outcome, r.procedure_id);
+    if (r.procedure_id === 'oropharyngeal_airway') await animateOPA(r.outcome);
+    if (r.procedure_id === 'needle_decompression') await animateNCD(r.outcome, 'needle_decompression');
+    if (r.procedure_id === 'needle_cricothyrotomy') await animateNCD(r.outcome, 'needle_cricothyrotomy');
+    if (r.procedure_id === 'medication_push') {
+      await animateMedicationAdministration(r);
+    }
+  }
+  // The server expects SYNC states in the original order, independent of playback.
+  return rolls.filter(r => shockStates.has(r)).map(r => shockStates.get(r));
+}
+
 async function sendTurn(msg, opts = {}) {
   if (window.EMSTutorial?.active) return window.EMSTutorial.send(msg, opts);
   if (!sessionId || sendingTurn || document.getElementById('proc-confirm')) return;
@@ -1378,7 +1437,7 @@ async function sendTurn(msg, opts = {}) {
       proc_allow: opts.procAllow || [],
       proc_deny: opts.procDeny || [],
       procs_resolved: !!opts.resolved,
-      // Both modes use the prepared shock's energy, roll, and device state.
+      // A prepared roll set plays once before the shock state is submitted.
       shock_interactive: true,
     };
     if (opts.shockSync) body.shock_sync = opts.shockSync;
@@ -1402,13 +1461,7 @@ async function sendTurn(msg, opts = {}) {
         patient_focus: { id: focusedPatientId },
         patient: localTranscript?.meta?.patient,
       }));
-      body.shock_sync = [];
-      for (const r of prepared.rolls) {
-        await animateDiceRoll(r.procedure_id, r.roll, r.dc, r.outcome, r.target);
-        const sync = await animateDefib(r.procedure_id, r.outcome, r.shock_energy, 1, manualShock);
-        if (sync === null) throw Object.assign(new Error('Shock cancelled.'), { code: 'operation_cancelled' });
-        body.shock_sync.push(sync);
-      }
+      body.shock_sync = await playTurnRolls(prepared.rolls, { manualShock });
       // A dropped response must retry the discharge that already happened.
       retryOpts.shockSync = body.shock_sync;
       showLoadingDots();
@@ -1422,50 +1475,9 @@ async function sendTurn(msg, opts = {}) {
       patient_focus: { id: focusedPatientId },
       patient: localTranscript?.meta?.patient,
     }));
-    // Animate each real single roll in sequence, then print all to the log
-    for (const r of (data.rolls || [])) {
-      if (r.no_roll) {
-        if (r.procedure_id === 'medication_push') await animateMedicationAdministration(r);
-        continue;
-      }
-      const procSound = getProcedureSound(r.procedure_id, r.outcome);
-      console.log('[roll]', r.procedure_id, r.outcome, '→ sound:', procSound);
-      // Dice own outcome feedback; every procedure scene owns its physical cue.
-      // Shocks roll visibly before the charging and discharge scene.
-      if (DEFIB_PROCS.has(r.procedure_id)) {
-        if (r.shock_energy != null) continue;
-        await animateDiceRoll(r.procedure_id, r.roll, r.dc, r.outcome, r.target);
-        await animateDefib(r.procedure_id, r.outcome);
-        continue;
-      }
-      const dc = Array.isArray(r.dc) ? r.dc[0] : r.dc;
-      if (r.multi_roll) await waitForSound(playSound(getOutcomeSound(r.outcome)));
-      else await animateDiceRoll(r.procedure_id, r.roll, dc, r.outcome, r.target);
-      if (procSound && !hasProcedureAnimationSound(r.procedure_id)) playSound(procSound);
-      if (SCALPEL_PROCS.has(r.procedure_id)) await animateScalpel(r.procedure_id, r.outcome);
-      if (r.procedure_id === 'nasopharyngeal_airway') await animateProcedureScene('npa', r.procedure_id, r.outcome);
-      if (OBSTRUCTION_PROCS.has(r.procedure_id)) await animateProcedureScene('obstruction', r.procedure_id, r.outcome);
-      if (LARYNGOSCOPE_PROCS.has(r.procedure_id)) await animateLaryngoscope(r.procedure_id, r.outcome);
-      if (THUMP_PROCS.has(r.procedure_id)) await animateThorsHammer(r.outcome);
-      if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
-      if (r.procedure_id === 'cpr') await animateCPR(r.outcome);
-      if (['bleeding_control', 'tourniquet', 'chest_seal', 'pacing'].includes(r.procedure_id)) await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
-      if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
-      if (r.procedure_id === 'cpap') await animateNIV(r);
-      if (r.procedure_id === 'oxygen') await animateRouteMedication('oxygen', r.outcome, 3200);
-      if (r.procedure_id === 'lucas') await animateLUCAS(r.outcome);
-      if (r.procedure_id === 'suction') await animateSuction(r.outcome);
-      if (r.procedure_id === 'supraglottic_airway') await animateSGA(r.outcome);
-      if (r.procedure_id === 'peripheral_iv') await animateIV(r.outcome);
-      if (ECG_PROCS.has(r.procedure_id)) await animateTwelveLead(r.outcome, r.procedure_id);
-      if (r.procedure_id === 'oropharyngeal_airway') await animateOPA(r.outcome);
-      if (r.procedure_id === 'needle_decompression') await animateNCD(r.outcome, 'needle_decompression');
-      if (r.procedure_id === 'needle_cricothyrotomy') await animateNCD(r.outcome, 'needle_cricothyrotomy');
-      if (r.procedure_id === 'medication_push') {
-        await animateMedicationAdministration(r);
-      }
-    }
-    for (const r of (data.rolls || [])) printRoll(r);
+    const playbackRolls = orderRollsForPlayback(data.rolls || []);
+    if (!body.shock_sync) await playTurnRolls(data.rolls || []);
+    for (const r of playbackRolls) printRoll(r);
     printHr();
 
     // Contextual animations — server signals exactly when these events occur
@@ -1514,7 +1526,8 @@ async function sendTurn(msg, opts = {}) {
       for (const item of data.suppressed.filter(s => s.unavailable)) {
         print(`[not performed: ${item.procedure_id.replace(/_/g, ' ')} — ${item.reason}]`, 'system');
       }
-      const names = data.suppressed.filter(s => !s.unavailable).map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
+      for (const item of data.suppressed.filter(s => s.held)) print(item.reason, 'system');
+      const names = data.suppressed.filter(s => !s.unavailable && !s.held).map(s => (s.matchedKey || s.procedure_id).replace(/_/g, ' '));
       if (names.length) print(`[mentioned, not performed: ${names.join(', ')}]`, 'system');
     }
     printHr();
@@ -2858,17 +2871,14 @@ function animateScalpel(procedureId, outcome) {
 }
 
 let cancelActiveShock = null;
-function animateDefib(procedureId, outcome, energy, playbackRate = 1, manual = true) {
-  // Still poses and old recordings use the same shock artwork on a fixed clock.
-  if (energy == null) return animateProcedureScene('defib', procedureId, outcome);
+function animateDefib(procedureId, outcome, { manual = false } = {}) {
   const overlay = document.getElementById('defib-overlay');
   const syncButton = document.getElementById('defib-sync');
   const shockButton = document.getElementById('defib-shock');
-  const charge = document.getElementById('defib-charge');
   const status = document.getElementById('defib-charge-status');
-  const current = document.getElementById('defib-current-energy');
+  const charge = document.getElementById('defib-charge');
   const label = document.getElementById('defib-label');
-  if (!overlay || !syncButton || !shockButton || !charge || !status || !current || !label) return Promise.resolve(null);
+  if (!overlay || !syncButton || !shockButton || !status || !charge || !label) return Promise.resolve(null);
   cancelActiveShock?.();
   const needsSync = procedureId === 'cardioversion';
   let synchronized = !manual && needsSync;
@@ -2881,10 +2891,8 @@ function animateDefib(procedureId, outcome, energy, playbackRate = 1, manual = t
   overlay.style.setProperty('--procedure-fade', `${PROCEDURE_FADE_MS}ms`);
   document.getElementById('defib-header').textContent = needsSync ? 'SYNCHRONIZED CARDIOVERSION' : 'DEFIBRILLATION';
   label.textContent = '';
-  status.textContent = `Charging to ${energy} J`;
-  charge.max = energy;
+  status.textContent = 'Charging';
   charge.value = 0;
-  current.textContent = '0 J';
   syncButton.disabled = !manual || !needsSync;
   syncButton.setAttribute('aria-pressed', String(synchronized));
   shockButton.disabled = true;
@@ -2896,23 +2904,18 @@ function animateDefib(procedureId, outcome, energy, playbackRate = 1, manual = t
     let readyTimer, recoveryTimer, fadeTimer, readyVoice, shockVoice;
     const chargeVoice = playSound('defib_charge');
     const start = performance.now();
-    const updateCharge = () => {
-      const elapsed = performance.now() - start;
-      const value = Math.floor(energy * Math.min(1, elapsed / CHARGE_MS));
-      charge.value = value;
-      current.textContent = `${value} J`;
-    };
-    const progressTimer = setInterval(updateCharge, 40);
+    const progressTimer = setInterval(() => {
+      charge.value = Math.min(1, (performance.now() - start) / CHARGE_MS);
+    }, 40);
     const chargeTimer = setTimeout(() => {
       clearInterval(progressTimer);
-      charge.value = energy;
-      current.textContent = `${energy} J`;
-      status.textContent = `Charged to ${energy} J`;
+      charge.value = 1;
       chargeVoice?.pause();
       if (!manual) {
         discharge();
         return;
       }
+      status.textContent = 'Charged';
       shockButton.disabled = false;
       if (document.activeElement !== syncButton) shockButton.focus();
       const keepReadyTone = () => {
@@ -2956,13 +2959,10 @@ function animateDefib(procedureId, outcome, energy, playbackRate = 1, manual = t
       readyVoice?.pause();
       const missedSync = needsSync && !synchronized;
       const result = missedSync ? 'COMPLICATION' : outcome;
-      status.textContent = `${energy} J delivered`;
+      status.textContent = 'Shock delivered';
       label.textContent = missedSync ? 'COMPLICATION · SYNC OFF · AUTOMATIC d20 = 1' : result;
       overlay.classList.remove('shock-wait');
       overlay.classList.add(`outcome-${result}`);
-      if (playbackRate !== 1) {
-        overlay.getAnimations({ subtree: true }).forEach(animation => animation.updatePlaybackRate(playbackRate));
-      }
       shockVoice = playSound(getProcedureSound(procedureId, result), { offset: 4.98 });
       recoveryTimer = setTimeout(() => {
         overlay.classList.add('is-fading');
@@ -3398,7 +3398,7 @@ function formatBackendSection(t, backend) {
     const tm = minute != null ? `T+${Math.round(minute)}m` : 'T+?';
     lines.push(`  ${tm} > ${(turn.user || '').slice(0, 90)}`);
     for (const r of (turn.rolls || [])) {
-      if (r.no_roll) { lines.push(`      roll: ${r.procedure_id} (no roll — routine)`); continue; }
+      if (r.no_roll) { lines.push(`      ${r.procedure_id} (${r.continued ? 'established care continued' : 'no roll — routine'})`); continue; }
       if (r.multi_roll) {
         const parts = (r.rolls || []).map(x => `d20=${x.roll} vs DC${x.dc} -> ${x.outcome}`).join(' | ');
         lines.push(`      roll: ${r.procedure_id}${r.matched_drug ? ' (' + r.matched_drug + ')' : ''} ${parts}`);

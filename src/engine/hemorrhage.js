@@ -1,5 +1,7 @@
 'use strict';
 
+const { patientFor } = require('./patient-records');
+
 // Wound state is owned by the server. The narrator can reveal a wound, but
 // cannot grant hemostasis, reroll maintenance, or transfer control to a patient.
 const METHODS = ['pressure', 'packing', 'dressing', 'tourniquet'];
@@ -77,14 +79,6 @@ function parseActions(text) {
 function initialWounds(seed) {
   return (seed.hemorrhage_wounds || []).map(w => ({ ...structuredClone(w), discovered: false,
     status: 'uncontrolled', method: null, holder: null, attempts: 0 }));
-}
-function patientFor(source, focus = 'patient_1', records = []) {
-  const explicit = /\bpatient[ _]([1-9]\d*)\b/i.exec(source);
-  if (explicit) return `patient_${explicit[1]}`;
-  if (/\b(?:second|other|intoxicated|drunk|loud) patient\b|\bpatient two\b/i.test(source)) return 'patient_2';
-  if (/\b(?:first|quiet|quieter|primary) patient\b|\bpatient one\b/i.test(source)) return 'patient_1';
-  const matched = records.filter(r => r.label && r.label.length > 3 && source.toLowerCase().includes(r.label.toLowerCase()));
-  return matched.length === 1 ? matched[0].id : focus;
 }
 function siteMatches(a,b) {
   return a === b || a.replace(/^(left|right) /,'') === b.replace(/^(left|right) /,'')
