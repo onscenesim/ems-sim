@@ -15,6 +15,7 @@ const { rollPatientName } = require('../data/patientNames');
 const { applyInstructor } = require('./instructor');
 const { randomUUID } = require('node:crypto');
 const { createRandom } = require('./random');
+const { rollHospitals } = require('./hospitals');
 const { selectPresentation } = require('./presentation-selection');
 
 function createRoller(random) {
@@ -472,10 +473,8 @@ function rollScenario(opts = {}) {
       isMultiPatientSeed(presentation) ? true :
       random() < 0.08,
     region: region_id,
-    // The two transport destinations for this region: `nearest` (closer, lower
-    // capability — community/basic ED) vs `major` (farther, higher capability —
-    // trauma/cath/stroke). This binary is presented to the provider on every run.
-    hospitals: region && region.hospitals ? region.hospitals : null,
+    // Persist the rolled capabilities with the call for CAD, narration and replay.
+    hospitals: rollHospitals(region, opts.random_seed),
     provider_level,
     protocols: resolveProtocols(provider_level, region_id, opts.protocols),
     difficulty,

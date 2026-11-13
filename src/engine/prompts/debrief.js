@@ -21,6 +21,11 @@ PREHOSPITAL SUCCESS — CARE FIRST:
 - Account for resource limits, misleading presentations, and random hurdles. Evaluate the provider's response and adaptation, not their ability to prevent an unavoidable complication or guarantee a good outcome. Supportive care and timely transport can be excellent prehospital management even when the cause remains unknown or the patient deteriorates.
 - Use respectful, specific coaching. Distinguish an actual care gap from optional diagnostic enrichment; never turn the latter into a failure, a backhanded compliment, or a criticism repeated across sections. Do not manufacture deficiencies to fill a section.
 
+DESTINATION REVIEW — TIME TO DEFINITIVE CARE:
+- Use the actual CAD capabilities and baseline ETAs for this run, plus the documented route, weather, diversion, patient needs, care feasible in transit, and local protocol or medical direction when known. A hospital name, crew opinion, or a poor outcome does not establish that a destination was appropriate. Do not assume unlisted services or treat baseline drive time as time to treatment.
+- For suspected STEMI supported by findings available at the time, direct EMS transport to a reachable primary PCI center is generally preferred when feasible under the regional STEMI protocol. Bypassing a closer non-PCI ED can avoid an interfacility transfer and shorten time to reperfusion, limiting ongoing myocardial injury. Instability alone, including cardiogenic shock, is not a reason to rule out direct PCI transport. Do not infer STEMI solely from ACS, shock, or a hidden MI diagnosis.
+- A closer ED can be a reasonable fallback when the PCI route is actually unsafe or unavailable (for example, impassable flooding or diversion), or when a specific immediate life threat cannot be managed during the longer transport. Explain the concrete reason and the tradeoff of delayed definitive care. When relevant, discuss pre-notification and coordinating the onward reperfusion plan per protocol and medical direction without claiming it occurred. Keep any takeaway specific to the call; never teach a blanket rule to avoid bypassing a stabilizing hospital for unstable patients. Apply the separate arrest doctrine during active CPR.
+
 ${NONCOMPRESSIBLE_HEMORRHAGE_REVIEW}
 
 CREW FRICTION — DISTRACTION, NOT A TRICK TEST:

@@ -1759,8 +1759,7 @@ function showProcConfirm(msg, opts, items) {
 // never starts transport, in the engine or via narration. The player either
 // clicks a destination (an explicit, deliberate transport order routed through
 // the normal turn pipeline) or ignores it and keeps working, deciding later in
-// their own words. Closer/lower-capability vs farther/higher-capability is the
-// same binary every run, so it becomes a familiar routine fast.
+// their own words. The facility profiles come from the current run.
 function showDestinationPanel(chosenKey = null) {
   if (destinationShown) return;
   const h = currentHospitals;
@@ -1801,8 +1800,23 @@ function showDestinationPanel(chosenKey = null) {
     const t = document.createElement('span'); t.className = 'dest-tag'; t.textContent = tag;
     const n = document.createElement('span'); n.className = 'dest-name'; n.textContent = hosp.name || '';
     const m = document.createElement('span'); m.className = 'dest-meta';
-    m.textContent = [hosp.type, hosp.eta ? 'ETA ' + hosp.eta : null].filter(Boolean).join('  ·  ');
+    m.textContent = [hosp.type, hosp.eta ? 'Baseline ETA: ' + hosp.eta : null].filter(Boolean).join('  ·  ');
     btn.appendChild(t); btn.appendChild(n); btn.appendChild(m);
+    if (hosp.capabilities) {
+      const caps = document.createElement('span');
+      caps.className = 'dest-capabilities';
+      for (const [key, label] of [['stroke', 'Stroke'], ['cardiac', 'Cardiac'], ['icu', 'ICU'], ['trauma', 'Trauma']]) {
+        const row = document.createElement('span');
+        const heading = document.createElement('span');
+        heading.className = 'dest-cap-label';
+        heading.textContent = label + ': ';
+        const detail = document.createElement('span');
+        detail.textContent = hosp.capabilities[key];
+        row.append(heading, detail);
+        caps.appendChild(row);
+      }
+      btn.appendChild(caps);
+    }
     if (committed) {
       btn.disabled = true;
       if (key === chosenKey) btn.classList.add('chosen');
@@ -1812,8 +1826,8 @@ function showDestinationPanel(chosenKey = null) {
     return btn;
   };
 
-  opts.appendChild(makeOpt(h.nearest, 'CLOSER · LOWER CAPABILITY', 'dest-near', 'nearest'));
-  opts.appendChild(makeOpt(h.major,   'FARTHER · HIGHER CAPABILITY', 'dest-major', 'major'));
+  opts.appendChild(makeOpt(h.nearest, 'CLOSER · COMMUNITY', 'dest-near', 'nearest'));
+  opts.appendChild(makeOpt(h.major,   'FARTHER · REFERRAL', 'dest-major', 'major'));
   card.appendChild(opts);
   wrap.appendChild(card);
 

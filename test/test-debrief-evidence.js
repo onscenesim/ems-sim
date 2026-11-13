@@ -8,6 +8,38 @@ const { buildDebriefPrompt } = require('../src/engine/prompts/debrief');
 const { evidenceFixture } = require('./fixtures/debrief-evidence');
 const { hemorrhageCases } = require('./fixtures/debrief-hemorrhage');
 const { rollScenario } = require('../src/engine/roller');
+const { REGIONS } = require('../src/data/regions');
+
+test('each region rolls explicit destination capabilities without community cath labs', () => {
+  for (const { id } of REGIONS) {
+    const roll = i => rollScenario({ region_id: id, random_seed: `destinations-${i}` });
+    const first = roll(0);
+    assert.deepEqual(first.hospitals, roll(0).hospitals);
+    const profiles = { nearest: new Set(), major: new Set() };
+    for (let i = 0; i < 48; i++) {
+      const { nearest, major } = roll(i).hospitals;
+      assert.match(nearest.capabilities.cardiac, /no cath lab/);
+      for (const [key, hospital] of Object.entries({ nearest, major })) {
+        for (const field of ['stroke', 'cardiac', 'icu', 'trauma']) assert.ok(hospital.capabilities[field]);
+        profiles[key].add(JSON.stringify(hospital.capabilities));
+      }
+    }
+    assert.ok(profiles.nearest.size > 1 && profiles.major.size > 1, id);
+  }
+});
+
+test('scene and debrief use the same stored facility profiles, including non-PCI referral centers', () => {
+  const seed = Array.from({ length: 24 }, (_, i) => rollScenario({ random_seed: `routing-${i}` }))
+    .find(s => s.hospitals.major.capabilities.cardiac.includes('no cath lab'));
+  assert.ok(seed);
+  const scene = assembleSeedBlock(seed);
+  const debrief = buildDebriefContext(seed);
+  for (const hospital of Object.values(seed.hospitals)) {
+    const description = `${hospital.name} | Stroke: ${hospital.capabilities.stroke} | Cardiac: ${hospital.capabilities.cardiac} | ICU: ${hospital.capabilities.icu} | Trauma: ${hospital.capabilities.trauma} | Baseline ETA: ${hospital.eta}`;
+    assert.ok(scene.includes(description));
+    assert.ok(debrief.includes(description));
+  }
+});
 
 test('scene and review protect noncompressible hemorrhage care across levels and mixed bleeding', () => {
   for (const level of ['BLS', 'ALS']) for (const fixture of hemorrhageCases()) {

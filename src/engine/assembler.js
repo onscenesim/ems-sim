@@ -6,6 +6,7 @@ const ECG = require('../../public/twelve-lead');
 const { complicationContract } = require('./catastrophes');
 const { CREW }    = require('../data/crew');
 const { REGIONS } = require('../data/regions');
+const { describeHospital } = require('./hospitals');
 const { describe: describeProtocols } = require('../../public/protocols');
 const { COMORBIDITIES } = require('../data/comorbidities');
 const { CREW_BEHAVIOR_CONTRACT } = require('./prompts/crew');
@@ -214,12 +215,11 @@ function assembleSeedBlock(seed) {
     lines.push('--- REGION CONTEXT ---');
     lines.push(`Region: ${region.id} (${region.examples})`);
     lines.push(`Response times: ${region.response_times}`);
-    if (region.hospitals) {
-      const n = region.hospitals.nearest;
-      const m = region.hospitals.major;
-      lines.push(`Nearest hospital: ${n.name} — ${n.type} — ETA ${n.eta}`);
-      lines.push(`Major hospital:   ${m.name} — ${m.type} — ETA ${m.eta}`);
-      lines.push(`Use these names consistently throughout the scenario. Never invent other hospital names.`);
+    const hospitals = seed.hospitals || region.hospitals;
+    if (hospitals?.nearest && hospitals.major) {
+      lines.push(`Nearest hospital: ${describeHospital(hospitals.nearest)}`);
+      lines.push(`Major hospital: ${describeHospital(hospitals.major)}`);
+      lines.push('These are the CAD destinations for this run. Use their names and listed services consistently. A community hospital never has a cath lab; the major hospital has one only if listed. Do not invent facilities or services. The baseline ETAs can change with route conditions; distinguish facility capability from current reachability or diversion.');
     } else {
       lines.push(`Nearest hospital: ${region.nearest_hospital_min}`);
       lines.push(`Major hospital: ${region.major_hospital_min}`);
@@ -343,8 +343,8 @@ function assembleSeedBlock(seed) {
   lines.push('16. NEVER SPEAK FOR THE USER — ABSOLUTE RULE: You play every NPC. The user plays the provider. The user\'s message is the complete and sole record of what the provider did that turn. NEVER: write any action the user did not explicitly state ("You reach for...," "You tell your partner...," "You administer..."), invent or paraphrase user speech, add implied follow-up actions beyond what was stated ("you then confirm placement," "you simultaneously establish IV access"), narrate a second or repeat attempt at a procedure the provider ordered only once ("let me try the other arm," "you stick again"), use any "You..." construction for something the user did not write, or assume the provider did anything not in their message. DO: narrate what the patient, partner, scene, and equipment do in response; describe clinical consequences in passive voice ("The tube passes the cords," "The line is seated," "The monitor shows VF"). Treat provider silence as silence — do not invent a provider action. Autonomous crew activity permitted by the CREW BEHAVIOR CONTRACT is an NPC action and must be narrated as such. WHEN THE PROVIDER ORDERS AN ACTION ("give 500 mL fluid," "place a vomit bag," "push 1mg epi"): report only the RESULT in passive/third person ("A 500 mL saline bag runs through the right-arm lock." / "An emesis basin sits within reach.") — do NOT replay the provider performing each sub-step in second person ("you reach into the bag," "you spike the bag," "you prime the line," "you open the roller clamp," "you secure it with tape"). One or two sentences of consequence, then the patient and scene response. Keep it tight; the provider directs, you report what results.');
   lines.push('17. EVENT TAGS — emit once each, when event first occurs:');
   lines.push('  [LOADING] — emit ONLY when the provider gives an explicit ORDER to put THE PATIENT inside the ambulance. Valid trigger orders: "load the patient", "load her/him up", "move (the patient) to the ambulance/rig/truck/unit", "take her to the rig", "get him in the unit", "bring him to the truck", "package and move (to the rig)". Resolve and emit in the SAME turn the order is given. The following are NON-triggers — do NOT emit [LOADING] for any of them: (a) PACKAGING / PREPARING ON SCENE — c-collar, straps, backboard, KED, splinting, "package her up" by itself — this readies the patient but is not loading; (b) CLINICAL "LOAD" LANGUAGE — "loading dose", "load up on fluids", "fluid bolus", "load the monitor", "load/bolus epi or amio" — medication and equipment loading is NEVER patient loading; (c) QUESTIONS, HYPOTHETICALS, OR FUTURE INTENT — "should we load now?", "are we ready to move?", "after the IV we\'ll load" — only an actual order counts, never a question or a stated plan; (d) simply walking toward or reaching the rig. NEVER SELF-INITIATE loading: the crew loads only when the provider orders it — however critical the patient, do not decide to load on their behalf or narrate the crew loading unprompted.');
-  lines.push('  [EN_ROUTE:nearest] — wheels rolling to nearest appropriate hospital (default for most calls).');
-  lines.push('  [EN_ROUTE:major]   — wheels rolling to trauma center, cardiac cath lab, stroke center, or other major/specialty hospital (longer drive).');
+  lines.push('  [EN_ROUTE:nearest] — wheels rolling to the closer hospital listed in REGION CONTEXT.');
+  lines.push('  [EN_ROUTE:major]   — wheels rolling to the farther hospital listed in REGION CONTEXT. Match specialty requests to the actual listed services.');
   lines.push('  ORDERING — LOAD vs DEPART ARE SEPARATE BEATS: [LOADING] must precede or accompany [EN_ROUTE:…]. LOADING = the patient goes into the rig (and the crew climb in). EN_ROUTE = the rig actually pulls away and drives. Emit [EN_ROUTE] ONLY on the turn the provider explicitly orders the unit to DRIVE / go / transport / roll / head out. CRITICAL: do NOT emit [EN_ROUTE] on the loading turn merely because a destination is already known. A destination decided earlier — by medical control, a discussion, or a prior order — does NOT start transport; loading the patient does NOT start transport; climbing into the ambulance does NOT start transport. The two tags may appear in the SAME turn ONLY when the provider\'s message THIS turn is itself an explicit load-and-go that also commits to driving (e.g. "load him and take him to the trauma center", "load and go"). Otherwise: load now (emit [LOADING]; destination dialogue follows Rule 10), then depart LATER on the turn the provider says to roll (emit [EN_ROUTE]).');
   lines.push('  LOADING IS ATOMIC — CRITICAL RULE: When the provider orders the patient loaded or moved into the ambulance (an order to put the patient IN the rig, not merely to package on scene), resolve the ENTIRE sequence in this single response and emit [LOADING] before the response ends. Do NOT split loading across multiple turns requiring further player input. If equipment must be retrieved (stair chair, backboard, KED, splints, etc.) the partner retrieves it and the sequence continues — narrate it all within the same reply. The provider gave the loading order; the crew executes the full sequence without waiting for re-confirmation. Loading never requires a follow-up player message to complete. If the patient condition genuinely complicates loading (agitation, tight stairwell, unstable fracture), narrate the complication AND its resolution in the same turn, then emit [LOADING]. The only valid exception: the student explicitly pauses loading to perform another intervention first ("wait, let me finish the IV before we move him").');
   lines.push('');
@@ -492,6 +492,14 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   }
   lines.push('');
 
+  if (seed.hospitals?.nearest && seed.hospitals.major) {
+    lines.push('--- CAD DESTINATIONS FOR THIS CALL (shown when the patient is loaded) ---');
+    lines.push(`  Closer: ${describeHospital(seed.hospitals.nearest)}`);
+    lines.push(`  Farther: ${describeHospital(seed.hospitals.major)}`);
+    lines.push('  These are baseline services and travel estimates. Use the timeline for closures, diversion, actual transport and what was known at the decision point.');
+    lines.push('');
+  }
+
   // ── 2. Chronological call timeline: orders + dice + scene narration ──────
   lines.push("[2] CALL TIMELINE (chronological). Each entry: the provider's order, its dice results, SCENE narration, DISPLAYED VITALS and acquired ECG PRINTOUTS. All three observation sources were available to the player, even when the scene prose did not describe monitor or ECG findings. Ground truth, dice and explicitly hidden physiology are evaluator context, not player knowledge. Findings become available at the recorded turn/capture time, after that turn's order; judge subsequent decisions using all evidence available so far.");
   let actionCount = 0;
@@ -557,7 +565,7 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   lines.push('INFORMATION TIMING — NO HINDSIGHT: if a critical finding (a DNR bracelet, a hidden hazard, a second patient, an ECG change) first appears in player-visible evidence at time T, the provider could not have acted on it before T. Judge their response from the moment of reveal, not from the start of the call. Faulting them for not asking sooner is allowed ONLY when standard practice demands that question regardless of cues — and say so explicitly.');
   lines.push('TRANSPORT SKIPS: Ongoing care continued; no new interventions ordered. Monitoring and existing treatments continued throughout the skipped interval. Never infer an interruption or abandonment of care from a time-skip alone.');
   lines.push('Do NOT assume or invent any action, medication, dose, assessment, or vital not listed above; if it is not in the log, it did not happen. Do NOT invent scene details (documents, signage, bystanders, locations) that never appear in the SCENE text.');
-  lines.push('NEVER fabricate specific facility or hospital names — use "the receiving facility".');
+  lines.push('Use recorded facility names only; if the receiving facility is unidentified, call it "the receiving facility".');
   lines.push('TIME TERMS: "on-scene time" means arrival until departing for the hospital; "call time" means the whole run. Both are labeled in section [1] — use the terms precisely and never call total call time "scene time".');
   lines.push('=== END LOG ===');
   return lines.join('\n');

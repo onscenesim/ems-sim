@@ -7,9 +7,10 @@ const REGIONS = [
     weather_weights: "full four seasons", agency_culture: "high call volume, protocol-driven, seen everything",
     medical_direction_culture: "hospital patch, usually fast",
     crew_pool: ["partner", "captain"], acuity_minimum: "EASY",
+    hospital_network: "metro",
     hospitals: {
-      nearest: { name: "Riverside Community Hospital", type: "community ED", eta: "5-10 minutes" },
-      major:   { name: "Mercy General Medical Center", type: "Level I Trauma Center / Cardiac Cath Lab / Comprehensive Stroke Center", eta: "7-14 minutes" },
+      nearest: { name: "Riverside Community Hospital", eta: "5-10 minutes" },
+      major:   { name: "Mercy General Medical Center", eta: "7-14 minutes" },
     },
   },
   {
@@ -18,9 +19,10 @@ const REGIONS = [
     weather_weights: "heat weighted heavily, ice excluded", agency_culture: "mixed, car dependant",
     medical_direction_culture: "standard",
     crew_pool: ["partner", "captain"], acuity_minimum: "EASY",
+    hospital_network: "metro",
     hospitals: {
-      nearest: { name: "Valley Regional Medical Center", type: "community ED", eta: "10-20 minutes" },
-      major:   { name: "Southwest Trauma and Heart Center", type: "Level I Trauma Center / Cardiac Cath Lab / Stroke Center", eta: "20-30 minutes" },
+      nearest: { name: "Valley Regional Medical Center", eta: "10-20 minutes" },
+      major:   { name: "Southwest Trauma and Heart Center", eta: "20-30 minutes" },
     },
   },
   {
@@ -29,9 +31,10 @@ const REGIONS = [
     weather_weights: "standard four season", agency_culture: "mixed volunteer and career, \n               pride in community, less jaded",
     medical_direction_culture: "standard",
     crew_pool: ["partner", "captain", "partner_BLS", "captain_BLS"], acuity_minimum: "EASY",
+    hospital_network: "metro",
     hospitals: {
-      nearest: { name: "Lakeview Community Hospital", type: "community ED", eta: "10-15 minutes" },
-      major:   { name: "University Medical Center", type: "Level II Trauma Center / Cardiac Cath Lab / Stroke Center", eta: "20-30 minutes" },
+      nearest: { name: "Lakeview Community Hospital", eta: "10-15 minutes" },
+      major:   { name: "University Medical Center", eta: "20-30 minutes" },
     },
   },
   {
@@ -40,9 +43,10 @@ const REGIONS = [
     weather_weights: "winter weighted, fog, ice", agency_culture: "volunteer heavy, deeply community connected,\n               crew may know the patient personally",
     medical_direction_culture: "difficult, cell service variable",
     crew_pool: ["partner_BLS", "captain_BLS"], acuity_minimum: "NORMAL",
+    hospital_network: "limited",
     hospitals: {
-      nearest: { name: "Millbrook General Hospital", type: "basic ED — limited surgical, no cath lab", eta: "30-50 minutes" },
-      major:   { name: "Regional Medical Centre", type: "Level II Trauma Center / surgical services / cardiac monitoring", eta: "60-100 minutes" },
+      nearest: { name: "Millbrook General Hospital", eta: "30-50 minutes" },
+      major:   { name: "Regional Medical Centre", eta: "60-100 minutes" },
     },
   },
   {
@@ -51,9 +55,10 @@ const REGIONS = [
     weather_weights: "extreme cold weighted, \n                blizzard, ice, wildlife hazard", agency_culture: "volunteer, isolated, \n               extended scene time expected and accepted",
     medical_direction_culture: "satellite phone possible, \n            radio often unreliable",
     crew_pool: ["partner_BLS", "captain_BLS"], acuity_minimum: "NORMAL",
+    hospital_network: "remote",
     hospitals: {
-      nearest: { name: "Clearwater District Hospital", type: "very limited ED — stabilization only, no surgery on site", eta: "60-120 minutes" },
-      major:   { name: "Northern Regional Health Centre", type: "full trauma and surgical services — air medical primary, ground 6-12 hours", eta: "air medical preferred; ground 360-720 minutes" },
+      nearest: { name: "Clearwater District Hospital", eta: "60-120 minutes" },
+      major:   { name: "Northern Regional Health Centre", eta: "air medical preferred; ground 360-720 minutes" },
     },
   },
   {
@@ -62,9 +67,10 @@ const REGIONS = [
     weather_weights: "extreme cold heavily weighted,\n                blizzard, ice, black ice standard", agency_culture: "experienced with environmental emergencies,\n               cold weather protocols standard",
     medical_direction_culture: "standard",
     crew_pool: ["partner", "captain"], acuity_minimum: "EASY",
+    hospital_network: "metro",
     hospitals: {
-      nearest: { name: "Northgate General Hospital", type: "community ED", eta: "10-20 minutes" },
-      major:   { name: "Northern Health Sciences Centre", type: "Level I Trauma Center / Cardiac Cath Lab / Comprehensive Stroke Center", eta: "30-40 minutes" },
+      nearest: { name: "Northgate General Hospital", eta: "10-20 minutes" },
+      major:   { name: "Northern Health Sciences Centre", eta: "30-40 minutes" },
     },
   },
   {
@@ -73,9 +79,10 @@ const REGIONS = [
     weather_weights: "heat, humidity, \n                hurricane season possible", agency_culture: "community-oriented, \n               heat and humidity baseline",
     medical_direction_culture: "standard",
     crew_pool: ["partner", "captain", "partner_BLS", "captain_BLS"], acuity_minimum: "EASY",
+    hospital_network: "regional",
     hospitals: {
-      nearest: { name: "Island Medical Center", type: "community ED", eta: "15-40 minutes" },
-      major:   { name: "Queen's Medical Center", type: "Level II Trauma / cardiac — inter-island air medical for Level I needs", eta: "40-60 minutes; inter-island air medical for highest acuity" },
+      nearest: { name: "Island Medical Center", eta: "15-40 minutes" },
+      major:   { name: "Queen's Medical Center", eta: "40-60 minutes; inter-island air medical for highest acuity" },
     },
   },
   {
@@ -84,9 +91,10 @@ const REGIONS = [
     weather_weights: "heat, rain, flooding", agency_culture: "resource-constrained, \n               improvisation expected",
     medical_direction_culture: "unreliable",
     crew_pool: ["partner_BLS", "captain_BLS"], acuity_minimum: "HARD",
+    hospital_network: "limited",
     hospitals: {
-      nearest: { name: "Hospital General", type: "basic ED — limited resources, minimal surgical capability", eta: "30-90 minutes" },
-      major:   { name: "Centro Médico Regional", type: "regional referral center — surgical and ICU capable", eta: "120-240 minutes" },
+      nearest: { name: "Hospital General", eta: "30-90 minutes" },
+      major:   { name: "Centro Médico Regional", eta: "120-240 minutes" },
     },
   },
   {
@@ -95,9 +103,10 @@ const REGIONS = [
     weather_weights: "heat in inland valleys, fog on coast, \n         wildfire smoke seasonally significant,\n         earthquake not a weather event but worth noting\n         as a special circumstance possibility", agency_culture: "high call volume, burnout prevalent, \n         us-vs-them dynamic between field and administration,\n         crews are experienced but often demoralized,\n         documentation-heavy, liability-averse decisions common,\n         transport-first mentality even when scene stabilization \n         is clearly indicated. Fire vs Private EMS",
     medical_direction_culture: "hospital patch can be slow; clinical discussion when requested",
     crew_pool: ["partner", "captain"], acuity_minimum: "EASY",
+    hospital_network: "metro",
     hospitals: {
-      nearest: { name: "Valley Presbyterian Medical Center", type: "community ED", eta: "8-15 minutes" },
-      major:   { name: "LAC+USC Medical Center", type: "Level I Trauma Center / Cardiac Cath Lab / Comprehensive Stroke Center — base hospital", eta: "10-20 minutes" },
+      nearest: { name: "Valley Presbyterian Medical Center", eta: "8-15 minutes" },
+      major:   { name: "LAC+USC Medical Center", eta: "10-20 minutes" },
     },
   },
 ];
