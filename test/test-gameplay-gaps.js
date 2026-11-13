@@ -347,6 +347,69 @@ test('new transport defaults coherently and explicit redirection still changes d
   assert.notEqual(s.transportEtaMin, nearestEta);
 });
 
+test('hospital distance advances with simulated driving time and snow reduces speed without changing the route', async () => {
+  for (const [weather, startEta, afterFive] of [['clear', 750, 4.5], ['snow', 1154, 5.55]]) {
+    const s = session();
+    Object.assign(s.seed, { weather_id: weather, complication_type: 'none', routine_er_divert: false });
+    assert.equal(s.transportStatus(), null);
+    response = 'The ambulance departs.\n[EN_ROUTE:nearest]\n[CREW_STATUS: partner=driving captain=not_on_scene]\n[TIME: 4:00]';
+    await s.send('Transport to Lakeview Community Hospital.');
+    const departure = s.transportStatus();
+    assert.equal(departure.distance_mi, 7.5);
+    assert.equal(departure.eta_seconds, startEta);
+
+    response = 'Monitoring continues.\n[TIME: 9:00]';
+    await s.send('Continue monitoring.');
+    assert.ok(Math.abs(s.transportStatus().distance_mi - afterFive) < 1e-8);
+    assert.equal(s.transportStatus().eta_seconds, startEta - 300);
+
+    // Even an incorrect driving tag cannot tick the ETA down during a stop.
+    response = 'The rig pulls over.\n[CREW_STATUS: partner=driving captain=not_on_scene]\n[TIME: 12:00]';
+    await s.send('Pull over.');
+    assert.equal(s.transportStatus().phase, 'paused');
+    assert.equal(s.transportStatus().eta_seconds, startEta - 300);
+    response = 'The rig starts moving.\n[EN_ROUTE]\n[CREW_STATUS: partner=driving captain=not_on_scene]\n[TIME: 13:00]';
+    await s.send('Resume driving.');
+    assert.equal(s.transportStatus().eta_seconds, startEta - 300);
+
+    response = 'The rig reaches the ED bay.\n[TIME: 14:00]';
+    const result = await s.send('Continue current care and monitoring until arrival.', false, 'to_arrival');
+    assert.equal(s.sceneMinute, 13 + (startEta - 300) / 60);
+    assert.equal(s.departSceneMinute, 4);
+    assert.equal(s.transportStatus().phase, 'arrived');
+    assert.equal(result.closed, false);
+  }
+});
+
+test('diversion at the hospital preserves the location and the saved reroute includes backtracking', async () => {
+  const s = session();
+  Object.assign(s.seed, { weather_id: 'clear', complication_type: 'er_divert', routine_er_divert: false });
+  response = 'The rig departs.\n[EN_ROUTE:nearest]\n[CREW_STATUS: partner=driving captain=not_on_scene]\n[TIME: 4:00]';
+  await s.send('Depart for the nearest hospital.');
+  response = 'Monitoring continues.\n[TIME: 16:00]';
+  await s.send('Continue monitoring.');
+  assert.equal(s.transportStatus().eta_seconds, 30);
+  assert.equal(s.incident, null);
+  response = 'Monitoring continues.\n[TIME: 17:00]';
+  const rejected = await s.send('Continue monitoring.');
+  assert.equal(rejected.arrived, false);
+  assert.equal(s.sceneMinute, 16.5);
+  assert.equal(s.transportStatus().phase, 'diverted');
+  assert.match(rejected.reply, /ER is on diversion/);
+
+  response = 'The rig redirects.\n[EN_ROUTE:major]\n[INCIDENT_RECOVERY: alternate_destination]\n[CREW_STATUS: partner=driving captain=not_on_scene]\n[TIME: 18:00]';
+  await s.send('Redirect to the major hospital.');
+  const reroute = s.transportStatus();
+  assert.equal(reroute.destination, 'University Medical Center');
+  assert.ok(Math.abs(reroute.distance_mi - 12.75) < 1e-8);
+  assert.equal(reroute.eta_seconds, 1275);
+
+  const id = randomUUID();
+  const restored = restoreSession({ ...structuredClone(s), id });
+  assert.deepEqual(restored.transportStatus(), reroute);
+  deleteSession(id);
+});
+
 test('radio reports and handoffs advance from the TIME footer without inventing procedure rolls', async () => {
   const s = session();
   s.sceneMinute = 7;

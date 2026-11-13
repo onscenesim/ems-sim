@@ -938,7 +938,8 @@ body.light-mode .brief-options-note { color: #536159; }
 .dest-opt:disabled { cursor: default; opacity: 0.45; }
 .dest-opt.chosen { opacity: 1; background: rgba(255, 255, 255, 0.05); border-color: var(--cyan); }
 .dest-opt.chosen .dest-name { color: #fff; }
-.dest-opt.chosen .dest-tag::after { content: ' ✓ EN ROUTE'; color: var(--cyan); }
+.dest-opt.chosen .dest-tag::after { content: ' ✓ SELECTED'; color: var(--cyan); }
+.dest-panel[data-phase="en_route"] .dest-opt.chosen .dest-tag::after { content: ' ✓ EN ROUTE'; }
 
 .new-scenario-btn {
   display: block;
@@ -983,6 +984,28 @@ body.light-mode .brief-options-note { color: #536159; }
 }
 
 .export-btn:hover { background: #232840; }
+
+#transport-status:not([hidden]) {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  background: #e4e8e7;
+  border-top: 1px solid #9daaa7;
+  color: #263e39;
+  font-family: var(--font-ui);
+  font-size: 15px;
+}
+
+.transport-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1px 12px;
+  min-width: 0;
+}
+
+#transport-label { font-weight: 700; }
+#transport-detail { font-variant-numeric: tabular-nums; }
+#transport-status[data-phase="diverted"] { background: #fff0cf; color: #683b0a; }
 
 #input-row {
   flex-shrink: 0;

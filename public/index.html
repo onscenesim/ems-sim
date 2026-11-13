@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=113">
+  <link rel="stylesheet" href="style.css?v=115">
   <link rel="stylesheet" href="monitor.css?v=9">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
@@ -2723,6 +2723,12 @@
       <div id="crew-panel-footer">Today&#x2019;s shift</div>
     </div>
 
+    <div id="transport-status" hidden>
+      <div class="transport-readout" role="status" aria-live="polite" aria-atomic="true">
+        <span id="transport-label"></span>
+        <span id="transport-detail"></span>
+      </div>
+    </div>
     <div id="input-row">
       <label class="prompt" for="user-input" aria-hidden="true">&gt;&nbsp;</label>
       <input
@@ -2868,7 +2874,7 @@
   </dialog>
   <script src="monitor.js?v=5"></script>
   <script src="airway-scenes.js?v=3"></script>
-  <script src="app.js?v=134"></script>
+  <script src="app.js?v=136"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

@@ -4,7 +4,7 @@ const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { DESTINATION_DIALOGUE_POLICY, BACKUP_TRANSPORT_POLICY, captainPresent } = require('./prompts/transport');
 const { prepareIncident, reconcileIncident, enforceIncidentState } = require('./catastrophes');
 const { reviewText } = require('./instructor');
-const { REGIONS } = require('../data/regions');
+const { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, transportStatus } = require('./transport');
 const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, splitCareCheckpoint, getProcedure, rollProcedure, PRECHARGE_RE } = require('./dice');
 const { careSeconds, clockStamp, hasBundledSuction } = require('./care-timing');
@@ -296,18 +296,6 @@ function parsePatientFocusTag(reply) {
   };
 }
 
-/**
- * Parse [LOADING] and [EN_ROUTE:nearest|major] event tags from the reply.
- * Returns { cleanedReply, loading, enRoute, transportDest }.
- */
-function parseHospitalEtaMin(str) {
-  // Extract all numbers from strings like "10-20 minutes" or "360-720 minutes, air medical primary"
-  const nums = (str || '').match(/\d+/g);
-  if (!nums || !nums.length) return null;
-  const vals = nums.map(Number);
-  return vals.reduce((a, b) => a + b, 0) / vals.length;
-}
-
 // Parse [DEMO: source] — demographics obtained
 function parseDemoTag(reply) {
   const re = /\s*\[DEMO:\s*([^\]]+)\]\s*/gi;
@@ -340,10 +328,10 @@ function parseEventTags(reply) {
   // without tolerating it the tag never matched, so departure never fired and the
   // raw tag leaked into the visible reply. A single trailing [a-z] word is required
   // so a placeholder like "[EN_ROUTE: pending destination]" does NOT fire transport.
-  const routeMatch = cleaned.match(/\[EN_ROUTE(?::\s*([a-z]+))?\]/i);
+  const routeMatch = cleaned.match(/\[EN_ROUTE(?::\s*(nearest|major))?\]/i);
   if (routeMatch) {
     enRoute = true;
-    transportDest = routeMatch[1] ? routeMatch[1].toLowerCase() : 'nearest';
+    transportDest = routeMatch[1]?.toLowerCase() || null;
   }
   // Strip ANY [EN_ROUTE…] tag from the visible text, including malformed/placeholder
   // forms (e.g. "[EN_ROUTE: pending destination]") that don't fire transport.
@@ -405,6 +393,8 @@ const LOAD_REQUEST_RE = /\b(?:(?:load|get|bring|take|put|wheel|roll|move)\s+(?:u
 // Interrogative / hypothetical framing — don't force a load on a question
 // ("should we load him up?", "are we ready to move to the rig?").
 const LOAD_QUESTION_RE = /\b(?:should|shall|can|could|are|is|ready|when|do)\s+(?:we|i|you|he|she|they|it)\b/i;
+const REROUTE_RE = /\b(?:divert|redirect|reroute|switch|change|transport|drive|go|head|depart|take)\b/i;
+const STOP_TRANSPORT_RE = /\b(?:pull over|park (?:the )?(?:rig|ambulance|unit)|stop (?:the )?(?:rig|ambulance|unit|driving|transport))\b/i;
 
 /**
  * Parse [TIME: M:SS] tag from Claude's reply.
@@ -542,6 +532,7 @@ class Session {
     this.moving = false;      // true after [EN_ROUTE] fires — raises CPR DC
     this.transportEtaMin = null; // minutes to hospital, set when [EN_ROUTE] fires
     this.transportDest = null;   // 'nearest' | 'major' — which hospital the unit is en route to
+    this.transportPosition = null; // road segment and miles from its start
     this.departSceneMinute = null; // scene-clock minute when the unit first departed for the hospital — the true "scene time" boundary for the debrief
     // Vascular access ledger — the engine's authoritative record of every line
     // placed this call: [{ kind: 'IV'|'IO', status: 'patent'|'marginal'|'blown' }].
@@ -556,21 +547,18 @@ class Session {
     this.patientOutcome = null; // generated with the debrief, hidden from its visible text
   }
 
-  /**
-   * Estimate transport time (minutes) for the current region. Used to advance the
-   * scene clock realistically when the player time-skips through transport. Falls
-   * back to the active transport ETA, then to a sane default.
-   */
-  _transportEtaEstimate() {
-    if (typeof this.transportEtaMin === 'number' && this.transportEtaMin > 0) {
-      return Math.round(this.transportEtaMin);
+  _remainingTransportMinutes() {
+    const network = roadNetwork(this.seed);
+    if (this.transportPosition && network.ground[this.transportDest]) {
+      return travelSeconds(network, this.transportPosition, this.transportDest) / 60;
     }
-    const reg = REGIONS.find(r => r.id === this.seed.region);
-    if (reg) {
-      const v = parseHospitalEtaMin(reg.nearest_hospital_min);
-      if (v) return Math.round(v);
-    }
-    return 12;
+    if (this.transportDest && !network.ground[this.transportDest]) return null;
+    return Math.max(0, (this.transportEtaMin ?? legacyEta(this.seed, this.transportDest))
+      - (this.departSceneMinute === null ? 0 : this.sceneMinute - this.departSceneMinute));
+  }
+
+  transportStatus() {
+    return transportStatus(this);
   }
 
   /** One-line summary of the access ledger, numbered per kind. */
@@ -639,8 +627,9 @@ class Session {
     const rollContext = buildTurnContextFlags(
       this.seed, this.contextFlags, this.lastVitals, userText, this.moving
     );
-    const transportParked = this.moving && !this.arrivedAtHospital
-      && this.crewStatus?.partner === 'on_scene' && !this.crewStatus.driver;
+    const transportParked = !this.arrivedAtHospital && (
+      (this.transportPosition && !this.moving)
+      || (this.moving && this.crewStatus?.partner === 'on_scene' && !this.crewStatus.driver));
     rollContext.canthotomy_moving = this.moving && !this.arrivedAtHospital && !transportParked;
     rollContext.managed_hemorrhage = this.wounds.length > 0;
     const woundPlan = !reportMode && !skipMode && rollContext.managed_hemorrhage
@@ -778,8 +767,20 @@ class Session {
         + 'Reports consume scene time too: advance the mandatory TIME footer by the realistic duration of this exchange.]';
     }
     const incidentTurnStart = this.sceneMinute;
+    const network = roadNetwork(this.seed);
+    const previousDest = this.transportDest;
+    const wasArrived = this.arrivedAtHospital;
+    const wasDriving = this.moving && !transportParked && !wasArrived;
+    const changesRoute = !reportMode && REROUTE_RE.test(userText);
+    const explicitDest = changesRoute ? orderedDestination(this.seed, userText) : null;
+    const stopping = wasDriving && !reportMode && !skipMode && STOP_TRANSPORT_RE.test(userText);
+    const resuming = /\b(?:resume|continue driving|keep driving|start driving|pull back out|roll out)\b/i.test(userText);
+    const diversionArrival = !this.incident && ['to_hospital', 'to_arrival'].includes(skipMode);
     const incidentContext = prepareIncident(this, userText, reportMode, skipMode, wantsLoad);
     skipMode = incidentContext.skipMode;
+    const arrivalSkip = ['to_hospital', 'to_arrival'].includes(skipMode);
+    const remainingBefore = this._remainingTransportMinutes();
+    const routeTime = key => travelSeconds(network, this.transportPosition || origin(), key) / 60;
     const arrestWindow = this.seed.category === 'arrest'
       && rolls.some(r => ['cpr', 'lucas', 'pulse_check', 'rhythm_check', ...SHOCK_PROC_IDS].includes(r.procedure_id));
     const timeCare = !reportMode && !skipMode && !arrestWindow && !this.incident?.bedAvailableMinute;
@@ -802,13 +803,6 @@ class Session {
     // provider kept monitoring (not an abandonment of care), and pick up from the
     // patient's current state.
     if (skipMode) {
-      // A transport skip deterministically lands at the ED bay — record it server-
-      // side so the END/handoff state never depends on whether the model's prose
-      // happened to say "we've arrived". This survives resume via the snapshot.
-      if (skipMode === 'to_hospital' || skipMode === 'to_arrival') {
-        this.arrivedAtHospital = true;
-      }
-      const etaMin = this._transportEtaEstimate();
       const noTreat = 'IMPORTANT: a time-skip is a fast-forward through an uneventful stretch, NOT an abandonment of care. '
         + 'Assume the provider kept monitoring the patient and continued whatever care was already in progress the entire '
         + 'time; they simply did not issue new minute-to-minute orders during the skipped interval. The patient\'s '
@@ -845,16 +839,15 @@ class Session {
         messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — TRANSPORT TO HOSPITAL. The provider skips ahead: transport the '
           + 'patient and ARRIVE at the emergency department bay. If a destination was already chosen use it; otherwise '
           + 'transport to the most clinically appropriate facility and name it in one clause. In 2-3 sentences, summarize '
-          + 'the transport and arrival. ' + noTreat + ' Advance the scene clock by roughly ' + etaMin + ' minutes to reflect '
-          + 'the full transport. Emit [EN_ROUTE:nearest] or [EN_ROUTE:major] for the destination.' + crewNote
+          + 'the transport and arrival. ' + noTreat + ' Use the chosen destination’s travel time. '
+          + 'Emit [EN_ROUTE:nearest] or [EN_ROUTE:major] for the destination.' + crewNote
           + ' Arrive at the bay doors; the receiving team meets the unit and is ready to take report. Do NOT deliver '
           + 'the handoff yourself, do NOT transfer care, and do NOT declare the call over — prompt the provider for '
           + 'their report and await it. The scenario continues.]';
       } else if (skipMode === 'to_arrival') {
         messageText += '\n\n[SYSTEM NOTE: TIME-SKIP — COMPLETE TRANSPORT. The unit is already en route. The provider skips '
           + 'the remainder of the drive and ARRIVES at the emergency department bay. In 1-2 sentences, summarize the rest of '
-          + 'the transport and arrival. ' + noTreat + ' Advance the scene clock by roughly ' + etaMin + ' minutes to reflect '
-          + 'the remaining transport. Do not ask about destination — it is already set.' + crewNote
+          + 'the transport and arrival. ' + noTreat + ' Do not ask about destination — it is already set.' + crewNote
           + ' Arrive at the bay doors; the receiving team meets the unit and is ready to take report. Do NOT deliver '
           + 'the handoff yourself, do NOT transfer care, and do NOT declare the call over — prompt the provider for '
           + 'their report and await it. The scenario continues.]';
@@ -869,10 +862,30 @@ class Session {
     }
     // Inject transport lock when the unit is already moving so the model never
     // asks about destination again or invents a phantom driver.
-    if (transportParked && !skipMode) {
+    if (stopping) {
+      messageText += '\n\n[CAD: The provider ordered a stop. Pull over safely before starting care. Keep the current destination and do not emit EN_ROUTE unless the provider also ordered the rig to resume.]';
+    } else if (transportParked && !skipMode) {
       messageText += '\n\n[SYSTEM NOTE: The unit is stopped during transport. Keep the selected destination and keep the unit stopped until the provider orders transport to resume. Emit [EN_ROUTE] when the unit starts moving again.]';
     } else if (this.moving) {
-      messageText += '\n\n[SYSTEM NOTE: EN_ROUTE LOCKED — the unit is already moving. Destination is set. Do NOT ask where to go. Do NOT invent a new crew member to drive. The assigned driver is driving.]';
+      messageText += '\n\n[SYSTEM NOTE: EN_ROUTE LOCKED — destination is set unless the provider explicitly reroutes. Do NOT ask where to go or invent a new driver. When the provider orders a reroute, emit the new [EN_ROUTE:nearest] or [EN_ROUTE:major] tag.]';
+    }
+    if (!incidentContext.blocked && !wasArrived) {
+      if (arrivalSkip && previousDest && network.ground[previousDest]) {
+        messageText += `\n\n[CAD: Arrival is at T+${clockStamp(incidentTurnStart + remainingBefore)}. Use that time for arrival findings and the TIME footer.]`;
+      } else if (arrivalSkip) {
+        const times = ['nearest', 'major'].filter(key => network.ground[key])
+          .map(key => `${key} arrives at T+${clockStamp(incidentTurnStart + routeTime(key))}`);
+        messageText += `\n\n[CAD: Ground arrival from scene: ${times.join('; ')}. Use the selected destination's time in the footer. If the provider ordered air or ferry transport, use the established transfer plan instead.]`;
+      } else if (wasDriving && previousDest && network.ground[previousDest] && this.transportPosition) {
+        messageText += `\n\n[CAD: ${clockStamp(remainingBefore)} remaining on the current route at T+${clockStamp(incidentTurnStart)}. Use that estimate for radio reports. Advance time only for this turn's actions. Let CAD signal physical arrival; do not narrate arrival or handoff on this turn.]`;
+        if (explicitDest && explicitDest !== previousDest && network.ground[explicitDest]) {
+          messageText += `\n\n[CAD: If the alternate destination is accepted, its ETA from this position is ${clockStamp(routeTime(explicitDest))}.]`;
+        }
+      } else if (changesRoute) {
+        const choices = ['nearest', 'major'].filter(key => network.ground[key])
+          .map(key => `${key}: ${clockStamp(routeTime(key))}`);
+        messageText += `\n\n[CAD: Ground time from this position: ${choices.join('; ')}. If starting or resuming ground transport, end with the rig just departing. Let CAD track arrival.]`;
+      }
     }
     // Deterministic load directive — force the model to resolve loading atomically
     // this turn instead of deferring it, so narration and the [LOADING] tag agree.
@@ -1211,6 +1224,8 @@ class Session {
       if (_hospitalRe.test(reply)) enRoute = true;
       else if (_motionRe.test(reply) && !_otherUnitRe.test(reply)) enRoute = true;
     }
+    if (wasArrived || (reportMode && !arrivalSkip) || (stopping && !resuming)
+        || (transportParked && !arrivalSkip && !changesRoute && !resuming)) enRoute = false;
     if (this.incident && !this.incident.resolved) {
       enRoute = false;
       this.arrivedAtHospital = false;
@@ -1221,17 +1236,15 @@ class Session {
     if (enRoute) {
       // Record which hospital the unit committed to so the destination panel can
       // mark the chosen side when it flashes on a load-and-go.
-      const previousDest = this.transportDest;
       // A skip completes the committed journey; a normal explicit destination
       // tag may redirect it. Missing tags never erase a previous choice.
       this.transportDest = skipMode
-        ? (previousDest || transportDest || 'nearest')
-        : (transportDest || previousDest || 'nearest');
-      // Compute transport ETA from region data
-      const _reg = REGIONS.find(r => r.id === this.seed.region);
-      if (_reg && (this.transportEtaMin == null || previousDest !== this.transportDest)) {
-        const _etaStr = this.transportDest === 'major' ? _reg.major_hospital_min : _reg.nearest_hospital_min;
-        this.transportEtaMin = parseHospitalEtaMin(_etaStr);
+        ? (previousDest || explicitDest || transportDest || 'nearest')
+        : (explicitDest || (changesRoute ? transportDest : null) || previousDest || transportDest || 'nearest');
+      this.transportPosition ||= origin();
+      if (this.transportEtaMin == null || previousDest !== this.transportDest) {
+        this.transportEtaMin = network.ground[this.transportDest]
+          ? travelSeconds(network, this.transportPosition, this.transportDest) / 60 : null;
       }
     }
     if (enRoute && !this.hasLoaded) {
@@ -1275,14 +1288,9 @@ class Session {
       }
     }
 
-    // ORGANIC ARRIVAL: the provider can reach the ED without ever pressing the skip
-    // button — by driving in through normal narration. The skip path sets
-    // arrivedAtHospital directly (see above); this covers the non-skip path so the
-    // client's skip button still flips to END. Trigger on unambiguous "we're physically
-    // at the hospital" cues — the ambulance bay / ED entrance, or a bedside transfer of
-    // care. Gated on this.moving so nothing on scene (or an en-route ETA mention like
-    // "arriving in 18 minutes") can trip it, and only matters until it's set once.
-    if (this.moving && !this.arrivedAtHospital && !reportMode && !(this.incident && !this.incident.resolved)) {
+    // Transfers without a modeled ground route still use narrated arrival.
+    if (this.moving && !this.arrivedAtHospital && !network.ground[this.transportDest]
+        && !reportMode && !(this.incident && !this.incident.resolved)) {
       const _arrivalRe = /\b(?:ambulance bay|ed bay|hospital bay|bay doors?|ambulance entrance|ed entrance|hospital entrance|emergency (?:department|room) entrance|we have it from here|we'?ve got (?:it|him|her|them) from here|(?:resus|trauma|ed|the) team takes over|transfer(?:s|red|ring)? (?:of )?care|releas\w+ the stretcher|hand(?:s|ed|ing)? (?:off )?(?:the )?(?:patient|care) (?:off )?to the (?:resus|trauma|ed|hospital|receiving) team)\b/i;
       if (_arrivalRe.test(reply)) this.arrivedAtHospital = true;
     }
@@ -1337,10 +1345,69 @@ class Session {
       this.messages.at(-1).content = this.messages.at(-1).content.replace(/\[TIME:[^\]]*\]/gi, stamp);
     }
 
+    const blocked = this.incident && !this.incident.resolved;
+    const dest = this.transportDest;
+    const ground = network.ground[dest];
+    const stillDriving = this.moving && (enRoute || (!stopping
+      && (this.crewStatus?.partner !== 'on_scene' || this.crewStatus?.driver)));
+    const finalizeClock = minute => {
+      this.sceneMinute = minute;
+      const message = this.messages.at(-1);
+      message.content = `${parseTimeTag(message.content).cleanedReply}\n[TIME: ${clockStamp(minute)}]`;
+      this.lastReplyHadTime = true;
+    };
+    if (!wasArrived && arrivalSkip && !blocked) {
+      if (ground) {
+        const travel = travelSeconds(network, this.transportPosition, dest) / 60;
+        finalizeClock(incidentTurnStart + travel);
+        this.transportPosition = drive(network, this.transportPosition, dest, travel);
+      }
+      this.arrivedAtHospital = true;
+    } else if (!wasArrived && diversionArrival && this.incident?.id === 'er_divert' && blocked) {
+      const divertedDest = this.incident.divertedDest;
+      if (network.ground[divertedDest]) {
+        this.transportDest = divertedDest;
+        this.transportPosition ||= origin();
+        const travel = previousDest === divertedDest && wasDriving
+          ? remainingBefore : travelSeconds(network, this.transportPosition, divertedDest) / 60;
+        this.transportPosition = drive(network, this.transportPosition, divertedDest, travel);
+        this.departSceneMinute ??= incidentTurnStart;
+        if (!this.hasLoaded) loading = this.hasLoaded = true;
+        finalizeClock(incidentTurnStart + travel);
+      }
+    } else if (!wasArrived && wasDriving && blocked && this.incident?.bedAvailableMinute) {
+      if (this.transportPosition && ground) {
+        this.transportPosition = drive(network, this.transportPosition, dest, remainingBefore);
+      }
+    } else if (!blocked && wasDriving && stillDriving && previousDest === dest && ground && this.transportPosition) {
+      this.transportPosition = drive(network, this.transportPosition, dest, this.sceneMinute - incidentTurnStart);
+      if (travelSeconds(network, this.transportPosition, dest) === 0) {
+        const arrivalIncident = prepareIncident(this, userText, reportMode, 'to_arrival', false);
+        if (arrivalIncident.blocked) {
+          enforceIncidentState(this);
+          if (this.incident.bedAvailableMinute) {
+            this.incident.startedMinute = incidentTurnStart + remainingBefore;
+            this.incident.bedAvailableMinute = this.incident.startedMinute + 40;
+          }
+          finalizeClock(incidentTurnStart + remainingBefore);
+          reply += this.incident.id === 'er_divert'
+            ? '\nThe ambulance reaches the ED. The receiving ER is on diversion; choose another destination.'
+            : '\nThe ambulance reaches the ED. No bed is available; continue care in the rig.';
+        } else {
+          this.arrivedAtHospital = true;
+          reply += '\nThe ambulance arrives at the receiving hospital. The crew is ready for your handoff.';
+        }
+        const message = this.messages.at(-1);
+        message.content = message.content.replace(/(?=\[(?:CREW_STATUS|PATIENT_FOCUS|VITALS|TIME):)/,
+          reply.slice(reply.lastIndexOf('\n') + 1) + '\n');
+      }
+    }
+    if (this.moving && !stillDriving && !this.arrivedAtHospital) this.moving = false;
+
     // Record the on-scene → transport boundary the first time the unit departs
     // (after the clock advance, so it carries this turn's departure timestamp).
     if (enRoute && this.departSceneMinute === null) {
-      this.departSceneMinute = this.sceneMinute;
+      this.departSceneMinute = arrivalSkip ? incidentTurnStart : this.sceneMinute;
     }
 
     logEvent(this.seed, {

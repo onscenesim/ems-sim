@@ -207,6 +207,18 @@ function restoreSession(snapshot) {
   session.transportEtaMin     = snapshot.transportEtaMin     ?? null;
   session.transportDest       = snapshot.transportDest       ?? null;
   session.departSceneMinute   = snapshot.departSceneMinute   ?? null;
+  session.transportPosition   = snapshot.transportPosition   ?? null;
+  if (!session.transportPosition && session.transportDest && session.departSceneMinute !== null) {
+    // Older saves only recorded departure and the current clock. Estimate
+    // their position once; new turns persist the actual simulated position.
+    const { roadNetwork, origin, drive } = require('../engine/transport');
+    const network = roadNetwork(session.seed);
+    if (network.ground[session.transportDest]) {
+      const stop = session.incident && !session.incident.resolved
+        ? session.incident.startedMinute : session.sceneMinute;
+      session.transportPosition = drive(network, origin(), session.transportDest, stop - session.departSceneMinute);
+    }
+  }
   session.access              = snapshot.access              || [];
   session.wounds              = snapshot.wounds              || session.wounds;
   session.contextFlags        = snapshot.contextFlags        || session.contextFlags;

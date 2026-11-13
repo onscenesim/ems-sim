@@ -416,6 +416,7 @@ let isClosed        = false;
 let waitingDebrief  = false;
 let hasPlayedLoading      = false;
 let hasPlayedDepart       = false;
+let hasAnimatedDeparture  = false;
 let arrivedAtHospital     = false;   // true after a skip-to-hospital/bay arrives — button becomes END
 let currentHospitals      = null;    // {nearest, major} — the two transport destinations this run
 let destinationShown      = false;   // guard so the destination binary is presented once per run
@@ -1491,8 +1492,8 @@ async function sendTurn(msg, opts = {}) {
         patient: localTranscript?.meta?.patient,
       }));
     }
-    if (!hasPlayedDepart && data.departing) {
-      hasPlayedDepart = true;
+    if (!hasAnimatedDeparture && data.departing) {
+      hasAnimatedDeparture = hasPlayedDepart = true;
       window._isMoving = true; // ambulance en route — CPR sound switches
       lockDestinationPanel(data.transport_dest);  // unit is rolling — the choice is made
       playSound('sfx_depart');
@@ -1503,6 +1504,7 @@ async function sendTurn(msg, opts = {}) {
     // The server is authoritative (data.arrived) and persists across resume; the
     // skipMode check is a belt-and-suspenders fallback for the same turn.
     applyAuthoritativeTransportState(data, skipMode);
+    renderTransportStatus(data.transport);
     // Relabel the skip button to match the new transport phase.
     updateSkipBtn();
 
@@ -1536,6 +1538,7 @@ async function sendTurn(msg, opts = {}) {
     // structural beat. On a load-and-go (destination already chosen this turn) it
     // renders locked with the chosen side marked instead of interactive.
     if (data.loading) showDestinationPanel(data.transport_dest);
+    if (data.transport_dest) lockDestinationPanel(data.transport_dest, data.transport?.phase);
 
     // Vitals update on every turn
     if (typeof data.scene_minute === 'number') {
@@ -1854,16 +1857,51 @@ function chooseDestination(name, wrap) {
 // Lock the destination panel once the unit is actually rolling (by click or by a
 // typed go order), so its buttons can't fire mid-transport. Marks the chosen
 // side when the destination key is known.
-function lockDestinationPanel(chosenKey = null) {
+function lockDestinationPanel(chosenKey = null, phase = 'en_route') {
   const dp = document.getElementById('dest-panel');
   if (!dp) return;
   dp.classList.add('resolved', 'departed');
+  dp.dataset.phase = phase;
   dp.querySelectorAll('.dest-opt').forEach(b => {
     b.disabled = true;
-    if (chosenKey && b.dataset.key === chosenKey) b.classList.add('chosen');
+    if (chosenKey) b.classList.toggle('chosen', b.dataset.key === chosenKey);
   });
   const sub = dp.querySelector('.dest-sub');
-  if (sub) sub.textContent = 'Destination set — en route.';
+  if (sub) sub.textContent = phase === 'diverted' ? 'Receiving ER on diversion.'
+    : phase === 'arrived' || phase === 'waiting' ? 'At the receiving hospital.'
+    : phase === 'paused' ? 'Transport paused.' : 'Destination set.';
+}
+
+function renderTransportStatus(status) {
+  const bar = document.getElementById('transport-status');
+  bar.hidden = !status;
+  if (!status) return;
+  const { phase, destination, distance_mi, eta_seconds, weather } = status;
+  bar.dataset.phase = phase;
+  const state = {
+    en_route: 'En route', paused: 'Transport paused', diverted: 'ER on diversion',
+    arrived: 'Arrived', waiting: 'At hospital', unavailable: 'Transfer',
+  }[phase];
+  const weatherLabel = {
+    rain: 'Heavy rain', fog: 'Fog', wind: 'High winds', snow: 'Snow and ice',
+    black_ice: 'Black ice', smoke: 'Wildfire smoke', flood: 'Flooding',
+    blizzard: 'Blizzard', tornado: 'Tornado warning', dust: 'Dust storm',
+  }[weather];
+  let detail = {
+    diverted: 'Order transport to an alternate hospital.',
+    waiting: 'Waiting for an ED bed.',
+    unavailable: 'No ground ETA available.',
+  }[phase] || '';
+  if (Number.isFinite(eta_seconds) && Number.isFinite(distance_mi)) {
+    const time = `${Math.floor(eta_seconds / 60)}:${String(eta_seconds % 60).padStart(2, '0')}`;
+    const miles = distance_mi > 0 && distance_mi < 0.1 ? '<0.1' : distance_mi.toFixed(1);
+    detail = [`${miles} mi left`, `~${time} left`, weatherLabel].filter(Boolean).join(' · ');
+  }
+  const label = document.getElementById('transport-label');
+  const readout = document.getElementById('transport-detail');
+  const title = `${state} · ${destination}`;
+  if (label.textContent !== title) label.textContent = title;
+  if (readout.textContent !== detail) readout.textContent = detail;
 }
 
 // ── End scenario button ───────────────────────────────────────────────────
@@ -2123,8 +2161,10 @@ function resetToStart(refresh = true) {
   waitingDebrief  = false;
   hasPlayedLoading  = false;
   hasPlayedDepart   = false;
+  hasAnimatedDeparture = false;
   arrivedAtHospital = false;
   window._isMoving  = false;   // next scenario starts on scene — reset transport sounds
+  renderTransportStatus(null);
   updateSkipBtn();
   prevBackupStatus  = null;
   firstVitalsPlayed = false;
@@ -2203,9 +2243,6 @@ function setInputEnabled(enabled) {
   sendBtn.disabled   = !enabled;
   userInput.disabled = !enabled;
 }
-
-// ── Transport progress bar ───────────────────────────────────────────────────
-//
 
 // ── Event handlers ────────────────────────────────────────────────────────
 
@@ -3593,6 +3630,7 @@ async function resumeFromSnapshot(snap) {
   // Restore transport phase so the skip button reflects where the call left off.
   hasPlayedLoading = snap.hasLoaded || false;
   hasPlayedDepart  = snap.moving    || false;
+  hasAnimatedDeparture = snap.moving || !!snap.transportDest;
   arrivedAtHospital = snap.arrivedAtHospital || false;  // server-persisted — keeps END after resume
   window._isMoving = hasPlayedDepart; // keeps CPR/defib transport sounds correct
   currentHospitals = (snap.meta && snap.meta.hospitals) || null;
@@ -3640,6 +3678,8 @@ async function resumeFromSnapshot(snap) {
   // Patient was loaded — re-flash the destination binary after a resume. If the
   // unit is already en route, it renders locked with the chosen side marked.
   if (hasPlayedLoading) showDestinationPanel(snap.transportDest || null);
+  if (snap.transportDest) lockDestinationPanel(snap.transportDest, snap.transport?.phase);
+  renderTransportStatus(snap.transport);
 
   applyPatientFocus(snap.patient_focus, snap.multi_patient || snap.second_patient);
   applyVitals(snap.lastVitals || null);

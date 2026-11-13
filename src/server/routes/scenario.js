@@ -84,6 +84,7 @@ function buildSnapshot(id, session, { userId, tier, meta, crew }) {
     crewStatus:          session.crewStatus,
     transportEtaMin:     session.transportEtaMin,
     transportDest:       session.transportDest,
+    transportPosition:   session.transportPosition,
     departSceneMinute:   session.departSceneMinute,
     access:               session.access,
     wounds:               session.wounds,
@@ -245,7 +246,8 @@ function persistSession(id, session) {
     demo_source: session.demoSource, second_patient: session.secondPatientFound,
     backupStatus: session.backupStatus, backupArrivalMinute: session.backupArrivalMinute,
     crewStatus: session.crewStatus, transportEtaMin: session.transportEtaMin,
-    transportDest: session.transportDest, departSceneMinute: session.departSceneMinute,
+    transportDest: session.transportDest, transportPosition: session.transportPosition,
+    departSceneMinute: session.departSceneMinute,
     access: session.access, wounds: session.wounds, contextFlags: session.contextFlags,
     lastReplyHadTime: session.lastReplyHadTime,
     debriefText: session.debriefText || null,
@@ -368,6 +370,7 @@ router.get('/resume', (req, res) => {
       backup:         snapshot.backupStatus  || null,
       crewStatus:     snapshot.crewStatus    || null,
       transportDest:  snapshot.transportDest || null,
+      transport:      getSession(sid).transportStatus(),
     },
   });
 });
@@ -637,6 +640,7 @@ router.post('/:id/turn', async (req, res) => {
         hasLoaded:      session.hasLoaded,
         transport_eta_min:  result.transportEtaMin ?? null,
         transport_dest:     result.transportDest   || null,
+        transport:      session.transportStatus(),
         rolls:          result.rolls || [],
         suppressed:     result.suppressed || [],
         vitals:         result.vitals || null,

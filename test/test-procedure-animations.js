@@ -331,7 +331,7 @@ test('server transport flags still gate one-time loading/departure sounds, desti
     let enteredDepart;
     const departStarted = new Promise(r => { enteredDepart = r; });
     Object.assign(f.context, {
-      hasPlayedLoading: false, hasPlayedDepart: false,
+      hasPlayedLoading: false, hasPlayedDepart: false, hasAnimatedDeparture: false,
       localTranscript: { meta: { provider_level: provider } },
       playSound: sound => events.push(sound),
     waitForSound: async () => {},
@@ -350,6 +350,7 @@ test('server transport flags still gate one-time loading/departure sounds, desti
     assert.equal(f.context.window._isMoving, true);
     assert.deepEqual(events.slice(2), ['lock:hospital', 'sfx_depart', 'depart']);
     assert.equal(done, false); releases.shift()(); await p;
+    f.context.hasPlayedDepart = false; // a stop followed by a new departure signal
     await f.context.transportEvents({ loading: true, departing: true, transport_dest: 'hospital' });
     assert.equal(events.length, 5, 'repeated server flags do not replay transport');
   }

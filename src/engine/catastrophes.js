@@ -3,6 +3,7 @@
 const { CREW } = require('../data/crew');
 const { captainPresent } = require('./prompts/transport');
 const { logEvent } = require('./logger');
+const { orderedDestination, roadNetwork, origin, travelSeconds } = require('./transport');
 
 const CATASTROPHE_RATES = Object.freeze({ EASY: 0, NORMAL: 0, HARD: 0.01, BLACK_CLOUD: 0.10 });
 const CATASTROPHES = Object.freeze([
@@ -82,9 +83,11 @@ function prepareIncident(session, userText, reportMode, skipMode, wantsLoad) {
   const wasActive = !!state;
   const advanceLimit = bedHoldAdvance(userText, skipMode);
   const arrival = ['to_hospital', 'to_arrival'].includes(skipMode)
-    || (session.moving && session.departSceneMinute !== null && session.sceneMinute >= session.departSceneMinute + session._transportEtaEstimate())
-    || (session.moving && /\b(?:arriv\w*|reach\w*|pull\w* into)\b.{0,45}\b(?:hospital|er|ed|bay)\b/i.test(userText));
-  const departure = !reportMode && (DEPART_RE.test(userText) || ['to_hospital', 'to_arrival'].includes(skipMode));
+    || (session.moving && session.transportPosition && session._remainingTransportMinutes() === 0);
+  const ordered = orderedDestination(session.seed, userText);
+  const departure = !reportMode && (DEPART_RE.test(userText)
+    || (ordered && /\b(?:depart|drive|transport|head|go|leave|take)\b/i.test(userText))
+    || ['to_hospital', 'to_arrival'].includes(skipMode));
   const backupDue = session.backupStatus?.status === 'en_route'
     && session.backupArrivalMinute !== null && session.sceneMinute >= session.backupArrivalMinute;
   const captainHere = captainPresent(session.seed, session.backupStatus, session.crewStatus);
@@ -103,14 +106,18 @@ function prepareIncident(session, userText, reportMode, skipMode, wantsLoad) {
     if (event.id === 'er_overcrowding') {
       // The journey happens before the bed hold starts; never consume travel
       // time as part of the forty minutes spent waiting at the hospital.
-      const elapsed = session.departSceneMinute === null ? 0 : Math.max(0, session.sceneMinute - session.departSceneMinute);
-      state.startedMinute += Math.max(0, session._transportEtaEstimate() - elapsed);
+      const network = roadNetwork(session.seed);
+      const dest = session.transportDest || ordered || 'nearest';
+      state.startedMinute += session.transportDest || session.transportEtaMin != null
+        ? session._remainingTransportMinutes() ?? 0
+        : network.ground[dest] ? travelSeconds(network, origin(), dest) / 60 : 0;
       state.bedAvailableMinute = state.startedMinute + 40;
     }
     if (event.id === 'er_divert') {
       const hospitals = session.seed.hospitals;
       const majorName = hospitals?.major?.name;
-      state.divertedDest = session.transportDest || (/\bmajor|trauma center\b/i.test(userText) || (majorName && userText.includes(majorName)) ? 'major' : 'nearest');
+      state.divertedDest = session.transportDest || ordered
+        || (/\b(?:major|trauma center)\b/i.test(userText) || (majorName && userText.includes(majorName)) ? 'major' : 'nearest');
     }
     logEvent(session.seed, { event_type: 'complication', detail: `${event.id} triggered` }, session.sceneMinute);
   }
