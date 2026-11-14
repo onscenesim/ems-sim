@@ -84,6 +84,28 @@ test('renderer keeps one frame loop, preserves sweep across RR changes and stops
   strip.dispose();assert.equal(frames.size,0);
 });
 
+test('assisted cadence drives low-flow breaths, with explicit pause and measured zero preserved', () => {
+  const placement = { procedure_id: 'supraglottic_airway', outcome: 'SUCCESS' };
+  const bvm = { procedure_id: 'bvm', outcome: 'SUCCESS' };
+  const mask = applyCapnography({ ETCO2: 0, RR: 0, CapnoSource: 'mask', CapnoShape: 'apnea' });
+  const breaths = applyCapnography({ ETCO2: 4, RR: 0, CapnoQuality: 'poor', CapnoShape: 'low_flow' }, mask, 'p1', { rolls: [bvm], age: 30 });
+  assert.equal(breaths.Capnography.ventilation, 'manual');
+  assert.equal(breaths.Capnography.rate, 10);
+  assert.equal(Capno.scale(breaths.Capnography), 20);
+  assert.ok(Capno.sample(1, breaths.Capnography, .3) > Capno.sample(1, breaths.Capnography, .02) + 1);
+  const inline = applyCapnography({ ETCO2: 3, CapnoShape: 'low_flow' }, breaths, 'p1', { rolls: [placement], age: 6 });
+  assert.equal(inline.Capnography.source, 'airway');
+  assert.equal(inline.Capnography.rate, 20);
+  const continued = applyCapnography({ RR: 0 }, inline, 'p1', { age: 6 });
+  assert.equal(continued.Capnography.rate, 20);
+  const paused = applyCapnography({ CapnoVentilation: 'paused', RR: 0 }, continued, 'p1', { age: 6 });
+  assert.equal(paused.Capnography.rate, 0);
+  const resumed = applyCapnography({ ETCO2: 0, CapnoVentilation: 'manual', CapnoQuality: 'poor' }, paused, 'p1', { age: 6 });
+  assert.equal(resumed.Capnography.rate, 20);
+  assert.equal(Capno.sample(1, resumed.Capnography, .3), 0);
+  assert.equal(applyCapnography({ RR: 0 }, null, 'p1', { rolls: [bvm], age: 30 }).Capnography, undefined);
+});
+
 let reply='';
 require.cache[require.resolve('../src/engine/api')]={exports:{sendTurn:async()=>reply,sendDebrief:async()=>''}};
 require.cache[require.resolve('../src/server/adminLogger')]={exports:{logRun(){},updateRunDebrief(){}}};

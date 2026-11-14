@@ -4,7 +4,7 @@ const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { DESTINATION_DIALOGUE_POLICY, BACKUP_TRANSPORT_POLICY, captainPresent } = require('./prompts/transport');
 const { prepareIncident, reconcileIncident, enforceIncidentState } = require('./catastrophes');
 const { reviewText } = require('./instructor');
-const { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, transportStatus } = require('./transport');
+const { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, typedTransportSkip, transportStatus } = require('./transport');
 const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, splitCareCheckpoint, getProcedure, rollProcedure, PRECHARGE_RE } = require('./dice');
 const { careSeconds, clockStamp, hasBundledSuction } = require('./care-timing');
@@ -102,13 +102,14 @@ function medNotGiven(reply) {
 
 // Per-roll refusal / non-occurrence cue, scoped to a sentence that names the action.
 const REFUSAL_RE = /\b(?:not indicated|no (?:\w+ )?indication|is contraindicated|contraindicated (?:here|in|anyway)|refus(?:e|es|ed|ing)|declin(?:e|es|ed|ing)|will not (?:give|push|administer|execute|happen|proceed)|won'?t (?:give|push|administer)|(?:is )?not warranted|inappropriate|premature|not happening|will not proceed|received no|did not receive|never received|there (?:is|are) no|no (?:newborn|baby|infant|delivery|crowning|fetus)|not (?:delivering|in labor|crowning|administered|given))\b/i;
+const MASSAGE_HELD_RE = /\b(?:held|withheld|deferred|not performed|not attempted)\b/i;
 
 function reconcileRolls(rolls, reply) {
   if (!rolls.length || !reply) return rolls;
   const sentences = reply.split(/(?<=[.;!?])\s+/);
   const noMeds = medNotGiven(reply);
   return rolls.filter(r => {
-    if ((r.no_roll && !r.continued) || typeof r.shock_sync === 'boolean') return true; // routine action or a shock already delivered by the player
+    if ((r.no_roll && !r.continued && r.procedure_id !== 'fundal_massage') || typeof r.shock_sync === 'boolean') return true;
     const isMed = r.procedure_id === 'medication_push';
     if (isMed && noMeds) return false;                // no route / nothing given
     const terms = rollSearchTerms(r);
@@ -119,7 +120,8 @@ function reconcileRolls(rolls, reply) {
         const opposite = side === 'left' ? 'right' : 'left';
         if (sl.includes(opposite) && !sl.includes(side)) continue;
       }
-      if (terms.some(t => t.length === 2 ? new RegExp(`\\b${t}\\b`, 'i').test(sent) : sl.includes(t)) && REFUSAL_RE.test(sent)) return false;
+      const refused = REFUSAL_RE.test(sent) || (r.procedure_id === 'fundal_massage' && MASSAGE_HELD_RE.test(sent));
+      if (refused && terms.some(t => t.length === 2 ? new RegExp(`\\b${t}\\b`, 'i').test(sent) : sl.includes(t))) return false;
     }
     return true;
   });
@@ -677,6 +679,7 @@ class Session {
       return { reply: '[Scenario is closed. Start a new scenario.]', rolls: [], closed: true };
     }
 
+    if (!reportMode && !skipMode) skipMode = typedTransportSkip(this, userText);
     const originalOrder = userText;
     const checkpoint = reportMode || skipMode ? { now: userText, pending: '' } : splitCareCheckpoint(userText);
     userText = checkpoint.now;
@@ -732,6 +735,9 @@ class Session {
     if (rolls.some(r => r.procedure_id === 'capillary_refill')) {
       messageText += '\n\n[SYSTEM NOTE: Explicit capillary refill assessment requested. Perform it for the patient being assessed and state the measured duration numerically in seconds. Include CapRefill=<seconds>@T+M:SS in the VITALS tag, using this assessment time. Do not report only "brisk", "normal", or "delayed". If the assessment cannot be performed, state that and omit the reading.]';
     }
+    if (rolls.some(r => r.procedure_id === 'fundal_massage')) {
+      messageText += '\n\n[SYSTEM NOTE: Uterine (fundal) massage is an obstetric procedure for postpartum bleeding with uterine atony. If the patient has not delivered, or the maneuver is inappropriate for the current findings, hold it and say why in a sentence naming uterine or fundal massage. When performed, describe the change in uterine tone and bleeding, if any. Do not substitute another maneuver or invent a delivery.]';
+    }
     if (this.seed.provider_level === 'BLS' && !this.seed.protocols && rollContext.monitor_available
         && rolls.some(r => isECGProcedure(r.procedure_id))) {
       messageText += '\n\n[SYSTEM NOTE: An arrived ALS resource has an available cardiac monitor. The injected ECG roll represents the requested acquisition with that crew and device. This does not change the BLS unit manifest or provider scope. Narrate the equipped crew assisting; do not invent additional ALS interventions.]';
@@ -772,6 +778,7 @@ class Session {
     const incidentTurnStart = this.sceneMinute;
     const network = roadNetwork(this.seed);
     const previousDest = this.transportDest;
+    const previousCrew = this.crewStatus;
     const wasArrived = this.arrivedAtHospital;
     const wasDriving = this.moving && !transportParked && !wasArrived;
     const changesRoute = !reportMode && REROUTE_RE.test(userText);
@@ -1084,11 +1091,6 @@ class Session {
     const assessedVitals = applyCapillaryRefill(rhythmVitals, this.patientVitals[patientId],
       reconcileRolls(rolls, focusClean).some(r => r.procedure_id === 'capillary_refill'),
       parseTimeTag(rawReply).timeMinutes ?? this.sceneMinute, vitalsClean);
-    const capnoVitals = applyCapnography(assessedVitals, this.patientVitals[patientId], `${this.seed.scenario_id}|${patientId}`);
-    const vitals = applyPulseOx(capnoVitals, this.patientVitals[patientId] || null,
-      patientId === 'patient_1' ? this.seed : { complication_type: this.seed.complication_type }, vitalsClean);
-    if (vitals) this.lastVitals = vitals;
-    if (vitals) this.patientVitals[patientId] = vitals;
     const { cleanedReply: backupClean, backup } = parseBackupTag(vitalsClean);
     const { cleanedReply: crewClean, crewStatus } = parseCrewStatusTag(backupClean);
     const { cleanedReply: demoClean, demoSource } = parseDemoTag(crewClean);
@@ -1132,6 +1134,14 @@ class Session {
         return true;
       })
       .concat(rolls.filter(r => r.hemorrhage_managed));
+    const capnoVitals = applyCapnography(assessedVitals, priorPatientVitals, `${this.seed.scenario_id}|${patientId}`, {
+      rolls: reconciledRolls.filter(r => (r.patient || previousId) === patientId),
+      age: patientId === 'patient_1' ? this.seed.patient_age : this.patientRecords.find(p => p.id === patientId)?.age,
+      als: this.seed.provider_level !== 'BLS',
+    });
+    const vitals = applyPulseOx(capnoVitals, priorPatientVitals,
+      patientId === 'patient_1' ? this.seed : { complication_type: this.seed.complication_type }, vitalsClean);
+    if (vitals) this.lastVitals = this.patientVitals[patientId] = vitals;
     const glucose = rawVitals?.Glucose;
     const glucoseValue = glucose?.value ?? glucose;
     const previousGlucose = priorPatientVitals?.Glucose;
@@ -1363,7 +1373,7 @@ class Session {
     const dest = this.transportDest;
     const ground = network.ground[dest];
     const stillDriving = this.moving && (enRoute || (!stopping
-      && (this.crewStatus?.partner !== 'on_scene' || this.crewStatus?.driver)));
+      && ((wasDriving && ground) || this.crewStatus?.partner !== 'on_scene' || this.crewStatus?.driver)));
     const finalizeClock = minute => {
       this.sceneMinute = minute;
       const message = this.messages.at(-1);
@@ -1409,12 +1419,23 @@ class Session {
             : '\nThe ambulance reaches the ED. No bed is available; continue care in the rig.';
         } else {
           this.arrivedAtHospital = true;
+          finalizeClock(incidentTurnStart + remainingBefore);
           reply += '\nThe ambulance arrives at the receiving hospital. The crew is ready for your handoff.';
         }
         const message = this.messages.at(-1);
         message.content = message.content.replace(/(?=\[(?:CREW_STATUS|PATIENT_FOCUS|VITALS|TIME):)/,
           reply.slice(reply.lastIndexOf('\n') + 1) + '\n');
       }
+    }
+    if (stillDriving && wasDriving && ground && !blocked && !this.arrivedAtHospital
+        && this.crewStatus?.partner === 'on_scene' && !this.crewStatus.driver) {
+      // A stale arrival/parked crew tag cannot stop a modeled route early.
+      const partner = previousCrew?.partner === 'in_back' ? 'in_back' : 'driving';
+      this.crewStatus = { ...this.crewStatus, partner, driver: previousCrew?.driver || null };
+      const assistant = this.messages.at(-1);
+      const { captain, driver } = this.crewStatus;
+      const tag = `[CREW_STATUS: partner=${partner} captain=${captain}${driver ? ' driver=' + driver : ''}]`;
+      assistant.content = assistant.content.replace(/\[CREW_STATUS:[^\]]*\]/i, tag);
     }
     if (this.moving && !stillDriving && !this.arrivedAtHospital) this.moving = false;
 

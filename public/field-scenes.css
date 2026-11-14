@@ -82,28 +82,33 @@
 
 #glucometry-overlay.visible .glucose-strip { animation: insert-strip var(--field-duration) ease both; }
 #glucometry-overlay.visible .glucose-finger { animation: touch-strip var(--field-duration) ease both; }
-#glucometry-overlay.visible .glucose-sample {
+#glucometry-overlay.visible :is(.glucose-sample, .glucose-sample-window) {
   transform-box: fill-box;
   transform-origin: top;
-  animation: fill-strip var(--field-duration) linear both;
+  animation-duration: var(--field-duration);
+  animation-timing-function: linear;
+  animation-fill-mode: both;
 }
+#glucometry-overlay.visible .glucose-sample { animation-name: fill-strip-tip; }
+#glucometry-overlay.visible .glucose-sample-window { animation-name: fill-strip-window; }
 #glucometry-overlay.visible .glucose-drop { animation: transfer-drop var(--field-duration) linear both; }
 #glucometry-overlay.visible .meter-ready { animation: meter-ready var(--field-duration) linear both; }
 #glucometry-overlay.visible .meter-result {
   animation: field-reveal 180ms linear calc(var(--field-duration) * .75) both;
 }
 @keyframes insert-strip {
-  0% { transform: translateY(-20px); }
-  12% { transform: translateY(-17px); }
+  0% { transform: translateY(-28px); }
+  12% { transform: translateY(-25px); }
   34%, 100% { transform: none; }
 }
 @keyframes touch-strip {
   0%, 34%, 100% { transform: translate(160px, -8px); }
-  54%, 62% { transform: translate(-16px, -15px); }
+  54%, 62% { transform: translate(-24px, -24px); }
   80% { transform: translate(160px, -8px); }
 }
-@keyframes fill-strip { 0%, 54% { transform: scaleY(0); } 63%, 100% { transform: scaleY(1); } }
-@keyframes transfer-drop { 0%, 55% { opacity: 1; } 63%, 100% { opacity: 0; } }
+@keyframes fill-strip-tip { 0%, 54% { transform: scaleY(0); } 59%, 100% { transform: scaleY(1); } }
+@keyframes fill-strip-window { 0%, 57% { transform: scaleY(0); } 64%, 100% { transform: scaleY(1); } }
+@keyframes transfer-drop { 0%, 54% { opacity: 1; } 58%, 100% { opacity: 0; } }
 @keyframes meter-ready { 0%, 30%, 72%, 100% { opacity: 0; } 35%, 67% { opacity: 1; } }
 
 .trauma-art, .packing-art, .dressing-art, .splint-view { display: none; }
@@ -111,15 +116,16 @@
 [data-trauma="dressing"] :is(.wound-art, .dressing-art),
 [data-trauma="collar"] .collar-art,
 [data-trauma="binder"] .binder-art,
+[data-trauma="sling"] .sling-art,
 [data-trauma="splint"] .splint-art,
 [data-region="upper-arm"] .splint-upper-arm,
-[data-region="forearm"] .splint-forearm,
-[data-region="hand"] .splint-hand,
+:is([data-region="forearm"], [data-region="hand"]) .splint-wrist,
 [data-region="foot"] .splint-foot,
 :is([data-region="thigh"], [data-region="lower-leg"]):not([data-splint="traction"]) .splint-long-leg,
 [data-splint="traction"] .splint-traction { display: inline; }
 [data-trauma="dressing"] .wound-seep { display: none; }
 [data-side="left"] .splint-art { transform: translateX(360px) scaleX(-1); }
+[data-side="left"] .sling-art { transform: translateX(360px) scaleX(-1); }
 [data-region="lower-leg"] .long-thigh-wrap { display: none; }
 
 .limb { fill: #536573; stroke: #a5b7c2; stroke-width: 1.7; }
@@ -130,6 +136,79 @@
 .wrap-stitch { fill: none; stroke: #819aa7; }
 .sling { fill: #334a5b; fill-opacity: .92; stroke: #9db1ba; }
 .sling-line { fill: none; stroke: #aebfc5; stroke-width: 1.7; }
+
+[data-region="hand"] .long-trough,
+[data-region="forearm"] .short-trough { display: none; }
+.wrist-trough { fill: #ad765e; stroke: #deb395; stroke-width: 1.5; }
+.wrist-lining { fill: none; stroke: #709eaf; stroke-width: 5; }
+.wrist-lip { fill: none; stroke: #daa789; stroke-width: 3; }
+.wrist-thumb { fill: #536573; stroke: #93a7b4; stroke-width: 1.1; }
+.wrist-nail { fill: #93a7b4; opacity: .36; }
+.wrist-wrap { transform-box: fill-box; transform-origin: center top; }
+#trauma-overlay.visible .wrist-patient { animation: lower-wrist var(--field-duration) ease both; }
+#trauma-overlay.visible .wrist-wrap { animation: wrap-wrist calc(var(--field-duration) * .13) ease-out both; }
+#trauma-overlay.visible .wrist-wrap-first { animation-delay: calc(var(--field-duration) * .46); }
+#trauma-overlay.visible .wrist-wrap-second { animation-delay: calc(var(--field-duration) * .68); }
+.wrist-wrap-tool { --second-wrap-x: 88px; }
+[data-region="hand"] .wrist-wrap-tool { --second-wrap-x: 148px; }
+#trauma-overlay.visible .wrist-wrap-tool { animation: roll-wrist-bandage var(--field-duration) ease both; }
+@keyframes lower-wrist {
+  0%, 22% { translate: 0 -24px; }
+  42%, 100% { translate: 0 0; }
+}
+@keyframes wrap-wrist {
+  from { opacity: 0; scale: 1 .1; }
+  22% { opacity: 1; }
+  to { opacity: 1; scale: 1; translate: 0 var(--field-final-y); }
+}
+@keyframes roll-wrist-bandage {
+  0%, 42% { opacity: 0; transform: translate(193px, 95px); }
+  46% { opacity: 1; transform: translate(195px, 111px); }
+  57% { opacity: 1; transform: translate(199px, 174px) rotate(100deg); }
+  61% { opacity: 0; transform: translate(200px, 188px) rotate(125deg); }
+  65% { opacity: 0; transform: translate(var(--second-wrap-x), 96px); }
+  68% { opacity: 1; transform: translate(var(--second-wrap-x), 109px); }
+  79% { opacity: 1; transform: translate(var(--second-wrap-x), 170px) rotate(100deg); }
+  85%, 100% { opacity: 0; transform: translate(var(--second-wrap-x), 188px) rotate(125deg); }
+}
+
+.sling-patient .limb { fill: #151e28; stroke: currentColor; stroke-width: 2.2; }
+.sling-cloth { fill: #bac9c3; stroke: #dbdcce; stroke-width: 1.6; }
+.sling-pouch { transform-origin: 110px 87px; }
+.sling-swathe { transform-origin: 100px 133px; }
+#trauma-overlay[data-patient-profile="baby"] .sling-art {
+  --torso-baby-display: none;
+  --torso-child-display: inline;
+  --torso-bra-display: inline;
+}
+#trauma-overlay:is([data-patient-profile^="child-"], [data-patient-profile="baby"]) .sling-patient {
+  transform: translate(92px, 27px) scale(.8);
+}
+.sling-arm { transform-origin: 35px 67px; }
+#trauma-overlay.visible .sling-arm { animation: sling-lift-arm var(--field-duration) ease both; }
+#trauma-overlay.visible .sling-pouch { animation: sling-raise-pouch var(--field-duration) ease both; }
+#trauma-overlay.visible .sling-swathe { animation: sling-wrap-chest var(--field-duration) ease both; }
+#trauma-overlay.visible .sling-helper { animation: sling-pull-band var(--field-duration) ease both; }
+@keyframes sling-lift-arm {
+  0%, 10% { transform: scaleY(1.13); }
+  34%, 100% { transform: none; }
+}
+@keyframes sling-raise-pouch {
+  0%, 12% { opacity: 0; transform: translateY(64px) scaleY(.62); }
+  22% { opacity: 1; }
+  45%, 100% { opacity: 1; transform: translateY(var(--field-final-y)) rotate(var(--field-final-r)); }
+}
+@keyframes sling-wrap-chest {
+  0%, 47% { opacity: 0; transform: translateX(-42px) scaleX(.25); }
+  53% { opacity: 1; }
+  76%, 100% { opacity: 1; transform: translateY(var(--field-final-y)) rotate(var(--field-final-r)); }
+}
+@keyframes sling-pull-band {
+  0%, 44% { opacity: 0; transform: translate(37px, 129px); }
+  51% { opacity: 1; transform: translate(70px, 127px); }
+  72% { opacity: 1; transform: translate(158px, 121px); }
+  84%, 100% { opacity: 0; transform: translate(218px, 92px); }
+}
 
 #trauma-overlay.visible .packing-feed {
   stroke-dasharray: 122;
@@ -222,6 +301,17 @@
 .splint-support { --device-entry-y: 24px; }
 .splint-foot .splint-support { --device-entry-x: -35px; --device-entry-y: 14px; }
 .splint-upper-arm .splint-support { --device-entry-x: -42px; --device-entry-y: 5px; }
+#trauma-overlay.visible .splint-wrist .splint-support {
+  transform-box: view-box;
+  transform-origin: 190px 158px;
+  animation-name: seat-wrist-cradle;
+}
+@keyframes seat-wrist-cradle {
+  0% { opacity: 0; translate: 0 28px; rotate: -5deg; }
+  16% { opacity: 1; }
+  39%, 56% { translate: 0 0; rotate: 0deg; }
+  84%, 100% { translate: 0 var(--field-final-y); rotate: var(--field-final-r); }
+}
 #trauma-overlay.visible .collar-rear { animation: seat-rear var(--field-duration) ease both; }
 #trauma-overlay.visible .collar-hand {
   animation: seat-hand var(--field-duration) ease both;
@@ -341,6 +431,7 @@
   #arrival-overlay, .field-scene { transition: none; }
   #arrival-overlay.visible *, .field-scene.visible * { animation: none !important; }
   .glucose-finger, .meter-ready, .packing-feed, .dressing-roll, .traction-grip, .traction-tail,
+  .wrist-wrap-tool, .sling-helper,
   .collar-hand, .binder-pull-tab, .binder-hand-left, .binder-hand-right { visibility: hidden; }
   .field-scene .wound-seep { opacity: var(--wound-seep); }
   .packing-press { translate: 0 9px; }

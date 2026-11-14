@@ -33,7 +33,8 @@ test('lab registers every production animation overlay, with unique IDs and real
   assert.equal(new Set(api.scenes.map(s=>s.id)).size,api.scenes.length);
   for(const scene of api.scenes)assert.ok(scene.duration>0,scene.id);
   for(const id of ['cardioversion','rsi','medpush_io','blood_IO','fluid_IV','arrival','arrival_waiting','glucometry',
-    'packing','dressing','collar','binder','splint_traction','splint_foot'])assert.ok(api.scenes.some(s=>s.id===id));
+    'packing','dressing','collar','binder','sling','splint_traction','splint_foot'])assert.ok(api.scenes.some(s=>s.id===id));
+  assert.equal(api.scenes.find(s=>s.id==='sling')?.fixedPatient,false);
   assert.equal(api.scenes.find(s=>s.id==='lateral_canthotomy')?.overlay,'scalpel');
   for(const cue of api.sounds)assert.ok(fs.existsSync(path.join(__dirname,'../public',cue.src)),cue.src);
 });

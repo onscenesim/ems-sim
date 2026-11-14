@@ -26,7 +26,7 @@
     'cardiac monitor', 'cardiac monitoring', 'rhythm check', 'physical exam', 'reassessment',
     'foreign body removal', 'epistaxis control', 'glucometry', 'resuscitative thoracotomy',
     'fetal assessment', 'perimortem C-section', 'perimortem cesarean', 'emergency delivery',
-    'shoulder dystocia maneuvers', 'McRoberts maneuver', 'cord prolapse management', 'fundal massage',
+    'shoulder dystocia maneuvers', 'McRoberts maneuver', 'cord prolapse management', 'fundal massage', 'uterine massage',
     'newborn resuscitation', 'neonatal resuscitation', 'decontamination', 'active rewarming',
     'active cooling', 'REBOA', 'precordial thump', 'manual decompression', 'capnography confirmation',
     'V4R ECG', 'posterior leads', 'right-sided leads',

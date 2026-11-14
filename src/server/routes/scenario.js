@@ -19,6 +19,7 @@ const { detectAllProcedures, splitCareCheckpoint } = require('../../engine/dice'
 const { SHOCK_PROC_IDS, resolveShock } = require('../../engine/shock');
 const { hasCardiacMonitor, unavailableProcedure } = require('../../engine/equipment');
 const { LOAD_REQUEST_RE, LOAD_QUESTION_RE } = require('../../engine/session');
+const { typedTransportSkip } = require('../../engine/transport');
 
 const { operationsFor, operationError } = require('../../engine/operations');
 const { currentPlayer } = require('./auth');
@@ -541,7 +542,7 @@ router.post('/:id/turn', async (req, res) => {
   // through, as do pre-charge suppressions (deterministically not a shock).
   // No clock or clinical state change. Unfamiliar wound-care wording may use
   // the constrained interpretation pass before presenting confirmation.
-  if (!skipMode && report_mode !== true && procs_resolved !== true) {
+  if (!skipMode && report_mode !== true && !typedTransportSkip(session, message) && procs_resolved !== true) {
     const msg = splitCareCheckpoint(message.trim()).now;
     const managedWounds = session.wounds?.length > 0;
     const ongoingCare = session.ongoingCareFor(msg);

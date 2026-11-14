@@ -1393,6 +1393,7 @@ async function playTurnRolls(rolls, { manualShock = false } = {}) {
       await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
     }
     if (r.procedure_id === 'splinting') await animateTraumaScene('splint', r);
+    if (r.procedure_id === 'sling_and_swathe') await animateTraumaScene('sling', r);
     if (r.procedure_id === 'pelvic_binder') await animateTraumaScene('binder', r);
     if (r.procedure_id === 'spinal_motion_restriction' && r.trauma_variant === 'collar') await animateTraumaScene('collar', r);
     if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
@@ -1508,10 +1509,7 @@ async function sendTurn(msg, opts = {}) {
       playSound('sfx_depart');
       await animateDepart();
     }
-    // A terminal skip (to the hospital / bay) has now arrived — the call isn't over
-    // yet (handoff comes next), but the button should offer END from here on.
-    // The server is authoritative (data.arrived) and persists across resume; the
-    // skipMode check is a belt-and-suspenders fallback for the same turn.
+    // A terminal skip and ordinary driving both use the server's hospital phase.
     applyAuthoritativeTransportState(data, skipMode);
     renderTransportStatus(data.transport);
     const bay = hospitalBay(data.transport);
@@ -3358,9 +3356,9 @@ function animateTraumaScene(variant, roll) {
   const device = roll.splint_device || '';
   const titles = {
     packing: 'WOUND PACKING', dressing: 'PRESSURE DRESSING', collar: 'CERVICAL COLLAR',
-    binder: 'PELVIC BINDER', splint: device === 'traction' ? 'TRACTION SPLINT' : 'SPLINTING',
+    binder: 'PELVIC BINDER', sling: 'SLING AND SWATHE', splint: device === 'traction' ? 'TRACTION SPLINT' : 'SPLINTING',
   };
-  const anatomy = variant === 'splint' && [side, site || SPLINT_REGION_NAMES[region]].filter(Boolean).join(' ');
+  const anatomy = variant === 'splint' ? [side, site || SPLINT_REGION_NAMES[region]].filter(Boolean).join(' ') : variant === 'sling' ? side : '';
   overlay.dataset.trauma = variant;
   overlay.dataset.region = region;
   overlay.dataset.side = side || '';
@@ -4239,6 +4237,8 @@ const capnoStrip = Capnography.createStrip(document.getElementById('capno-strip'
 function updateCapnography(vitals) {
   const signal=Capnography.fromVitals(vitals);
   capnoStrip.update(signal);
+  const ceiling = Capnography.scale(signal);
+  document.getElementById('capno-scale').textContent = ceiling === 20 ? 'CO₂ · 12 s · 0–20 mmHg' : 'CO₂ · 12 s';
   document.getElementById('capno-waveform').hidden=!signal||signal.status==='unplaced';
   const status=document.getElementById('capno-status');
   const source=signal&&signal.status!=='unplaced'?({nasal:'Nasal',airway:'Inline',mask:'Mask',unknown:''})[signal.source]:'';

@@ -20,8 +20,8 @@
 <label>Sampling connection<select id="capno-connection"><option value="connected">Connected</option><option value="disconnected">Disconnected</option><option value="unplaced">Not placed</option></select></label>
 <button id="capno-variant" type="button">New variation</button>
 </div>
-<p class="hint">Live production signal · 12-second sweep · 0–80 mmHg scale. Change rate or morphology while running to inspect the transition. Nasal capture includes irregular noise, dilution, and missing breaths; confirm the patient and sampling quality. Features overlap across causes.</p>
-<div class="capno-lab-screen"><div><strong id="capno-lab-label">Inline airway</strong><span id="capno-lab-numbers"></span></div><canvas id="capno-detail" role="img" aria-label="Capnography preview"></canvas><div class="capno-scale">0 mmHg <span>12 seconds →</span> 80 mmHg</div></div>
+<p class="hint">Live production signal · 12-second sweep. Change rate or morphology while running to inspect the transition. Nasal capture includes irregular noise, dilution, and missing breaths; confirm the patient and sampling quality. Features overlap across causes.</p>
+<div class="capno-lab-screen"><div><strong id="capno-lab-label">Inline airway</strong><span id="capno-lab-numbers"></span></div><canvas id="capno-detail" role="img" aria-label="Capnography preview"></canvas><div class="capno-scale">0 mmHg <span>12 seconds →</span><span id="capno-lab-ceiling">80 mmHg</span></div></div>
 </section>
 <section id="ecg-output" hidden><div id="ecg-printout"></div></section>
 <section id="collection" class="collection" hidden aria-label="Asset gallery"></section>

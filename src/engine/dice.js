@@ -700,6 +700,12 @@ function isTreatmentAssessment(text, start, length, proc, key) {
     return /\b(?:what|tell me|show me|review|last|previous)\b/.test(clause)
       && !/\b(?:check|recheck|repeat|measure|obtain|get|take)\b/.test(clause);
   }
+  if (proc.id === 'sling_and_swathe') {
+    const [s] = sentenceBounds(text, start);
+    const before = text.slice(s, start).split(/[,;]|\b(?:and|then|but|also)\b/i).at(-1);
+    return /\b(?:check|inspect|assess|remove|loosen|take off|keep|maintain)\b/i.test(before)
+      && !/\b(?:apply|place|fit|put on|reapply|replace)\b/i.test(before);
+  }
   const oxygen = proc.id === 'oxygen';
   const ambiguousFluid = proc.id === 'medication_push' && /^(?:plasma|plazma|platelets?|platlets|plt|plts|albumin|albumen|fibrinogen|pcc|ns|lr|crystalloid|saline|blood|units? of blood|blood products?|blood components?)$/i.test(key);
   if (!oxygen && !ambiguousFluid) return false;
@@ -718,7 +724,14 @@ function isTreatmentAssessment(text, start, length, proc, key) {
 }
 
 function traumaPresentationAt(text, start, length, procedure) {
-  if (!['splinting', 'spinal_motion_restriction', 'bleeding_control'].includes(procedure)) return {};
+  if (!['splinting', 'sling_and_swathe', 'spinal_motion_restriction', 'bleeding_control'].includes(procedure)) return {};
+  if (procedure === 'sling_and_swathe') {
+    // The conjunction inside the equipment name is not an order boundary.
+    const before = text.slice(0, start).match(/\b(left|right)\s+(?:(?:arm|shoulder)\s+)?$/i);
+    const after = text.slice(start + length).match(/^\s*(?:(?:to|on|for)\s+)?(?:the\s+)?(left|right)\s+(?:upper\s+)?(?:arm|shoulder|elbow|wrist|forearm|hand)\b/i);
+    const side = (after || before)?.[1].toLowerCase();
+    return side ? { splint_side: side } : {};
+  }
   const clause = actionClause(text, start, length);
   if (procedure === 'spinal_motion_restriction') {
     return COLLAR_PATTERN.test(clause) && !/\b(?:remove|loosen|take off|check|inspect|keep|maintain|continue)\b/.test(clause)

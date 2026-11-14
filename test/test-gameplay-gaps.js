@@ -410,6 +410,48 @@ test('diversion at the hospital preserves the location and the saved reroute inc
   deleteSession(id);
 });
 
+test('typed arrival fast-forwards ongoing care and a parked crew footer cannot suppress arrival', async () => {
+  for (const order of ['Continue until we reach Lakeview', 'Keep doing ACLS til we reach the hospital', 'Skip to the hospital', 'Continue.']) {
+    const s = session();
+    Object.assign(s.seed, { weather_id: 'clear', complication_type: 'none', routine_er_divert: false });
+    response = 'The rig departs. [EN_ROUTE:nearest] [CREW_STATUS: partner=driving captain=not_on_scene] [TIME: 4:00]';
+    await s.send('Depart for the nearest hospital.');
+    const ordinary = order === 'Continue.';
+    response = `The rig pulls into the bay. [CREW_STATUS: partner=on_scene captain=not_on_scene] [TIME: ${ordinary ? '17:00' : '6:00'}]`;
+    const result = await s.send(order);
+    assert.equal(s.sceneMinute, 16.5, order);
+    assert.equal(s.transportStatus().phase, 'arrived', order);
+    assert.equal(result.closed, false);
+    assert.deepEqual(result.rolls, []);
+    assert.equal(s.turns.at(-1).skip, !ordinary);
+  }
+});
+
+test('a bundled new treatment retains care and a stale on-scene footer leaves the route moving', async () => {
+  const s = session();
+  Object.assign(s.seed, { weather_id: 'clear', complication_type: 'none', routine_er_divert: false });
+  response = 'The rig departs. [EN_ROUTE:nearest] [CREW_STATUS: partner=driving captain=not_on_scene] [TIME: 4:00]';
+  await s.send('Depart for the nearest hospital.');
+  response = 'The crew checks the patient. [CREW_STATUS: partner=on_scene captain=not_on_scene] [TIME: 5:00]';
+  const result = await s.send('Check vitals. Continue until we reach Lakeview.');
+  assert.equal(s.turns.at(-1).skip, false);
+  assert.ok(result.rolls.length > 0);
+  assert.equal(s.transportStatus().phase, 'en_route');
+  assert.equal(s.transportStatus().eta_seconds, 690);
+  assert.equal(result.crewStatus.partner, 'driving');
+});
+
+test('uterine massage is recorded when performed and omitted when held', async () => {
+  const s = session();
+  reply('Uterine massage is held pending delivery.', '0:30');
+  assert.deepEqual((await s.send('Massage her uterus')).rolls, []);
+  assert.match(request, /Uterine \(fundal\) massage/);
+  reply('Uterine massage firms the fundus and slows bleeding.', '1:00');
+  const performed = await s.send('Perform uterine massage');
+  assert.equal(performed.rolls[0].procedure_id, 'fundal_massage');
+  assert.equal(performed.rolls[0].no_roll, true);
+});
+
 test('radio reports and handoffs advance from the TIME footer without inventing procedure rolls', async () => {
   const s = session();
   s.sceneMinute = 7;
@@ -574,4 +616,12 @@ test('trauma artwork selects the recorded method and named splint site', () => {
   assert.deepEqual([radius.splint_region, radius.splint_site, radius.splint_side], ['forearm', 'radius', 'left']);
   const femur = roll('Apply a traction splint to the right femur.');
   assert.deepEqual([femur.splint_region, femur.splint_site, femur.splint_device], ['thigh', 'femur', 'traction']);
+});
+
+test('sling and swathe is a separate procedure and retains the requested arm', () => {
+  const { rolls } = detectWithConfirmation('Splint the left radius, then apply a sling and swathe to the right arm.');
+  assert.deepEqual(rolls.map(r => [r.procedure_id, r.splint_side]), [['splinting', 'left'], ['sling_and_swathe', 'right']]);
+  assert.equal(detectWithConfirmation('Sling & swath').rolls[0]?.procedure_id, 'sling_and_swathe');
+  assert.equal(detectWithConfirmation('Check the sling and swathe.').rolls.length, 0);
+  assert.equal(detectWithConfirmation('Apply a SAM pelvic sling.').rolls[0]?.procedure_id, 'pelvic_binder');
 });

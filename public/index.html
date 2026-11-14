@@ -14,7 +14,7 @@
   <script src="/analytics-config.js"></script>
   <script src="/analytics.js?v=1"></script>
   <link rel="stylesheet" href="airway-scenes.css?v=7">
-  <link rel="stylesheet" href="field-scenes.css?v=14">
+  <link rel="stylesheet" href="field-scenes.css?v=20">
 </head>
 <body>
 
@@ -738,7 +738,7 @@
           <canvas id="pleth-strip" role="img" aria-label="SpO₂ pleth: probe not placed"></canvas>
         </div>
         <div id="capno-waveform" hidden>
-          <div class="capno-heading"><span>CO₂ · 12 s</span><span id="capno-source"></span></div>
+          <div class="capno-heading"><span id="capno-scale">CO₂ · 12 s</span><span id="capno-source"></span></div>
           <canvas id="capno-strip" role="img" aria-label="CO₂ waveform: not connected"></canvas>
         </div>
       </div>
@@ -2780,15 +2780,15 @@
         <path d="M167 57Q181 55 198 57L192 63Q182 71 173 63Z" fill="#354653"/>
         <path d="M175 58H191" fill="none" stroke="#17222c" stroke-width="3" stroke-linecap="round"/>
         <g clip-path="url(#meter-strip-opening)">
-          <g transform="translate(0 -17)">
-            <g class="glucose-strip">
-              <path d="M175 48L177 42H188L191 47V86H175Z" fill="#262b2c" stroke="#e1dcc2" stroke-width="1"/>
-              <path d="M179 72V83M183 72V83M187 72V83" stroke="#b4a361" stroke-width="1.1"/>
-              <path d="M178 43H188V55H178Z" fill="#d6ccb7"/>
-              <path class="glucose-sample" d="M179 43H187V54H179Z" fill="#ac223e"/>
-              <rect x="180" y="49" width="6" height="4" rx="1" fill="none" stroke="#f6eee1" stroke-width=".75"/>
-              <text x="183" y="66" text-anchor="middle" fill="#d3d8d1" font-size="4.5" font-family="sans-serif">PRISM</text>
-            </g>
+          <g class="glucose-strip">
+            <path d="M175.5 23L180 16H185L190.5 23V82H175.5Z" fill="#262b2c" stroke="#e1dcc2" stroke-width=".85"/>
+            <path d="M179 65V79M183 68V79M187 65V79" stroke="#b4a361" stroke-width="1.1"/>
+            <rect x="178.5" y="36" width="9" height="16" rx="2" fill="none" stroke="#a4a99f" stroke-width=".55"/>
+            <text x="183" y="45.5" transform="rotate(-90 183 44)" text-anchor="middle" fill="#d3d8d1" font-size="3.5" font-family="sans-serif">ARKRAY</text>
+            <path d="M181 16.5H184.7L185.1 19H180.6Z" fill="#d6ccb7"/>
+            <rect x="180.5" y="24.5" width="5" height="4.5" rx=".65" fill="#444939" stroke="#d6ccb7" stroke-width=".65"/>
+            <path class="glucose-sample" d="M181 16.5H184.7L185.1 19H180.6Z" fill="#b92f43"/>
+            <rect class="glucose-sample-window" x="181.15" y="25.15" width="3.7" height="3.2" rx=".2" fill="#b92f43"/>
           </g>
         </g>
         <path d="M175 59H191" fill="none" stroke="#8197a2" stroke-width="1.1" stroke-linecap="round"/>
@@ -2820,7 +2820,7 @@
         <path d="M134 216L144 212V221Z M232 216L222 212V221Z" fill="#ecf0f0"/>
         <text x="183" y="235" text-anchor="middle" fill="#eff2f0" font-family="sans-serif" font-size="14" font-weight="700">m</text>
         <g class="glucose-finger">
-          <path d="M360 21V49Q331 51 302 48Q277 47 258 48L235 49Q220 52 211 47Q204 43 208 36Q213 28 230 29L258 28Q288 22 315 24Z"
+          <path d="M386 30V52Q339 51 302 48Q277 47 258 48L235 49Q220 52 211 47Q204 43 208 36Q213 28 230 29L258 28Q285 25 315 28Z"
             fill="#536573" stroke="#a5b7c2" stroke-width="1.3"/>
           <path d="M227 31Q225 39 212 40Q207 38 212 34Q218 31 227 31Z" fill="#8b9ba8" stroke="#b8cbd6" stroke-width=".8"/>
           <path d="M258 33Q255 37 257 42M265 32Q262 36 264 41" fill="none" stroke="#a5b7c2" stroke-width=".8"/>
@@ -3060,7 +3060,78 @@
           </g>
         </g>
 
+        <g class="trauma-art sling-art" stroke-linecap="round" stroke-linejoin="round">
+          <defs>
+            <g id="sling-supported-arm">
+              <path fill="#151e28" stroke="currentColor" stroke-width="2.2"
+                d="M35 67C30 80 27 98 24 116L20 140C17 155 21 164 31 166
+                C48 169 77 161 99 154Q121 148 140 146Q148 149 154 153Q162 156 171 153
+                Q177 151 178 148Q178 145 172 147L178 144Q183 141 184 139Q184 135 179 136
+                L174 138L179 135Q185 133 185 130Q184 127 179 128L170 131L176 128Q182 125 181 122
+                Q180 119 175 120L161 125L164 122Q168 118 164 116Q160 115 156 119L148 125
+                Q145 129 140 129L119 129C93 127 63 129 44 139C48 127 53 108 54 93L57 69"/>
+              <path class="limb-detail" d="M29 154Q32 146 43 140M53 149Q73 143 92 142
+                M148 139Q155 137 160 143M166 132L170 131M170 140L174 138M168 148L172 147"/>
+            </g>
+            <clipPath id="sling-exposed-hand"><path d="M139 110H190V158H139Z"/></clipPath>
+          </defs>
+          <g class="sling-patient" transform="translate(70 10)" color="#a5b7c2">
+            <g fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M89 12L88 25C81 33 61 31 47 42Q41 48 35 67
+                M131 12L132 25C139 33 159 31 173 42Q179 48 185 67"/>
+              <path class="torso-adult-male" d="M57 69Q53 88 57 111M163 69Q167 88 163 111"/>
+              <path class="torso-adult-female" d="M57 69Q54 88 58 111M163 69Q166 88 162 111"/>
+              <path class="torso-child" d="M57 69Q55 88 61 111M163 69Q165 88 159 111"/>
+              <use href="#torso-chest"/><use href="#torso-abdomen"/>
+            </g>
+            <g class="sling-arm"><use href="#sling-supported-arm"/></g>
+            <path class="limb" d="M185 67C190 80 194 103 196 121Q197 135 200 146C205 162 201 179 198 195
+              Q197 202 198 208L197 219Q197 223 194 223L193 220L193 227Q192 231 189 229L188 225
+              L187 229Q185 232 182 229L182 224Q179 227 177 224Q176 222 178 217L180 210
+              Q176 214 173 213Q170 212 173 208L178 200Q179 197 183 195C184 182 183 166 180 155
+              C176 141 172 125 170 113Q167 98 166 90L163 69"/>
+            <path class="limb-detail" d="M190 141Q194 149 193 156M185 190L185 197M183 203Q185 208 182 212
+              M184 214L182 224M189 214L188 225M193 215L193 220"/>
+            <g class="sling-pouch">
+              <path class="sling-cloth" d="M83 29L94 37Q98 74 111 91Q122 75 127 39L135 29
+                Q145 58 153 91L159 128L141 149Q112 167 63 173Q39 176 23 169Q15 161 19 146
+                Q28 118 45 86Q59 57 83 29Z"/>
+              <path d="M83 34Q80 74 64 105Q50 134 49 164M93 53Q100 83 111 91Q125 114 141 144
+                M135 40Q138 85 151 115M29 163Q69 170 117 152" fill="none" stroke="#779095" stroke-width="1.25"/>
+              <path d="M86 30Q91 27 95 32L97 44L90 47L83 40Z" fill="#a9bdba" stroke="#cdcebb"/>
+            </g>
+            <g class="sling-swathe">
+              <path d="M20 128Q73 133 119 119Q149 111 178 116L184 136Q151 133 122 141Q59 157 20 148Z"
+                fill="#4c6977" stroke="#a5b7c2" stroke-width="1.4"/>
+              <path d="M24 135Q73 140 118 127Q152 118 178 122" fill="none" stroke="#b6c5c5" stroke-dasharray="2 3"/>
+              <path d="M163 115L179 116L183 136L168 135Z" fill="#364e5e" stroke="#94aeb8"/>
+            </g>
+            <g class="sling-arm">
+              <use href="#sling-supported-arm" clip-path="url(#sling-exposed-hand)"/>
+            </g>
+            <g class="sling-helper"><use href="#field-glove" transform="rotate(26) scale(.78)"/></g>
+          </g>
+        </g>
+
         <g class="trauma-art splint-art" stroke-linecap="round" stroke-linejoin="round">
+          <defs>
+            <g id="splint-profile-leg">
+              <!-- Lateral view, with the kneecap above the joint and the calf below the shin. -->
+              <path class="limb" d="M29 99C49 84 76 82 102 87C125 91 145 101 162 107
+                Q173 110 181 108Q189 107 193 115C195 120 201 123 211 125
+                C230 129 250 135 269 137Q278 137 282 128C286 119 294 116 301 107
+                L307 98Q310 93 315 94Q320 95 319 100L316 106Q323 102 324 107
+                Q325 111 321 116Q322 120 318 125L310 133Q304 139 304 147L306 159
+                Q308 169 302 175Q296 181 284 178Q276 175 267 172
+                C248 167 229 172 208 167C195 164 184 154 175 154
+                Q168 153 158 156C133 160 114 165 87 166Q53 168 29 158Z"/>
+              <path class="limb-detail" d="M46 103C73 90 108 95 131 106Q151 114 166 116
+                M171 115Q182 110 189 117Q191 121 189 125M168 148Q178 143 187 150
+                M195 129C211 135 244 137 267 145M190 151C210 164 233 164 254 163
+                M272 150Q282 146 287 152Q291 156 286 160M292 140Q295 132 302 126
+                M287 171Q295 174 301 167M311 103Q314 104 316 106M313 114Q317 114 321 116M309 121L318 125"/>
+            </g>
+          </defs>
           <g class="splint-view splint-upper-arm">
             <!-- A sling carries the forearm while the lateral support follows the upper arm. -->
             <path class="limb" d="M104 54Q124 43 146 51Q173 63 177 90L171 153Q176 160 189 162L253 143L273 133
@@ -3078,55 +3149,69 @@
             </g>
           </g>
 
-          <g class="splint-view splint-forearm">
-            <!-- Side profile with a shallow wrist extension and exposed fingers. -->
-            <path class="limb" d="M42 121Q53 104 73 109Q111 112 161 124L226 135Q242 135 256 128L278 116Q287 113 291 119L279 130
-              L307 122Q320 119 323 126Q324 130 317 134L301 141Q316 141 316 147Q316 152 308 154L296 156
-              Q308 157 306 163Q304 168 295 169L286 168L295 169Q301 172 295 177L282 177Q268 178 254 172L234 162L157 168Q109 177 69 173Q43 174 36 155Q31 139 42 121Z"/>
-            <path class="limb-detail" d="M47 128Q54 139 49 150M63 153Q119 152 152 143M223 144Q229 147 230 154M254 141Q262 148 265 156M292 137L297 142"/>
-            <g class="splint-support">
-              <path class="splint-foam" d="M58 157Q78 169 117 164L220 153Q232 152 246 155L270 162L266 176Q255 179 237 172L219 169L114 181Q77 186 57 174Z"/>
-              <path class="splint-highlight" d="M63 170Q83 179 116 175L220 164Q231 163 244 167L262 171"/>
+          <g class="splint-view splint-wrist" transform="rotate(-13 180 130)">
+            <defs>
+              <g id="wrist-bandage">
+                <path d="M-16 112Q-1 105 17 111C12 128 14 154 21 174Q6 183-12 176C-19 155-21 129-16 112Z"
+                  fill="#906168" stroke="#c58b8b" stroke-width="1.3"/>
+                <path d="M-12 116Q3 112 15 115M-15 124Q3 120 14 122M-16 133Q2 129 13 130M-15 144Q1 138 14 139
+                  M-14 153Q3 147 16 149M-12 163Q4 156 17 158M-10 172Q5 167 19 168"
+                  fill="none" stroke="#dca7a0" stroke-width=".7" opacity=".62"/>
+              </g>
+            </defs>
+            <g class="splint-support wrist-cradle">
+              <path class="wrist-trough long-trough" d="M49 134Q60 137 78 140L209 150Q235 151 251 143L269 147
+                Q281 154 278 171Q276 190 255 197Q235 203 226 191L220 181Q237 190 249 183Q259 177 253 171
+                Q248 166 236 171Q222 179 202 178L78 170Q56 166 49 153Z"/>
+              <path class="wrist-trough short-trough" d="M134 138L209 150Q235 151 251 143L269 147Q281 154 278 171
+                Q276 190 255 197Q235 203 226 191L220 181Q237 190 249 183Q259 177 253 171
+                Q248 166 236 171Q222 179 202 178L147 172Q132 168 130 156Z"/>
+              <path class="wrist-lining long-trough" d="M51 138Q56 147 79 151L203 160Q226 162 246 151"/>
+              <path class="wrist-lining short-trough" d="M134 143Q133 152 149 156L203 160Q226 162 246 151"/>
             </g>
-            <g class="splint-wraps">
-              <path class="splint-wrap" d="M84 111Q92 109 103 113L104 180L86 178Z M207 132L225 135L226 171L209 173Z M248 131L261 127L275 169L260 175Z"/>
-              <path class="wrap-stitch" d="M94 115L96 176M216 136L217 169M255 133L267 169"/>
+            <g class="wrist-patient">
+              <!-- Side nearest the thumb in the photo. The other fingers fold behind the grip. -->
+              <path class="limb" d="M43 103C77 99 119 103 151 113C172 119 193 127 211 127
+                C221 126 227 121 238 122C253 123 265 132 272 138
+                C283 141 284 151 285 161L289 176Q290 181 286 184
+                Q285 191 279 191Q276 198 267 198L255 197Q248 196 244 192
+                Q239 188 243 184Q248 181 254 184L261 185Q265 183 265 177
+                L263 167Q256 162 247 164Q236 161 225 156
+                C213 151 198 151 183 153C149 157 78 163 42 153Q37 130 43 103Z"/>
+              <path class="limb-detail" d="M48 112Q55 127 47 147M67 145C105 147 142 141 170 141
+                M197 132Q210 134 215 132M213 145Q221 144 227 148
+                M252 133Q266 138 273 147M280 174Q283 181 286 184M273 181Q276 187 279 191
+                M261 185Q265 188 267 191"/>
+              <path class="wrist-thumb" d="M231 134C242 135 247 144 252 150
+                Q258 158 266 165Q271 171 269 176Q266 182 260 179
+                Q253 176 248 169Q241 160 236 156Q231 152 226 152"/>
+              <path class="wrist-nail" d="M259 169Q263 168 267 172Q268 176 264 177Q260 177 257 174Z"/>
             </g>
-          </g>
-
-          <g class="splint-view splint-hand">
-            <!-- Dorsal oblique view. The hand cradle ends just behind the fingertips. -->
-            <path class="limb" d="M43 126Q87 124 130 130L172 126Q184 117 197 112L217 101Q227 96 232 101Q237 107 229 114L219 124L252 113
-              Q267 110 275 116Q280 120 275 125L256 134L282 129Q300 126 305 132Q308 137 298 142L274 149L294 146
-              Q310 145 313 151Q314 156 305 160L280 166L295 165Q308 166 307 172Q305 177 296 179L269 181
-              L249 189Q234 194 217 186L175 173L133 175Q86 183 43 177Z"/>
-            <path class="limb-detail" d="M173 137Q180 147 177 163M204 128Q198 141 206 155M233 139Q247 136 256 134M243 155L270 149M248 171L277 166M265 175L269 181"/>
-            <g class="splint-support">
-              <path class="splint-foam" d="M111 167Q139 166 169 165Q198 169 219 180Q241 191 257 181L283 172L285 183L259 196Q242 203 218 195L171 179L112 182Z"/>
-              <path class="splint-highlight" d="M119 177L168 175L222 191Q239 198 256 191L282 180"/>
+            <g class="splint-support wrist-rim">
+              <path class="wrist-lip long-trough" d="M49 151Q60 157 78 158L205 167Q220 168 233 160"/>
+              <path class="wrist-lip short-trough" d="M132 154Q137 162 151 163L205 167Q220 168 233 160"/>
+              <path class="wrist-lining" d="M228 187Q242 197 256 190Q269 184 269 172"/>
             </g>
-            <g class="splint-wraps">
-              <path class="splint-wrap" d="M132 129L149 128L151 181L134 182Z M177 124L192 114L206 179L189 183Z M244 119L258 115L274 188L260 192Z"/>
-              <path class="wrap-stitch" d="M141 133L143 178M185 125L197 177M252 121L266 185"/>
+            <g transform="translate(195 0)"><use class="wrist-wrap wrist-wrap-first" href="#wrist-bandage"/></g>
+            <g class="long-trough" transform="translate(88 -6)"><use class="wrist-wrap wrist-wrap-second" href="#wrist-bandage"/></g>
+            <g class="short-trough" transform="translate(148 -1)"><use class="wrist-wrap wrist-wrap-second" href="#wrist-bandage"/></g>
+            <g class="wrist-wrap-tool">
+              <path d="M-16-3Q-8 4 5-2L7 7Q-7 13-17 6Z" fill="#b57c80" stroke="#e2a7a0"/>
+              <ellipse rx="9" ry="7" fill="#ae777e" stroke="#e2a7a0"/>
+              <ellipse rx="3.5" ry="3" fill="#654b53" stroke="#d9aba5"/>
             </g>
           </g>
 
           <g class="splint-view splint-long-leg">
-            <!-- Side profile from hip to toes. The long support crosses the knee and holds the foot. -->
-            <path class="limb" d="M33 103Q60 83 100 91L152 109Q173 113 189 122Q208 120 224 129
-              L268 143Q278 146 281 139L285 130Q288 122 293 116Q296 111 297 103L298 94Q299 89 305 89
-              Q311 89 314 94Q317 99 314 105L308 121Q304 130 305 140L306 159Q307 172 299 177Q290 182 280 178L266 174
-              L224 169Q204 169 188 172L152 163Q102 163 74 158L33 160Z"/>
-            <path class="limb-detail" d="M73 99Q111 105 135 116M169 116Q164 127 172 138M189 129Q194 138 188 149
-              M224 150L267 161M284 151Q289 145 294 149Q298 153 294 157M305 94Q309 92 312 95M302 106L310 109M300 113L308 116"/>
+            <use href="#splint-profile-leg"/>
             <g class="splint-support">
               <path class="splint-foam" d="M48 145L53 158Q93 168 152 172L188 182L229 178L269 190Q300 200 311 188Q324 176 321 157L318 119L309 117L307 123L308 156Q308 178 291 181L269 174L228 165L189 167L153 159Q98 159 48 145Z"/>
               <path class="splint-highlight" d="M57 154Q102 168 153 166L189 175L229 172L273 184Q307 197 315 171L314 121"/>
             </g>
             <g class="splint-wraps">
-              <path class="splint-wrap long-thigh-wrap" d="M75 91L94 90L100 169L81 165Z"/>
-              <path class="splint-wrap" d="M137 104L155 109L157 174L140 173Z M205 123L225 129L226 179L207 180Z M260 140L276 144L276 192L259 188Z
-                M288 128L318 129L317 142L283 143Z"/>
+              <path class="splint-wrap long-thigh-wrap" d="M75 85Q85 84 94 86L100 169L81 165Z"/>
+              <path class="splint-wrap" d="M137 98L155 104L157 174L140 173Z M205 123L225 128L226 179L207 180Z M260 136L276 137L276 192L259 188Z
+                M287 124L318 126L316 139L282 140Z"/>
               <path class="wrap-stitch" d="M146 111L148 171M215 131L216 176M268 146L268 187"/>
             </g>
           </g>
@@ -3152,12 +3237,7 @@
 
           <g class="splint-view splint-traction">
             <!-- The padded proximal seat and ankle harness connect through the lateral rail. -->
-            <path class="limb" d="M26 108Q57 90 93 96L160 115Q176 116 193 127Q213 126 228 136L268 147
-              Q279 150 283 141L287 130Q290 123 295 117Q298 111 299 104L301 96Q303 91 309 92
-              Q316 93 318 98Q319 102 316 108L311 122Q307 128 307 140L310 157Q311 170 301 177Q291 185 278 179L266 175L228 169Q205 167 192 174
-              L160 167L92 163Q57 168 26 163Z"/>
-            <path class="limb-detail" d="M68 109Q116 117 149 129M174 125Q169 133 175 143M192 139Q194 148 190 155
-              M241 155L268 162M288 149Q293 145 297 150Q300 154 297 159M308 97Q313 95 316 98M304 109L313 112M302 116L311 119"/>
+            <use href="#splint-profile-leg"/>
             <g class="splint-support">
               <path d="M45 149L49 179Q51 187 63 187H321Q334 187 334 176V156" fill="none" stroke="#9cb1bd" stroke-width="5"/>
               <path d="M64 185H242M259 185H320Q331 185 331 175" fill="none" stroke="#d7e1e3" stroke-width="1.2"/>
@@ -3166,7 +3246,7 @@
               <path d="M328 155L328 149M323 150H335" stroke="#a8bfc7" stroke-width="2"/>
             </g>
             <g class="splint-wraps">
-              <path class="splint-wrap" d="M82 101L96 102L102 184H86Z M136 110L150 114L156 185H141Z M208 131L222 134L224 184H208Z M245 143L257 146L262 186H248Z"/>
+              <path class="splint-wrap" d="M78 85Q86 83 94 85L102 184H86Z M136 97L150 102L156 185H141Z M207 124L222 127L224 184H208Z M244 132L258 135L262 186H248Z"/>
               <path d="M281 148L306 144L308 157L283 164Z M284 163L298 176L307 169L306 154" fill="#536e7e" stroke="#a5b7c2" stroke-width="1.2"/>
               <path class="traction-link" d="M302 166Q314 158 328 151" fill="none" stroke="#d2dde0" stroke-width="2.4"/>
               <path class="traction-tail" d="M328 151Q337 142 347 140" fill="none" stroke="#d2dde0" stroke-width="2.4"/>
@@ -3379,7 +3459,7 @@
   </dialog>
   <script src="monitor.js?v=5"></script>
   <script src="airway-scenes.js?v=3"></script>
-  <script src="app.js?v=143"></script>
+  <script src="app.js?v=144"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

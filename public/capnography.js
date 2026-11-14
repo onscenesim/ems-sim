@@ -20,6 +20,7 @@
     return {source,status:['connected','disconnected','unplaced'].includes(raw.status)?raw.status:'connected',
       quality:Object.hasOwn(qualities,raw.quality)?raw.quality:source==='airway'?'clean':'variable',
       shape:Object.hasOwn(shapes,raw.shape)?raw.shape:'normal',rate:numeric(raw.rate,100),etco2:numeric(raw.etco2,150),
+      ...(['manual','mechanical','paused','spontaneous'].includes(raw.ventilation)?{ventilation:raw.ventilation}:{}),
       seed:Number.isFinite(raw.seed)?raw.seed:1};
   }
   function fromVitals(v){
@@ -37,9 +38,10 @@
     if(s.rate==null)return 'Respiratory rate unavailable';
     return sources[s.source]+(s.quality==='variable'?' · variable capture':'');
   }
+  const scale=s=>s?.shape==='low_flow'&&s.etco2>0&&s.etco2<=16?20:80;
   function sample(t,raw,phaseOverride){
     const s=raw;
-    if(!s||s.status!=='connected'||s.rate==null||s.etco2==null||s.rate===0||s.shape==='apnea')return 0;
+    if(!s||s.status!=='connected'||s.rate==null||!s.etco2||s.rate===0||s.shape==='apnea')return 0;
     const seed=s.seed||1,rate=clamp(s.rate,1,100);
     // Continuous time warp alters cadence without phase resets or discontinuities.
     const irregular=s.shape==='irregular';
@@ -61,10 +63,13 @@
     const severity=s.quality==='poor'?1:s.quality==='variable'?.5:0;
     if(nasal||uncertain||severity){
       const capture=nasal?.32+rand(11)*.67:uncertain?.65+rand(11)*.3:1;
-      const dropout=(nasal&&rand(12)<.27)||(s.quality==='poor'&&rand(12)<.40);
+      const assisted=s.ventilation==='manual'||s.ventilation==='mechanical';
+      const inlineBreath=s.source==='airway'||(s.source==='mask'&&assisted);
+      const dropout=(nasal&&rand(12)<.27)||(s.quality==='poor'&&!inlineBreath&&rand(12)<.40);
       const withinBreath=1-(nasal?.55:.25)*Math.max(0,noise(t,1.2,seed+17));
       y*=dropout?.025:capture*withinBreath;
-      const disturbance=(nasal?7:uncertain?3:1)+severity*7;
+      const disturbance=inlineBreath&&s.shape==='low_flow'
+        ? Math.min(s.etco2*.25,1+severity*7) : (nasal?7:uncertain?3:1)+severity*7;
       y+=disturbance*(.45*noise(t,9.7,seed+40)+.35*noise(t,24.3,seed+51)+.35*noise(t,.73,seed+60));
       if(nasal)y+=7*Math.max(0,noise(t,3.1,seed+83))**4;
     }else y+=.25*noise(t,12,seed);
@@ -84,12 +89,13 @@
     function idle(){if(!size())return;ctx.save();ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);ctx.strokeStyle='#e5c25355';ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(0,h*.88);ctx.lineTo(w,h*.88);ctx.stroke();ctx.restore();}
     function frame(ts){raf=requestAnimationFrame(frame);if(!size()){lastTs=null;return;}
       if(lastTs===null){lastTs=ts;return;}const dt=Math.min(.25,Math.max(0,(ts-lastTs)/1000));lastTs=ts;if(!dt)return;
-      const speed=w/windowSeconds,target=x+speed*dt,baseline=h*.88,gain=h*.74/80,rate=(signal?.rate||0)/60;
+      const ceiling=scale(signal);
+      const speed=w/windowSeconds,target=x+speed*dt,baseline=h*.88,gain=h*.74/ceiling,rate=(signal?.rate||0)/60;
       ctx.save();ctx.scale(dpr,dpr);ctx.strokeStyle='#f4cd55';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x,pen??baseline);
       let prev=x;
       for(let next=x+.5;;next+=.5){next=Math.min(next,target);const offset=(next-x)/speed,drawX=next%w;
         const wobble=signal?.shape==='irregular'?Math.min(1,(signal.rate||0)/12)*(.075*Math.sin((clock+offset)*.61+(signal.seed||1))+.03*Math.sin((clock+offset)*1.17)):.008*Math.sin((clock+offset)*.43+(signal?.seed||1));
-        const y=clamp(baseline-gain*Math.min(80,sample(clock+offset,signal,phase+offset*rate+wobble)),2,h-2);
+        const y=clamp(baseline-gain*Math.min(ceiling,sample(clock+offset,signal,phase+offset*rate+wobble)),2,h-2);
         if(drawX<prev)ctx.moveTo(drawX,y);else ctx.lineTo(drawX,y);prev=drawX;pen=y;if(next>=target)break;
       }
       ctx.stroke();const gap=8,gapX=target%w;ctx.clearRect(gapX+1,0,gap,h);if(gapX+gap+1>w)ctx.clearRect(0,0,gapX+gap+1-w,h);ctx.restore();
@@ -99,8 +105,10 @@
       // Preserve phase and displayed history across rate/morphology changes.
       // Unplacing or changing patient/source clears the previous trace.
       const reset=!normalized||!signal||normalized.seed!==signal.seed||normalized.source!==signal.source;
+      const scaleChanged=scale(normalized)!==scale(signal);
       signal=normalized;
       if(reset){clock=0;phase=0;x=0;pen=null;lastTs=null;if(ctx)ctx.clearRect(0,0,canvas.width,canvas.height);}
+      else if(scaleChanged){x=0;pen=null;if(ctx)ctx.clearRect(0,0,canvas.width,canvas.height);}
       if(signal&&signal.status==='connected') {if(raf===null)raf=requestAnimationFrame(frame);}
       else {if(raf!==null)cancelAnimationFrame(raf);raf=null;lastTs=null;idle();}
       const label=!signal||signal.status==='unplaced'?'not connected':
@@ -109,5 +117,5 @@
     }
     return {update,resize(){dirty=true;if(raf===null)idle();},dispose(){if(raf!==null)cancelAnimationFrame(raf);raf=null;observer?.disconnect();}};
   }
-  return {shapes,sources,qualities,normalize,fromVitals,description,sample,createStrip};
+  return {shapes,sources,qualities,normalize,fromVitals,description,scale,sample,createStrip};
 });

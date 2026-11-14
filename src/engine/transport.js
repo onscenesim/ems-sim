@@ -74,6 +74,22 @@ function orderedDestination(seed, text) {
   return near === far ? null : near ? 'nearest' : 'major';
 }
 
+function typedTransportSkip(session, text) {
+  if (session.arrivedAtHospital) return null;
+  const order = text.trim().toLowerCase().replace(/[.!]+$/, '');
+  const explicit = /^(?:please )?(?:skip(?: ahead)?|fast[ -]forward|jump(?: ahead)?)\s+(?:to|until)\s+(.+)$/.exec(order);
+  const ongoing = /^(?:please )?(?:continue(?:(?: with)? (?:current care(?: and monitoring)?|care|monitoring|acls|cpr|transport|driving))?|keep (?:going|driving|monitoring|doing (?:acls|cpr))|wait)\s+(?:until|til|till|'til)\s+(.+)$/.exec(order);
+  const endpoint = (explicit || ongoing)?.[1].replace(/^(?:we|you)\s+(?:reach|get to|arrive at)\s+/, '');
+  const destination = session.transportDest;
+  const hospital = session.seed.hospitals?.[destination]
+    || REGIONS.find(r => r.id === session.seed.region)?.hospitals?.[destination];
+  const name = hospital?.name?.toLowerCase();
+  const generic = /^(?:(?:the )?(?:hospital|er|ed|emergency department|ambulance bay|(?:hospital|ed) bay|arrival|hospital arrival|end of transport)|(?:we|you) arrive)$/;
+  if (!endpoint || (!generic.test(endpoint) && !(name && (endpoint === name || endpoint === name.split(' ')[0])))) return null;
+  if (destination) return 'to_arrival';
+  return explicit ? 'to_hospital' : null;
+}
+
 function transportStatus(session) {
   const dest = session.transportDest;
   const incident = session.incident;
@@ -98,4 +114,4 @@ function transportStatus(session) {
   };
 }
 
-module.exports = { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, transportStatus };
+module.exports = { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, typedTransportSkip, transportStatus };

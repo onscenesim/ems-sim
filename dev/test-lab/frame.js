@@ -12,7 +12,7 @@
   ballOverlay.append(eightball,eightballResponse);terminal.append(ballOverlay);
   const scenes = [];
   const add = (id, name, overlay, run, duration) => {
-    const fixedPatient = overlay === 'glucometry' || (overlay === 'trauma' && id !== 'collar');
+    const fixedPatient = overlay === 'glucometry' || (overlay === 'trauma' && !['collar', 'sling'].includes(id));
     scenes.push({ id, name, overlay, run, duration, fixedPatient });
   };
   add('dispatch', 'Dispatch radio', 'dispatch', () => { playSound('dispatch'); return animateDispatch(); }, 1700);
@@ -23,7 +23,7 @@
   add('arrival_waiting', 'ED arrival · Bed hold', 'arrival', () => animateArrival('waiting'), TRANSPORT_TIMING.arrival.hold);
   add('glucometry', 'Assure Prism glucometer', 'glucometry', () => animateGlucometry(106), FIELD_SCENE_TIMING.glucometry);
   for (const [variant, name] of [
-    ['packing', 'Wound packing'], ['dressing', 'Pressure dressing'], ['collar', 'Cervical collar'], ['binder', 'Pelvic binder'],
+    ['packing', 'Wound packing'], ['dressing', 'Pressure dressing'], ['collar', 'Cervical collar'], ['binder', 'Pelvic binder'], ['sling', 'Sling and swathe'],
   ]) {
     add(variant, name, 'trauma', o => animateTraumaScene(variant, o), FIELD_SCENE_TIMING.trauma);
   }
@@ -123,6 +123,7 @@
         : scene.id === 'collar' && o.outcome === 'COMPLICATION' ? scene.duration * .72
         : scene.id === 'packing' ? scene.duration * .69
         : scene.id === 'splint_traction' ? scene.duration * .70
+        : ['splint_hand', 'splint_forearm', 'sling'].includes(scene.id) ? scene.duration * .65
         : scene.overlay === 'cpr' ? 275 : scene.duration * .5;
       animation.currentTime = mode === 'start' ? 0 : mode === 'action' ? actionTime : Math.max(0, scene.duration - 1);
     }

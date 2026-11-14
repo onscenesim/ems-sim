@@ -9,7 +9,7 @@ clears EtCO₂ and capnographic RR; any manually counted RR remains independent.
 The model reports measured signal metadata with the VITALS tag:
 
 ```
-ETCO2=38 RR=12 CapnoSource=airway CapnoStatus=connected CapnoQuality=clean CapnoShape=normal
+ETCO2=38 RR=12 CapnoSource=airway CapnoStatus=connected CapnoQuality=clean CapnoShape=normal CapnoVentilation=manual
 ```
 
 - `CapnoSource`: `nasal`, `airway` (inline ETT/SGA/cric), `mask`, or `unknown`.
@@ -17,8 +17,11 @@ ETCO2=38 RR=12 CapnoSource=airway CapnoStatus=connected CapnoQuality=clean Capno
 - `CapnoQuality`: `clean`, `variable`, `poor`.
 - `CapnoShape`: `normal`, `obstructive`, `cleft`, `rebreathing`, `irregular`,
   `low_flow`, `apnea`. These describe signal features, not confirmed diagnoses.
-- RR is measured spontaneous breathing or assisted ventilation rate, independent
-  of ECG HR. Zero is preserved. Missing RR is not replaced by a default rate.
+- `CapnoVentilation` tracks manual, mechanical, paused, or spontaneous breathing.
+  RR reflects the measured breathing or delivered ventilation rate. During
+  assisted ventilation, the engine uses the prior assisted cadence or an
+  age-based simulation cadence when the current rate is missing or zero. An
+  explicit pause suppresses breaths and a measured zero CO₂ remains flat.
 
 `src/engine/capnography.js` validates metadata and stores a `Capnography` object
 per patient with a stable case/patient seed. A connected sensor retains its last
@@ -31,7 +34,9 @@ such and rendered with uncertain capture, rather than assumed to be inline.
 
 `public/capnography.js` supplies the shared pure signal and live canvas renderer.
 Rate controls breath density and expiration/inspiration durations. EtCO₂ controls
-amplitude on a fixed 0–80 mmHg display scale (higher values clip at the top).
+amplitude on a 0–80 mmHg display scale. Low-flow readings of 1–16 mmHg use a
+labeled 0–20 mmHg scale so small breaths are visible. The sweep clears when
+the scale changes.
 Breath-to-breath upstroke, plateau slope, expiratory duration, cleft location and
 depth vary deterministically with seed and cycle. Slow breathing can have small
 oscillations. Irregular breathing warps timing continuously. Low-flow cases use

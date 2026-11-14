@@ -134,7 +134,7 @@ initialize();
 window.addEventListener('pagehide',stop);
 
 function capnoOptions(){return Capnography.normalize({source:$('capno-input').value,status:$('capno-connection').value,rate:Number($('capno-rate').value),etco2:Number($('capno-value').value),shape:$('capno-shape').value,quality:$('capno-quality').value,seed:capnoSeed});}
-function renderCapno(){if(!api)return;const signal=capnoOptions();api.capnography(signal);capnoDetail.update(signal);$('capno-lab-label').textContent=Capnography.description(signal);$('capno-lab-numbers').textContent=signal.status==='connected'?`EtCO₂ ${signal.etco2??'—'} mmHg · RR ${signal.rate??'—'}/min`:'EtCO₂ — · RR —';}
+function renderCapno(){if(!api)return;const signal=capnoOptions();api.capnography(signal);capnoDetail.update(signal);$('capno-lab-ceiling').textContent=Capnography.scale(signal)+' mmHg';$('capno-lab-label').textContent=Capnography.description(signal);$('capno-lab-numbers').textContent=signal.status==='connected'?`EtCO₂ ${signal.etco2??'—'} mmHg · RR ${signal.rate??'—'}/min`:'EtCO₂ — · RR —';}
 for(const id of ['capno-rate','capno-value','capno-shape','capno-quality','capno-connection'])$(id).onchange=renderCapno;
 $('capno-shape').onchange=()=>{const shape=$('capno-shape').value;if(shape==='apnea'){$('capno-rate').value=0;$('capno-value').value=0;}else if(shape==='low_flow'){$('capno-value').value=12;}else if(Number($('capno-rate').value)===0){$('capno-rate').value=12;$('capno-value').value=38;}renderCapno();};
 $('capno-input').onchange=()=>{$('capno-quality').value=$('capno-input').value==='airway'?'clean':'variable';renderCapno();};
