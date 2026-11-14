@@ -1,12 +1,15 @@
 'use strict';
 
-const { INTERVENTIONS } = require('../data/interventions');
+const { INTERVENTIONS, SPLINT_SITES } = require('../data/interventions');
 const { parseActions: hemorrhageActions, nonWoundCare } = require('./hemorrhage');
-const { SITE_PROCEDURES, procedureTargets, rollEntry } = require('./procedure-targets');
+const { actionClause, SITE_PROCEDURES, procedureTargets, rollEntry } = require('./procedure-targets');
 const { medicationPresentationAt } = require('./medication-route');
 const { unavailableProcedure } = require('./equipment');
 const { SHOCK_PROC_IDS } = require('./shock');
 const { MEDICATION_ALIASES } = require('../../public/medication-aliases');
+const SPLINT_SITE_PATTERN = new RegExp(
+  `\\b(?:(left|right)\\s+)?(?:(?:distal|proximal|mid[- ]shaft)\\s+)*(${Object.keys(SPLINT_SITES).join('|')})\\b`, 'i');
+const COLLAR_PATTERN = /\b(?:c[ -]collar|cervical collar|extrication collar)\b/i;
 const MEDICATION_NAMES = new Map(Object.entries(MEDICATION_ALIASES).flatMap(
   ([name, aliases]) => aliases.map(alias => [alias.toLowerCase(), name])));
 const { HARD_MODE_DC_PENALTY, BLACK_CLOUD_DC_PENALTY } = require('../data/config');
@@ -84,7 +87,10 @@ for (const proc of INTERVENTIONS) {
     const gap = SITE_PROCEDURES.has(proc.id)
       ? '\\s+(?:(?:an?|the|another|second|additional|bilateral(?:ly)?|bilat)\\s+)*'
       : '\\s+(?:an?\\s+|the\\s+|another\\s+|second\\s+|additional\\s+)?';
-    const flexible = plural.replace(/\\? /g, gap);
+    let flexible = plural.replace(/\\? /g, gap);
+    if (proc.id === 'splinting' && key.startsWith('splint the ')) {
+      flexible = flexible.replace(`splint${gap}`, `splint${gap}(?:(?:left|right|distal|proximal|mid[- ]shaft)\\s+)*`);
+    }
     // Word-boundary via lookbehind/lookahead — handles hyphens and acronyms
     const pattern = new RegExp(`(?<![a-z0-9])${flexible}(?![a-z0-9])`, 'i');
     // Precompute specificity using the ORIGINAL raw string so uppercase acronyms
@@ -689,6 +695,11 @@ function isTreatmentAssessment(text, start, length, proc, key) {
     return /\b(?:read|interpret|inspect|review|look at|what|show me|tell me|already|obtained|acquired|performed)\b/i.test(before)
       || /^\s*(?:shows?|showing|reveals?|was|is|looks?|results?|interpretation)\b/i.test(after);
   }
+  if (proc.id === 'glucometry') {
+    const clause = actionClause(text, start, length);
+    return /\b(?:what|tell me|show me|review|last|previous)\b/.test(clause)
+      && !/\b(?:check|recheck|repeat|measure|obtain|get|take)\b/.test(clause);
+  }
   const oxygen = proc.id === 'oxygen';
   const ambiguousFluid = proc.id === 'medication_push' && /^(?:plasma|plazma|platelets?|platlets|plt|plts|albumin|albumen|fibrinogen|pcc|ns|lr|crystalloid|saline|blood|units? of blood|blood products?|blood components?)$/i.test(key);
   if (!oxygen && !ambiguousFluid) return false;
@@ -704,6 +715,26 @@ function isTreatmentAssessment(text, start, length, proc, key) {
   if (!oxygen && /^\s*(?:levels?|counts?|results?|tests?|studies|samples?)\b/i.test(after)) return true;
   return /\b(?:check(?:ing)?|recheck|assess(?:ing)?|measure|monitor|read|inspect|look at|what(?:\s+is|'s|\s+are)?|how(?:\s+is|'s|\s+are)?|draw|collect|order|send|request)\b[^;.!?]*$/i.test(before)
     && !/\b(?:giv(?:e|ing)|administer(?:ing)?|apply(?:ing)?|start(?:ing)?|infus(?:e|ing)|transfus(?:e|ing)|hang(?:ing)?|put|plac(?:e|ing))\b[^;.!?]*$/i.test(before);
+}
+
+function traumaPresentationAt(text, start, length, procedure) {
+  if (!['splinting', 'spinal_motion_restriction', 'bleeding_control'].includes(procedure)) return {};
+  const clause = actionClause(text, start, length);
+  if (procedure === 'spinal_motion_restriction') {
+    return COLLAR_PATTERN.test(clause) && !/\b(?:remove|loosen|take off|check|inspect|keep|maintain|continue)\b/.test(clause)
+      ? { trauma_variant: 'collar' } : {};
+  }
+  if (procedure === 'bleeding_control') {
+    const action = hemorrhageActions(clause).find(a => a.kind === 'treat' && ['packing', 'dressing'].includes(a.method));
+    return action ? { hemorrhage_method: action.method } : {};
+  }
+  const site = SPLINT_SITE_PATTERN.exec(clause);
+  const traction = /\b(?:traction splint|sager|hare traction)\b/.test(clause);
+  return {
+    splint_region: SPLINT_SITES[site?.[2]?.toLowerCase()] || (traction ? 'thigh' : 'forearm'),
+    ...(site ? { splint_site: site[2].toLowerCase(), splint_side: site[1]?.toLowerCase() } : {}),
+    ...(traction ? { splint_device: 'traction' } : {}),
+  };
 }
 
 function detectAllProcedures(userText) {
@@ -808,6 +839,7 @@ function detectAllProcedures(userText) {
           orderIndex: bestMatchIndex,
           ...(SITE_PROCEDURES.has(proc.id) ? { targets: procedureTargets(normalized, bestMatchIndex, bestMatch.matchLen, proc.id) } : {}),
           matchedKey,
+          presentation: traumaPresentationAt(normalized, bestMatchIndex, bestMatch.matchLen, proc.id),
           ...(proc.id === 'medication_push'
             ? medicationPresentationAt(normalized, bestMatchIndex, bestMatch.matchLen, medication, matchedKey) : {}),
           uncertain: !!uncertain,
@@ -869,7 +901,7 @@ function detectAllProcedures(userText) {
     if (found.length && !/\b(?:wound|bleed\w*|hemorrhag\w*|gauze|towel|laceration|armpit|axill\w*|(?:direct|manual|sustained) pressure)\b/i.test(action.source)) continue;
     const proc = INTERVENTIONS.find(p => p.id === id);
     found.push({ proc, orderIndex: context.indexOf(action.source.toLowerCase()), matchedKey:action.source.toLowerCase(), sentence:action.source,
-      targets:procedureTargets(action.source,0,action.source.length,id), uncertain:false, reason:null, key:procEntryKey(id,action.source.toLowerCase()) });
+      targets:procedureTargets(action.source,0,action.source.length,id), presentation:{hemorrhage_method:action.method}, uncertain:false, reason:null, key:procEntryKey(id,action.source.toLowerCase()) });
   }
   return found;
 }

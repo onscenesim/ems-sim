@@ -7,18 +7,22 @@ const SITE_PROCEDURES = new Set([
   'needle_decompression', 'chest_seal', 'chest_tube_insertion', 'finger_thoracostomy',
 ]);
 
-function procedureTargets(text, start, length, id) {
-  if (!SITE_PROCEDURES.has(id)) return [];
+function actionClause(text, start, length) {
   // Keep limb lists together, but stop at the next action clause. This prevents
   // "bilateral IVs and apply a tourniquet" from doubling the tourniquet.
-  const actionStart = '(?:(?:bilateral|bilat)\\s+)?(?:give|push|apply|place|start|attempt|try|perform|obtain|establish|check|assess|insert|do|drill|tourniquets?|tqs?|ivs?|ios?|needle\\s+decompression|chest\\s+seals?)\\b';
+  const actionStart = '(?:(?:bilateral|bilat)\\s+)?(?:give|push|apply|place|start|attempt|try|perform|obtain|establish|check|recheck|assess|insert|do|drill|splint|immobilize|pack|wrap|remove|reassess|tourniquets?|tqs?|ivs?|ios?|needle\\s+decompression|chest\\s+seals?)\\b';
   const boundaries = new RegExp(`[;.!?\\n]|,?\\s*\\b(?:and|then|also|but)\\s+(?=${actionStart})|,\\s*(?=${actionStart})`, 'gi');
   let lo = 0, hi = text.length;
   for (const m of text.matchAll(boundaries)) {
     if (m.index + m[0].length <= start) lo = m.index + m[0].length;
     else if (m.index >= start + length) { hi = m.index; break; }
   }
-  const clause = text.slice(lo, hi).toLowerCase();
+  return text.slice(lo, hi).toLowerCase();
+}
+
+function procedureTargets(text, start, length, id) {
+  if (!SITE_PROCEDURES.has(id)) return [];
+  const clause = actionClause(text, start, length);
   const sites = new Set();
   const excluded = new Set();
   const thoracic = ['needle_decompression', 'chest_seal', 'chest_tube_insertion', 'finger_thoracostomy'].includes(id);
@@ -68,7 +72,7 @@ function procedureTargets(text, start, length, id) {
 
 function rollEntry(entry, context, difficulty, rollProcedure) {
   const targets = entry.targets?.length ? entry.targets : [null];
-  return targets.map(target => ({ ...rollProcedure(entry.proc, context, difficulty), ...(target ? { target } : {}) }));
+  return targets.map(target => ({ ...rollProcedure(entry.proc, context, difficulty), ...entry.presentation, ...(target ? { target } : {}) }));
 }
 
-module.exports = { SITE_PROCEDURES, procedureTargets, rollEntry };
+module.exports = { actionClause, SITE_PROCEDURES, procedureTargets, rollEntry };

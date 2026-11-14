@@ -11,11 +11,29 @@
   const ballStyle=document.createElement('style');ballStyle.textContent='#eightball-overlay{display:none}#eightball-overlay.visible{display:flex}#eightball-response{position:static;display:block;min-height:40px}';document.head.append(ballStyle);
   ballOverlay.append(eightball,eightballResponse);terminal.append(ballOverlay);
   const scenes = [];
-  const add = (id, name, overlay, run, duration) => scenes.push({ id, name, overlay, run, duration });
+  const add = (id, name, overlay, run, duration) => {
+    const fixedPatient = overlay === 'glucometry' || (overlay === 'trauma' && id !== 'collar');
+    scenes.push({ id, name, overlay, run, duration, fixedPatient });
+  };
   add('dispatch', 'Dispatch radio', 'dispatch', () => { playSound('dispatch'); return animateDispatch(); }, 1700);
   add('signoff', 'Radio signoff', 'signoff', () => { showSignoffAnimation(); return new Promise(resolve => setTimeout(resolve, 2550)); }, 2200);
   add('loading', 'Load patient', 'loading', o => { playSound(o.provider === 'BLS' ? 'sfx_loading_bls' : 'sfx_loading_als'); return animateLoading(o.patient); }, TRANSPORT_TIMING.loading.hold);
   add('depart', 'Depart scene', 'depart', () => { playSound('sfx_depart'); return animateDepart(); }, TRANSPORT_TIMING.depart.hold);
+  add('arrival', 'ED arrival', 'arrival', () => animateArrival('arrived'), TRANSPORT_TIMING.arrival.hold);
+  add('arrival_waiting', 'ED arrival · Bed hold', 'arrival', () => animateArrival('waiting'), TRANSPORT_TIMING.arrival.hold);
+  add('glucometry', 'Assure Prism glucometer', 'glucometry', () => animateGlucometry(106), FIELD_SCENE_TIMING.glucometry);
+  for (const [variant, name] of [
+    ['packing', 'Wound packing'], ['dressing', 'Pressure dressing'], ['collar', 'Cervical collar'], ['binder', 'Pelvic binder'],
+  ]) {
+    add(variant, name, 'trauma', o => animateTraumaScene(variant, o), FIELD_SCENE_TIMING.trauma);
+  }
+  for (const [region, name] of Object.entries(SPLINT_REGION_NAMES)) {
+    add(`splint_${region}`, `Splint · ${name}`, 'trauma',
+      o => animateTraumaScene('splint', { outcome: o.outcome, splint_region: region }), FIELD_SCENE_TIMING.trauma);
+  }
+  add('splint_traction', 'Splint · Femur traction', 'trauma', o => animateTraumaScene('splint', {
+    outcome: o.outcome, splint_region: 'thigh', splint_site: 'femur', splint_device: 'traction',
+  }), FIELD_SCENE_TIMING.trauma);
   for (const [id, name, procedure] of [
     ['npa','Nasopharyngeal airway','nasopharyngeal_airway'], ['obstruction','Remove obstruction','foreign_body_removal'],
     ['chest_seal','Chest seal','chest_seal'], ['pacing','Transcutaneous pacing','pacing'],
@@ -99,7 +117,12 @@
       const timing = PROCEDURE_TIMING[scene.overlay];
       const actionTime = scene.overlay === 'bvm' ? timing.start + timing.cycle * .5
         : scene.overlay === 'lucas' ? timing.start + timing.cycle * .45
+        : scene.id === 'chest_seal' && o.outcome === 'COMPLICATION' ? scene.duration * .47
         : scene.overlay === 'defib' ? timing.result + 64
+        : scene.overlay === 'glucometry' ? scene.duration * .59
+        : scene.id === 'collar' && o.outcome === 'COMPLICATION' ? scene.duration * .72
+        : scene.id === 'packing' ? scene.duration * .69
+        : scene.id === 'splint_traction' ? scene.duration * .70
         : scene.overlay === 'cpr' ? 275 : scene.duration * .5;
       animation.currentTime = mode === 'start' ? 0 : mode === 'action' ? actionTime : Math.max(0, scene.duration - 1);
     }

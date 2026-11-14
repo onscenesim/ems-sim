@@ -16,21 +16,28 @@ require.cache[apiPath] = { exports: {
   sendTurn: async (_prompt, messages) => {
     if (scriptedReply !== null) return scriptedReply;
     const action = messages.at(-1).content;
+    const order = action.split('\n')[0];
     const last = messages.filter(m => m.role === 'assistant').at(-1)?.content || '';
     const match = last.match(/\[TIME: (\d+):(\d+)\]/);
     let minute = match ? Number(match[1]) + Number(match[2]) / 60 : -2;
     minute += /\[REPORT MODE:/.test(action) ? 0.5 : 2;
     let text = 'SYNTHETIC PREVIEW: The patient is awake and answers your questions.', tag = '';
+    if (/Wait for transport to finish/i.test(order)) minute += 30;
     if (/CANNOT be performed/.test(action)) text = 'The requested ECG cannot be acquired because no monitor is available.';
     else if (/\[REPORT MODE:/.test(action)) text = 'The receiving nurse asks, “What is his current 12-lead finding, and do you have an updated ETA once wheels roll?”';
     else if (/TIME-SKIP — COMPLETE TRANSPORT|TIME-SKIP — TRANSPORT TO HOSPITAL/.test(action)) { text = 'The ambulance reaches the ED bay doors. The receiving team awaits your handoff.'; minute += 20; }
     else if (/TIME-SKIP — LOAD|Load the patient into the ambulance/i.test(action)) { text = 'The patient is secured on the stretcher and loaded. The unit stays parked.'; tag = '[LOADING]'; }
-    else if (/Depart|Head to the hospital|Start transport/i.test(action)) { text = 'The ambulance pulls away from the scene, heading to the major hospital.'; tag = '[EN_ROUTE:major]'; }
+    else if (/^Transport to Lakeview Community Hospital/i.test(order)) { text = 'The ambulance pulls away, heading to Lakeview Community Hospital.'; tag = '[EN_ROUTE:nearest]'; }
+    else if (/^Transport to|Depart|Head to the hospital|Start transport/i.test(order)) { text = 'The ambulance pulls away from the scene, heading to the major hospital.'; tag = '[EN_ROUTE:major]'; }
     else if (/SYSTEM ROLL: peripheral_iv/.test(action)) {
       const outcome = action.match(/SYSTEM ROLL: peripheral_iv[^\n]*— (SUCCESS|MARGINAL|FAILURE|COMPLICATION)/)?.[1];
       text = outcome === 'SUCCESS' ? 'A peripheral IV is seated and patent.' : outcome === 'MARGINAL' ? 'A peripheral IV is seated with sluggish flow.' : 'The peripheral IV attempt fails; no access is established.';
     } else if (/SYSTEM ROLL: (?:twelve_lead|posterior_ecg|right_sided_ecg|v4r_ecg)/.test(action)) text = 'The ECG paper is filed in More Vitals.';
-    return `${text}\n${tag}\n[CREW_STATUS: partner=on_scene captain=not_on_scene]\n[VITALS: HR=90 RR=18 BP=118/76 GCS=15]\n[TIME: ${Math.floor(minute)}:${String(Math.round(minute % 1 * 60)).padStart(2, '0')}]`;
+    const time = `${Math.floor(minute)}:${String(Math.round(minute % 1 * 60)).padStart(2, '0')}`;
+    const glucose = /When the ordered fingerstick is performed/.test(action) ? ` Glucose=106@T+${time}` : '';
+    if (glucose) text += ' Fingerstick glucose is 106 mg/dL.';
+    const partner = tag.startsWith('[EN_ROUTE:') || /Wait for transport to finish/i.test(order) ? 'driving' : 'on_scene';
+    return `${text}\n${tag}\n[CREW_STATUS: partner=${partner} captain=not_on_scene]\n[VITALS: HR=90 RR=18 BP=118/76 GCS=15${glucose}]\n[TIME: ${time}]`;
   },
   sendDebrief: async () => 'LOCAL SYNTHETIC PREVIEW. No clinical evaluation was generated for this interactive fixture.',
 } };
@@ -101,7 +108,7 @@ wrapper.post('/qa/evidence', (_req, res) => {
     console.log(`Live debrief saved: ${path.join(process.env.EMS_DATA_DIR, 'evidence-review.json')}`);
   }).catch(error => { evidenceJob = { state: 'failed', error: error.message }; });
 });
-wrapper.get('/qa', (_req, res) => res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Gameplay gap verification</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/practice.css"><style>body{display:block;height:auto;min-height:100vh;padding:24px;background:#17232e;color:#e7ecf0;font:18px system-ui}.qa{max-width:1050px;margin:auto}h1{font-size:28px}button,a{font:inherit;padding:10px;margin:5px;color:#dbeefa;background:#263c4c;border:1px solid #7c99ab;border-radius:4px;cursor:pointer}pre{white-space:pre-wrap;background:#10202c;padding:18px;line-height:1.55}#review{color:#18222b}#status{margin:18px 0}button:disabled{opacity:.5}</style></head><body><main class="qa"><h1>Gameplay gap verification</h1><p>Real Session and UI code. Gameplay uses synthetic replies in temporary storage. The evidence-debrief button calls the configured live model.</p><nav><a href="/">Open interactive simulator</a></nav><p>In the simulator, try “try one IV in the left arm,” then expand “Edit or add a missed action,” add “Acquire a 12-lead ECG,” and recheck before confirming.</p><div><button data-check="bls">BLS equipment gate</button><button data-check="backup">Equipped ALS backup</button><button data-check="arrival">Arrival at major hospital</button><button data-check="report">Report timing and dialogue</button></div><pre id="result">Choose a check to inspect its scene response and engine state.</pre><button id="evidence">Generate live evidence debrief</button><p id="status">No live model request has run.</p><div id="review"></div></main><script src="/practice.js"></script><script>
+wrapper.get('/qa', (_req, res) => res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Gameplay gap verification</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/practice.css"><style>body{display:block;height:auto;min-height:100vh;padding:24px;background:#17232e;color:#e7ecf0;font:18px system-ui}.qa{max-width:1050px;margin:auto}h1{font-size:28px}button,a{font:inherit;padding:10px;margin:5px;color:#dbeefa;background:#263c4c;border:1px solid #7c99ab;border-radius:4px;cursor:pointer}pre{white-space:pre-wrap;background:#10202c;padding:18px;line-height:1.55}#review{color:#18222b}#status{margin:18px 0}button:disabled{opacity:.5}</style></head><body><main class="qa"><h1>Gameplay gap verification</h1><p>Real Session and UI code. Gameplay uses synthetic replies in temporary storage. The evidence-debrief button calls the configured live model.</p><nav><a href="/">Open interactive simulator</a></nav><p>In the simulator, try “Check glucose. Splint the left distal radius.” After departure, type “Wait for transport to finish” to verify the ED cutscene.</p><div><button data-check="bls">BLS equipment gate</button><button data-check="backup">Equipped ALS backup</button><button data-check="arrival">Arrival at major hospital</button><button data-check="report">Report timing and dialogue</button></div><pre id="result">Choose a check to inspect its scene response and engine state.</pre><button id="evidence">Generate live evidence debrief</button><p id="status">No live model request has run.</p><div id="review"></div></main><script src="/practice.js"></script><script>
 const result=document.querySelector('#result');document.querySelectorAll('[data-check]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const r=await fetch('/qa/check/'+b.dataset.check,{method:'POST'});const d=await r.json();result.textContent=JSON.stringify(d,null,2);}finally{b.disabled=false;}});
 const evidence=document.querySelector('#evidence');async function poll(){const d=await(await fetch('/qa/evidence')).json();document.querySelector('#status').textContent=d.state==='failed'?d.error:'Live evidence debrief: '+d.state;if(d.state==='running'){setTimeout(poll,1000);return;}evidence.disabled=false;if(d.review)document.querySelector('#review').replaceChildren(PracticeUI.learning(d.review));}
 evidence.onclick=async()=>{evidence.disabled=true;await fetch('/qa/evidence',{method:'POST'});poll();};poll();

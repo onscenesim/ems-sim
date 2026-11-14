@@ -1299,7 +1299,7 @@ body.light-mode .brief-options-note { color: #536159; }
 
 /* ── Patient loading and ambulance departure ──────────────────────────── */
 /* Retain the chrome transport cards, with larger clipped SVG scenes. */
-#loading-overlay, #depart-overlay {
+#loading-overlay, #depart-overlay, #arrival-overlay {
   position: fixed;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%) scale(0.96);
@@ -1320,24 +1320,24 @@ body.light-mode .brief-options-note { color: #536159; }
   transition: opacity var(--transport-fade, 220ms) ease, transform 200ms ease;
   text-align: center;
 }
-#loading-overlay.visible, #depart-overlay.visible {
+#loading-overlay.visible, #depart-overlay.visible, #arrival-overlay.visible {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
-:is(#loading-overlay, #depart-overlay).visible.is-fading { opacity: 0; }
-#loading-header, #depart-header {
+:is(#loading-overlay, #depart-overlay, #arrival-overlay).visible.is-fading { opacity: 0; }
+#loading-header, #depart-header, #arrival-header {
   font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #0a3d52;
 }
-#loading-label, #depart-label {
+#loading-label, #depart-label, #arrival-label {
   font-size: 16px;
   line-height: 1.5;
   letter-spacing: 0.14em;
   color: #1a1a1a;
 }
-#loading-svg, #depart-svg {
+#loading-svg, #depart-svg, #arrival-svg {
   width: min(100%, calc((100vh - 110px) * 1.8947));
   height: auto;
   flex-shrink: 0;
@@ -2912,16 +2912,41 @@ body.light-mode .brief-options-note { color: #536159; }
 }
 @keyframes cprPress {
   0%, 100% { transform: scale(1); }
-  45%      { transform: scale(0.95); }
+  45%      { transform: scale(var(--cpr-hand-depth, .95)); }
 }
 @keyframes cprChest {
   0%, 100% { transform: scale(1); }
-  45%      { transform: scale(0.97, 0.955); }
+  45%      { transform: scale(var(--cpr-chest-x, .97), var(--cpr-chest-y, .955)); }
 }
 @keyframes cprAbdomen {
   0%, 100% { transform: scale(1); }
-  45%      { transform: scale(1.025, 0.99); }
+  45%      { transform: scale(var(--cpr-abdomen-x, 1.025), var(--cpr-abdomen-y, .99)); }
 }
+#cpr-overlay.outcome-FAILURE.visible {
+  --cpr-hand-depth: .986;
+  --cpr-chest-x: .996;
+  --cpr-chest-y: .992;
+  --cpr-abdomen-x: 1.004;
+  --cpr-abdomen-y: 1;
+}
+#cpr-overlay.outcome-COMPLICATION {
+  --torso-rib-arc-opacity: 0;
+  --cpr-hand-depth: .91;
+  --cpr-chest-x: 1.045;
+  --cpr-chest-y: 1.06;
+  --cpr-abdomen-x: .88;
+  --cpr-abdomen-y: .95;
+}
+/* Keep the torso contours joined as the chest and belly details move in opposite directions. */
+#cpr-fixed-sides,
+#cpr-overlay.outcome-COMPLICATION #cpr-moving-sides { display: none; }
+#cpr-overlay.outcome-COMPLICATION #cpr-fixed-sides { display: inline; }
+#cpr-overlay.outcome-COMPLICATION .cpr-hand-motion {
+  translate: 0 44px;
+  transform-origin: 110px 157px;
+}
+#cpr-overlay.outcome-COMPLICATION[data-patient-profile="baby"] .cpr-hand-motion { translate: 0 26px; }
+#cpr-overlay.outcome-COMPLICATION #cpr-abdomen { transform-origin: 110px 157px; }
 @media (prefers-reduced-motion: reduce) {
   #cpr-overlay.visible .cpr-hand-motion,
   #cpr-overlay.visible #cpr-chest,
@@ -4223,6 +4248,69 @@ body.light-mode .proc-confirm-edit textarea { color: #302c21; background: #fffdf
 #lucas-overlay.visible .side-chest-profile { animation: lucasChestContour var(--procedure-cycle) linear var(--procedure-start) 3 both; }
 #lucas-overlay.visible .side-abdomen-profile { animation: lucasBellyContour var(--procedure-cycle) linear var(--procedure-start) 3 both; }
 #lucas-overlay.visible #lucas-bellows { animation: lucasBellows var(--procedure-cycle) linear var(--procedure-start) 3 both; }
+.lucas-low-arm { display: none; }
+#lucas-overlay.outcome-FAILURE { --lucas-low-offset: -77px; }
+#lucas-overlay.outcome-FAILURE .lucas-placement { translate: var(--lucas-low-offset) 9px; }
+#lucas-overlay.outcome-FAILURE :is(#lucas-backplate, #lucas-far-rail) { translate: var(--lucas-low-offset) 0; }
+#lucas-overlay.outcome-FAILURE #lucas-backplate { mask: none; }
+/* Follow the lowered housing at the top while keeping the rail seated on the backplate. */
+#lucas-overlay.outcome-FAILURE #lucas-far-rail {
+  transform-box: view-box;
+  transform-origin: 0 167px;
+  scale: 1 .914;
+}
+#lucas-overlay.outcome-FAILURE :is(#lucas-arm, .patient-scene > g > use[href="#resus-lucas-far-arm"]) { display: none; }
+#lucas-overlay.outcome-FAILURE .lucas-low-arm { display: inline; }
+#lucas-overlay.outcome-FAILURE :is(#lucas-chest, #lucas-lower-body) { mask: url(#resus-arm-knockout); }
+#lucas-overlay.outcome-FAILURE .lucas-placement :is(#lucas-frame, path[mask]) { mask: none; }
+#lucas-overlay.outcome-FAILURE.visible .side-chest-profile { animation-name: lucasParadoxChest; }
+#lucas-overlay.outcome-FAILURE.visible #lucas-chest .side-chest-details { animation-name: lucasParadoxDetail; }
+#lucas-overlay.outcome-FAILURE.visible .side-abdomen-profile { animation-name: lucasLowBelly; }
+@keyframes lucasParadoxChest {
+  0%, 90%, 100% { d: var(--side-chest-rest, path('M151 123 C170 118 185 116 205 116 C225 116 237 121 249 134')); }
+  42%, 50% { d: var(--side-chest-expanded, path('M151 123 C170 111 185 105 205 105 C225 105 237 115 249 134')); }
+}
+@keyframes lucasParadoxDetail {
+  0%, 90%, 100% { transform: none; }
+  42%, 50% { transform: translateY(-7px); }
+}
+@keyframes lucasLowBelly {
+  0%, 90%, 100% { d: path('M53 128 C86 126 121 125 151 123'); }
+  42%, 50% { d: path('M53 128 C86 129 121 142 151 123'); }
+}
+#lucas-battery-fault { opacity: 0; }
+#lucas-overlay.outcome-COMPLICATION #lucas-status { color: #f69a69; }
+#lucas-overlay.outcome-COMPLICATION #lucas-battery-fault { opacity: 1; }
+#lucas-overlay.outcome-COMPLICATION .lucas-battery-normal { opacity: 0; }
+#lucas-overlay.outcome-COMPLICATION #lucas-piston { transform: translateY(-27px); }
+#lucas-overlay.outcome-COMPLICATION #lucas-bellows { transform: scaleY(.32); }
+#lucas-overlay.outcome-COMPLICATION.visible #lucas-piston {
+  animation: lucasPump var(--procedure-cycle) linear var(--procedure-start) 1 both,
+    lucasRetract 340ms cubic-bezier(.38,.05,.32,1) calc(var(--procedure-start) + var(--procedure-cycle) * 1.36) forwards;
+}
+#lucas-overlay.outcome-COMPLICATION.visible :is(#lucas-chest .side-chest-details, .side-chest-profile, .side-abdomen-profile) {
+  animation-iteration-count: 1;
+}
+#lucas-overlay.outcome-COMPLICATION.visible #lucas-bellows {
+  animation: lucasBellows var(--procedure-cycle) linear var(--procedure-start) 1 both,
+    lucasBellowsRetract 340ms ease calc(var(--procedure-start) + var(--procedure-cycle) * 1.36) forwards;
+}
+#lucas-overlay.outcome-COMPLICATION.visible #lucas-battery-fault {
+  animation: lucasFaultFlash var(--procedure-duration) linear both;
+}
+#lucas-overlay.outcome-COMPLICATION.visible .lucas-battery-normal {
+  animation: lucasBatteryNormal var(--procedure-duration) step-end both;
+}
+#lucas-overlay.outcome-COMPLICATION.visible #lucas-status {
+  animation: lucasStatusFault var(--procedure-duration) step-end both;
+}
+@keyframes lucasRetract { from { transform: translateY(0); } to { transform: translateY(-27px); } }
+@keyframes lucasBellowsRetract { from { transform: scaleY(1); } to { transform: scaleY(.32); } }
+@keyframes lucasFaultFlash {
+  0%, 38% { opacity: 0; } 41%, 49% { opacity: 1; } 52%, 56% { opacity: 0; } 60%, 100% { opacity: 1; }
+}
+@keyframes lucasBatteryNormal { 0% { opacity: 1; } 40%, 100% { opacity: 0; } }
+@keyframes lucasStatusFault { 0% { color: #8bd79b; } 40%, 100% { color: #f69a69; } }
 @keyframes lucasPump { 0%, 90%, 100% { transform: translateY(0); } 42%, 50% { transform: translateY(9px); } }
 @keyframes lucasChest { 0%, 90%, 100% { transform: scaleY(1); } 42%, 50% { transform: scaleY(0.8125); } }
 @keyframes lucasBellows { 0%, 90%, 100% { transform: scaleY(1); } 42%, 50% { transform: scaleY(1.375); } }
@@ -5106,24 +5194,70 @@ body.light-mode #lx-male-soft-tissue { --lx-tissue-edge: #925e65; }
 #chest_seal-overlay.visible .seal-clog { animation: sealClog 1800ms ease 1300ms both; }
 #chest_seal-overlay.visible .seal-seep { animation: sealSeep 3100ms ease both; }
 #chest_seal-overlay.outcome-MARGINAL.visible .seal-dressing { animation: sealSlap 1300ms ease both, sealPeel 600ms ease 2200ms forwards; }
-#chest_seal-overlay.outcome-COMPLICATION .seal-hand { opacity: 1; transform: translate(3px, 12px); }
-#chest_seal-overlay.outcome-COMPLICATION.visible .seal-hand { animation: sealMiss 4400ms linear both; }
-#chest_seal-overlay.outcome-COMPLICATION .seal-impact { transform: translate(-62px, 39px); }
+#chest_seal-overlay.outcome-COMPLICATION.visible .seal-attempt {
+  animation: sealAttempts var(--procedure-duration) linear both;
+}
+#chest_seal-overlay.outcome-COMPLICATION.visible .seal-hand {
+  opacity: 1;
+  animation: sealHandTremor 100ms linear infinite;
+}
+#chest_seal-overlay.outcome-COMPLICATION.visible .seal-dressing {
+  animation: sealRelease var(--procedure-duration) linear both;
+}
+#chest_seal-overlay.outcome-COMPLICATION.visible .seal-impact {
+  animation: sealMissImpacts var(--procedure-duration) linear both;
+}
 @keyframes sealSlap { 0%, 35% { transform: translate(15px, -65px) scale(1.18); opacity: 0; } 55% { opacity: 1; } 73% { transform: translate(0, 0) scale(1.08, .9); } 87% { transform: scale(.98, 1.02); } 100% { transform: scale(1); opacity: 1; } }
 @keyframes sealGlove { 0%, 20% { transform: translate(15px, -65px); opacity: 0; } 32% { opacity: 1; } 45%, 65% { transform: translate(0, 8px); opacity: 1; } 100% { transform: translate(20px, -70px); opacity: 0; } }
 @keyframes sealImpact { 0%, 100% { opacity: 0; } 20% { opacity: .9; } }
 @keyframes sealClog { from { opacity: 0; } to { opacity: var(--seal-clog); } }
 @keyframes sealSeep { 0% { stroke-dashoffset: 50; opacity: 1; } 35% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: var(--seal-leak); } }
 @keyframes sealPeel { to { transform: skewY(-5deg) scaleX(.96); } }
-@keyframes sealMiss {
-  0%, 10% { transform: translate(-47px, -26px); opacity: 0; }
-  18% { opacity: 1; } 22%, 32% { transform: translate(-62px, 47px); opacity: 1; }
-  40% { transform: translate(14px, 3px) rotate(12deg); }
-  48% { transform: translate(-13px, 21px) rotate(-9deg); }
-  56% { transform: translate(8px, 7px) rotate(7deg); }
-  64% { transform: translate(-8px, 17px) rotate(-6deg); }
-  72% { transform: translate(6px, 8px); } 80% { transform: translate(-5px, 16px); }
-  88% { transform: translate(5px, 9px); } 96%, 100% { transform: translate(3px, 12px); opacity: 1; }
+/* Short lifts keep the hand close while separating the three contacts. */
+@keyframes sealAttempts {
+  0%, 6% { transform: translate(-50px, 5px) rotate(-8deg); opacity: 0; }
+  13%, 19% { transform: translate(-55px, 23px) rotate(-6deg); opacity: 1; }
+  24%, 26% { transform: translate(-62px, 47px) rotate(-4deg); opacity: 1; }
+  30% { transform: translate(-56px, 21px) rotate(-8deg); opacity: 1; }
+  40%, 44% { transform: translate(16px, -9px) rotate(8deg); opacity: 1; }
+  47%, 49% { transform: translate(16px, 12px) rotate(5deg); opacity: 1; }
+  56% { transform: translate(14px, -9px) rotate(8deg); opacity: 1; }
+  65%, 70% { transform: translate(-3px, -15px) rotate(-5deg); opacity: 1; }
+  73%, 100% { transform: translate(0, 5px); opacity: 1; }
+}
+.seal-finger-seep { opacity: 0; }
+#chest_seal-overlay.outcome-COMPLICATION.visible .seal-finger-seep {
+  opacity: 1;
+}
+#chest_seal-overlay.outcome-COMPLICATION.visible .seal-finger-seep path {
+  stroke-dasharray: 100;
+  animation: sealFingerSeep var(--procedure-duration) linear both;
+}
+#chest_seal-overlay.outcome-COMPLICATION.visible .seal-seep { animation: none; opacity: 0; }
+@keyframes sealFingerSeep {
+  0%, 73% { opacity: 0; stroke-dashoffset: 100; }
+  78% { opacity: 1; }
+  100% { opacity: 1; stroke-dashoffset: 0; }
+}
+@keyframes sealHandTremor {
+  0%, 100% { translate: -1px 0; }
+  35% { translate: 1.5px -1px; }
+  68% { translate: 0 1px; }
+}
+@keyframes sealRelease {
+  0%, 9% { transform: translate(12px, -66px) rotate(-6deg); opacity: 0; }
+  13%, 19% { transform: translate(7px, -47px) rotate(-2deg); opacity: 1; }
+  24% { transform: translate(0, 1px) scale(1.04, .94); opacity: 1; }
+  28%, 100% { transform: none; opacity: 1; }
+}
+@keyframes sealMissImpacts {
+  0%, 23% { transform: translate(-62px, 39px); opacity: 0; }
+  24% { transform: translate(-62px, 39px); opacity: .8; }
+  27%, 46% { transform: translate(18px, 4px); opacity: 0; }
+  47% { transform: translate(18px, 4px); opacity: .72; }
+  50%, 72% { transform: none; opacity: 0; }
+  73% { transform: none; opacity: .72; }
+  76%, 100% { transform: none; opacity: 0; }
 }
 /* Identical torso, pads and translucent heart for pacing and both shock modes. */
 .heart-motion { transform-origin: 117px 101px; }
@@ -5196,6 +5330,7 @@ body.light-mode #lx-male-soft-tissue { --lx-tissue-edge: #925e65; }
 @media (prefers-reduced-motion: reduce) {
   #chest_seal-overlay, #pacing-overlay, #defib-overlay { transition: none; }
   #defib-overlay.visible, #pacing-overlay.visible { animation: none !important; }
+  #chest_seal-overlay.outcome-COMPLICATION.visible .seal-attempt { transform: translateY(5px); }
   :is(#chest_seal-overlay, #pacing-overlay, #defib-overlay).visible * { animation: none !important; }
 }
 

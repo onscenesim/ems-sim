@@ -1,0 +1,390 @@
+/* Emergency department approach shares the departure ambulance's SVG art. */
+#arrival-overlay { visibility: hidden; }
+#arrival-overlay.visible { visibility: visible; }
+#arrival-car { transform: translateX(15px); }
+#arrival-overlay.visible #arrival-car {
+  animation: bay-approach var(--transport-travel) cubic-bezier(.2,.42,.42,1) var(--transport-start) both;
+}
+#arrival-body { transform-origin: 160px 146px; }
+#arrival-overlay.visible #arrival-body {
+  animation: bay-brake var(--transport-travel) ease var(--transport-start) both;
+}
+.arrival-wheel {
+  stroke: #667276;
+  stroke-width: 1.2;
+  transform-origin: 0 0;
+}
+#arrival-overlay.visible .arrival-wheel {
+  animation: bay-wheel var(--transport-travel) cubic-bezier(.2,.42,.42,1) var(--transport-start) both;
+}
+#arrival-brake { opacity: 0; }
+#arrival-overlay.visible #arrival-brake {
+  animation: bay-stop-light var(--transport-travel) linear var(--transport-start) both;
+}
+@keyframes bay-approach { from { transform: translateX(-310px); } to { transform: translateX(15px); } }
+@keyframes bay-wheel { to { transform: rotate(1034.5deg); } }
+@keyframes bay-brake {
+  0%, 54%, 100% { transform: none; }
+  77% { transform: translateY(.65px) rotate(1.6deg); }
+  89% { transform: translateY(-.35px) rotate(-.42deg); }
+}
+@keyframes bay-stop-light { 0%, 50%, 100% { opacity: 0; } 59%, 87% { opacity: 1; } }
+
+/* Compact procedure cards use the same chrome and bounded lifecycle as transport. */
+.field-scene {
+  position: fixed;
+  z-index: 103;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 24px));
+  box-sizing: border-box;
+  padding: 18px 16px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: #b8cbd6;
+  background: #101923;
+  border: 1px solid #526878;
+  border-radius: 8px;
+  box-shadow: 0 16px 60px #0009;
+  font-family: var(--font-block, monospace);
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+  --field-final-y: 0px;
+  --field-final-r: 0deg;
+}
+.field-scene.visible { opacity: 1; visibility: visible; }
+.field-scene.visible.is-fading { opacity: 0; }
+.field-scene svg {
+  width: min(100%, calc((100dvh - 100px) * 1.33));
+  height: auto;
+  overflow: hidden;
+}
+.field-header, .field-result {
+  font-size: 11px;
+  letter-spacing: .14em;
+  line-height: 1.4;
+}
+.field-result { min-height: 26px; color: var(--field-result-color, #b8cbd6); }
+.field-scene.visible .field-result {
+  animation: field-reveal 200ms linear calc(var(--field-duration) * .76) both;
+}
+.field-backdrop { fill: #151e28; stroke: #526878; stroke-width: 1; }
+.field-rule { fill: none; stroke: #526878; stroke-width: 1.25; }
+.field-scene.outcome-SUCCESS { --field-result-color: #69d995; }
+.field-scene.outcome-FAILURE { --field-final-y: 6px; --field-final-r: -7deg; --field-result-color: #e16c70; }
+.field-scene.outcome-MARGINAL { --field-final-y: 2px; --field-final-r: -3deg; --field-result-color: #e2c66f; }
+.field-scene.outcome-COMPLICATION { --field-final-y: -5px; --field-final-r: 7deg; --field-result-color: #f38a62; }
+
+#glucometry-overlay.visible .glucose-strip { animation: insert-strip var(--field-duration) ease both; }
+#glucometry-overlay.visible .glucose-finger { animation: touch-strip var(--field-duration) ease both; }
+#glucometry-overlay.visible .glucose-sample {
+  transform-box: fill-box;
+  transform-origin: top;
+  animation: fill-strip var(--field-duration) linear both;
+}
+#glucometry-overlay.visible .glucose-drop { animation: transfer-drop var(--field-duration) linear both; }
+#glucometry-overlay.visible .meter-ready { animation: meter-ready var(--field-duration) linear both; }
+#glucometry-overlay.visible .meter-result {
+  animation: field-reveal 180ms linear calc(var(--field-duration) * .75) both;
+}
+@keyframes insert-strip {
+  0% { transform: translateY(-20px); }
+  12% { transform: translateY(-17px); }
+  34%, 100% { transform: none; }
+}
+@keyframes touch-strip {
+  0%, 34%, 100% { transform: translate(160px, -8px); }
+  54%, 62% { transform: translate(-16px, -15px); }
+  80% { transform: translate(160px, -8px); }
+}
+@keyframes fill-strip { 0%, 54% { transform: scaleY(0); } 63%, 100% { transform: scaleY(1); } }
+@keyframes transfer-drop { 0%, 55% { opacity: 1; } 63%, 100% { opacity: 0; } }
+@keyframes meter-ready { 0%, 30%, 72%, 100% { opacity: 0; } 35%, 67% { opacity: 1; } }
+
+.trauma-art, .packing-art, .dressing-art, .splint-view { display: none; }
+[data-trauma="packing"] :is(.wound-art, .packing-art),
+[data-trauma="dressing"] :is(.wound-art, .dressing-art),
+[data-trauma="collar"] .collar-art,
+[data-trauma="binder"] .binder-art,
+[data-trauma="splint"] .splint-art,
+[data-region="upper-arm"] .splint-upper-arm,
+[data-region="forearm"] .splint-forearm,
+[data-region="hand"] .splint-hand,
+[data-region="foot"] .splint-foot,
+:is([data-region="thigh"], [data-region="lower-leg"]):not([data-splint="traction"]) .splint-long-leg,
+[data-splint="traction"] .splint-traction { display: inline; }
+[data-trauma="dressing"] .wound-seep { display: none; }
+[data-side="left"] .splint-art { transform: translateX(360px) scaleX(-1); }
+[data-region="lower-leg"] .long-thigh-wrap { display: none; }
+
+.limb { fill: #536573; stroke: #a5b7c2; stroke-width: 1.7; }
+.limb-detail { fill: none; stroke: #93a7b4; stroke-width: 1.1; }
+.splint-foam { fill: #bd916a; stroke: #ebc5a0; stroke-width: 1.4; }
+.splint-highlight { fill: none; stroke: #f0cbab; stroke-width: 1.2; }
+.splint-wrap { fill: #3b5362; stroke: #afbfc7; stroke-width: 1.2; }
+.wrap-stitch { fill: none; stroke: #819aa7; }
+.sling { fill: #334a5b; fill-opacity: .92; stroke: #9db1ba; }
+.sling-line { fill: none; stroke: #aebfc5; stroke-width: 1.7; }
+
+#trauma-overlay.visible .packing-feed {
+  stroke-dasharray: 122;
+  animation: gauze-feed var(--field-duration) ease both;
+}
+#trauma-overlay.visible .packing-fold {
+  animation: build-packing 370ms ease calc(var(--field-duration) * .22) both;
+}
+#trauma-overlay.visible .packing-fold:nth-child(2) { animation-delay: calc(var(--field-duration) * .32); }
+#trauma-overlay.visible .packing-crown {
+  transform-origin: 180px 154px;
+  animation: compress-packing var(--field-duration) ease both;
+}
+#trauma-overlay.visible .packing-press { animation: hold-packing var(--field-duration) ease both; }
+#trauma-overlay.visible .packing-tremor {
+  animation: pressureTremor 120ms linear calc(var(--field-duration) * .61) infinite;
+}
+#trauma-overlay.visible .wound-seep { animation: wound-seep var(--field-duration) ease both; }
+#trauma-overlay { --wound-seep: 0; --stain-opacity: 0; --stain-scale: .14; }
+#trauma-overlay.outcome-MARGINAL { --wound-seep: .32; --stain-opacity: .64; --stain-scale: .42; }
+#trauma-overlay:is(.outcome-FAILURE, .outcome-COMPLICATION) {
+  --wound-seep: .85;
+  --stain-opacity: .96;
+  --stain-scale: 1.35;
+}
+.wound-stain {
+  opacity: var(--stain-opacity);
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(var(--stain-scale));
+}
+#trauma-overlay.visible .wound-stain { animation: soak-cloth var(--field-duration) linear both; }
+#trauma-overlay.visible .dressing-pad { animation: place-pad var(--field-duration) ease both; }
+.dressing-pass { fill: none; stroke-width: 35; }
+.dressing-edge { stroke: #cad6d1; stroke-width: 1.2; opacity: .65; --band-opacity: .65; }
+#trauma-overlay.visible .dressing-pass {
+  stroke-dasharray: 100;
+  animation: wrap-pass calc(var(--field-duration) * .22) ease both;
+}
+#trauma-overlay.visible .dressing-first { animation-delay: calc(var(--field-duration) * .24); }
+#trauma-overlay.visible .dressing-second { animation-delay: calc(var(--field-duration) * .42); }
+#trauma-overlay.visible .dressing-third { animation-delay: calc(var(--field-duration) * .59); }
+#trauma-overlay.visible .dressing-roll { animation: roll-bandage var(--field-duration) linear both; }
+#trauma-overlay.visible .dressing-texture { animation: field-reveal 250ms ease calc(var(--field-duration) * .76) both; }
+
+@keyframes build-packing { from { opacity: 0; translate: 0 -13px; } to { opacity: 1; translate: 0 0; } }
+@keyframes compress-packing {
+  0%, 33% { opacity: 0; transform: translateY(-12px) scaleY(1.18); }
+  47%, 54% { opacity: 1; transform: scaleY(1.14); }
+  65%, 100% { opacity: 1; transform: scaleY(.74); }
+}
+@keyframes hold-packing {
+  0%, 46% { opacity: 0; translate: 12px -36px; }
+  54% { opacity: 1; translate: 4px -12px; }
+  65%, 100% { opacity: 1; translate: 0 9px; }
+}
+@keyframes soak-cloth {
+  0%, 64% { opacity: 0; transform: scale(.12); }
+  75% { opacity: var(--stain-opacity); transform: scale(calc(var(--stain-scale) * .40)); }
+  100% { opacity: var(--stain-opacity); transform: scale(var(--stain-scale)); }
+}
+@keyframes place-pad {
+  0% { opacity: 0; translate: 0 -38px; }
+  12% { opacity: 1; }
+  24%, 100% { opacity: 1; translate: 0 0; }
+}
+@keyframes wrap-pass {
+  0% { opacity: 0; stroke-dashoffset: 100; }
+  4% { opacity: var(--band-opacity, 1); }
+  100% { opacity: var(--band-opacity, 1); stroke-dashoffset: 0; }
+}
+@keyframes roll-bandage {
+  0%, 19% { opacity: 0; transform: translate(147px, 70px) rotate(12deg); }
+  24% { opacity: 1; transform: translate(149px, 90px); }
+  39% { opacity: 1; transform: translate(159px, 163px) rotate(18deg); }
+  41% { opacity: 0; transform: translate(164px, 178px); }
+  43% { opacity: 1; transform: translate(176px, 91px); }
+  56% { opacity: 1; transform: translate(187px, 164px) rotate(18deg); }
+  60% { opacity: 0; transform: translate(191px, 178px); }
+  62% { opacity: 1; transform: translate(201px, 90px); }
+  75% { opacity: 1; transform: translate(216px, 151px) rotate(19deg); }
+  81%, 100% { opacity: 0; transform: translate(238px, 145px) rotate(-9deg); }
+}
+#trauma-overlay.visible :is(.collar-front, .splint-support) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: seat-device var(--field-duration) ease both;
+}
+.collar-front { --device-entry-y: -62px; }
+.splint-support { --device-entry-y: 24px; }
+.splint-foot .splint-support { --device-entry-x: -35px; --device-entry-y: 14px; }
+.splint-upper-arm .splint-support { --device-entry-x: -42px; --device-entry-y: 5px; }
+#trauma-overlay.visible .collar-rear { animation: seat-rear var(--field-duration) ease both; }
+#trauma-overlay.visible .collar-hand {
+  animation: seat-hand var(--field-duration) ease both;
+}
+#trauma-overlay.visible .splint-wraps {
+  animation: secure-splint var(--field-duration) ease both;
+}
+@keyframes secure-splint {
+  0%, 49% { opacity: 0; }
+  70%, 100% { opacity: 1; translate: 0 var(--field-final-y); }
+}
+
+.binder-landmarks { opacity: 0; }
+#trauma-overlay.outcome-MARGINAL .binder-position { transform: translateY(-16px) rotate(-3deg); }
+#trauma-overlay.outcome-FAILURE .binder-position { transform: translateY(-51px); }
+#trauma-overlay.outcome-COMPLICATION .binder-position { transform: translateY(37px) rotate(7deg); }
+.binder-position { transform-origin: 180px 124px; }
+#trauma-overlay.visible .binder-landmarks { animation: mark-hip-level var(--field-duration) ease both; }
+#trauma-overlay.visible .binder-rear-panel { animation: slide-binder var(--field-duration) ease both; }
+#trauma-overlay.visible :is(.binder-wrap, .binder-buckle) { animation: bring-binder-around var(--field-duration) ease both; }
+#trauma-overlay.visible .binder-thread { animation: thread-binder var(--field-duration) linear both; }
+#trauma-overlay.visible .binder-pull-tab { animation: pull-binder-tab var(--field-duration) linear both; }
+#trauma-overlay.visible :is(.binder-hand-left, .binder-hand-right) { animation: pull-binder var(--field-duration) linear both; }
+@keyframes mark-hip-level {
+  0%, 19% { opacity: .68; }
+  38%, 100% { opacity: 0; }
+}
+@keyframes slide-binder {
+  0%, 8% { opacity: 0; translate: -130px 0; }
+  17% { opacity: .9; }
+  30%, 100% { opacity: 1; translate: 0 0; }
+}
+@keyframes bring-binder-around {
+  0%, 28% { opacity: 0; }
+  43%, 100% { opacity: 1; }
+}
+@keyframes thread-binder {
+  0%, 36% { opacity: 0; translate: 48px 0; }
+  47% { opacity: 1; translate: 18px 0; }
+  57% { translate: 0 0; }
+  72% { opacity: 1; translate: -23px 0; }
+  86%, 100% { opacity: 1; translate: 0 0; }
+}
+@keyframes pull-binder-tab {
+  0%, 35% { opacity: 0; }
+  48%, 56% { opacity: 1; translate: -13px 0; }
+  72% { opacity: 1; translate: 10px 0; }
+  87%, 100% { opacity: 0; translate: 0 0; }
+}
+@keyframes pull-binder {
+  0%, 38% { opacity: 0; translate: -36px 0; }
+  52%, 57% { opacity: 1; translate: 0 0; }
+  72% { opacity: 1; translate: -15px 0; }
+  87%, 100% { opacity: 0; translate: -47px 3px; }
+}
+/* The hand pulls the free end as slack disappears from the ankle line. */
+.traction-grip, .traction-tail { opacity: 0; }
+#trauma-overlay.visible .traction-grip { animation: draw-traction var(--field-duration) ease both; }
+#trauma-overlay.visible .traction-tail { animation: take-up-tail var(--field-duration) ease both; }
+#trauma-overlay.visible .traction-link { animation: tension-line var(--field-duration) ease both; }
+#trauma-overlay.visible .splint-traction .splint-wraps {
+  animation: secure-splint 320ms ease calc(var(--field-duration) * .32) both;
+}
+@keyframes draw-traction {
+  0%, 32% { opacity: 0; transform: translate(-11px, -40px); }
+  43%, 51% { opacity: 1; transform: translate(-15px, 11px); }
+  69%, 75% { opacity: 1; transform: translate(3px, -2px); }
+  90%, 100% { opacity: 0; transform: translate(18px, -19px); }
+}
+@keyframes take-up-tail {
+  0%, 40% { opacity: 0; d: path('M328 151Q320 162 331 151'); }
+  47%, 51% { opacity: 1; d: path('M328 151Q320 162 331 151'); }
+  69%, 75% { opacity: 1; d: path('M328 151Q338 145 347 140'); }
+  90%, 100% { opacity: 0; d: path('M328 151Q338 145 347 140'); }
+}
+@keyframes tension-line {
+  0%, 51% { d: path('M302 166Q318 176 328 151'); }
+  69%, 100% { d: path('M302 166Q314 158 328 151'); }
+}
+#trauma-overlay.outcome-FAILURE.visible .traction-link { animation: lose-traction var(--field-duration) ease both; }
+@keyframes lose-traction {
+  0%, 51%, 91%, 100% { d: path('M302 166Q318 176 328 151'); }
+  69%, 77% { d: path('M302 166Q314 158 328 151'); }
+}
+@keyframes field-reveal { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gauze-feed {
+  0%, 14% { stroke-dashoffset: 130; opacity: 0; }
+  22% { opacity: 1; }
+  55% { stroke-dashoffset: 0; opacity: 1; }
+  62%, 100% { stroke-dashoffset: -100; opacity: 0; }
+}
+@keyframes wound-seep {
+  0%, 26% { opacity: .65; }
+  60%, 73% { opacity: .18; }
+  100% { opacity: var(--wound-seep); }
+}
+@keyframes seat-device {
+  0% { translate: var(--device-entry-x, 0px) var(--device-entry-y); rotate: -6deg; opacity: 0; }
+  10% { opacity: 1; }
+  53% { translate: 0 0; rotate: 0deg; }
+  75%, 100% { translate: 0 var(--field-final-y); rotate: var(--field-final-r); }
+}
+@keyframes seat-rear {
+  0% { transform: translate(var(--rear-x, -15px), var(--rear-y, 27px)); opacity: 0; }
+  12% { opacity: 1; }
+  48%, 100% { transform: none; }
+}
+@keyframes seat-hand {
+  0%, 100% { translate: -62px 0; opacity: 0; }
+  20% { opacity: 1; }
+  51% { translate: 0 0; opacity: 1; }
+  62% { translate: -4px 0; opacity: 1; }
+  80% { translate: -34px 0; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #arrival-overlay, .field-scene { transition: none; }
+  #arrival-overlay.visible *, .field-scene.visible * { animation: none !important; }
+  .glucose-finger, .meter-ready, .packing-feed, .dressing-roll, .traction-grip, .traction-tail,
+  .collar-hand, .binder-pull-tab, .binder-hand-left, .binder-hand-right { visibility: hidden; }
+  .field-scene .wound-seep { opacity: var(--wound-seep); }
+  .packing-press { translate: 0 9px; }
+  .packing-crown { transform-origin: 180px 154px; transform: scaleY(.74); }
+  #trauma-overlay.outcome-FAILURE .traction-link { d: path('M302 166Q318 176 328 151'); }
+  .field-scene :is(.collar-front, .splint-support) {
+    translate: 0 var(--field-final-y);
+    rotate: var(--field-final-r);
+  }
+}
+
+/* The complication cuts to a frontal close-up as the chin support flips up. */
+[data-trauma="collar"].outcome-COMPLICATION .collar-art { display: none; }
+[data-trauma="collar"].outcome-COMPLICATION .collar-closeup { display: inline; }
+.collar-portrait { transform: rotate(8deg); transform-origin: 180px 130px; }
+.collar-face-shape {
+  d: path('M123 83Q125 56 152 46Q181 38 210 49Q230 57 235 83L231 129Q228 153 213 175Q199 193 180 195Q160 193 145 177Q130 160 126 136Z');
+}
+[data-patient-profile="female"] .collar-face-shape {
+  d: path('M124 83Q125 53 153 45Q181 37 208 49Q231 58 233 81L229 128Q226 152 211 174Q194 192 180 193Q163 190 147 175Q132 158 127 133Z');
+}
+[data-patient-profile^="child-"] .collar-face-shape {
+  d: path('M122 86Q122 56 151 46Q181 36 209 46Q235 56 236 84L231 133Q228 159 209 177Q195 191 180 191Q163 191 146 178Q127 160 125 135Z');
+}
+[data-patient-profile="baby"] .collar-face-shape {
+  d: path('M119 86Q118 55 145 43Q182 26 216 44Q241 57 240 86L236 129Q233 159 212 177Q197 189 180 189Q159 188 145 177Q123 160 122 134Z');
+}
+[data-patient-profile^="child-"] .collar-portrait { transform: rotate(6deg) scale(.89); }
+[data-patient-profile="baby"] .collar-portrait { transform: rotate(4deg) scale(.77); }
+.collar-hair { display: none; }
+#trauma-overlay:is(:not([data-patient-profile]), [data-patient-profile="male"]) .hair-male,
+[data-patient-profile="female"] .hair-female,
+[data-patient-profile="child-male"] .hair-child-male,
+[data-patient-profile="child-female"] .hair-child-female,
+[data-patient-profile="baby"] .hair-baby { display: inline; }
+[data-patient-profile]:not([data-patient-profile="male"]) .collar-maturity-lines { display: none; }
+.collar-face-shell { transform: none; transform-origin: 181px 185px; }
+#trauma-overlay.visible .collar-face-shell {
+  animation: collarFlip var(--field-duration) ease both;
+}
+@keyframes collarFlip {
+  0%, 39% { transform: translateY(53px) rotate(-3deg); }
+  55% { transform: translateY(24px) rotate(-8deg); }
+  64% { transform: translateY(-11px) rotate(4deg); }
+  74% { transform: translateY(4px) rotate(-2deg); }
+  85%, 100% { transform: none; }
+}

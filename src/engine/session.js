@@ -726,6 +726,9 @@ class Session {
       woundResult.events.push(...hemorrhage.pressureInterruptions(this.wounds, true));
     }
     messageText += hemorrhage.woundContext(this.wounds,woundNotes,woundResult.events);
+    if (rolls.some(r => r.procedure_id === 'glucometry')) {
+      messageText += '\n\n[SYSTEM NOTE: When the ordered fingerstick is performed, include the measured Glucose in the VITALS tag with its new measurement time. If the check cannot be completed, explain the limitation and do not update the prior measurement.]';
+    }
     if (rolls.some(r => r.procedure_id === 'capillary_refill')) {
       messageText += '\n\n[SYSTEM NOTE: Explicit capillary refill assessment requested. Perform it for the patient being assessed and state the measured duration numerically in seconds. Include CapRefill=<seconds>@T+M:SS in the VITALS tag, using this assessment time. Do not report only "brisk", "normal", or "delayed". If the assessment cannot be performed, state that and omit the reading.]';
     }
@@ -1076,7 +1079,8 @@ class Session {
     const switchedPatient = patientId !== previousId;
     if (switchedPatient) this.lastVitals = null;
     const { cleanedReply: vitalsClean, vitals: rawVitals } = parseVitalsTag(focusClean);
-    const rhythmVitals = applyEctopy(rawVitals, this.patientVitals[patientId], vitalsClean, patientId === 'patient_1' ? this.seed : {});
+    const priorPatientVitals = this.patientVitals[patientId];
+    const rhythmVitals = applyEctopy(rawVitals, priorPatientVitals, vitalsClean, patientId === 'patient_1' ? this.seed : {});
     const assessedVitals = applyCapillaryRefill(rhythmVitals, this.patientVitals[patientId],
       reconcileRolls(rolls, focusClean).some(r => r.procedure_id === 'capillary_refill'),
       parseTimeTag(rawReply).timeMinutes ?? this.sceneMinute, vitalsClean);
@@ -1128,6 +1132,16 @@ class Session {
         return true;
       })
       .concat(rolls.filter(r => r.hemorrhage_managed));
+    const glucose = rawVitals?.Glucose;
+    const glucoseValue = glucose?.value ?? glucose;
+    const previousGlucose = priorPatientVitals?.Glucose;
+    const freshGlucose = Number.isFinite(glucoseValue) && glucoseValue >= 0
+      && (glucose?.tMin == null || previousGlucose?.tMin == null || glucose.tMin > previousGlucose.tMin);
+    if (freshGlucose) {
+      for (const roll of reconciledRolls) {
+        if (roll.procedure_id === 'glucometry' && roll.patient === patientId) roll.glucose = glucoseValue;
+      }
+    }
     const elapsedCareSeconds = timeCare ? Math.max(minimumObservationSeconds, careSeconds(userText, reconciledRolls, timingCrew)) : 0;
     for (const roll of reconciledRolls) {
       delete roll.orderIndex;

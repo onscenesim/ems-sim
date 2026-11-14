@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>EMS TERMINAL</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=115">
+  <link rel="stylesheet" href="style.css?v=122">
   <link rel="stylesheet" href="monitor.css?v=9">
   <link rel="stylesheet" href="glovebox.css?v=2">
   <link rel="stylesheet" href="cosmetics.css?v=7">
@@ -14,6 +14,7 @@
   <script src="/analytics-config.js"></script>
   <script src="/analytics.js?v=1"></script>
   <link rel="stylesheet" href="airway-scenes.css?v=7">
+  <link rel="stylesheet" href="field-scenes.css?v=14">
 </head>
 <body>
 
@@ -281,9 +282,13 @@
         </g>
         <path class="torso-baby" d="M68 72 Q85 66 101 75 M152 72 Q135 66 119 75
           M65 99 Q80 111 101 105 M155 99 Q140 111 119 105" stroke-width="1.1" opacity="0.3"/>
-        <path d="M63 112 Q110 127 157 112" stroke-width="1.2" opacity="0.4"/>
+        <path d="M63 112 Q110 127 157 112" stroke-width="1.2" opacity="0.4" style="opacity: var(--torso-rib-arc-opacity, .4)"/>
       </g>
       <g id="torso-abdomen">
+        <use href="#torso-abdomen-sides"/>
+        <use href="#torso-abdomen-details"/>
+      </g>
+      <g id="torso-abdomen-sides">
         <path class="torso-adult-male" d="M57 111 C59 137 67 149 65 173 Q60 205 61 222
           M163 111 C161 137 153 149 155 173 Q160 205 159 222"/>
         <path class="torso-adult-female" d="M58 111 C59 132 73 150 70 174 Q60 202 62 222
@@ -291,8 +296,10 @@
         <path class="torso-child" d="M61 111 Q63 137 70 157 Q65 186 67 211
           M159 111 Q157 137 150 157 Q155 186 153 211"/>
         <path class="torso-baby" d="M62 113 Q58 145 68 173 Q72 195 70 213
-          M158 113 Q162 145 152 173 Q148 195 150 213
-          M74 151 Q110 176 146 151" stroke-width="1.6"/>
+          M158 113 Q162 145 152 173 Q148 195 150 213" stroke-width="1.6"/>
+      </g>
+      <g id="torso-abdomen-details">
+        <path class="torso-baby" d="M74 151 Q110 176 146 151" stroke-width="1.6"/>
         <path d="M108 174 Q112 178 109 181 M74 211 Q88 207 100 216 M146 211 Q132 207 120 216" stroke-width="1.2" opacity="0.5"/>
         <path class="torso-adult-detail" d="M84 151 Q77 177 87 201 M136 151 Q143 177 133 201" stroke-width="1" opacity="0.25"/>
       </g>
@@ -394,6 +401,11 @@
           <path d="M325 135 C321 134 320 139 323 142 Q327 146 329 141
             Q330 136 325 135 M324 138 Q323 140 326 140"/>
         </g>
+      </g>
+      <g id="pressure-palms" fill="#769aaa" stroke="#c0d5df" stroke-width="2">
+        <path d="M112 33 L153 34 L168 87 Q183 94 201 100 L227 107 Q235 110 232 117 Q230 122 222 120 L197 115 L231 125 Q238 128 234 135 Q232 139 225 137 L195 129 L225 141 Q231 145 226 151 Q223 154 216 151 L188 141 L207 153 Q213 157 208 163 Q205 166 197 163 L158 145 Q143 138 137 123 L125 99 Z"/>
+        <path d="M240 30 L202 31 L187 82 Q178 86 162 94 L138 108 Q131 113 135 119 Q139 124 147 120 L168 110 L141 130 Q135 135 140 141 Q144 146 151 141 L178 123 L154 145 Q149 151 155 156 Q160 160 166 154 L190 136 L174 155 Q170 162 176 166 Q182 169 188 162 L218 137 Q230 124 229 110 L227 90 Z"/>
+        <path d="M127 91 L163 82 M193 80 L228 89 M163 105 Q174 110 177 120 M201 98 Q212 104 214 115" fill="none" stroke="#4c7185"/>
       </g>
       <!-- Static lower body/legs and arm are independent of the thorax/belly. -->
       <g id="resus-side-lower" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -983,11 +995,7 @@
             <g clip-path="url(#gauze-clip)"><ellipse class="pressure-stain" cx="181" cy="151" rx="81" ry="51" fill="#b92f43"/></g>
             <rect x="117" y="119" width="130" height="70" rx="9" fill="url(#gauze-weave)" opacity="0.55"/>
             <!-- Two overlapping gloved palms; the separated fingers leave visible channels. -->
-            <g id="pressure-hands" fill="#769aaa" stroke="#c0d5df" stroke-width="2">
-              <path d="M112 33 L153 34 L168 87 Q183 94 201 100 L227 107 Q235 110 232 117 Q230 122 222 120 L197 115 L231 125 Q238 128 234 135 Q232 139 225 137 L195 129 L225 141 Q231 145 226 151 Q223 154 216 151 L188 141 L207 153 Q213 157 208 163 Q205 166 197 163 L158 145 Q143 138 137 123 L125 99 Z"/>
-              <path d="M240 30 L202 31 L187 82 Q178 86 162 94 L138 108 Q131 113 135 119 Q139 124 147 120 L168 110 L141 130 Q135 135 140 141 Q144 146 151 141 L178 123 L154 145 Q149 151 155 156 Q160 160 166 154 L190 136 L174 155 Q170 162 176 166 Q182 169 188 162 L218 137 Q230 124 229 110 L227 90 Z"/>
-              <path d="M127 91 L163 82 M193 80 L228 89 M163 105 Q174 110 177 120 M201 98 Q212 104 214 115" fill="none" stroke="#4c7185"/>
-            </g>
+            <g id="pressure-hands"><use href="#pressure-palms"/></g>
             <g class="pressure-ooze" fill="none" stroke="#d23b50" stroke-width="4">
               <path d="M155 143 Q148 153 154 166 T146 187 M179 153 Q172 166 181 177 T178 193 M213 145 Q221 157 214 173 T228 188"/>
               <path d="M131 161 Q124 171 129 180 M235 154 Q245 168 241 183" stroke-width="2"/>
@@ -1139,9 +1147,15 @@
             <path class="seal-clog" d="M141 98 Q152 107 146 116" fill="none" stroke="#c53f52" stroke-width="4"/>
           </g>
         </g>
-        <g class="seal-hand" fill="#769aaa" stroke="#c0d5df" stroke-width="1.5" stroke-linejoin="round">
-          <path d="M123 19 L150 18 L156 54 L164 75 Q168 84 163 86 Q159 88 155 79 L151 72 L157 99 Q158 107 153 107 Q149 107 147 100 L142 80 L146 105 Q147 113 142 113 Q137 113 137 106 L132 82 L134 103 Q134 110 129 109 Q125 108 125 101 L122 80 L117 90 Q113 98 109 94 Q105 91 110 80 L117 62 Z"/>
-          <path d="M119 57 L155 54 M123 71 Q138 65 148 75" fill="none" stroke="#4b7183"/>
+        <g class="seal-attempt">
+          <g class="seal-hand" fill="#769aaa" stroke="#c0d5df" stroke-width="1.5" stroke-linejoin="round">
+            <path d="M123 19 L150 18 L156 54 L164 75 Q168 84 163 86 Q159 88 155 79 L151 72 L157 99 Q158 107 153 107 Q149 107 147 100 L142 80 L146 105 Q147 113 142 113 Q137 113 137 106 L132 82 L134 103 Q134 110 129 109 Q125 108 125 101 L122 80 L117 90 Q113 98 109 94 Q105 91 110 80 L117 62 Z"/>
+            <path d="M119 57 L155 54 M123 71 Q138 65 148 75" fill="none" stroke="#4b7183"/>
+          </g>
+        </g>
+        <g class="seal-finger-seep" fill="none" stroke="#d05263" stroke-linecap="round">
+          <path pathLength="100" d="M143 94Q139 102 143 110Q145 119 141 125T143 139" stroke-width="2.8"/>
+          <path pathLength="100" d="M132 94Q130 100 133 108Q136 117 132 122" stroke-width="2"/>
         </g>
         <g class="seal-impact" fill="none" stroke="#d4e8dc" stroke-width="2"><path d="M110 77 L104 73 M112 104 L105 109 M172 77 L180 72 M173 102 L181 108"/></g>
 
@@ -1612,8 +1626,12 @@
         <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <g mask="url(#cpr-anatomy-mask)">
             <use href="#torso-outline"/>
+            <use id="cpr-fixed-sides" href="#torso-abdomen-sides"/>
             <g id="cpr-chest"><use href="#torso-chest"/></g>
-            <g id="cpr-abdomen"><use href="#torso-abdomen"/></g>
+            <g id="cpr-abdomen">
+              <use id="cpr-moving-sides" href="#torso-abdomen-sides"/>
+              <use href="#torso-abdomen-details"/>
+            </g>
           </g>
           <g id="cpr-press" class="cpr-hand-motion cpr-palms">
             <g mask="url(#cpr-lower-hand-mask)">
@@ -1734,7 +1752,8 @@
         <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <use href="#resus-lucas-far-arm"/>
           <!-- Far support stays behind the patient; small depth offset clarifies the frame. -->
-          <path d="M184 62 L173 157 L183 167 L193 161 L199 66 Z" fill="#293c2a" stroke="#87a77b" opacity="0.45"/>
+          <path id="lucas-far-rail" d="M184 62 L173 157 L183 167 L193 161 L199 66 Z"
+            fill="#293c2a" stroke="#87a77b" opacity="0.45"/>
           <g id="lucas-backplate" mask="url(#lucas-arm-knockout)">
             <path d="M144 166 L250 166 L259 173 L251 179 L141 179 L136 173 Z" fill="#29333d"/>
             <path d="M151 173 L244 173" opacity="0.5"/>
@@ -1747,34 +1766,41 @@
             <g id="lucas-chest-details" class="side-chest-details"><use href="#resus-side-chest-details"/></g>
           </g>
 
-          <!-- Piston and pressure pad stay in contact through compression and recoil. -->
-          <g id="lucas-piston">
-            <rect x="207" y="67" width="12" height="37" rx="2" fill="#b9c7d1" stroke="#e0e7eb"/>
-            <path d="M201 99 L225 99 L230 112 Q214 119 196 112 Z" fill="#7fd0ff" fill-opacity="0.13"/>
-            <path d="M197 115 Q214 118 229 115" stroke-width="3.2"/>
-          </g>
-          <g id="lucas-bellows" fill="#202932">
-            <path d="M201 68 L225 68 L227 73 L201 77 L227 82 L201 87 L225 92 L201 92 Z"/>
-          </g>
-          <!-- Near support arm, broad curved hood, battery and control panel. -->
-          <g id="lucas-frame" mask="url(#lucas-arm-knockout)">
-            <path d="M164 61 L177 64 L177 157 L169 169 L153 166 L156 151 Z" fill="#789767" stroke="#bad0a8"/>
-            <path d="M164 86 L164 149" stroke="#34482f" stroke-width="3"/>
-            <path d="M159 158 L175 158 L173 171 L156 171 Z" fill="#29333d"/>
-            <path d="M160 49 Q171 29 200 30 L228 32 Q243 35 248 50 L246 69 L180 72 L161 64 Z" fill="#9ab580" stroke="#c4d6b3"/>
-            <path d="M180 72 L247 69 L243 79 L191 79 Z" fill="#29333d"/>
-            <path d="M167 50 Q176 39 190 39 L190 49 Q179 50 176 57 L167 57 Z" fill="#151e28" stroke-width="1.5"/>
-            <rect x="202" y="25" width="28" height="9" rx="2" fill="#29333d"/>
-            <path d="M209 27 L222 27" opacity="0.5"/>
-            <rect x="211" y="40" width="27" height="14" rx="3" fill="#151e28" stroke-width="1.2"/>
-            <circle id="lucas-status" cx="218" cy="47" r="2.5" fill="currentColor" stroke="none"/>
-            <path d="M226 45 L232 45 M226 49 L230 49" stroke-width="1.2"/>
-            <text x="208" y="65" fill="#16251b" stroke="none" font-family="sans-serif" font-size="9" font-weight="700" letter-spacing="1">LUCAS</text>
-            <path d="M156 148 Q146 141 147 151 Q148 159 156 153" stroke="#d7bc75" stroke-width="2.5"/>
+          <g class="lucas-placement">
+            <!-- Piston and pressure pad stay in contact through compression and recoil. -->
+            <g id="lucas-piston">
+              <rect x="207" y="67" width="12" height="37" rx="2" fill="#b9c7d1" stroke="#e0e7eb"/>
+              <path d="M201 99 L225 99 L230 112 Q214 119 196 112 Z" fill="#7fd0ff" fill-opacity="0.13"/>
+              <path d="M197 115 Q214 118 229 115" stroke-width="3.2"/>
+            </g>
+            <g id="lucas-bellows" fill="#202932">
+              <path d="M201 68 L225 68 L227 73 L201 77 L227 82 L201 87 L225 92 L201 92 Z"/>
+            </g>
+            <!-- Near support arm, broad curved hood, battery and control panel. -->
+            <g id="lucas-frame" mask="url(#lucas-arm-knockout)">
+              <path d="M164 61 L177 64 L177 157 L169 169 L153 166 L156 151 Z" fill="#789767" stroke="#bad0a8"/>
+              <path d="M164 86 L164 149" stroke="#34482f" stroke-width="3"/>
+              <path d="M159 158 L175 158 L173 171 L156 171 Z" fill="#29333d"/>
+              <path d="M160 49 Q171 29 200 30 L228 32 Q243 35 248 50 L246 69 L180 72 L161 64 Z" fill="#9ab580" stroke="#c4d6b3"/>
+              <path d="M180 72 L247 69 L243 79 L191 79 Z" fill="#29333d"/>
+              <path d="M167 50 Q176 39 190 39 L190 49 Q179 50 176 57 L167 57 Z" fill="#151e28" stroke-width="1.5"/>
+              <rect x="202" y="25" width="28" height="9" rx="2" fill="#29333d"/>
+              <path d="M209 27 L222 27" opacity="0.5"/>
+              <rect x="211" y="40" width="27" height="14" rx="3" fill="#151e28" stroke-width="1.2"/>
+              <circle id="lucas-status" cx="218" cy="47" r="2.5" fill="currentColor" stroke="none"/>
+              <path class="lucas-battery-normal" d="M226 45 L232 45 M226 49 L230 49" stroke-width="1.2"/>
+              <g id="lucas-battery-fault" fill="none" stroke="#f69a69" stroke-width="1.2">
+                <rect x="222" y="43.5" width="10" height="7" rx="1"/>
+                <path d="M232 45.5H234V48.5H232M224 45L229 49M229 45L224 49"/>
+              </g>
+              <text x="208" y="65" fill="#16251b" stroke="none" font-family="sans-serif" font-size="9" font-weight="700" letter-spacing="1">LUCAS</text>
+              <path d="M156 148 Q146 141 147 151 Q148 159 156 153" stroke="#d7bc75" stroke-width="2.5"/>
+            </g>
+            <path d="M245 45 Q258 40 262 52 Q265 63 251 68" fill="none" stroke="#bccddd" stroke-width="2" mask="url(#lucas-arm-knockout)"/>
           </g>
         </g>
-          <path d="M245 45 Q258 40 262 52 Q265 63 251 68" fill="none" stroke="#bccddd" stroke-width="2" mask="url(#lucas-arm-knockout)"/>
           <use id="lucas-arm" href="#resus-lucas-arm"/>
+          <use class="lucas-low-arm" href="#resus-side-arm" fill="none" stroke="currentColor"/>
 
         </g>
       </svg>
@@ -2589,7 +2615,67 @@
       <div id="depart-header">TRANSPORTING</div>
       <div id="depart-svg-wrap">
         <svg id="depart-svg" viewBox="0 0 360 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs><clipPath id="depart-viewport"><rect x="1" y="1" width="358" height="188" rx="5"/></clipPath></defs>
+          <defs>
+            <clipPath id="depart-viewport"><rect x="1" y="1" width="358" height="188" rx="5"/></clipPath>
+            <g id="ambulance-tire">
+              <circle r="18" fill="#586366" stroke="#465157" stroke-width="2"/>
+              <circle r="15" fill="none" stroke="#7c8986" stroke-width="0.8"/>
+            </g>
+            <g id="ambulance-body-art" stroke="#465157" stroke-width="2.1">
+              <!-- Type I box and truck cab. Suspension moves independently of the tires. -->
+              <path d="M47 53 Q47 49 52 49 H207 Q211 49 211 53 V145 H135 A23 23 0 0 0 89 145 H47 Z" fill="#e1e0da"/>
+              <path d="M211 83 H239 Q244 83 248 90 L263 109 L293 114 Q301 115 301 124 V145 H287 A23 23 0 0 0 241 145 H211 Z" fill="#e1e0da"/>
+              <path d="M50 53 H207 M51 56 V140 M207 56 V140" stroke="#f0eee5" stroke-width="1"/>
+              <!-- Reflective belt follows the cab and hood, with narrow blue edging. -->
+              <path d="M48 105 H258 L264 109 L300 115 V123 H48 Z" fill="#bd916a" stroke="none"/>
+              <path d="M49 105 H258 L264 109 L296 115 M49 123 H300" stroke="#66858b" stroke-width="1.3"/>
+              <!-- Side access door and lower equipment lockers. -->
+              <g stroke-width="1" stroke="#7a8583">
+                <path d="M172 69 H201 V141 H172 Z M52 125 H83 V141 H52 Z M140 125 H168 V141 H140 Z"/>
+                <path d="M53 92 H168 M56 130 V136 M79 130 V136 M145 130 V136 M163 130 V136" stroke="#b0b6af"/>
+                <path d="M176 72 H197 M176 138 H197 M175 95 V99 M198 95 V99"/>
+              </g>
+              <g fill="#8b9691" stroke-width="0.9">
+                <rect x="184" y="98" width="6" height="4" rx="1"/>
+                <rect x="65" y="128" width="6" height="4" rx="1"/>
+                <rect x="150" y="128" width="6" height="4" rx="1"/>
+              </g>
+              <circle cx="143" cy="119" r="4" fill="#b5bcb5" stroke="#8a9691" stroke-width="1"/>
+              <circle cx="143" cy="119" r="2" fill="#74827f" stroke="none"/>
+              <!-- Cab window, quarter light, mirror arm, door, and running board. -->
+              <path d="M217 90 H238 Q240 90 242 94 L253 108 H217 Z" fill="#a3b5b4" stroke-width="1.5"/>
+              <path d="M239 92 L238 107 M221 94 H234" stroke="#d5ddd5" stroke-width="1.2"/>
+              <path d="M214 86 V139 H238 M256 112 L254 124 M223 119 H230" stroke-width="1.2"/>
+              <path d="M252 101 H260 V111 M260 102 H264 V110 H260" fill="#9aa7a2" stroke-width="1.4"/>
+              <path d="M216 143 H240 M49 145 H86 M138 145 H207" stroke="#8b9793" stroke-width="3"/>
+              <path d="M217 144 H237 M52 145 L55 142 M60 145 L63 142 M65 145 L68 142 M70 145 L73 142 M75 145 L78 142" stroke="#cbd0c7" stroke-width="1"/>
+              <path d="M89 145 A23 23 0 0 1 135 145 M241 145 A23 23 0 0 1 287 145" stroke="#8c9994" stroke-width="3"/>
+              <!-- Body-mounted warning lights and small roof markers. -->
+              <g stroke-width="1.2">
+                <rect x="56" y="57" width="13" height="8" rx="1" fill="#a56b67"/>
+                <rect x="76" y="57" width="12" height="8" rx="1" fill="#b9c1b8"/>
+                <rect x="172" y="57" width="12" height="8" rx="1" fill="#b9c1b8"/>
+                <rect x="191" y="57" width="12" height="8" rx="1" fill="#a56b67"/>
+                <path d="M60 59 V63 M64 59 V63 M80 59 V63 M176 59 V63 M195 59 V63 M199 59 V63" stroke="#e0b5a1" stroke-width="0.7"/>
+                <path d="M221 81 H228 M234 81 H239" stroke="#b8a477" stroke-width="2"/>
+                <rect x="47" y="126" width="4" height="9" rx="1" fill="#a56b67"/>
+                <rect x="295" y="119" width="6" height="9" rx="1" fill="#d1c7a1"/>
+                <rect x="288" y="118" width="6" height="3" rx="1" fill="#b8a477"/>
+              </g>
+              <path d="M292 131 H301 M293 135 H300" stroke-width="1.2"/>
+              <path d="M298 138 H307 V146 H292 M47 139 H39 V146 H58" fill="#9ba6a0" stroke-width="1.5"/>
+              <!-- Unlettered Star of Life, in the existing subdued blue. -->
+              <g transform="translate(132 82)" stroke="#587e89" stroke-width="1.1">
+                <path d="M-4 -15 H4 V-7 L11 -11 L15 -4 L8 0 L15 4 L11 11 L4 7 V15 H-4 V7 L-11 11 L-15 4 L-8 0 L-15 -4 L-11 -11 L-4 -7 Z" fill="#6e929b"/>
+                <path d="M0 -10 V10 M-2 -7 Q5 -6 1 -2 Q-4 0 1 3 Q4 5 -1 7" stroke="#e1e3d9" stroke-width="1.2"/>
+              </g>
+            </g>
+            <g id="ambulance-wheel-rim">
+              <circle r="11" fill="#c3cbc2"/><circle r="8"/>
+              <path d="M0 -8 V-6 M7 -4 L5 -3 M7 4 L5 3 M0 8 V6 M-7 4 L-5 3 M-7 -4 L-5 -3" stroke-width="2"/>
+              <circle r="3.5" fill="#8e9b96"/>
+            </g>
+          </defs>
           <g clip-path="url(#depart-viewport)" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">
             <rect x="1" y="1" width="358" height="188" rx="5" fill="#d7d5cf" stroke="none"/>
             <g id="depart-background" stroke="#89908d" stroke-width="1.5" opacity="0.55">
@@ -2601,71 +2687,19 @@
               <path d="M-80 181 H-41 M10 181 H49 M100 181 H139 M190 181 H229 M280 181 H319 M370 181 H409 M460 181 H499 M550 181 H589"/>
             </g>
             <g id="depart-car">
-              <g id="depart-body" stroke="#465157" stroke-width="2.1">
-                <!-- Type I box and truck cab. Suspension moves independently of the tires. -->
-                <path d="M47 53 Q47 49 52 49 H207 Q211 49 211 53 V145 H135 A23 23 0 0 0 89 145 H47 Z" fill="#e1e0da"/>
-                <path d="M211 83 H239 Q244 83 248 90 L263 109 L293 114 Q301 115 301 124 V145 H287 A23 23 0 0 0 241 145 H211 Z" fill="#e1e0da"/>
-                <path d="M50 53 H207 M51 56 V140 M207 56 V140" stroke="#f0eee5" stroke-width="1"/>
-                <!-- Reflective belt follows the cab and hood, with narrow blue edging. -->
-                <path d="M48 105 H258 L264 109 L300 115 V123 H48 Z" fill="#bd916a" stroke="none"/>
-                <path d="M49 105 H258 L264 109 L296 115 M49 123 H300" stroke="#66858b" stroke-width="1.3"/>
-                <!-- Side access door and lower equipment lockers. -->
-                <g stroke-width="1" stroke="#7a8583">
-                  <path d="M172 69 H201 V141 H172 Z M52 125 H83 V141 H52 Z M140 125 H168 V141 H140 Z"/>
-                  <path d="M53 92 H168 M56 130 V136 M79 130 V136 M145 130 V136 M163 130 V136" stroke="#b0b6af"/>
-                  <path d="M176 72 H197 M176 138 H197 M175 95 V99 M198 95 V99"/>
-                </g>
-                <g fill="#8b9691" stroke-width="0.9">
-                  <rect x="184" y="98" width="6" height="4" rx="1"/>
-                  <rect x="65" y="128" width="6" height="4" rx="1"/>
-                  <rect x="150" y="128" width="6" height="4" rx="1"/>
-                </g>
-                <circle cx="143" cy="119" r="4" fill="#b5bcb5" stroke="#8a9691" stroke-width="1"/>
-                <circle cx="143" cy="119" r="2" fill="#74827f" stroke="none"/>
-                <!-- Cab window, quarter light, mirror arm, door, and running board. -->
-                <path d="M217 90 H238 Q240 90 242 94 L253 108 H217 Z" fill="#a3b5b4" stroke-width="1.5"/>
-                <path d="M239 92 L238 107 M221 94 H234" stroke="#d5ddd5" stroke-width="1.2"/>
-                <path d="M214 86 V139 H238 M256 112 L254 124 M223 119 H230" stroke-width="1.2"/>
-                <path d="M252 101 H260 V111 M260 102 H264 V110 H260" fill="#9aa7a2" stroke-width="1.4"/>
-                <path d="M216 143 H240 M49 145 H86 M138 145 H207" stroke="#8b9793" stroke-width="3"/>
-                <path d="M217 144 H237 M52 145 L55 142 M60 145 L63 142 M65 145 L68 142 M70 145 L73 142 M75 145 L78 142" stroke="#cbd0c7" stroke-width="1"/>
-                <path d="M89 145 A23 23 0 0 1 135 145 M241 145 A23 23 0 0 1 287 145" stroke="#8c9994" stroke-width="3"/>
-                <!-- Body-mounted warning lights and small roof markers. -->
-                <g stroke-width="1.2">
-                  <rect x="56" y="57" width="13" height="8" rx="1" fill="#a56b67"/>
-                  <rect x="76" y="57" width="12" height="8" rx="1" fill="#b9c1b8"/>
-                  <rect x="172" y="57" width="12" height="8" rx="1" fill="#b9c1b8"/>
-                  <rect x="191" y="57" width="12" height="8" rx="1" fill="#a56b67"/>
-                  <path d="M60 59 V63 M64 59 V63 M80 59 V63 M176 59 V63 M195 59 V63 M199 59 V63" stroke="#e0b5a1" stroke-width="0.7"/>
-                  <path d="M221 81 H228 M234 81 H239" stroke="#b8a477" stroke-width="2"/>
-                  <rect x="47" y="126" width="4" height="9" rx="1" fill="#a56b67"/>
-                  <rect x="295" y="119" width="6" height="9" rx="1" fill="#d1c7a1"/>
-                  <rect x="288" y="118" width="6" height="3" rx="1" fill="#b8a477"/>
-                </g>
-                <path d="M292 131 H301 M293 135 H300" stroke-width="1.2"/>
-                <path d="M298 138 H307 V146 H292 M47 139 H39 V146 H58" fill="#9ba6a0" stroke-width="1.5"/>
-                <!-- Unlettered Star of Life, in the existing subdued blue. -->
-                <g transform="translate(132 82)" stroke="#587e89" stroke-width="1.1">
-                  <path d="M-4 -15 H4 V-7 L11 -11 L15 -4 L8 0 L15 4 L11 11 L4 7 V15 H-4 V7 L-11 11 L-15 4 L-8 0 L-15 -4 L-11 -11 L-4 -7 Z" fill="#6e929b"/>
-                  <path d="M0 -10 V10 M-2 -7 Q5 -6 1 -2 Q-4 0 1 3 Q4 5 -1 7" stroke="#e1e3d9" stroke-width="1.2"/>
-                </g>
+              <g id="depart-body">
+                <use href="#ambulance-body-art"/>
               </g>
               <g transform="translate(112 150)">
-                <circle r="18" fill="#586366" stroke="#465157" stroke-width="2"/>
-                <circle r="15" stroke="#7c8986" stroke-width="0.8"/>
+                <use href="#ambulance-tire"/>
                 <g class="depart-wheel" stroke="#667276" stroke-width="1.2">
-                  <circle r="11" fill="#c3cbc2"/><circle r="8"/>
-                  <path d="M0 -8 V-6 M7 -4 L5 -3 M7 4 L5 3 M0 8 V6 M-7 4 L-5 3 M-7 -4 L-5 -3" stroke-width="2"/>
-                  <circle r="3.5" fill="#8e9b96"/>
+                  <use href="#ambulance-wheel-rim"/>
                 </g>
               </g>
               <g transform="translate(264 150)">
-                <circle r="18" fill="#586366" stroke="#465157" stroke-width="2"/>
-                <circle r="15" stroke="#7c8986" stroke-width="0.8"/>
+                <use href="#ambulance-tire"/>
                 <g class="depart-wheel" stroke="#667276" stroke-width="1.2">
-                  <circle r="11" fill="#c3cbc2"/><circle r="8"/>
-                  <path d="M0 -8 V-6 M7 -4 L5 -3 M7 4 L5 3 M0 8 V6 M-7 4 L-5 3 M-7 -4 L-5 -3" stroke-width="2"/>
-                  <circle r="3.5" fill="#8e9b96"/>
+                  <use href="#ambulance-wheel-rim"/>
                 </g>
               </g>
             </g>
@@ -2673,6 +2707,477 @@
         </svg>
       </div>
       <div id="depart-label">EN ROUTE</div>
+    </div>
+
+    <div id="arrival-overlay" aria-hidden="true">
+      <div id="arrival-header">HOSPITAL ARRIVAL</div>
+      <svg id="arrival-svg" viewBox="0 0 360 190" aria-hidden="true">
+        <defs>
+          <clipPath id="arrival-viewport"><rect x="1" y="1" width="358" height="188" rx="5"/></clipPath>
+          <linearGradient id="bay-interior" x2="0%" y2="100%">
+            <stop stop-color="#46555b"/><stop offset="1" stop-color="#778487"/>
+          </linearGradient>
+        </defs>
+        <g clip-path="url(#arrival-viewport)">
+          <rect width="360" height="190" fill="#bac4c4"/>
+          <path d="M0 60H96V151H0Z" fill="#9ea9a9"/>
+          <path d="M0 69H96M0 93H96M0 116H96M0 138H96" stroke="#b9c0ba"/>
+          <path d="M50 8H360V157H50Z" fill="#b4b7ad" stroke="#7f8b89" stroke-width="2"/>
+          <path d="M61 37H350V163H61Z" fill="url(#bay-interior)"/>
+          <path d="M62 38L99 60H319L350 38M99 60V155M319 60V155" fill="none" stroke="#929f9e" stroke-width="1.5"/>
+          <path d="M90 49H146M206 49H271M299 49H328" stroke="#f3e8c6" stroke-width="3" stroke-linecap="round"/>
+          <path d="M287 76H321V151H287Z" fill="#849695" stroke="#a3afaa"/>
+          <path d="M303 76V150" stroke="#667b7d"/>
+          <path d="M0 151H360V190H0Z" fill="#9b9e95"/>
+          <path d="M0 169H360" stroke="#677372" stroke-width="2"/>
+          <path d="M0 183H102M120 183H254M271 183H360" stroke="#e2c17f" stroke-width="2"/>
+          <path d="M51 157V35H360M350 35V157" fill="none" stroke="#858f8b" stroke-width="10"/>
+          <rect x="107" y="12" width="185" height="20" rx="2" fill="#8f4d4b"/>
+          <text x="199.5" y="25.8" text-anchor="middle" fill="#fff2df" font-family="monospace" font-weight="700" font-size="10" letter-spacing="1.5">ED · AMBULANCE BAY</text>
+          <path d="M326 157V128M340 157V128" stroke="#dbaf64" stroke-width="5" stroke-linecap="round"/>
+          <g id="arrival-car" fill="none" stroke-linejoin="round" stroke-linecap="round">
+            <ellipse cx="170" cy="164" rx="127" ry="6" fill="#313e40" opacity=".3"/>
+            <g id="arrival-body">
+              <use href="#ambulance-body-art"/>
+              <rect id="arrival-brake" x="47" y="126" width="4" height="9" rx="1" fill="#f57862"/>
+            </g>
+            <g transform="translate(112 150)">
+              <use href="#ambulance-tire"/>
+              <use class="arrival-wheel" href="#ambulance-wheel-rim"/>
+            </g>
+            <g transform="translate(264 150)">
+              <use href="#ambulance-tire"/>
+              <use class="arrival-wheel" href="#ambulance-wheel-rim"/>
+            </g>
+          </g>
+          <path d="M53 156V38" stroke="#a9ada0" stroke-width="5"/>
+        </g>
+      </svg>
+      <div id="arrival-label">AT THE AMBULANCE BAY</div>
+    </div>
+
+    <div id="glucometry-overlay" class="field-scene" aria-hidden="true">
+      <div class="field-header">BLOOD GLUCOSE</div>
+      <svg viewBox="0 0 360 270" aria-hidden="true">
+        <defs>
+          <linearGradient id="meter-case" x1="0%" x2="100%" y1="0%" y2="80%">
+            <stop stop-color="#d5dfe0"/><stop offset=".55" stop-color="#b1c1c8"/><stop offset="1" stop-color="#71858f"/>
+          </linearGradient>
+          <linearGradient id="meter-screen" x2="0%" y2="100%">
+            <stop stop-color="#516865"/><stop offset=".25" stop-color="#819792"/><stop offset="1" stop-color="#9cb2a9"/>
+          </linearGradient>
+          <radialGradient id="meter-button" cx=".33" cy=".22" r=".82">
+            <stop stop-color="#769aaa"/><stop offset=".55" stop-color="#354653"/><stop offset="1" stop-color="#1b2833"/>
+          </radialGradient>
+          <clipPath id="meter-strip-opening"><rect x="171" y="0" width="24" height="58.7"/></clipPath>
+        </defs>
+        <rect class="field-backdrop" x="1" y="1" width="358" height="268" rx="6"/>
+        <path class="field-rule" d="M26 49H94M26 56H68M267 223H334M291 230H334"/>
+        <ellipse cx="183" cy="250" rx="84" ry="10" fill="#13283a" opacity=".17"/>
+        <path d="M114 79Q112 67 123 64Q181 48 240 64Q251 67 249 79
+          C244 111 247 171 255 207Q264 240 228 250Q182 263 136 250Q102 241 110 207C118 173 120 111 114 79Z"
+          fill="url(#meter-case)" stroke="#526878" stroke-width="2"/>
+        <path d="M167 57Q181 55 198 57L192 63Q182 71 173 63Z" fill="#354653"/>
+        <path d="M175 58H191" fill="none" stroke="#17222c" stroke-width="3" stroke-linecap="round"/>
+        <g clip-path="url(#meter-strip-opening)">
+          <g transform="translate(0 -17)">
+            <g class="glucose-strip">
+              <path d="M175 48L177 42H188L191 47V86H175Z" fill="#262b2c" stroke="#e1dcc2" stroke-width="1"/>
+              <path d="M179 72V83M183 72V83M187 72V83" stroke="#b4a361" stroke-width="1.1"/>
+              <path d="M178 43H188V55H178Z" fill="#d6ccb7"/>
+              <path class="glucose-sample" d="M179 43H187V54H179Z" fill="#ac223e"/>
+              <rect x="180" y="49" width="6" height="4" rx="1" fill="none" stroke="#f6eee1" stroke-width=".75"/>
+              <text x="183" y="66" text-anchor="middle" fill="#d3d8d1" font-size="4.5" font-family="sans-serif">PRISM</text>
+            </g>
+          </g>
+        </g>
+        <path d="M175 59H191" fill="none" stroke="#8197a2" stroke-width="1.1" stroke-linecap="round"/>
+        <path d="M117 90L111 93V103L116 106M247 104L253 106V116L248 118M248 124H253V135H248"
+          fill="#aab1be" stroke="#697a93" stroke-width="1"/>
+        <path d="M127 113Q127 101 142 99Q183 91 224 99Q239 101 239 113L244 178Q245 191 231 194Q183 203 134 194Q121 190 122 178Z"
+          fill="#263846" stroke="#8da0a8" stroke-width="1.3"/>
+        <path d="M132 115H233L237 178Q237 185 229 186H138Q129 185 129 178Z" fill="url(#meter-screen)"/>
+        <text x="183" y="110" text-anchor="middle" fill="#d5dfe0" font-family="Arial,sans-serif" font-size="10" font-weight="700" font-style="italic">Assure® Prism <tspan font-size="7.5">multi</tspan></text>
+        <g class="meter-ready" fill="#293729">
+          <path d="M182 128Q173 141 173 146A9 9 0 0 0 191 146Q191 141 182 128Z" fill="none" stroke="#293729" stroke-width="1.5"/>
+          <text x="183" y="169" text-anchor="middle" font-family="monospace" font-size="8">APPLY SAMPLE</text>
+        </g>
+        <g class="meter-result" fill="#162523">
+          <g transform="translate(146 124) scale(1.15)" fill="none" stroke="#162523" stroke-width="3.1" stroke-linecap="round">
+            <path data-lcd-digit/><path data-lcd-digit transform="translate(24 0)"/><path data-lcd-digit transform="translate(48 0)"/>
+          </g>
+          <text id="glucometry-display-code" x="183" y="151" text-anchor="middle" font-family="monospace" font-size="19">— —</text>
+          <text id="glucometry-unit" x="228" y="173" text-anchor="end" font-family="sans-serif" font-weight="600" font-size="8">mg/dL</text>
+        </g>
+        <text x="183" y="194" fill="#e0dfd2" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="4.5" letter-spacing="1">ARKRAY</text>
+        <g fill="url(#meter-button)" stroke="#354653" stroke-width="1.6">
+          <circle cx="140" cy="216" r="14"/><circle cx="226" cy="216" r="14"/><circle cx="183" cy="230" r="19"/>
+        </g>
+        <g fill="none" stroke="#a5b7c2" stroke-width=".8">
+          <circle cx="140" cy="216" r="12"/><circle cx="226" cy="216" r="12"/>
+          <circle cx="183" cy="230" r="16"/><circle cx="183" cy="230" r="12" stroke="#e2e8e9" stroke-width="2"/>
+        </g>
+        <path d="M134 216L144 212V221Z M232 216L222 212V221Z" fill="#ecf0f0"/>
+        <text x="183" y="235" text-anchor="middle" fill="#eff2f0" font-family="sans-serif" font-size="14" font-weight="700">m</text>
+        <g class="glucose-finger">
+          <path d="M360 21V49Q331 51 302 48Q277 47 258 48L235 49Q220 52 211 47Q204 43 208 36Q213 28 230 29L258 28Q288 22 315 24Z"
+            fill="#536573" stroke="#a5b7c2" stroke-width="1.3"/>
+          <path d="M227 31Q225 39 212 40Q207 38 212 34Q218 31 227 31Z" fill="#8b9ba8" stroke="#b8cbd6" stroke-width=".8"/>
+          <path d="M258 33Q255 37 257 42M265 32Q262 36 264 41" fill="none" stroke="#a5b7c2" stroke-width=".8"/>
+          <circle class="glucose-drop" cx="207" cy="41" r="2.6" fill="#b92f43"/>
+        </g>
+      </svg>
+      <div id="glucometry-label" class="field-result"></div>
+    </div>
+
+    <div id="trauma-overlay" class="field-scene" aria-hidden="true">
+      <div id="trauma-header" class="field-header"></div>
+      <svg viewBox="0 0 360 250" aria-hidden="true">
+        <defs>
+          <pattern id="field-gauze" width="5" height="5" patternUnits="userSpaceOnUse">
+            <path d="M0 0H5M0 0V5" fill="none" stroke="#a1adad" stroke-width=".65"/>
+          </pattern>
+          <pattern id="binder-fabric" width="5" height="5" patternUnits="userSpaceOnUse">
+            <path d="M0 5L5 0" stroke="#677278" stroke-width=".7" opacity=".65"/>
+          </pattern>
+          <path id="packed-gauze" d="M147 151Q148 142 156 139Q151 126 162 124Q170 123 173 133
+            Q176 118 186 120Q194 122 194 133Q204 123 210 131Q215 137 208 145L214 152Q200 162 176 160Q158 163 147 151Z"/>
+          <clipPath id="packing-cloth-clip"><use href="#packed-gauze"/></clipPath>
+          <path id="dressing-band" d="M135 107Q158 101 184 104L214 107Q228 126 231 150Q232 170 217 176
+            L157 178Q143 175 136 161Q130 137 135 107Z"/>
+          <clipPath id="dressing-band-clip"><use href="#dressing-band"/></clipPath>
+          <g id="field-glove" fill="#769aaa" stroke="#c0d5df" stroke-width="1.5">
+            <path d="M-35 18L-31-9L-11-13L4-16Q13-16 13-10L4-7L22-8Q28-7 28-2Q27 1 22 2L8 4L24 3Q31 3 30 9Q29 11 24 12L9 14L21 14Q26 15 25 19Q24 22 18 22L-4 25Q-14 24-19 18Z"/>
+            <path d="M-20-10Q-15 3-19 18M-4 3Q2 6 1 12" fill="none" stroke="#aac1c5"/>
+          </g>
+        </defs>
+        <rect class="field-backdrop" x="1" y="1" width="358" height="248" rx="6"/>
+        <g class="field-rule" fill="none">
+          <path d="M28 37H78M28 43H58M282 208H332M301 215H332"/>
+          <path d="M22 200H338" stroke-dasharray="4 7" opacity=".45"/>
+        </g>
+
+        <g class="trauma-art wound-art" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M30 130Q75 102 124 107L251 114Q293 118 331 145L333 184Q292 168 246 174L114 176Q74 172 31 186Z"
+            fill="#536573" stroke="#a5b7c2" stroke-width="1.8"/>
+          <path d="M31 130L78 113L103 107L94 176L30 186Z M273 119Q304 126 331 145L333 184L282 171Z"
+            fill="#354652" stroke="#8d9ea9" stroke-width="1.4"/>
+          <path d="M96 114Q90 145 91 169M276 124L281 165" fill="none" stroke="#92a5a9"/>
+          <path d="M137 149Q152 128 174 135Q189 129 209 143L217 156Q206 169 180 166Q151 171 137 149Z"
+            fill="#922d40" stroke="#d45460" stroke-width="2"/>
+          <path d="M151 150Q159 142 174 146Q190 138 204 151Q192 157 173 155Q158 160 151 150Z" fill="#401e2a"/>
+          <path class="wound-seep" d="M146 159Q131 175 154 178Q183 183 215 175Q225 171 214 155" fill="#a52c40" opacity=".64"/>
+          <g class="packing-art">
+            <g class="packing-feed">
+              <path d="M245 68C214 61 219 95 191 99Q171 104 179 129L181 151"
+                fill="none" stroke="#d5dfe0" stroke-width="9"/>
+              <path d="M245 68C214 61 219 95 191 99Q171 104 179 129L181 151"
+                fill="none" stroke="#8da0a8" stroke-width="1.3"/>
+            </g>
+            <g fill="#c0cdd1" stroke="#71858f" stroke-width="1.3">
+              <path class="packing-fold" d="M142 150Q151 142 165 144L195 141Q208 142 213 151L206 160Q178 170 148 158Z"/>
+              <path class="packing-fold" d="M147 150Q152 137 165 139Q176 130 186 137Q201 131 207 145L203 153Q173 164 147 150Z"/>
+            </g>
+            <g class="packing-crown">
+              <use href="#packed-gauze" fill="#d5dfe0" stroke="#edf2ed" stroke-width="1.4"/>
+              <g clip-path="url(#packing-cloth-clip)">
+                <path class="wound-stain packing-stain" d="M145 155Q147 141 157 143Q164 133 175 138Q182 129 194 134
+                  Q207 132 214 144Q211 156 198 160L159 165Z" fill="#a52c40"/>
+                <use href="#packed-gauze" fill="url(#field-gauze)" opacity=".68"/>
+              </g>
+              <path d="M155 146Q165 148 170 136M174 144Q183 145 189 132M186 150Q197 151 204 141"
+                fill="none" stroke="#8da0a8" stroke-width="1.3"/>
+            </g>
+            <g class="packing-press">
+              <g class="packing-tremor">
+                <use href="#pressure-palms" transform="translate(18 0) scale(.9)"/>
+              </g>
+            </g>
+          </g>
+          <g class="dressing-art">
+            <g class="dressing-pad">
+              <rect x="134" y="127" width="94" height="43" rx="7" fill="#d5dfe0" stroke="#8da0a8" stroke-width="1.6"/>
+              <rect x="137" y="130" width="88" height="37" rx="5" fill="url(#field-gauze)"/>
+            </g>
+            <g clip-path="url(#dressing-band-clip)">
+              <path class="dressing-pass dressing-first" pathLength="100" d="M151 104Q159 135 159 183" stroke="#819890"/>
+              <path class="dressing-pass dressing-second" pathLength="100" d="M176 103Q191 135 185 182" stroke="#a2b2ab"/>
+              <path class="dressing-pass dressing-edge dressing-second" pathLength="100" d="M159 103Q174 135 168 182"/>
+              <path class="dressing-pass dressing-third" pathLength="100" d="M201 103Q218 138 210 180" stroke="#819890"/>
+              <path class="dressing-pass dressing-edge dressing-third" pathLength="100" d="M184 103Q201 138 193 180"/>
+              <path class="wound-stain dressing-stain" d="M145 153Q153 139 164 143Q178 130 187 139Q208 132 215 151
+                Q225 161 211 171Q201 177 175 172Q154 177 145 165Z" fill="#a52c40"/>
+              <use class="dressing-texture" href="#dressing-band" fill="url(#field-gauze)" opacity=".44"/>
+            </g>
+            <g class="dressing-roll">
+              <path d="M0 0H23V23H0Z" fill="#879f96" stroke="#c0d1c7" stroke-width="1.3"/>
+              <ellipse cx="23" cy="11.5" rx="6" ry="11.5" fill="#aebfb7" stroke="#c0d1c7" stroke-width="1.3"/>
+              <ellipse cx="23" cy="11.5" rx="2.5" ry="5.4" fill="#405b55"/>
+              <use href="#field-glove" transform="translate(40 -4) rotate(156) scale(.85)"/>
+            </g>
+          </g>
+        </g>
+
+        <g class="trauma-art collar-art" stroke-linecap="round" stroke-linejoin="round">
+          <!-- BVM's supine model, at rest. Collar components use the same patient coordinates. -->
+          <g transform="translate(8 -9) scale(.9)">
+            <g class="collar-rear">
+              <path d="M248 156Q267 162 292 148L301 155Q293 169 273 171L250 168Z"
+                fill="#354653" stroke="#8d9ea9" stroke-width="1.5"/>
+              <path d="M252 165Q278 172 297 155" fill="none" stroke="#9faeae" stroke-width="1.6"/>
+            </g>
+            <g fill="none" stroke="currentColor" stroke-width="2">
+              <use href="#resus-ground-contact"/>
+              <use href="#resus-side-head" mask="url(#resus-arm-knockout)"/>
+              <use href="#resus-side-lower" mask="url(#resus-arm-knockout)"/>
+              <path class="side-abdomen-profile"/>
+              <g mask="url(#resus-arm-knockout)">
+                <path class="side-chest-profile"/>
+                <use href="#resus-side-chest-details"/>
+              </g>
+              <use href="#resus-side-arm"/>
+            </g>
+            <g class="collar-front">
+              <path d="M240 129Q254 133 264 124L279 115Q286 111 290 118L291 128Q293 139 301 145
+                L297 155Q281 167 262 162L247 155Q243 153 245 148L250 143Z"
+                fill="#d5dfe0" stroke="#a5b7c2" stroke-width="1.7"/>
+              <path d="M242 128Q254 131 264 123L279 114Q286 110 290 117L290 125"
+                fill="none" stroke="#6f9ebe" stroke-width="4"/>
+              <path d="M248 153Q273 168 296 154" fill="none" stroke="#6f9ebe" stroke-width="3.5"/>
+              <path d="M262 142Q267 131 277 130Q284 131 287 141Q278 150 268 149Z" fill="#151e28" stroke="#71838a"/>
+              <path d="M248 136L257 137L257 146L250 145Z" fill="#a8b8bb" stroke="#84999f"/>
+              <path d="M283 148L299 141L301 148L286 155Z" fill="#425968" stroke="#304754"/>
+            </g>
+            <g transform="translate(279 115) rotate(115) scale(.85)"><use class="collar-hand" href="#field-glove"/></g>
+          </g>
+        </g>
+
+        <g class="trauma-art collar-closeup" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M113 194Q91 174 91 140L99 55Q102 29 127 23L218 21Q243 24 253 53
+            L269 148Q275 181 249 201L213 228L123 217Z" fill="#283944" stroke="#667e8c" stroke-width="1.4"/>
+          <path d="M109 71Q105 43 133 32M232 36Q248 57 247 81M101 145Q102 181 121 198M241 190Q258 174 258 154"
+            fill="none" stroke="#47606e" stroke-width="1.4"/>
+          <g class="collar-portrait">
+            <path d="M104 236Q108 210 147 199L153 172H209L215 200Q256 207 267 236Z"
+              fill="#4b6473" stroke="#a0b7c3" stroke-width="1.5"/>
+            <path d="M145 202Q179 222 220 202M136 209Q178 231 227 208" fill="none" stroke="#8fa9b7" stroke-width="1.3"/>
+            <g class="collar-face" stroke="#a5bac5" stroke-width="1.5">
+              <path d="M125 115Q111 106 111 121Q112 138 129 143M232 115Q246 106 246 121Q244 138 229 143" fill="#4f6470"/>
+              <path class="collar-face-shape" fill="#607684"/>
+              <path class="collar-hair hair-male" d="M120 96Q116 68 127 51Q140 38 149 42Q166 29 189 37
+                Q215 35 232 55Q243 70 236 104L229 104Q230 80 218 67Q209 59 195 60Q158 52 135 70L127 101Z"
+                fill="#344953"/>
+              <path class="collar-hair hair-female" d="M117 100Q105 67 130 46Q155 25 182 37Q217 28 235 59
+                Q251 79 240 123L231 112Q234 83 216 63Q191 83 138 80Q124 89 127 113Z"
+                fill="#344953"/>
+              <path class="collar-hair hair-child-male" d="M120 93Q110 72 129 47Q145 33 161 39Q181 24 207 39
+                Q231 42 237 65L233 92Q224 87 218 70Q198 78 187 66Q170 76 155 68Q136 79 128 101Z"
+                fill="#3b535e"/>
+              <path class="collar-hair hair-child-female" d="M117 94Q111 67 133 47Q149 34 169 38Q187 27 208 40
+                Q237 50 242 77L239 100Q219 92 212 65Q193 85 154 74Q138 87 124 101Z"
+                fill="#3b535e"/>
+              <path class="collar-hair hair-baby" d="M152 53Q163 41 181 46Q173 36 187 34Q200 34 199 45Q197 52 189 53"
+                fill="none" stroke="#455f6e" stroke-width="3"/>
+              <path d="M133 108Q143 106 151 103L159 100M194 101Q203 103 210 105L220 109" fill="none" stroke="#384e5b" stroke-width="2.4"/>
+              <path d="M134 118Q146 115 158 118Q147 123 134 118ZM196 118Q207 114 219 118Q207 123 196 118Z" fill="#c2d1d5" stroke="#425b67"/>
+              <path d="M146 117L147 120M206 117L207 120" fill="none" stroke="#314957" stroke-width="2.8"/>
+              <path d="M176 113Q171 123 167 131Q166 136 172 138M179 138Q185 133 190 137M166 141Q178 146 191 139"
+                fill="none" stroke="#3b5260" stroke-width="1.6"/>
+              <path d="M154 159Q163 156 171 151Q176 149 182 152Q187 150 192 153Q197 157 204 161
+                Q194 162 184 159Q174 157 164 160Z" fill="#43515e" stroke="#3b4d59"/>
+              <path d="M154 160Q166 158 174 156Q185 156 193 160L204 162Q194 165 183 166Q171 164 161 162Z"
+                fill="#243640" stroke="#3d4f5b"/>
+              <path d="M157 161Q166 163 174 163Q183 166 195 163L201 163Q193 168 183 171Q168 170 157 161Z"
+                fill="#8293a0" stroke="#556a76"/>
+              <path d="M163 162Q172 165 181 165Q188 167 194 165M171 175Q184 179 194 174" fill="none" stroke="#9fafb9" stroke-width="1.2"/>
+              <path class="collar-maturity-lines" d="M130 124L138 125M213 125L224 123M157 158Q157 167 163 170M200 155Q204 164 202 169M141 92Q169 87 190 90"
+                fill="none" stroke="#4b6473" stroke-width="1.1"/>
+            </g>
+            <!-- Curved chin shelf, open window, and the padded lower edge of the reference collar. -->
+            <g class="collar-face-shell" transform="translate(0 53)">
+              <path d="M120 109Q133 82 159 85Q185 85 211 108Q224 119 233 118L237 107
+                L242 189Q244 201 235 206Q216 216 192 208Q171 200 152 207Q132 214 119 207L118 177Z
+                M137 128Q133 144 136 165Q137 177 147 175Q164 172 179 175Q197 177 209 170Q214 165 208 154
+                Q193 132 174 119Q150 104 137 128Z"
+                fill="#739db8" stroke="#adc3d0" stroke-width="1.8" fill-rule="evenodd"/>
+              <path d="M121 108Q133 83 159 86Q185 87 211 108Q224 119 235 119L239 110"
+                fill="none" stroke="#d3e0e4" stroke-width="7"/>
+              <path d="M121 200Q137 206 154 199Q174 192 193 201Q219 210 238 200"
+                fill="none" stroke="#314b5b" stroke-width="7"/>
+              <path d="M121 206Q136 213 154 205Q172 198 193 207Q218 217 238 206"
+                fill="none" stroke="#b4c8d1" stroke-width="3"/>
+              <path d="M220 149Q227 146 233 151L234 164Q228 169 221 165Z" fill="#527e9b" stroke="#abc3d1"/>
+              <path d="M224 154L230 154M225 159L231 159" fill="none" stroke="#c2d4dc" stroke-width="1"/>
+            </g>
+          </g>
+        </g>
+
+        <g class="trauma-art binder-art" stroke-linecap="round" stroke-linejoin="round">
+          <!-- View from above, with the belt centered on the lateral prominences of the upper femurs. -->
+          <defs>
+            <path id="binder-patient" d="M119 15Q127 42 116 60Q101 90 105 132L113 234H165L179 161L194 234H247L255 132Q259 90 244 60Q233 42 241 15"
+              fill="#536573" stroke="#a5b7c2" stroke-width="1.5"/>
+          </defs>
+          <g class="binder-position">
+            <path class="binder-rear-panel" d="M101 107Q180 96 259 107V141Q180 151 101 141Z"
+              fill="#1b2833" stroke="#7e949f" stroke-width="1.5"/>
+          </g>
+          <use href="#binder-patient"/>
+          <path d="M119 15H241L238 46Q210 52 180 51Q145 53 121 46Z" fill="#354652" stroke="#8d9ea9"/>
+          <path d="M121 46Q180 57 238 46M118 61Q180 72 242 61M137 57L134 74M154 61L152 77M213 62L215 77M228 57L230 75
+            M122 76Q124 91 146 98M237 76Q235 91 213 98M179 67V117M179 161V151M123 216L127 234M235 218L231 234"
+            fill="none" stroke="#9fb3be" stroke-width="1.1"/>
+          <circle cx="180" cy="59" r="2.2" fill="#c0c9c8"/>
+          <g class="binder-landmarks" fill="none">
+            <path d="M179 72Q165 68 153 81Q135 67 120 80Q108 92 122 108L138 115Q140 129 155 134L176 122
+              M181 72Q195 68 207 81Q225 67 240 80Q252 92 238 108L222 115Q220 129 205 134L184 122
+              M148 113Q139 106 134 115L125 124L121 143L123 174M212 113Q221 106 226 115L235 124L239 143L237 174"
+              stroke="#c0cbd0" stroke-width="2"/>
+            <path d="M99 124H261" stroke="#92b7c9" stroke-dasharray="3 4"/>
+            <circle cx="125" cy="124" r="3" fill="#c0d5df"/><circle cx="235" cy="124" r="3" fill="#c0d5df"/>
+          </g>
+          <g class="binder-position">
+            <g class="binder-wrap">
+              <path d="M105 105Q126 96 148 104L180 115L214 105Q236 95 255 106L256 141Q231 148 211 141L180 132L148 142Q125 149 104 141Z"
+                fill="#354653" stroke="#a0b5bd" stroke-width="1.4"/>
+              <path d="M107 108Q127 100 148 107L179 118L212 107Q236 100 253 108V138Q232 144 212 137L179 130L148 139Q127 145 107 138Z"
+                fill="url(#binder-fabric)"/>
+              <path d="M255 109L232 108L199 116V133L231 140L255 138Z" fill="#527b97" stroke="#8aa2b3"/>
+              <path d="M248 114L222 113L193 117L193 132L221 135L248 134Z" fill="#bb845d" stroke="#e7b48a"/>
+            </g>
+            <g class="binder-thread">
+              <path d="M204 117H139L111 119V131L140 133H204Z" fill="#243541" stroke="#8097a4" stroke-width="1.2"/>
+              <path d="M146 120H190M146 128H190" stroke="#afbec3" stroke-width="2.2" stroke-dasharray="1 5"/>
+            </g>
+            <path class="binder-pull-tab" d="M235 115H274Q281 116 281 124Q280 132 274 133H235Z" fill="#bb845d" stroke="#e7b48a"/>
+            <g class="binder-buckle">
+              <rect x="188" y="111" width="24" height="27" rx="4" fill="#cc986b" stroke="#ebbd97" stroke-width="1.5"/>
+              <rect x="193" y="116" width="12" height="16" rx="2" fill="#26313a"/>
+              <path d="M194 120H203M194 128H203" stroke="#b0bdc1" stroke-width="1.4"/>
+            </g>
+            <g transform="translate(115 123) rotate(10)"><use class="binder-hand-left" href="#field-glove"/></g>
+            <g transform="translate(266 120) rotate(177)"><use class="binder-hand-right" href="#field-glove"/></g>
+          </g>
+        </g>
+
+        <g class="trauma-art splint-art" stroke-linecap="round" stroke-linejoin="round">
+          <g class="splint-view splint-upper-arm">
+            <!-- A sling carries the forearm while the lateral support follows the upper arm. -->
+            <path class="limb" d="M104 54Q124 43 146 51Q173 63 177 90L171 153Q176 160 189 162L253 143L273 133
+              Q285 129 289 134L279 143L300 138Q310 139 306 145L289 151L306 150Q314 152 307 158L288 162
+              L299 163Q307 164 302 170L280 175L290 174Q298 176 290 181L274 182Q263 184 251 178L180 199Q146 209 127 190Q112 176 108 155Z"/>
+            <path class="limb-detail" d="M113 67Q132 62 151 79M145 149Q155 160 168 159M122 165Q126 182 141 189M253 147L257 159M277 150L281 163"/>
+            <g class="splint-support">
+              <path class="splint-foam" d="M106 60Q99 77 103 104L111 158Q114 185 136 196L151 187Q129 176 126 155L118 93Q116 77 123 64Z"/>
+              <path class="splint-highlight" d="M110 70Q107 84 111 106L119 160Q122 180 138 191"/>
+            </g>
+            <g class="splint-wraps">
+              <path class="splint-wrap" d="M103 90Q135 77 177 91L176 109Q133 96 105 109Z M108 139Q138 128 173 138L171 155Q143 146 111 156Z"/>
+              <path class="sling" d="M125 185Q141 201 177 201L263 174L252 151L176 167Z"/>
+              <path class="sling-line" d="M251 154Q228 106 181 68M146 181L181 68"/>
+            </g>
+          </g>
+
+          <g class="splint-view splint-forearm">
+            <!-- Side profile with a shallow wrist extension and exposed fingers. -->
+            <path class="limb" d="M42 121Q53 104 73 109Q111 112 161 124L226 135Q242 135 256 128L278 116Q287 113 291 119L279 130
+              L307 122Q320 119 323 126Q324 130 317 134L301 141Q316 141 316 147Q316 152 308 154L296 156
+              Q308 157 306 163Q304 168 295 169L286 168L295 169Q301 172 295 177L282 177Q268 178 254 172L234 162L157 168Q109 177 69 173Q43 174 36 155Q31 139 42 121Z"/>
+            <path class="limb-detail" d="M47 128Q54 139 49 150M63 153Q119 152 152 143M223 144Q229 147 230 154M254 141Q262 148 265 156M292 137L297 142"/>
+            <g class="splint-support">
+              <path class="splint-foam" d="M58 157Q78 169 117 164L220 153Q232 152 246 155L270 162L266 176Q255 179 237 172L219 169L114 181Q77 186 57 174Z"/>
+              <path class="splint-highlight" d="M63 170Q83 179 116 175L220 164Q231 163 244 167L262 171"/>
+            </g>
+            <g class="splint-wraps">
+              <path class="splint-wrap" d="M84 111Q92 109 103 113L104 180L86 178Z M207 132L225 135L226 171L209 173Z M248 131L261 127L275 169L260 175Z"/>
+              <path class="wrap-stitch" d="M94 115L96 176M216 136L217 169M255 133L267 169"/>
+            </g>
+          </g>
+
+          <g class="splint-view splint-hand">
+            <!-- Dorsal oblique view. The hand cradle ends just behind the fingertips. -->
+            <path class="limb" d="M43 126Q87 124 130 130L172 126Q184 117 197 112L217 101Q227 96 232 101Q237 107 229 114L219 124L252 113
+              Q267 110 275 116Q280 120 275 125L256 134L282 129Q300 126 305 132Q308 137 298 142L274 149L294 146
+              Q310 145 313 151Q314 156 305 160L280 166L295 165Q308 166 307 172Q305 177 296 179L269 181
+              L249 189Q234 194 217 186L175 173L133 175Q86 183 43 177Z"/>
+            <path class="limb-detail" d="M173 137Q180 147 177 163M204 128Q198 141 206 155M233 139Q247 136 256 134M243 155L270 149M248 171L277 166M265 175L269 181"/>
+            <g class="splint-support">
+              <path class="splint-foam" d="M111 167Q139 166 169 165Q198 169 219 180Q241 191 257 181L283 172L285 183L259 196Q242 203 218 195L171 179L112 182Z"/>
+              <path class="splint-highlight" d="M119 177L168 175L222 191Q239 198 256 191L282 180"/>
+            </g>
+            <g class="splint-wraps">
+              <path class="splint-wrap" d="M132 129L149 128L151 181L134 182Z M177 124L192 114L206 179L189 183Z M244 119L258 115L274 188L260 192Z"/>
+              <path class="wrap-stitch" d="M141 133L143 178M185 125L197 177M252 121L266 185"/>
+            </g>
+          </g>
+
+          <g class="splint-view splint-long-leg">
+            <!-- Side profile from hip to toes. The long support crosses the knee and holds the foot. -->
+            <path class="limb" d="M33 103Q60 83 100 91L152 109Q173 113 189 122Q208 120 224 129
+              L268 143Q278 146 281 139L285 130Q288 122 293 116Q296 111 297 103L298 94Q299 89 305 89
+              Q311 89 314 94Q317 99 314 105L308 121Q304 130 305 140L306 159Q307 172 299 177Q290 182 280 178L266 174
+              L224 169Q204 169 188 172L152 163Q102 163 74 158L33 160Z"/>
+            <path class="limb-detail" d="M73 99Q111 105 135 116M169 116Q164 127 172 138M189 129Q194 138 188 149
+              M224 150L267 161M284 151Q289 145 294 149Q298 153 294 157M305 94Q309 92 312 95M302 106L310 109M300 113L308 116"/>
+            <g class="splint-support">
+              <path class="splint-foam" d="M48 145L53 158Q93 168 152 172L188 182L229 178L269 190Q300 200 311 188Q324 176 321 157L318 119L309 117L307 123L308 156Q308 178 291 181L269 174L228 165L189 167L153 159Q98 159 48 145Z"/>
+              <path class="splint-highlight" d="M57 154Q102 168 153 166L189 175L229 172L273 184Q307 197 315 171L314 121"/>
+            </g>
+            <g class="splint-wraps">
+              <path class="splint-wrap long-thigh-wrap" d="M75 91L94 90L100 169L81 165Z"/>
+              <path class="splint-wrap" d="M137 104L155 109L157 174L140 173Z M205 123L225 129L226 179L207 180Z M260 140L276 144L276 192L259 188Z
+                M288 128L318 129L317 142L283 143Z"/>
+              <path class="wrap-stitch" d="M146 111L148 171M215 131L216 176M268 146L268 187"/>
+            </g>
+          </g>
+
+          <g class="splint-view splint-foot">
+            <!-- Lower leg and foot in profile, with the heel nested into the posterior splint. -->
+            <path class="limb" d="M123 43Q143 37 169 43Q169 73 175 103Q179 125 184 136
+              Q188 145 201 150Q213 154 225 161Q233 164 244 163L263 164Q272 164 279 168
+              Q286 172 282 177Q279 181 272 181L248 183Q233 182 220 186Q201 192 190 189
+              Q177 187 165 191Q150 195 139 188Q130 181 132 169L134 153Q135 141 131 129Q119 92 120 70Z"/>
+            <path class="limb-detail" d="M151 48Q148 77 159 106L167 136M143 153Q148 145 156 149Q163 154 157 161
+              M148 180Q155 185 165 181M177 183Q191 177 204 180M249 176L253 172M260 176L264 172M272 167Q279 169 280 173"/>
+            <g class="splint-support">
+              <path class="splint-foam" d="M112 57L120 52L130 51L127 82Q125 106 135 154Q131 173 143 180Q152 186 175 186L227 180L271 177L275 188L233 193L174 199Q139 201 127 186Q117 172 121 155Q112 115 110 89Z"/>
+              <path class="splint-highlight" d="M118 67Q115 99 128 154Q122 176 140 189Q152 196 173 193L231 187L269 182"/>
+            </g>
+            <g class="splint-wraps">
+              <path class="splint-wrap" d="M114 61Q139 56 168 61L170 79L112 81Z M115 106L172 101L175 117L118 124Z
+                M153 145Q166 140 177 140L195 188L175 199Z M225 152L244 153L249 191L231 193Z"/>
+              <path class="wrap-stitch" d="M118 70L166 68M122 115L170 110M169 147L184 191M233 156L240 188"/>
+            </g>
+          </g>
+
+          <g class="splint-view splint-traction">
+            <!-- The padded proximal seat and ankle harness connect through the lateral rail. -->
+            <path class="limb" d="M26 108Q57 90 93 96L160 115Q176 116 193 127Q213 126 228 136L268 147
+              Q279 150 283 141L287 130Q290 123 295 117Q298 111 299 104L301 96Q303 91 309 92
+              Q316 93 318 98Q319 102 316 108L311 122Q307 128 307 140L310 157Q311 170 301 177Q291 185 278 179L266 175L228 169Q205 167 192 174
+              L160 167L92 163Q57 168 26 163Z"/>
+            <path class="limb-detail" d="M68 109Q116 117 149 129M174 125Q169 133 175 143M192 139Q194 148 190 155
+              M241 155L268 162M288 149Q293 145 297 150Q300 154 297 159M308 97Q313 95 316 98M304 109L313 112M302 116L311 119"/>
+            <g class="splint-support">
+              <path d="M45 149L49 179Q51 187 63 187H321Q334 187 334 176V156" fill="none" stroke="#9cb1bd" stroke-width="5"/>
+              <path d="M64 185H242M259 185H320Q331 185 331 175" fill="none" stroke="#d7e1e3" stroke-width="1.2"/>
+              <path d="M49 140Q52 133 59 139L65 173Q65 179 59 180L51 176Z" fill="#556d7a" stroke="#9fb6c0" stroke-width="1.5"/>
+              <rect x="235" y="182" width="25" height="10" rx="3" fill="#354653" stroke="#a6bac5"/>
+              <path d="M328 155L328 149M323 150H335" stroke="#a8bfc7" stroke-width="2"/>
+            </g>
+            <g class="splint-wraps">
+              <path class="splint-wrap" d="M82 101L96 102L102 184H86Z M136 110L150 114L156 185H141Z M208 131L222 134L224 184H208Z M245 143L257 146L262 186H248Z"/>
+              <path d="M281 148L306 144L308 157L283 164Z M284 163L298 176L307 169L306 154" fill="#536e7e" stroke="#a5b7c2" stroke-width="1.2"/>
+              <path class="traction-link" d="M302 166Q314 158 328 151" fill="none" stroke="#d2dde0" stroke-width="2.4"/>
+              <path class="traction-tail" d="M328 151Q337 142 347 140" fill="none" stroke="#d2dde0" stroke-width="2.4"/>
+              <g class="traction-grip">
+                <use href="#field-glove" transform="translate(345 135) rotate(160) scale(.76)"/>
+              </g>
+            </g>
+          </g>
+        </g>
+      </svg>
+      <div id="trauma-label" class="field-result"></div>
     </div>
 
     <!-- Dice roll animation overlay -->
@@ -2874,7 +3379,7 @@
   </dialog>
   <script src="monitor.js?v=5"></script>
   <script src="airway-scenes.js?v=3"></script>
-  <script src="app.js?v=136"></script>
+  <script src="app.js?v=143"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

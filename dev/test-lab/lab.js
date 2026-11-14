@@ -24,6 +24,8 @@ async function play(mode='play') {
   if(!api)return;
   stop();const token=sequence;
   const selected=api.scenes.find(s=>s.id===scene);
+  $('patient').disabled=selected.fixedPatient;
+  if (selected.fixedPatient) $('patient').value='adult';
   status(`${selected.name} · ${$('outcome').value} · ${mode==='play'?'Playing…':mode+' pose held'}`);
   try {
     const finished=await api.play(scene,mode,options());

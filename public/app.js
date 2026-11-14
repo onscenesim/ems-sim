@@ -60,6 +60,7 @@ const SOUNDS = {
   sfx_loading_als:  '/sounds/ALSStretcher.m4a',
   sfx_loading_bls:  '/sounds/BLSStretcher.m4a',
   sfx_depart:       '/sounds/AmbulanceDeparting.m4a',
+  sfx_arrival:      '/sounds/EDArrival.wav',
 };
 // Match active audio (excluding quiet tails) near -27 dBFS for the new cues.
 // Keep their original dynamics; do not peak-normalize the quiet dialog texture.
@@ -417,6 +418,7 @@ let waitingDebrief  = false;
 let hasPlayedLoading      = false;
 let hasPlayedDepart       = false;
 let hasAnimatedDeparture  = false;
+let shownHospitalBay      = null;
 let arrivedAtHospital     = false;   // true after a skip-to-hospital/bay arrives — button becomes END
 let currentHospitals      = null;    // {nearest, major} — the two transport destinations this run
 let destinationShown      = false;   // guard so the destination binary is presented once per run
@@ -1385,7 +1387,14 @@ async function playTurnRolls(rolls, { manualShock = false } = {}) {
     if (THUMP_PROCS.has(r.procedure_id)) await animateThorsHammer(r.outcome);
     if (r.procedure_id === 'io_access') await animateDrill(r.outcome);
     if (r.procedure_id === 'cpr') await animateCPR(r.outcome);
-    if (['bleeding_control', 'tourniquet', 'chest_seal', 'pacing'].includes(r.procedure_id)) await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
+    if (['packing', 'dressing'].includes(r.hemorrhage_method) && r.procedure_id === 'bleeding_control') {
+      await animateTraumaScene(r.hemorrhage_method, r);
+    } else if (['bleeding_control', 'tourniquet', 'chest_seal', 'pacing'].includes(r.procedure_id)) {
+      await animateProcedureScene(r.procedure_id, r.procedure_id, r.outcome);
+    }
+    if (r.procedure_id === 'splinting') await animateTraumaScene('splint', r);
+    if (r.procedure_id === 'pelvic_binder') await animateTraumaScene('binder', r);
+    if (r.procedure_id === 'spinal_motion_restriction' && r.trauma_variant === 'collar') await animateTraumaScene('collar', r);
     if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
     if (r.procedure_id === 'cpap') await animateNIV(r);
     if (r.procedure_id === 'oxygen') await animateRouteMedication('oxygen', r.outcome, 3200);
@@ -1505,6 +1514,11 @@ async function sendTurn(msg, opts = {}) {
     // skipMode check is a belt-and-suspenders fallback for the same turn.
     applyAuthoritativeTransportState(data, skipMode);
     renderTransportStatus(data.transport);
+    const bay = hospitalBay(data.transport);
+    if (bay && bay !== shownHospitalBay) {
+      shownHospitalBay = bay;
+      await animateArrival(data.transport.phase);
+    }
     // Relabel the skip button to match the new transport phase.
     updateSkipBtn();
 
@@ -1576,6 +1590,11 @@ async function sendTurn(msg, opts = {}) {
         scene_minute: typeof data.scene_minute === 'number' ? data.scene_minute : null,
       });
     }
+
+    // Use the completed turn so a prepared shock cannot put the meter ahead
+    // of discharge or reveal a reading before the server returns it.
+    const glucose = playbackRolls.find(roll => roll.procedure_id === 'glucometry' && Number.isFinite(roll.glucose))?.glucose;
+    if (glucose !== undefined) await animateGlucometry(glucose);
 
     if (data.closed) {
       if (data.progressScope === 'guest') recordGuestProgress(sessionId, { completed: true, completionXP: data.completionXP || 0, category: localTranscript?.meta?.category });
@@ -1872,6 +1891,10 @@ function lockDestinationPanel(chosenKey = null, phase = 'en_route') {
     : phase === 'paused' ? 'Transport paused.' : 'Destination set.';
 }
 
+function hospitalBay(status) {
+  return ['waiting', 'arrived'].includes(status?.phase) ? status.destination : null;
+}
+
 function renderTransportStatus(status) {
   const bar = document.getElementById('transport-status');
   bar.hidden = !status;
@@ -2163,6 +2186,7 @@ function resetToStart(refresh = true) {
   hasPlayedDepart   = false;
   hasAnimatedDeparture = false;
   arrivedAtHospital = false;
+  shownHospitalBay = null;
   window._isMoving  = false;   // next scenario starts on scene — reset transport sounds
   renderTransportStatus(null);
   updateSkipBtn();
@@ -2712,6 +2736,7 @@ function animateDispatch() {
 const TRANSPORT_TIMING = Object.freeze({
   loading: Object.freeze({ hold: 2600, start: 100, travel: 2200, fade: 220 }),
   depart: Object.freeze({ hold: 1800, start: 700, travel: 1100, fade: 250 }),
+  arrival: Object.freeze({ hold: 3150, start: 120, travel: 2390, fade: 220 }),
 });
 function animateTransportScene(id) {
   const overlay = document.getElementById(`${id}-overlay`);
@@ -2795,12 +2820,12 @@ function hasProcedureAnimationSound(id) {
 }
 // Scene cleanup cancels unstarted cues, but lets a started recording finish.
 // Muting or backgrounding still stops all active and pending voices globally.
-function scheduleSceneAudio({ action, actionAt = 100, resultSound, resultAt, reduced = false }) {
+function scheduleSceneAudio({ action, actionAt = 100, resultSound, resultAt, offset, reduced = false }) {
   let cancelled = false;
   const sound = action || resultSound;
   const onVisibility = () => { if (document.hidden) cancel(); };
   const timer = setTimeout(() => {
-    if (!cancelled && !document.hidden && sound) cancel.voice = playSound(sound);
+    if (!cancelled && !document.hidden && sound) cancel.voice = playSound(sound, { offset });
   }, reduced ? 0 : action ? actionAt : resultAt);
   const cancel = () => {
     cancelled = true;
@@ -2847,7 +2872,7 @@ function configureResuscitationPatient(patient) {
   const variant = window.TransportPatient?.variantFor(patient) || 'adult';
   const sex = patient?.sex === 'female' ? 'female' : 'male';
   const profile = variant === 'baby' ? 'baby' : variant === 'child' ? `child-${sex}` : sex;
-  for (const id of ['cpr', 'bvm', 'lucas', 'chest_seal', 'defib', 'pacing', 'ekg']) {
+  for (const id of ['cpr', 'bvm', 'lucas', 'chest_seal', 'defib', 'pacing', 'ekg', 'trauma']) {
     const overlay = document.getElementById(`${id}-overlay`);
     // No infant LUCAS art: the presentation fallback is the existing child model.
     const selected = id === 'lucas' && profile === 'baby' ? 'child-male' : profile;
@@ -2867,22 +2892,7 @@ function animateProcedureScene(id, procedureId, outcome) {
     return Promise.resolve();
   }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const labels = {
-    npa: { SUCCESS: 'SUCCESS · AIRWAY SEATED', MARGINAL: 'MARGINAL · SHALLOW PLACEMENT', FAILURE: 'FAILURE · UNABLE TO ADVANCE', COMPLICATION: 'COMPLICATION · AIRWAY EXPELLED' },
-    obstruction: { SUCCESS: 'SUCCESS · OBSTRUCTION EXPELLED', MARGINAL: 'MARGINAL · DISLODGED INTO MOUTH', FAILURE: 'FAILURE · OBSTRUCTION REMAINS', COMPLICATION: 'COMPLICATION · OBSTRUCTION DEEPER' },
-    chest_seal: { SUCCESS: 'SUCCESS · SEAL SEATED', MARGINAL: 'MARGINAL · PARTIAL ADHESION', FAILURE: 'FAILURE · VENT CLOGGED', COMPLICATION: 'COMPLICATION · WOUND MISSED' },
-    pacing: { SUCCESS: 'SUCCESS · CAPTURE', MARGINAL: 'MARGINAL · INTERMITTENT CAPTURE', FAILURE: 'FAILURE · NO CAPTURE', COMPLICATION: 'COMPLICATION · CAPTURE LOST' },
-    defib: { SUCCESS: 'SUCCESS', MARGINAL: 'MARGINAL', FAILURE: 'FAILURE', COMPLICATION: 'COMPLICATION' },
-    bleeding_control: { SUCCESS: 'SUCCESS · BLEEDING CONTROLLED', MARGINAL: 'MARGINAL · SLOW SEEPAGE', FAILURE: 'FAILURE · GAUZE SATURATED', COMPLICATION: 'COMPLICATION · HEAVY BLEEDING' },
-    tourniquet: { SUCCESS: 'SUCCESS · FLOW STOPPED', MARGINAL: 'MARGINAL · FLOW REDUCED', FAILURE: 'FAILURE · BLEEDING CONTINUES', COMPLICATION: 'COMPLICATION · CONTROL LOST' },
-    ncd: { SUCCESS: 'SUCCESS · AIR RELEASED', MARGINAL: 'MARGINAL · LIMITED AIR RELEASE', FAILURE: 'FAILURE · NO AIR RETURN', COMPLICATION: 'COMPLICATION · BLOOD RETURN' },
-    suction: { SUCCESS: 'SUCCESS · AIRWAY CLEARED', MARGINAL: 'MARGINAL · PARTIAL CLEARANCE', FAILURE: 'FAILURE · MINIMAL CLEARANCE', COMPLICATION: 'COMPLICATION · SUCTION JAMMED' },
-    sga: { SUCCESS: 'SUCCESS · CUFF SEATED', MARGINAL: 'MARGINAL · SHALLOW SEAT', FAILURE: 'FAILURE · NOT SEATED', COMPLICATION: 'COMPLICATION · CUFF MISALIGNED' },
-    opa: { SUCCESS: 'SUCCESS · TONGUE SUPPORTED', MARGINAL: 'MARGINAL · SHORT OF POSITION', FAILURE: 'FAILURE · AIRWAY WITHDRAWN', COMPLICATION: 'COMPLICATION · AIRWAY WITHDRAWN' },
-    laryngoscope: { SUCCESS: 'SUCCESS · TUBE THROUGH THE CORDS', MARGINAL: 'MARGINAL · TRACHEAL PLACEMENT', FAILURE: 'FAILURE · TUBE WITHDRAWN', COMPLICATION: 'COMPLICATION · ESOPHAGEAL PLACEMENT' },
-    bvm: { SUCCESS: 'SUCCESS · CHEST RISE', MARGINAL: 'MARGINAL · LIMITED CHEST RISE', FAILURE: 'FAILURE · INEFFECTIVE VENTILATION', COMPLICATION: 'COMPLICATION · INEFFECTIVE VENTILATION' },
-  };
-  label.textContent = labels[id]?.[outcome] || outcome || '';
+  label.textContent = outcome || '';
   const header = document.getElementById(`${id}-header`);
   if (id === 'defib' && header) header.textContent = procedureId === 'cardioversion' ? 'SYNCHRONIZED CARDIOVERSION' : 'DEFIBRILLATION';
   if ((id === 'scalpel' || id === 'laryngoscope') && header) header.textContent = procedureId.replace(/_/g, ' ').toUpperCase();
@@ -2904,8 +2914,17 @@ function animateProcedureScene(id, procedureId, outcome) {
     // Reduced motion shows a still result, keeping the same bounded turn lifecycle.
     const cancelAudio = id === 'pacing' ? schedulePacingAudio(outcome)
       : scheduleSceneAudio({ action: timing.action, actionAt: timing.actionAt, resultSound: sound, resultAt: timing.sound, reduced });
+    const sealRetries = id === 'chest_seal' && outcome === 'COMPLICATION' && !reduced
+      ? [.47, .73].map(impact => scheduleSceneAudio({
+        action: timing.action, actionAt: Math.round(timing.hold * impact) - 100, offset: 1,
+      })) : [];
+    const batteryStop = id === 'lucas' && outcome === 'COMPLICATION' ? setTimeout(() => {
+      cancelAudio.voice?.pause();
+    }, reduced ? 0 : timing.start + timing.cycle * 1.36) : null;
     setTimeout(() => {
       cancelAudio();
+      sealRetries.forEach(cancel => cancel());
+      if (batteryStop !== null) clearTimeout(batteryStop);
       // Keep the finished CSS pose during the fade. Removing `visible` here
       // restarted the artwork before the overlay had become transparent.
       overlay.classList.add('is-fading');
@@ -3011,7 +3030,7 @@ function animateDefib(procedureId, outcome, { manual = false } = {}) {
       const missedSync = needsSync && !synchronized;
       const result = missedSync ? 'COMPLICATION' : outcome;
       status.textContent = 'Shock delivered';
-      label.textContent = missedSync ? 'COMPLICATION · SYNC OFF · AUTOMATIC d20 = 1' : result;
+      label.textContent = result;
       overlay.classList.remove('shock-wait');
       overlay.classList.add(`outcome-${result}`);
       shockVoice = playSound(getProcedureSound(procedureId, result), { offset: 4.98 });
@@ -3282,6 +3301,81 @@ function animateGoose() {
 
 function animateDepart() {
   return animateTransportScene('depart');
+}
+
+function animateArrival(phase) {
+  const label = document.getElementById('arrival-label');
+  if (!label) return Promise.resolve();
+  label.textContent = phase === 'waiting' ? 'AT THE BAY · WAITING FOR A BED' : 'AT THE AMBULANCE BAY';
+  playSound('sfx_arrival');
+  return animateTransportScene('arrival').finally(() => stopSound('sfx_arrival'));
+}
+
+const FIELD_SCENE_TIMING = Object.freeze({ glucometry: 2750, trauma: 3150 });
+const SPLINT_REGION_NAMES = Object.freeze({
+  'upper-arm': 'Upper arm', forearm: 'Forearm', hand: 'Hand', thigh: 'Thigh', 'lower-leg': 'Lower leg', foot: 'Ankle / foot',
+});
+const LCD_SEGMENTS = ['M5 2H16', 'M18 5L17 14', 'M17 19L16 28', 'M13 31H2', 'M0 28L1 19', 'M1 14L2 5', 'M4 16.5H14'];
+const LCD_DIGITS = ['012345', '12', '01346', '01236', '1256', '02356', '023456', '012', '0123456', '012356'];
+
+function showFieldScene(overlay, outcome, duration) {
+  overlay.classList.remove('visible', 'is-fading', 'outcome-SUCCESS', 'outcome-MARGINAL', 'outcome-FAILURE', 'outcome-COMPLICATION');
+  if (outcome) overlay.classList.add(`outcome-${outcome}`);
+  overlay.style.setProperty('--field-duration', `${duration}ms`);
+  void overlay.offsetWidth;
+  overlay.classList.add('visible');
+  return new Promise(resolve => {
+    setTimeout(() => {
+      overlay.classList.add('is-fading');
+      setTimeout(() => {
+        overlay.classList.remove('visible', 'is-fading');
+        resolve();
+      }, 180);
+    }, duration);
+  });
+}
+
+function animateGlucometry(glucose) {
+  const overlay = document.getElementById('glucometry-overlay');
+  if (!overlay) return Promise.resolve();
+  const displayed = String(Math.round(glucose));
+  const text = glucose > 600 ? 'HI' : glucose < 20 ? 'LO' : displayed;
+  const digits = text === displayed ? text.padStart(3, ' ') : '';
+  overlay.querySelectorAll('[data-lcd-digit]').forEach((path, i) => {
+    const segments = LCD_DIGITS[digits[i]] || '';
+    path.setAttribute('d', Array.from(segments, index => LCD_SEGMENTS[index]).join(' '));
+  });
+  document.getElementById('glucometry-display-code').textContent = digits ? '' : text;
+  document.getElementById('glucometry-unit').style.display = digits ? '' : 'none';
+  document.getElementById('glucometry-label').textContent = `${displayed} mg/dL`;
+  return showFieldScene(overlay, null, FIELD_SCENE_TIMING.glucometry);
+}
+
+function animateTraumaScene(variant, roll) {
+  const overlay = document.getElementById('trauma-overlay');
+  if (!overlay) return Promise.resolve();
+  const { outcome, splint_region: region = 'forearm', splint_site: site, splint_side: side } = roll;
+  const device = roll.splint_device || '';
+  const titles = {
+    packing: 'WOUND PACKING', dressing: 'PRESSURE DRESSING', collar: 'CERVICAL COLLAR',
+    binder: 'PELVIC BINDER', splint: device === 'traction' ? 'TRACTION SPLINT' : 'SPLINTING',
+  };
+  const anatomy = variant === 'splint' && [side, site || SPLINT_REGION_NAMES[region]].filter(Boolean).join(' ');
+  overlay.dataset.trauma = variant;
+  overlay.dataset.region = region;
+  overlay.dataset.side = side || '';
+  overlay.dataset.splint = device;
+  document.getElementById('trauma-header').textContent = [titles[variant], anatomy && anatomy.toUpperCase()].filter(Boolean).join(' · ');
+  document.getElementById('trauma-label').textContent = outcome || '';
+  const duration = FIELD_SCENE_TIMING.trauma;
+  const durationPromise = showFieldScene(overlay, outcome, duration);
+  if (!['packing', 'dressing'].includes(variant)) return durationPromise;
+  const cancelAudio = scheduleSceneAudio({
+    action: 'squelch',
+    actionAt: duration * (variant === 'packing' ? .61 : .76),
+    reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  });
+  return durationPromise.finally(cancelAudio);
 }
 
 /**
@@ -3679,6 +3773,7 @@ async function resumeFromSnapshot(snap) {
   // unit is already en route, it renders locked with the chosen side marked.
   if (hasPlayedLoading) showDestinationPanel(snap.transportDest || null);
   if (snap.transportDest) lockDestinationPanel(snap.transportDest, snap.transport?.phase);
+  shownHospitalBay = hospitalBay(snap.transport);
   renderTransportStatus(snap.transport);
 
   applyPatientFocus(snap.patient_focus, snap.multi_patient || snap.second_patient);

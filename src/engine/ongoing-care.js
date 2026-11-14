@@ -18,6 +18,7 @@ function ongoingCareFor(turns, text, focus, records) {
       if (roll.no_roll || roll.outcome !== 'SUCCESS' || !PROCEDURES.has(roll.procedure_id)) continue;
       const patient = /^patient_\d+$/.test(roll.patient) ? roll.patient : turn.patientFocus?.id || 'patient_1';
       successes.add(`${patient}|${roll.procedure_id}`);
+      if (roll.trauma_variant === 'collar') successes.add(`${patient}|collar`);
     }
   }
 
@@ -44,9 +45,10 @@ function ongoingCareFor(turns, text, focus, records) {
   }
   return entry => {
     const id = entry.proc.id;
-    if (!PROCEDURES.has(id)) return null;
+    if (!PROCEDURES.has(id) && id !== 'glucometry') return null;
     const patient = clauses.find(clause => entry.orderIndex < clause.end)?.patient || patientFocus;
-    return { patient, continued: successes.has(`${patient}|${id}`) };
+    const care = entry.presentation?.trauma_variant === 'collar' ? 'collar' : id;
+    return { patient, continued: successes.has(`${patient}|${care}`) };
   };
 }
 

@@ -175,7 +175,7 @@ test('replaying scenes clears previous outcomes and preserves all sound mappings
       const good = outcome === 'SUCCESS' || outcome === 'MARGINAL';
       assert.equal(f.played.at(-1).sound, f.context.timing[id].action || f.context.getProcedureSound(proc, outcome));
     }
-    assert.equal(f.played.length, 5);
+    assert.equal(f.played.length, id === 'chest_seal' ? 7 : 5);
   }
 });
 
@@ -238,10 +238,10 @@ test('the goose follows esophageal placement after the intubation or RSI scene f
   vm.runInContext(source.slice(source.indexOf('async function animateLaryngoscope('), source.indexOf('function animateDepart(')), f.context);
   const goose = f.elements.get('goose-overlay');
   for (const procedure of ['intubation', 'rsi']) {
-    for (const [outcome, caption] of [['SUCCESS', 'TUBE THROUGH THE CORDS'], ['MARGINAL', 'TRACHEAL PLACEMENT'], ['FAILURE', 'TUBE WITHDRAWN'], ['COMPLICATION', 'ESOPHAGEAL PLACEMENT']]) {
+    for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
       const promise = f.context.animateLaryngoscope(procedure, outcome);
       assert.equal(f.elements.get('laryngoscope-header').textContent, procedure.toUpperCase());
-      assert.equal(f.elements.get('laryngoscope-label').textContent, `${outcome} · ${caption}`);
+      assert.equal(f.elements.get('laryngoscope-label').textContent, outcome);
       f.advance(f.context.timing.laryngoscope.sound);
       assert.equal(f.played.at(-1).sound, 'intubation');
       assert.equal(f.elements.get('laryngoscope-overlay').classList.contains('visible'), true);
@@ -268,15 +268,15 @@ test('the goose follows esophageal placement after the intubation or RSI scene f
 
 test('SGA, OPA and suction wrappers preserve outcomes and use the shared sound/result lifecycle', async () => {
   const f = fixture();
-  for (const [fn, id, captions] of [
-    ['animateSuction', 'suction', ['AIRWAY CLEARED', 'PARTIAL CLEARANCE', 'MINIMAL CLEARANCE', 'SUCTION JAMMED']],
-    ['animateSGA', 'sga', ['CUFF SEATED', 'SHALLOW SEAT', 'NOT SEATED', 'CUFF MISALIGNED']],
-    ['animateOPA', 'opa', ['TONGUE SUPPORTED', 'SHORT OF POSITION', 'AIRWAY WITHDRAWN', 'AIRWAY WITHDRAWN']],
+  for (const [fn, id] of [
+    ['animateSuction', 'suction'],
+    ['animateSGA', 'sga'],
+    ['animateOPA', 'opa'],
   ]) {
     vm.runInContext(source.match(new RegExp('function ' + fn + '\\(outcome\\) \\{[\\s\\S]*?\\n\\}'))[0], f.context);
-    for (const [i, outcome] of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION'].entries()) {
+    for (const outcome of ['SUCCESS', 'MARGINAL', 'FAILURE', 'COMPLICATION']) {
       const p = f.context[fn](outcome);
-      assert.equal(f.elements.get(`${id}-label`).textContent, `${outcome} · ${captions[i]}`);
+      assert.equal(f.elements.get(`${id}-label`).textContent, outcome);
       f.advance(f.context.timing[id].hold + 220); await p;
       assert.equal(f.played.at(-1).sound, id === 'suction' ? 'suction' : 'airway_gulp');
       assert.equal(f.elements.get(`${id}-overlay`).classList.contains('visible'), false);
@@ -361,7 +361,7 @@ test('NCD routes to the chest scene while needle cric synchronizes its existing 
   const f = fixture();
   vm.runInContext(source.slice(source.indexOf('function animateNCD('), source.indexOf('function animateOPA(')), f.context);
   const p = f.context.animateNCD('SUCCESS');
-  assert.equal(f.elements.get('ncd-label').textContent, 'SUCCESS · AIR RELEASED');
+  assert.equal(f.elements.get('ncd-label').textContent, 'SUCCESS');
   f.advance(f.context.timing.ncd.sound - 1); assert.equal(f.played.length, 0);
   f.advance(1); assert.equal(f.played[0].sound, 'hiss');
   f.advance(f.context.timing.ncd.hold + 220); await p;
@@ -452,7 +452,7 @@ test('manual shocks keep their controls and the charging bar fills without a jou
     assert.equal(cues.at(-1).name, 'defib_outside');
     assert.equal(cues.at(-2).paused, true);
     assert.equal(overlay.classList.contains('shock-wait'), false);
-    if (procedure === 'cardioversion' && !enableSync) assert.match(label.textContent, /AUTOMATIC d20 = 1/);
+    if (procedure === 'cardioversion' && !enableSync) assert.equal(label.textContent, 'COMPLICATION');
     else assert.equal(label.textContent, 'SUCCESS');
     f.advance(10000);
     assert.equal(await done, enableSync);

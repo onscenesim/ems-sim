@@ -547,3 +547,31 @@ test('checklist runs permit BLS ECG acquisition even when crossed off, without i
   assert.equal(s.turns.at(-1).twelveLeads.length, 1);
   assert.doesNotMatch(request, /An arrived ALS resource|CANNOT be performed/);
 });
+
+test('a measured fingerstick exposes only the glucose from that check and patient', async () => {
+  const s = session();
+  reply('Fingerstick glucose is 106.', '1:00', '[VITALS: Glucose=106@T+1:00]');
+  const checked = await s.send('Check glucose.');
+  assert.equal(checked.rolls.find(roll => roll.procedure_id === 'glucometry').glucose, 106);
+
+  reply('No new reading is available.', '2:00', '[VITALS: Glucose=106@T+1:00]');
+  const stale = await s.send('Recheck glucose.');
+  assert.equal(stale.rolls.find(roll => roll.procedure_id === 'glucometry').glucose, undefined);
+
+  reply('The primary patient still has a glucose of 106.', '3:00', '[VITALS: Glucose=106@T+3:00]');
+  const other = await s.send('Get a BGL on patient 2.');
+  const glucoseRoll = other.rolls.find(roll => roll.procedure_id === 'glucometry');
+  assert.equal(glucoseRoll.patient, 'patient_2');
+  assert.equal(glucoseRoll.glucose, undefined);
+});
+
+test('trauma artwork selects the recorded method and named splint site', () => {
+  const roll = action => detectWithConfirmation(action).rolls[0];
+  assert.equal(roll('Pack the wound with gauze.').hemorrhage_method, 'packing');
+  assert.equal(roll('Apply a pressure dressing.').hemorrhage_method, 'dressing');
+  assert.equal(roll('Apply a C collar.').trauma_variant, 'collar');
+  const radius = roll('Splint the left distal radius.');
+  assert.deepEqual([radius.splint_region, radius.splint_site, radius.splint_side], ['forearm', 'radius', 'left']);
+  const femur = roll('Apply a traction splint to the right femur.');
+  assert.deepEqual([femur.splint_region, femur.splint_site, femur.splint_device], ['thigh', 'femur', 'traction']);
+});
