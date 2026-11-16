@@ -16,6 +16,8 @@ const { FREQUENT_CALLERS } = require('./frequent-callers');
 const { LOW_ACUITY_CALLS } = require('./low-acuity');
 const { applyToxicologyGroups } = require('./toxicology-groups');
 const { VISION_EMERGENCIES } = require('./vision-emergencies');
+const { ELDER_ABUSE } = require('./safeguarding');
+const { COLLEGE_HAZING } = require('./social-situations');
 
 const SCENARIO_POOLS = {
   cardiac:     CARDIAC,
@@ -32,6 +34,8 @@ const SCENARIO_POOLS = {
   curveballs:  CURVEBALLS,
 };
 
+SCENARIO_POOLS.trauma.push(ELDER_ABUSE);
+SCENARIO_POOLS.toxicology.push(...COLLEGE_HAZING);
 for (const [category, entries] of Object.entries(FREQUENT_CALLERS)) {
   SCENARIO_POOLS[category].push(...entries);
 }
@@ -50,7 +54,7 @@ applyToxicologyGroups(SCENARIO_POOLS.toxicology);
 const { createHash } = require('node:crypto');
 for (const [category, entries] of Object.entries(SCENARIO_POOLS)) {
   for (const entry of entries) {
-    entry.case_id = `${category}-${createHash('sha256').update(entry.presentation || entry.surface_presentation).digest('hex').slice(0, 16)}`;
+    entry.case_id ??= `${category}-${createHash('sha256').update(entry.presentation || entry.surface_presentation).digest('hex').slice(0, 16)}`;
   }
 }
 

@@ -36,6 +36,7 @@ function toxicologyGroup(entry) {
   if (exposure?.id === 'acid_ingestion') return 'caustic_ingestion';
   if (entry.scene_challenge === 'occult_co_arrest') return 'carbon_monoxide';
   if (entry.frequent_caller?.pair_id === 'frequent-caller-toxicology') return 'frequent_caller_toxicology';
+  if (entry.low_acuity_call?.id === 'intoxicated-patient-harassment') return 'ethanol';
   const title = entry.presentation || '';
   const families = [
     ['Carbon monoxide poisoning', 'carbon_monoxide'],

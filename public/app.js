@@ -4,7 +4,7 @@
 // ── Audio ──────────────────────────────────────────────────────────────
 // ── Sound effects ─────────────────────────────────────────────────────────────────────────
 const SOUNDS = {
-  suction: '/sounds/Suction.wav',
+  suction: '/sounds/SuctionDevice.m4a',
   oxygen_flow: '/sounds/Oxygen.mp3',
   intubation: '/sounds/ReverseCymbal.mp3',
   goose_honk: '/sounds/GooseHonk.wav',
@@ -15,6 +15,8 @@ const SOUNDS = {
   med_im_action: '/sounds/MedicationWetStab.wav',
   med_in_action: '/sounds/MedicationSpritz.wav',
   squelch: '/sounds/WoundCompression.wav',
+  splint: '/sounds/SPLINT.mp3',
+  collar_clip: '/sounds/CCollarClipIn.mp3',
   glovebox: '/sounds/Glovebox.mp3',
   rummage: '/sounds/GloveboxRummage.wav',
   pocket: '/sounds/PocketRustle.wav',
@@ -62,9 +64,9 @@ const SOUNDS = {
   sfx_depart:       '/sounds/AmbulanceDeparting.m4a',
   sfx_arrival:      '/sounds/EDArrival.wav',
 };
-// Match active audio (excluding quiet tails) near -27 dBFS for the new cues.
+// Match active audio (excluding quiet tails) near -27 to -29 dBFS for new cues.
 // Keep their original dynamics; do not peak-normalize the quiet dialog texture.
-const SOUND_LEVELS = { pacing_beep: .4, glovebox: .65, paper: .8, monitor_open: .2, monitor_reopen: 1, success: .42, fail: .56, suction: .65, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .62, med_im_action: .55, med_in_action: .48, squelch: .65, signoff: .65, defib_ready: .65 };
+const SOUND_LEVELS = { pacing_beep: .4, glovebox: .65, paper: .8, monitor_open: .2, monitor_reopen: 1, success: .42, fail: .56, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .62, med_im_action: .55, med_in_action: .48, squelch: .65, collar_clip: .34, sfx_arrival: .7, signoff: .65, defib_ready: .65 };
 // The recordings share a rising roll, with the first result impact at these
 // media times. Feedback outside the dice scene starts directly at that impact.
 const DICE_DROP_SECONDS = { success: .85, fail: .87 };
@@ -2808,7 +2810,8 @@ const PROCEDURE_TIMING = Object.freeze({
   goose: Object.freeze({ hold: 1700, sound: 160 }),
   sga: Object.freeze({ hold: 3400, start: 0, cycle: 3400, result: 2652, sound: 2652, action: 'airway_gulp', actionAt: 1950 }),
   ncd: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2280, sound: 2160 }),
-  suction: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2880, sound: 2880, action: 'suction' }),
+  // Hold through the full recording (5.116 s), including its quiet tail.
+  suction: Object.freeze({ hold: 5500, start: 0, cycle: 5500, result: 4400, sound: 4400, action: 'suction', actionAt: 100 }),
   opa: Object.freeze({ hold: 3600, start: 0, cycle: 3600, result: 2808, sound: 2808, action: 'airway_gulp', actionAt: 2150 }),
   scalpel: Object.freeze({ hold: 1150, start: 0, cycle: 1150, result: 650, sound: 345 }),
 });
@@ -3310,6 +3313,14 @@ function animateArrival(phase) {
 }
 
 const FIELD_SCENE_TIMING = Object.freeze({ glucometry: 2750, trauma: 3150 });
+const TRAUMA_ACTION_AUDIO = Object.freeze({
+  packing: { action: 'squelch', start: .61 },
+  dressing: { action: 'squelch', start: .76 },
+  splint: { action: 'splint', start: .05 },
+  binder: { action: 'splint', start: .05 },
+  // The click peaks 107 ms into the file. Seat-device closes at 53%.
+  collar: { action: 'collar_clip', start: .53, leadMs: 107 },
+});
 const SPLINT_REGION_NAMES = Object.freeze({
   'upper-arm': 'Upper arm', forearm: 'Forearm', hand: 'Hand', thigh: 'Thigh', 'lower-leg': 'Lower leg', foot: 'Ankle / foot',
 });
@@ -3367,10 +3378,12 @@ function animateTraumaScene(variant, roll) {
   document.getElementById('trauma-label').textContent = outcome || '';
   const duration = FIELD_SCENE_TIMING.trauma;
   const durationPromise = showFieldScene(overlay, outcome, duration);
-  if (!['packing', 'dressing'].includes(variant)) return durationPromise;
+  const cue = TRAUMA_ACTION_AUDIO[variant];
+  if (!cue || (variant === 'collar' && outcome === 'COMPLICATION')) return durationPromise;
+  if (variant === 'collar' && soundEnabled) loadSoundBuffer(cue.action).catch(() => {});
   const cancelAudio = scheduleSceneAudio({
-    action: 'squelch',
-    actionAt: duration * (variant === 'packing' ? .61 : .76),
+    action: cue.action,
+    actionAt: duration * cue.start - (cue.leadMs ?? 0),
     reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   });
   return durationPromise.finally(cancelAudio);

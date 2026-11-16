@@ -17,10 +17,9 @@ const ECG = require('../public/twelve-lead');
 const seedFor = (entry, difficulty='NORMAL', provider_level='ALS', i=0) => rollScenario({difficulty, provider_level,
   random_seed:`low-acuity-${i}`, instructor:prepareInstructor({case_id:entry.case_id})});
 
-test('all nine standalone cases are selectable and retain distinct dispatch, scene and history', () => {
-  assert.equal(LOW_ACUITY_CALLS.length, 9);
-  assert.equal(catalog().filter(e=>e.low_acuity_call).length, 9);
-  assert.equal(new Set(LOW_ACUITY_CALLS.map(e=>e.case_id)).size, 9);
+test('standalone cases are selectable and retain distinct dispatch, scene and history', () => {
+  assert.equal(catalog().filter(e=>e.low_acuity_call).length, LOW_ACUITY_CALLS.length);
+  assert.equal(new Set(LOW_ACUITY_CALLS.map(e=>e.case_id)).size, LOW_ACUITY_CALLS.length);
   const before = structuredClone(LOW_ACUITY_CALLS);
   for (const entry of LOW_ACUITY_CALLS) for (const level of ['ALS','BLS']) {
     const seed = seedFor(entry, 'NORMAL', level);

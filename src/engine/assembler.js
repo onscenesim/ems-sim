@@ -12,6 +12,7 @@ const { COMORBIDITIES } = require('../data/comorbidities');
 const { CREW_BEHAVIOR_CONTRACT } = require('./prompts/crew');
 const { ENCOUNTER_CONTRACT } = require('../data/scenarios/frequent-callers');
 const { LOW_ACUITY_CONTRACT } = require('../data/scenarios/low-acuity');
+const { SAFEGUARDING_CONTRACT } = require('../data/scenarios/safeguarding');
 const { DESTINATION_DIALOGUE_POLICY, BACKUP_TRANSPORT_POLICY } = require('./prompts/transport');
 const { ARREST_TRANSPORT_DOCTRINE, buildArrestMedicationRules } = require('./prompts/arrest');
 const { sceneChallengeContract } = require('./prompts/scene-challenges');
@@ -66,7 +67,7 @@ function assembleSeedBlock(seed) {
   lines.push(`Age: ${seed.patient_age_display || `${seed.patient_age} years old`} (${seed.age_group.replace('_', ' ')})`);
   lines.push(`Sex: ${seed.sex}`);
   lines.push(`Category: ${seed.category}`);
-  if (seed.dispatch_category) lines.push(`Dispatch pool: ${seed.dispatch_category} (unconfirmed caller report; actual clinical category above governs care)`);
+  if (seed.dispatch_category && !seed.safeguarding) lines.push(`Dispatch pool: ${seed.dispatch_category} (unconfirmed caller report; actual clinical category above governs care)`);
   if (isCurveball) {
     lines.push(`Surface presentation: ${seed.presentation}`);
     lines.push(`TRUE diagnosis (hidden until reveal): ${seed.true_diagnosis}`);
@@ -86,6 +87,12 @@ function assembleSeedBlock(seed) {
   if (sceneChallengeContract(seed)) lines.push(sceneChallengeContract(seed));
   if (seed.chemical_exposure) lines.push(chemicalExposureContract(seed));
   if (seed.vision_emergency) lines.push('VISION EMERGENCY — PRIVATE: Systemic vitals stay stable from the isolated eye condition, even when vision is threatened. Follow the case key for how vision changes with time and care. Describe dispatch in caller language and reveal eye findings through the relevant history and exam. A complication cannot replace the underlying eye diagnosis.');
+  if (seed.safeguarding) {
+    lines.push(SAFEGUARDING_CONTRACT);
+    lines.push(`Dispatch information: ${seed.safeguarding.dispatch}`);
+    lines.push(`First impression on arrival: ${seed.safeguarding.opening}`);
+    lines.push(`Interpersonal history and its conditions: ${seed.safeguarding.behavior}`);
+  }
   if (seed.low_acuity_call) {
     lines.push('--- LOW-ACUITY CALL (hidden from user) ---');
     lines.push(`Dispatch information: ${seed.low_acuity_call.dispatch}`);
@@ -105,9 +112,10 @@ function assembleSeedBlock(seed) {
 
   // --- Comorbidities ---
   lines.push('--- COMORBIDITY BUNDLE ---');
-  if (seed.low_acuity_call) {
+  const caseHistory = seed.safeguarding?.history || seed.low_acuity_call?.history;
+  if (caseHistory) {
     lines.push('Bundle: case-specific history (authoritative)');
-    lines.push(`Components: ${seed.low_acuity_call.history}`);
+    lines.push(`Components: ${caseHistory}`);
     lines.push('Reveal history when elicited; do not invent extra diagnoses or replace chronic illness with an otherwise-healthy history.');
   } else if (seed.frequent_caller) {
     lines.push('Bundle: case-specific chronic and behavioral history (authoritative in both variants)');
@@ -384,6 +392,8 @@ function assembleSeedBlock(seed) {
     lines.push(ruleNum + '. BLACK CLOUD EXPOSURE SCENE: Preserve the local or chronic clinical course in the chemical exposure contract. Add logistical friction and character dialogue; local injury may progress where appropriate. Do not invent systemic collapse or inevitable death. Procedure outcomes still follow server rolls.');
   } else if (seed.difficulty === 'BLACK_CLOUD' && seed.scene_challenge === 'police_transport_pretext') {
     lines.push(ruleNum + '. BLACK CLOUD STABLE SCENE: Escalate officer impatience and logistical friction while honoring the stable police-pretext case contract. Do not invent disease, incapacity or inevitable decline. Crew opinions follow the case-specific event and character cards; all actions still require provider decisions and applicable rolls.');
+  } else if (seed.difficulty === 'BLACK_CLOUD' && seed.safeguarding) {
+    lines.push(ruleNum + '. BLACK CLOUD SAFEGUARDING SCENE: Preserve the case-specific clinical course and information boundaries. Only the seeded complication applies. Do not invent incapacity, collapse, inevitable death or new evidence about an allegation.');
   } else if (seed.difficulty === 'BLACK_CLOUD') {
     lines.push(ruleNum + '. BLACK CLOUD MODE — THE UNIVERSE HAS DECIDED: This patient is not going to make it. The provider is cursed. Every intervention may momentarily hold the line but cannot reverse the tide — deterioration continues regardless of care quality. This is not a reflection of the provider\'s skill; it is the black cloud. MANDATORY BEHAVIORS: (a) INEVITABLE DECLINE: Vitals worsen on schedule. Interventions may produce brief, temporary improvement ("the rhythm converted for about 30 seconds") before the slide resumes. Never let good care save this patient — complications compound. (b) GALLOWS PARTNER: Your partner is a seasoned black-cloud survivor. Brief, deadpan acknowledgment of the chaos is acceptable — "Classic," "Of course it is," "That\'s a new one," "Yeah, that tracks" — delivered without breaking clinical focus. Never slapstick, never whining. Dark professionalism. (c) COMPOUNDING DISASTERS: Things go wrong in sequence. Equipment fails when most needed. A second problem emerges mid-treatment. The bystander\'s history was wrong. Layer them naturally — not all at once. (d) CLINICAL PLAUSIBILITY: Deterioration must be medically possible, not random. A cardiac patient refibs after ROSC. The airway swells despite correct technique. A tension pneumo develops from a rib fracture you didn\'t cause. Improbable but not impossible. (e) PARTNER FOCUS: Keep the partner clinically focused. Their named behavior still applies, and procedure execution follows the injected roll; never force success or failure from personality.');
   } else {
@@ -448,7 +458,7 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
   lines.push(`  Scenario ID: ${seed.scenario_id}`);
   lines.push(`  Call date (day 0 for the patient outcome): ${String(seed.timestamp_start || '').slice(0, 10) || 'unknown'}`);
   lines.push(`  Category: ${seed.category} | Difficulty: ${seed.difficulty}`);
-  if (seed.dispatch_category) lines.push(`  Original dispatch pool: ${seed.dispatch_category}; caller report did not establish arrest or death.`);
+  if (seed.dispatch_category) lines.push(`  Original dispatch pool: ${seed.dispatch_category}; assess the caller report separately from the clinical findings.`);
   lines.push(`  Presentation: ${seed.presentation}`);
   if (seed.true_diagnosis) lines.push(`  True diagnosis: ${seed.true_diagnosis}`);
   // The case key explains the pathology for the educational reveal, not a
@@ -474,7 +484,11 @@ function buildDebriefContext(seed, turns = [], departSceneMinute = null, accessS
     lines.push(`  Authored scene events: ${seed.low_acuity_call.behavior}`);
     lines.push('  Outside BLACK_CLOUD no hidden emergency or deterioration was present. Do not invent harm from omitted workup or require emergency treatment/transport solely for the dispatch label. Evaluate recorded proportionate assessment, scene safety, capacity/risk and policy-supported disposition, honest communication and crew-bias management. Distinguish an unassessed risk from an actual adverse outcome; benign outcome alone does not prove good care. Provider-initiated refusal is conditional on service policy, never a universal authority. In BLACK_CLOUD judge against findings actually revealed, not the original benign course.');
   }
-  lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.frequent_caller || seed.low_acuity_call ? 'case-specific chronic history' : seed.comorbidity_bundle || 'otherwise_healthy'}`);
+  if (seed.safeguarding) {
+    lines.push(`  Authored social history (private reference only): ${seed.safeguarding.behavior}`);
+    lines.push('  Evaluate the actual assessment, timely clinical care, safe opportunities for private history, objective documentation and confidential handoff or escalation as applicable. Treat patient and witness statements as attributed. Do not assume the player obtained an undisclosed detail, or require a diagnosis of abuse or trafficking, a confession, or a specific reporting action unsupported by the scene and applicable protocol.');
+  }
+  lines.push(`  Patient: ${seed.patient_age_display || `${seed.patient_age}yo`} ${seed.sex} | Comorbidity: ${seed.frequent_caller || seed.low_acuity_call || seed.safeguarding ? 'case-specific history' : seed.comorbidity_bundle || 'otherwise_healthy'}`);
   lines.push(`  Trajectory: ${seed.trajectory} | Deterioration threshold: ${seed.decompensation_clock || 'N/A'} min`);
   lines.push(`  Complication: ${seed.complication_type}${seed.catastrophe ? ' / ' + seed.catastrophe.id : ''}`);
   const incidents = (seed.events || []).filter(e => e.event_type === 'complication');

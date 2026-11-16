@@ -78,3 +78,70 @@ test('both scenes occur naturally outside instructor mode', () => {
   }
   assert.deepEqual(found, new Set(cases.map(e => e.scene_challenge)));
 });
+
+test('safeguarding cases keep their clinical course and disclosure rules across difficulty and replay', () => {
+  const entries = catalog().filter(e => e.safeguarding);
+  assert.deepEqual(entries.filter(e => !e.selection_group).map(e => e.category).sort(), ['behavioral', 'pediatric', 'trauma']);
+  assert.equal(new Set(entries.map(e => e.case_id)).size, entries.length);
+
+  for (const entry of entries) {
+    const instructor = prepareInstructor({ case_id: entry.case_id });
+    for (const difficulty of ['EASY', 'NORMAL', 'HARD', 'BLACK_CLOUD']) {
+      for (let i = 0; i < 12; i++) {
+        const seed = rollScenario({ difficulty, instructor, random_seed: `safeguarding-${i}` });
+        assert.equal(seed.trajectory, entry.trajectory_override);
+        assert.equal(seed.decompensation_clock === null, entry.trajectory_override === 'stable');
+        assert.equal(seed.comorbidity_bundle, null);
+        assert.equal(seed.special_circumstance, null);
+        assert.equal(seed.catastrophe, undefined);
+        assert.ok(['none', 'equipment_failure'].includes(seed.complication_type));
+        if (entry.category === 'pediatric') assert.match(seed.patient_age_display, /^\d+ months? old \(infant\)$/);
+      }
+    }
+
+    const seed = rollScenario({ difficulty: 'BLACK_CLOUD', instructor, random_seed: 'safeguarding-replay' });
+    const replay = JSON.parse(JSON.stringify(seed));
+    assert.deepEqual(replay.safeguarding, entry.safeguarding);
+    const prompt = assembleSeedBlock(replay);
+    assert.ok(prompt.includes(`Dispatch information: ${entry.safeguarding.dispatch}`));
+    assert.ok(prompt.includes(`First impression on arrival: ${entry.safeguarding.opening}`));
+    assert.match(prompt, /actually out of earshot/);
+    assert.doesNotMatch(prompt, /Dispatch pool:/);
+    assert.doesNotMatch(prompt, /INEVITABLE DECLINE/);
+    const debrief = buildDebriefContext(replay, []);
+    assert.ok(debrief.includes(entry.hint));
+    assert.match(debrief, /Do not assume the player obtained an undisclosed detail/);
+  }
+});
+
+test('natural rolls reach every social case variant with its clinical category and eligible demographics', () => {
+  const entries = catalog().filter(e => ['sex_trafficking', 'college_hazing', 'factitious_disorder'].includes(e.selection_group));
+  assert.deepEqual(entries.filter(e => e.selection_group === 'sex_trafficking').map(e => e.category_override).sort(),
+    ['medical', 'neuro', 'toxicology', 'trauma']);
+  assert.equal(entries.filter(e => e.selection_group === 'college_hazing').length, 2);
+  assert.equal(entries.filter(e => e.selection_group === 'factitious_disorder').length, 2);
+
+  const byId = new Map(entries.map(e => [e.case_id, e]));
+  const demographics = new Map(entries.map(e => [e.case_id, new Set()]));
+  for (const category of ['behavioral', 'toxicology']) {
+    for (let i = 0; i < 3000; i++) {
+      const seed = rollScenario({ category, random_seed: `social-situations-${category}-${i}` });
+      const entry = byId.get(seed.case_id);
+      if (!entry) continue;
+      assert.equal(seed.instructor_mode, undefined);
+      assert.equal(seed.category, entry.category_override || category);
+      assert.equal(seed.dispatch_category, entry.category_override ? category : undefined);
+      if (entry.selection_group === 'sex_trafficking') assert.ok(seed.patient_age >= 13 && seed.patient_age <= 64);
+      else assert.ok(seed.patient_age >= 18 && seed.patient_age <= (entry.selection_group === 'college_hazing' ? 39 : 64));
+      if (entry.sex_override) assert.equal(seed.sex, entry.sex_override);
+      demographics.get(seed.case_id).add(seed.sex);
+      demographics.get(seed.case_id).add(seed.age_group);
+    }
+  }
+
+  for (const entry of entries) {
+    assert.deepEqual(demographics.get(entry.case_id), new Set([
+      ...(entry.sex_override ? [entry.sex_override] : ['female', 'male']), ...entry.age_override,
+    ]));
+  }
+});
