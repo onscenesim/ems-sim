@@ -90,6 +90,50 @@ function typedTransportSkip(session, text) {
   return explicit ? 'to_hospital' : null;
 }
 
+// Continuation is an observation interval, with a chance to stop for a clinical
+// event. It must never swallow a bundled treatment, report, question or stop.
+function monitoringTransport(session, text) {
+  if (!session.moving || session.arrivedAtHospital || !session.transportPosition
+      || !session.transportDest || (session.incident && !session.incident.resolved)) return false;
+  const order = text.trim().toLowerCase().replace(/[.!]+$/, '').replace(/\s+/g, ' ');
+  const match = /^(?:please )?(?:continue(?: (?:transport(?: and monitoring)?|monitoring(?: and transport)?|current care(?: and monitoring)?))?|keep (?:going|driving|monitoring))(?: (until|unless) (.+))?$/.exec(order);
+  if (!match) return false;
+  if (!match[1]) return true;
+  // These endpoints explicitly return control for something that needs a
+  // decision; they are not instructions to ignore a changing patient.
+  if (/^(?:something (?:significant )?happens|(?:the )?need for intervention arises|(?:an? )?(?:intervention|significant change) (?:is needed|occurs))$/.test(match[2])) return true;
+  const endpoint = match[2].replace(/ or something (?:significant )?happens$/, '');
+  return typedTransportSkip(session, 'continue monitoring until ' + endpoint) === 'to_arrival';
+}
+
+function hospitalArrival(seed, text) {
+  const hospitals = seed.hospitals || REGIONS.find(r => r.id === seed.region)?.hospitals;
+  return text.replace(/\[[^\]]*\]/g, '').split(/(?<=[.!?])\s+|\n/).some(sentence => {
+    if (/\b(?:will|would|could|should|not|never|haven't|haven’t|before|once|when|if)\b/i.test(sentence)) return false;
+    const place = /\b(?:hospital|emergency department|(?:ambulance|ed|hospital) bay|bay doors?|hospital bed|resuscitation bay)\b/i.test(sentence)
+      || Object.values(hospitals || {}).some(h => sentence.toLowerCase().includes(h.name.toLowerCase()));
+    return place && (
+      (/\b(?:ambulance|rig|unit|medic\s*\d+|crew|we|you)\b/i.test(sentence)
+        && /\b(?:arriv(?:e|es|ed)|reach(?:es|ed)?|pull(?:s|ed)? (?:in|into|up)|(?:final )?turn into|(?:is|are|comes? to a) (?:now )?(?:halt|stop)|we(?:'re| are| have arrived|’re))\b/i.test(sentence))
+      || /\b(?:stretcher|patient)\b.{0,65}\b(?:wheel(?:s|ed)?|transferred?|moved?)\b/i.test(sentence));
+  });
+}
+
+function significantTransportChange(before, after, text) {
+  if (/\[TRANSPORT_EVENT\]/i.test(text)) return true;
+  const value = (v) => v && typeof v === 'object' ? v.value : v;
+  const changed = (key, amount, direction) => {
+    const a = Number(value(before?.[key])), b = Number(value(after?.[key]));
+    return Number.isFinite(a) && Number.isFinite(b) && direction * (b - a) >= amount;
+  };
+  // Fallback for a model that narrates deterioration but misses the checkpoint
+  // tag. Never silently carry on to the ED past these observed changes.
+  return changed('GCS', 2, -1) || changed('HR', 20, 1) || changed('HR', 25, -1)
+    || changed('RR', 10, 1) || changed('RR', 8, -1)
+    || changed('TrueSpO2', 5, -1) || changed('SpO2', 5, -1)
+    || /\b(?:becomes?|becoming|suddenly|now)\s+(?:\w+\s+){0,3}(?:unresponsive|unconscious|apneic|pulseless|confused|restless|seiz(?:ing|es)|vomit(?:s|ing))\b/i.test(text);
+}
+
 function transportStatus(session) {
   const dest = session.transportDest;
   const incident = session.incident;
@@ -114,4 +158,5 @@ function transportStatus(session) {
   };
 }
 
-module.exports = { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, typedTransportSkip, transportStatus };
+module.exports = { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, typedTransportSkip,
+  monitoringTransport, hospitalArrival, significantTransportChange, transportStatus };

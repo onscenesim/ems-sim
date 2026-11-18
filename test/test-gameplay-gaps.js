@@ -359,7 +359,7 @@ test('hospital distance advances with simulated driving time and snow reduces sp
     assert.equal(departure.eta_seconds, startEta);
 
     response = 'Monitoring continues.\n[TIME: 9:00]';
-    await s.send('Continue monitoring.');
+    await s.send('Observe for five minutes.');
     assert.ok(Math.abs(s.transportStatus().distance_mi - afterFive) < 1e-8);
     assert.equal(s.transportStatus().eta_seconds, startEta - 300);
 
@@ -387,11 +387,11 @@ test('diversion at the hospital preserves the location and the saved reroute inc
   response = 'The rig departs.\n[EN_ROUTE:nearest]\n[CREW_STATUS: partner=driving captain=not_on_scene]\n[TIME: 4:00]';
   await s.send('Depart for the nearest hospital.');
   response = 'Monitoring continues.\n[TIME: 16:00]';
-  await s.send('Continue monitoring.');
+  await s.send('Observe for twelve minutes.');
   assert.equal(s.transportStatus().eta_seconds, 30);
   assert.equal(s.incident, null);
   response = 'Monitoring continues.\n[TIME: 17:00]';
-  const rejected = await s.send('Continue monitoring.');
+  const rejected = await s.send('Observe for another minute.');
   assert.equal(rejected.arrived, false);
   assert.equal(s.sceneMinute, 16.5);
   assert.equal(s.transportStatus().phase, 'diverted');
@@ -439,6 +439,98 @@ test('a bundled new treatment retains care and a stale on-scene footer leaves th
   assert.equal(s.transportStatus().phase, 'en_route');
   assert.equal(s.transportStatus().eta_seconds, 690);
   assert.equal(result.crewStatus.partner, 'driving');
+});
+
+test('quiet monitoring covers the remaining drive without requiring repeated half-minute turns', async () => {
+  for (const order of [
+    'Continue transport and monitoring',
+    'Continue monitoring.',
+    'Continue transport and monitoring until something happens',
+    'Continue monitoring unless the need for intervention arises.',
+    'Continue monitoring until we reach university or something significant happens',
+  ]) {
+    const s = session();
+    Object.assign(s.seed, { weather_id: 'clear', complication_type: 'none', routine_er_divert: false });
+    response = 'Medic 96 departs. [EN_ROUTE:major] [CREW_STATUS: partner=driving captain=not_on_scene] [VITALS: GCS=14 HR=128 RR=36] [TIME: 5:45]';
+    await s.send('Go to University Medical Center.');
+    response = 'The crew continues monitoring. The patient remains tachypneic. [VITALS: GCS=14 HR=130 RR=36] [TIME: 6:15]';
+    const result = await s.send(order);
+    assert.match(request, /NEW clinically meaningful change/);
+    assert.doesNotMatch(request, /do not narrate arrival or handoff on this turn/);
+    assert.equal(s.sceneMinute, 30.75, order);
+    assert.equal(s.transportStatus().phase, 'arrived', order);
+    assert.equal(s.transportStatus().eta_seconds, null);
+    assert.match(result.reply, /arrives at the receiving hospital/);
+    assert.equal(result.closed, false);
+    assert.equal(s.transportDest, 'major');
+    assert.equal(s.turns.at(-1).skip, false);
+    assert.ok(result.rolls.every(r => r.no_roll));
+    assert.match(s.messages.at(-1).content, /\[TIME: 30:45\]/);
+  }
+});
+
+test('monitoring pauses at a new clinical change before carrying on to arrival', async () => {
+  for (const tag of ['[TRANSPORT_EVENT]', '']) {
+    const s = session();
+    Object.assign(s.seed, { weather_id: 'clear', complication_type: 'none', routine_er_divert: false });
+    response = 'The rig departs. [EN_ROUTE:major] [CREW_STATUS: partner=driving captain=not_on_scene] [VITALS: GCS=14 HR=128 RR=36] [TIME: 5:45]';
+    await s.send('Go to University Medical Center.');
+    response = `The patient becomes confused and restless. ${tag} [VITALS: GCS=10 HR=150 RR=38] [TIME: 14:15]`;
+    const change = await s.send('Continue monitoring until something significant happens.');
+    assert.equal(s.sceneMinute, 14.25);
+    assert.equal(s.transportStatus().phase, 'en_route');
+    assert.equal(s.transportStatus().eta_seconds, 990);
+    assert.doesNotMatch(change.reply, /TRANSPORT_EVENT|arrives at the receiving hospital/);
+    assert.doesNotMatch(s.messages.at(-1).content, /TRANSPORT_EVENT/);
+    response = 'The same findings persist without a new change. [VITALS: GCS=10 HR=150 RR=38] [TIME: 14:45]';
+    const arrival = await s.send('Continue monitoring.');
+    assert.equal(s.sceneMinute, 30.75);
+    assert.equal(s.transportStatus().phase, 'arrived');
+    assert.equal(arrival.closed, false);
+  }
+});
+
+test('physical arrival with a short model footer synchronizes the remaining ETA, history and resumed state', async () => {
+  const s = session();
+  Object.assign(s.seed, { weather_id: 'clear', complication_type: 'none', routine_er_divert: false });
+  response = 'The rig departs. [EN_ROUTE:major] [CREW_STATUS: partner=driving captain=not_on_scene] [TIME: 5:45]';
+  await s.send('Go to University Medical Center.');
+  response = 'The NIBP cuff cycles. [TIME: 21:30]';
+  await s.send('Cycle NIBP');
+  assert.equal(s.transportStatus().eta_seconds, 555);
+  // This is the contradictory arrival from the supplied debug call: 1 minute
+  // in its TIME footer, while over 9 minutes remain on the modeled route.
+  response = 'Medic 96 makes the final turn into the emergency department ambulance bay at University Medical Center, coming to a halt. Destiny cuts the siren and throws the rig into park. [CREW_STATUS: partner=on_scene captain=not_on_scene] [TIME: 22:30]';
+  const result = await s.send('Continue monitoring until we reach university or something significant happens');
+  assert.equal(s.sceneMinute, 30.75);
+  assert.equal(result.arrived, true);
+  assert.equal(s.transportStatus().phase, 'arrived');
+  assert.match(s.messages.at(-1).content, /\[TIME: 30:45\]/);
+  assert.equal(s.turns.at(-1).sceneMinute, 30.75);
+  const id = randomUUID();
+  const restored = restoreSession({ ...structuredClone(s), id });
+  assert.equal(restored.transportStatus().phase, 'arrived');
+  deleteSession(id);
+});
+
+test('reports, specific assessments, bundled treatments, stops and future arrival mentions do not fast-forward', async () => {
+  for (const [order, reportMode] of [
+    ['Continue monitoring.', true],
+    ['Cycle NIBP', false],
+    ['Check vitals. Continue monitoring.', false],
+    ['Pull over and continue monitoring.', false],
+    ['Continue monitoring for one minute.', false],
+  ]) {
+    const s = session();
+    Object.assign(s.seed, { weather_id: 'clear', complication_type: 'none', routine_er_divert: false });
+    response = 'The rig departs. [EN_ROUTE:major] [CREW_STATUS: partner=driving captain=not_on_scene] [TIME: 5:45]';
+    await s.send('Go to University Medical Center.');
+    response = 'The rig will arrive at the emergency department ambulance bay in 24 minutes. The receiving team is ready. [TIME: 6:15]';
+    await s.send(order, reportMode);
+    assert.equal(s.arrivedAtHospital, false, order);
+    assert.ok(s.sceneMinute < 10, order);
+    assert.doesNotMatch(request, /CONTINUE TRANSPORT AND OBSERVATION/);
+  }
 });
 
 test('uterine massage is recorded when performed and omitted when held', async () => {

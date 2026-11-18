@@ -4,7 +4,8 @@ const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { DESTINATION_DIALOGUE_POLICY, BACKUP_TRANSPORT_POLICY, captainPresent } = require('./prompts/transport');
 const { prepareIncident, reconcileIncident, enforceIncidentState } = require('./catastrophes');
 const { reviewText } = require('./instructor');
-const { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, typedTransportSkip, transportStatus } = require('./transport');
+const { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, typedTransportSkip,
+  monitoringTransport, hospitalArrival, significantTransportChange, transportStatus } = require('./transport');
 const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, splitCareCheckpoint, getProcedure, rollProcedure, PRECHARGE_RE } = require('./dice');
 const { careSeconds, clockStamp, hasBundledSuction } = require('./care-timing');
@@ -790,6 +791,9 @@ class Session {
     skipMode = incidentContext.skipMode;
     const arrivalSkip = ['to_hospital', 'to_arrival'].includes(skipMode);
     const remainingBefore = this._remainingTransportMinutes();
+    const monitoringDrive = !reportMode && !skipMode && !stopping && wasDriving
+      && network.ground[previousDest] && monitoringTransport(this, userText);
+    const expectedArrival = incidentTurnStart + (remainingBefore ?? 0);
     const routeTime = key => travelSeconds(network, this.transportPosition || origin(), key) / 60;
     const arrestWindow = this.seed.category === 'arrest'
       && rolls.some(r => ['cpr', 'lucas', 'pulse_check', 'rhythm_check', ...SHOCK_PROC_IDS].includes(r.procedure_id));
@@ -887,7 +891,10 @@ class Session {
           .map(key => `${key} arrives at T+${clockStamp(incidentTurnStart + routeTime(key))}`);
         messageText += `\n\n[CAD: Ground arrival from scene: ${times.join('; ')}. Use the selected destination's time in the footer. If the provider ordered air or ferry transport, use the established transfer plan instead.]`;
       } else if (wasDriving && previousDest && network.ground[previousDest] && this.transportPosition) {
-        messageText += `\n\n[CAD: ${clockStamp(remainingBefore)} remaining on the current route at T+${clockStamp(incidentTurnStart)}. Use that estimate for radio reports. Advance time only for this turn's actions. Let CAD signal physical arrival; do not narrate arrival or handoff on this turn.]`;
+        messageText += `\n\n[CAD: ${clockStamp(remainingBefore)} remaining on the current route at T+${clockStamp(incidentTurnStart)}; physical arrival is at T+${clockStamp(expectedArrival)}. Use these times for narration and radio reports. `;
+        messageText += monitoringDrive
+          ? 'CONTINUE TRANSPORT AND OBSERVATION: Carry forward current care and monitoring through the quiet part of the drive in this response. Stop only for a NEW clinically meaningful change or event requiring a provider decision, or at the hospital, whichever comes first. Existing symptoms, routine repeat readings, and small vital fluctuations do not create a new decision. At a meaningful event before arrival, emit [TRANSPORT_EVENT], give its actual earlier TIME, state the new findings, and return control without arriving. Otherwise summarize the quiet drive and arrival briefly, use the arrival TIME, and await the provider’s handoff. Do not start new treatment, speak for the provider, give a handoff, or finish the call. Never make the player repeat a monitoring order merely to consume driving time.]'
+          : 'Resolve the ordered action for its realistic duration. If that interval reaches arrival, narrate reaching the hospital and await the provider’s handoff; otherwise stay en route. The ETA is a travel estimate, not a minimum number of player turns.]';
         if (explicitDest && explicitDest !== previousDest && network.ground[explicitDest]) {
           messageText += `\n\n[CAD: If the alternate destination is accepted, its ETA from this position is ${clockStamp(routeTime(explicitDest))}.]`;
         }
@@ -1070,6 +1077,10 @@ class Session {
     }
 
     rawReply = reconcileIncident(this, rawReply, incidentContext, parseEventTags(rawReply).transportDest, userText, parseTimeTag(rawReply).timeMinutes);
+    const narratedArrival = wasDriving && !stopping && hospitalArrival(this.seed, rawReply);
+    const transportEvent = monitoringDrive && !narratedArrival
+      && significantTransportChange(this.lastVitals, parseVitalsTag(rawReply).vitals, rawReply);
+    rawReply = rawReply.replace(/\s*\[TRANSPORT_EVENT\]\s*/gi, '\n');
 
     // Keep the raw reply (with [VITALS:] tag) in Claude's message history so it
     // remembers what it last reported. Strip the tag from the user-facing copy.
@@ -1315,8 +1326,7 @@ class Session {
     // Transfers without a modeled ground route still use narrated arrival.
     if (this.moving && !this.arrivedAtHospital && !network.ground[this.transportDest]
         && !reportMode && !(this.incident && !this.incident.resolved)) {
-      const _arrivalRe = /\b(?:ambulance bay|ed bay|hospital bay|bay doors?|ambulance entrance|ed entrance|hospital entrance|emergency (?:department|room) entrance|we have it from here|we'?ve got (?:it|him|her|them) from here|(?:resus|trauma|ed|the) team takes over|transfer(?:s|red|ring)? (?:of )?care|releas\w+ the stretcher|hand(?:s|ed|ing)? (?:off )?(?:the )?(?:patient|care) (?:off )?to the (?:resus|trauma|ed|hospital|receiving) team)\b/i;
-      if (_arrivalRe.test(reply)) this.arrivedAtHospital = true;
+      if (narratedArrival) this.arrivedAtHospital = true;
     }
 
     // Advance scene clock.
@@ -1380,6 +1390,13 @@ class Session {
       message.content = `${parseTimeTag(message.content).cleanedReply}\n[TIME: ${clockStamp(minute)}]`;
       this.lastReplyHadTime = true;
     };
+    if (!blocked && wasDriving && stillDriving && previousDest === dest && ground
+        && (narratedArrival || (monitoringDrive && !transportEvent))) {
+      // Keep prose, route position, saved clock and animation on one arrival.
+      // A half-minute model footer cannot turn quiet monitoring into another
+      // compulsory turn or leave the rig "seven minutes out" at the ED.
+      finalizeClock(expectedArrival);
+    }
     if (!wasArrived && arrivalSkip && !blocked) {
       if (ground) {
         const travel = travelSeconds(network, this.transportPosition, dest) / 60;
@@ -1407,6 +1424,7 @@ class Session {
       this.transportPosition = drive(network, this.transportPosition, dest, this.sceneMinute - incidentTurnStart);
       if (travelSeconds(network, this.transportPosition, dest) === 0) {
         const arrivalIncident = prepareIncident(this, userText, reportMode, 'to_arrival', false);
+        let arrivalNotice = '';
         if (arrivalIncident.blocked) {
           enforceIncidentState(this);
           if (this.incident.bedAvailableMinute) {
@@ -1414,17 +1432,20 @@ class Session {
             this.incident.bedAvailableMinute = this.incident.startedMinute + 40;
           }
           finalizeClock(incidentTurnStart + remainingBefore);
-          reply += this.incident.id === 'er_divert'
-            ? '\nThe ambulance reaches the ED. The receiving ER is on diversion; choose another destination.'
-            : '\nThe ambulance reaches the ED. No bed is available; continue care in the rig.';
+          arrivalNotice = this.incident.id === 'er_divert'
+            ? 'The ambulance reaches the ED. The receiving ER is on diversion; choose another destination.'
+            : 'The ambulance reaches the ED. No bed is available; continue care in the rig.';
         } else {
           this.arrivedAtHospital = true;
           finalizeClock(incidentTurnStart + remainingBefore);
-          reply += '\nThe ambulance arrives at the receiving hospital. The crew is ready for your handoff.';
+          if (!narratedArrival) arrivalNotice = 'The ambulance arrives at the receiving hospital. The crew is ready for your handoff.';
         }
-        const message = this.messages.at(-1);
-        message.content = message.content.replace(/(?=\[(?:CREW_STATUS|PATIENT_FOCUS|VITALS|TIME):)/,
-          reply.slice(reply.lastIndexOf('\n') + 1) + '\n');
+        if (arrivalNotice) {
+          reply += '\n' + arrivalNotice;
+          const message = this.messages.at(-1);
+          message.content = message.content.replace(/(?=\[(?:CREW_STATUS|PATIENT_FOCUS|VITALS|TIME):)/,
+            arrivalNotice + '\n');
+        }
       }
     }
     if (stillDriving && wasDriving && ground && !blocked && !this.arrivedAtHospital
