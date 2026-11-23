@@ -7,6 +7,7 @@ const vm = require('node:vm');
 function fixture(reduced = false) {
   let now = 0, serial = 0;
   const timers = new Map(), nodes = new Map();
+  const windowHandlers = new Map();
   function node(id) {
     if (nodes.has(id)) return nodes.get(id);
     const classes = new Set(), handlers = {};
@@ -22,7 +23,8 @@ function fixture(reduced = false) {
     return value;
   }
   const source = fs.readFileSync(require.resolve('../public/app.js'), 'utf8');
-  const context = vm.createContext({ document: { getElementById: node }, window: { matchMedia: () => ({ matches: reduced }) },
+  const context = vm.createContext({ document: { getElementById: node }, window: { matchMedia: () => ({ matches: reduced }),
+    addEventListener: (name, callback) => windowHandlers.set(name, callback) },
     setTimeout(callback, delay) { const id = ++serial; timers.set(id, { at: now + delay, callback }); return id; },
     clearTimeout: id => timers.delete(id),
   });
@@ -36,7 +38,7 @@ function fixture(reduced = false) {
     }
     now = end;
   }
-  return { node, advance, timers, shake: () => context.shakeEightball(), close: () => context.closeEightball() };
+  return { node, advance, timers, context, windowHandlers, shake: () => context.shakeEightball(), close: () => context.closeEightball() };
 }
 
 test('the toolbar shakes before the full-screen entrance, then reveals and automatically dismisses', () => {
@@ -102,4 +104,40 @@ test('rapid repeated taps keep only one reveal and reduced motion still reveals 
     f.advance(6000);
     assert.equal(f.node('eightball-dialog').open, false);
   }
+});
+
+test('pointer use clears the rim indicator after keyboard activation while Tab restores keyboard focus visibility', () => {
+  const f = fixture();
+  const dialog = f.node('eightball-dialog');
+  f.node('eightball').fire('click', { detail: 0 });
+  f.advance(280);
+  assert.equal(dialog.classList.contains('is-keyboard'), true);
+  dialog.fire('pointerdown');
+  assert.equal(dialog.classList.contains('is-keyboard'), false);
+  f.node('eightball-shake').fire('click', { detail: 1 });
+  assert.equal(dialog.classList.contains('is-keyboard'), false);
+  dialog.fire('keydown', { key: 'Tab' });
+  assert.equal(dialog.classList.contains('is-keyboard'), true);
+  f.close(); f.advance(240);
+  assert.equal(dialog.classList.contains('is-keyboard'), false);
+});
+
+test('high-density phones and orientation changes get enough text pixels without changing the answer', () => {
+  const f = fixture();
+  f.context.window.devicePixelRatio = 3;
+  f.node('eightball-shake').clientWidth = 375;
+  const answer = f.node('eightball-answer-art');
+  const drawn = [];
+  answer.getContext = () => ({ clearRect() {}, save() {}, restore() {}, scale() {},
+    fillText(text) { drawn.push(text); } });
+  f.shake(); f.advance(3080);
+  assert.ok(answer.width >= 450, 'text has a retina-sized backing canvas rather than a 180px image');
+  assert.equal(answer.height, answer.width);
+  assert.ok(drawn.join(' ').trim());
+  const reading = f.node('eightball-response').textContent;
+  const firstWidth = answer.width;
+  f.node('eightball-shake').clientWidth = 700;
+  f.windowHandlers.get('resize')();
+  assert.ok(answer.width > firstWidth, 'rotating the phone redraws rather than stretching the old lettering');
+  assert.equal(f.node('eightball-response').textContent, reading);
 });

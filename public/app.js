@@ -3522,6 +3522,14 @@ function renderEightballTexture() {
 function renderEightballAnswer(answer) {
   const context = eightballAnswer.getContext?.('2d');
   if (!context) return;
+  // The shell supplies the deliberately low-resolution texture. Keep the
+  // lettering sharp at the phone's actual pixel density, including after rotation.
+  const resolution = Math.max(180, Math.ceil((eightballShake.clientWidth || 360)
+    * .484 * .88 * Math.min(window.devicePixelRatio || 1, 3)));
+  if (eightballAnswer.width !== resolution) {
+    eightballAnswer.width = resolution;
+    eightballAnswer.height = resolution;
+  }
   const size = eightballAnswer.width;
   context.clearRect(0, 0, size, size);
   context.save();
@@ -3548,6 +3556,9 @@ if (eightballSource.complete && eightballSource.naturalWidth) renderEightballTex
 document.fonts?.ready.then(() => {
   if (lastEightballAnswer) renderEightballAnswer(lastEightballAnswer);
 });
+window.addEventListener('resize', () => {
+  if (eightballDialog.open && lastEightballAnswer) renderEightballAnswer(lastEightballAnswer);
+});
 
 function clearEightballTimers() {
   for (const timer of eightballTimers) clearTimeout(timer);
@@ -3566,7 +3577,7 @@ function closeEightball() {
   eightballAfter(240, () => eightballDialog.close());
 }
 
-function shakeEightball() {
+function shakeEightball(event) {
   clearEightballTimers();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   eightball.classList.remove('shaking');
@@ -3574,6 +3585,7 @@ function shakeEightball() {
   eightball.classList.add('shaking');
   eightballDialog.classList.remove('is-closing', 'is-revealed', 'is-shaking', 'is-floating', 'is-settled');
   eightballDialog.classList.toggle('is-reroll', eightballDialog.open);
+  eightballDialog.classList.toggle('is-keyboard', event?.detail === 0);
   eightballResponse.textContent = '';
   renderEightballAnswer('');
   eightballHint.textContent = 'Shaking…';
@@ -3606,6 +3618,10 @@ function shakeEightball() {
 
 eightball.addEventListener('click', shakeEightball);
 eightballShake.addEventListener('click', shakeEightball);
+eightballDialog.addEventListener('pointerdown', () => eightballDialog.classList.remove('is-keyboard'));
+eightballDialog.addEventListener('keydown', event => {
+  if (event.key === 'Tab') eightballDialog.classList.add('is-keyboard');
+});
 eightballDialog.addEventListener('click', event => {
   if (!event.target.closest('#eightball-shake')) closeEightball();
 });
@@ -3615,7 +3631,7 @@ eightballDialog.addEventListener('cancel', event => {
 });
 eightballDialog.addEventListener('close', () => {
   clearEightballTimers();
-  eightballDialog.classList.remove('is-closing', 'is-revealed', 'is-shaking', 'is-reroll', 'is-floating', 'is-settled');
+  eightballDialog.classList.remove('is-closing', 'is-revealed', 'is-shaking', 'is-reroll', 'is-floating', 'is-settled', 'is-keyboard');
   eightballResponse.textContent = '';
   eightball.classList.remove('shaking');
   eightball.focus({ preventScroll: true });
