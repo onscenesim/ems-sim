@@ -1,0 +1,8 @@
+Pixel Operator
+Copyright 2009-2018 Jayvee Enaguas (HarvettFox96)
+
+This font is licensed under Creative Commons Zero 1.0 Universal (CC0 1.0).
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The bundled font metadata identifies this release as PixelOperator,
+FontForge 2018.10.04-1.
