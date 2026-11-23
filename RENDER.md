@@ -31,6 +31,35 @@ JSON entries appear in Render's service logs; search for the `session_id` from
 the export to correlate them. Capture starts with new activity after deployment.
 It does not fetch past Render logs or include logs from other runs.
 
+## Debug debrief emails
+
+The **Send debug debrief** button appears after generating a debrief and on saved
+debriefs in the call library. Players can add an optional message (up to 5,000
+characters). The server attaches the complete debug report, including the
+debrief, conversation, seed, model prompts/messages, procedure rolls, learning
+review, and render console. The recipient is configured privately on the server
+and is never returned to the browser or supplied by the player.
+
+To activate delivery on Render:
+
+1. Create a [Resend](https://resend.com) account and verify a sending domain.
+2. Create a sending API key in Resend.
+3. In the Render service's **Environment** settings, add `RESEND_API_KEY`,
+   `RESEND_FROM`, and `DEBRIEF_EMAIL_TO`. Set `RESEND_FROM` to a verified sender,
+   such as `EMS Terminal <debug@your-verified-domain.com>`, and `DEBRIEF_EMAIL_TO`
+   to the private inbox that should receive reports.
+4. Redeploy. Open a completed debrief and submit a test report; check the Resend
+   delivery log and the recipient inbox.
+
+See the [Resend send-email documentation](https://resend.com/docs/api-reference/emails/send-email).
+Keep the key in Render's environment settings, not in source control or public
+assets. When any setting is missing, the form explains that email is not
+available and the download option remains usable. Submissions require ownership
+of a completed, debriefed call and are limited to five attempts per IP per hour.
+Identical messages for the same call are deduplicated after successful submission;
+Resend idempotency keys also protect identical provider retries. “Report submitted”
+means Resend accepted the message, rather than confirmation of inbox delivery.
+
 ## Node runtime and dependency updates
 
 Use Node.js **24.22.1** for development and deployment, as pinned in

@@ -102,6 +102,14 @@
 .review-vitals-table tbody tr:nth-child(even) td { background: #f1f3e9; }
 .learning-window .review-vitals-table button { margin: 0; }
 /* Library is the containing desktop window for saved learning reviews. */
+.debrief-email-dialog { margin: auto; width: min(580px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); box-sizing: border-box; overflow-y: auto; box-shadow: 6px 8px 0 #0004; }
+.debrief-email-dialog::backdrop { background: #0009; }
+.debrief-email-dialog label { display: block; margin-bottom: 7px; }
+.debrief-email-dialog textarea { display: block; box-sizing: border-box; width: 100%; min-height: 125px; padding: 10px; resize: vertical; color: #242e32; background: #fffdf5; font: 18px/1.4 var(--font-xp); border: 2px solid; border-color: #767970 #fffdf2 #fffdf2 #767970; }
+.debrief-email-dialog textarea:focus-visible { outline: 2px solid #25485f; outline-offset: 2px; }
+.debrief-email-dialog small { display: block; margin-top: 5px; color: #505953; }
+.debrief-email-status { min-height: 2.6em; }
+.debrief-email-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 #library-dialog { margin: auto; width: min(1000px, 94vw); max-height: 88vh; padding: 3px; border: 3px solid; border-color: #eeeee3 #525b56 #525b56 #eeeee3; background: var(--chrome-bg, #d0cdc8); color: #242e32; box-shadow: 6px 8px 0 #0004; }
 #library-dialog::backdrop { background: #0009; }
 #library-dialog .dialog-titlebar { position: sticky; top: -3px; z-index: 2; margin: 0; display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: linear-gradient(90deg, #25485f, #547d8e); color: #fffbed; }

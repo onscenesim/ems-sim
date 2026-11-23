@@ -6,6 +6,8 @@ const { catalog, scenarioFields, seedFields, prepareInstructor, reviewText } = r
 const express = require('express');
 const router  = express.Router();
 const { randomUUID } = require('node:crypto');
+const rateLimit = require('express-rate-limit');
+const { emailConfigured, sendDebriefEmail, reportFingerprint, MAX_MESSAGE_LENGTH } = require('../debriefEmail');
 
 const { createSession, getSession, restoreSession, deleteSession } = require('../sessionStore');
 const persistence = require('../persistence');
@@ -157,6 +159,49 @@ const { getClientIP } = require('../middleware/authStub');
 
 router.get('/status', (_req, res) => {
   res.json({ scenarios_remaining: null, free_daily_limit: null });
+});
+
+router.get('/debrief-email/status', (_req, res) => res.json({ available: emailConfigured() }));
+
+const debriefEmailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'email_rate_limit', message: 'Too many reports. Please wait an hour before sending another.' },
+});
+const pendingDebriefEmails = new WeakMap();
+
+router.post('/:id/debrief/email', debriefEmailLimiter, async (req, res) => {
+  const session = ownedSession(req, res);
+  if (!session) return;
+  if (!session.closed || !session.debriefText) {
+    return res.status(409).json({ error: 'debrief_required', message: 'Generate the debrief before sending a report.' });
+  }
+  const message = req.body?.message ?? '';
+  if (typeof message !== 'string' || message.length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({ error: 'invalid_message', message: `Your message must be ${MAX_MESSAGE_LENGTH.toLocaleString('en-US')} characters or fewer.` });
+  }
+  const note = message.trim();
+  const id = req.params.id;
+  const fingerprint = reportFingerprint(note);
+  const sent = persistence.load(id)?.debriefEmails || [];
+  if (sent.includes(fingerprint)) return res.json({ accepted: true });
+  if (pendingDebriefEmails.has(session)) {
+    return res.status(409).json({ error: 'email_in_progress', message: 'A report for this call is already being sent. Please wait before retrying.' });
+  }
+  const pending = sendDebriefEmail({ id, message: note,
+    transcript: { ...session.getTranscriptData(), renderConsole: getRunConsole(session) } });
+  pendingDebriefEmails.set(session, pending);
+  try {
+    await pending;
+    persistence.update(id, { debriefEmails: [...sent, fingerprint].slice(-20) });
+    return res.json({ accepted: true });
+  } catch (error) {
+    return res.status(error.status || 502).json({ error: error.code || 'email_failed', message: error.message });
+  } finally {
+    pendingDebriefEmails.delete(session);
+  }
 });
 
 router.get('/instructor/catalog', (_req, res) => res.json({ scenarios: catalog(), scenarioFields, seedFields }));

@@ -149,7 +149,7 @@ test('dice buildup follows actual playback, reveals at the drop, and waits for t
       diceProcEl: el(), diceDCEl: el(), diceOutcomeEl: el(), diceNumberEl: el(), diceSvgEl: el(), diceOverlay: el(),
       playSound: (name, options) => { played.push({ name, offset: options.offset }); return voice; },
       performance: { now: () => now },
-      setInterval: fn => { tick = fn; }, clearInterval() {},
+      requestAnimationFrame: fn => { tick = fn; },
       setTimeout: fn => timers.push(fn),
     });
     vm.runInContext(source.slice(source.indexOf('async function animateDiceRoll('), source.indexOf('// ── Magic 8-ball')), c);
@@ -182,13 +182,41 @@ test('muted dice still reveal and complete without waiting for an audio event', 
   Object.assign(c, {
     OBSTRUCTION_PROCS: new Set(), getOutcomeSound: () => 'fail', soundEnabled: false,
     diceProcEl: el(), diceDCEl: el(), diceOutcomeEl: el(), diceNumberEl: el(), diceSvgEl: el(), diceOverlay: el(),
-    performance: { now: () => now }, setInterval: fn => { tick = fn; }, clearInterval() {}, setTimeout: fn => timers.push(fn),
+    performance: { now: () => now }, requestAnimationFrame: fn => { tick = fn; }, setTimeout: fn => timers.push(fn),
   });
   vm.runInContext(source.slice(source.indexOf('async function animateDiceRoll('), source.indexOf('// ── Magic 8-ball')), c);
   const done = c.animateDiceRoll('peripheral_iv', 2, 12, 'FAILURE'); await flush();
   now = 1000; tick(); assert.equal(c.diceOutcomeEl.textContent, 'FAILURE');
   timers.shift()(); await flush(); timers.shift()(); await done;
   assert.equal(f.requests.length, 0);
+});
+
+test('dice cap number repaints on fast displays and skip missed frames without delaying the result', async () => {
+  const f = soundFixture(), c = f.context;
+  let frame, now = 0, writes = 0, number;
+  const timers = [];
+  const el = () => ({ textContent: '', className: '', style: { setProperty() {} }, classList: { add() {}, remove() {} }, setAttribute() {} });
+  const die = el();
+  Object.defineProperty(die, 'textContent', { get: () => number, set: value => { number = value; writes++; } });
+  Object.assign(c, {
+    OBSTRUCTION_PROCS: new Set(), getOutcomeSound: () => 'success', soundEnabled: false,
+    diceProcEl: el(), diceDCEl: el(), diceOutcomeEl: el(), diceNumberEl: die, diceSvgEl: el(), diceOverlay: el(),
+    performance: { now: () => now }, requestAnimationFrame: fn => { assert.equal(frame, undefined); frame = fn; },
+    setTimeout: fn => timers.push(fn),
+  });
+  vm.runInContext(source.slice(source.indexOf('async function animateDiceRoll('), source.indexOf('// ── Magic 8-ball')), c);
+  const done = c.animateDiceRoll('peripheral_iv', 18, 12, 'SUCCESS'); await flush();
+  const advance = time => { now = time; const tick = frame; frame = undefined; tick(); };
+  writes = 0;
+  for (let i = 0; i < 96; i++) advance(i * 1000 / 120);
+  assert.equal(writes, 16, '120 Hz spin only repaints the number at 20 Hz');
+  assert.equal(c.diceOutcomeEl.textContent, '');
+  advance(1200);
+  assert.equal(writes, 17, 'a stall jumps straight to the actual roll without replaying missed numbers');
+  assert.equal(number, 18);
+  assert.equal(c.diceOutcomeEl.textContent, 'SUCCESS');
+  assert.equal(frame, undefined, 'no animation frame loop remains after landing');
+  timers.shift()(); await flush(); timers.shift()(); await done;
 });
 
 test('outcome-only cues skip the roll while dice playback retains the whole recording', async () => {

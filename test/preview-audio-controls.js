@@ -31,7 +31,25 @@
     localTranscript = {meta:{provider_level:panel.querySelector('#qa-provider').value}};
     window._isMoving = panel.querySelector('#qa-moving').checked;
     log(id+' DICE · '+localTranscript.meta.provider_level+' · '+(window._isMoving?'ambulance':'outside'));
+    // Measure the production roll only; result hold/fade are not spin frames.
+    const gaps=[];
+    let lastFrame, frame, numberChanges=0;
+    const numbers=new MutationObserver(changes=>{numberChanges+=changes.length;});
+    numbers.observe(diceNumberEl,{childList:true});
+    const sample=time=>{
+      if(diceSvgEl.classList.contains('rolling')){
+        if(lastFrame!==undefined)gaps.push(time-lastFrame);
+        lastFrame=time;
+      }
+      frame=requestAnimationFrame(sample);
+    };
+    frame=requestAnimationFrame(sample);
     await animateDiceRoll(id,outcome==='SUCCESS'?18:3,12,outcome);
+    cancelAnimationFrame(frame);numbers.disconnect();
+    if(gaps.length){
+      const sorted=[...gaps].sort((a,b)=>a-b);
+      log('SPIN '+gaps.length+' frames · median '+sorted[Math.floor(sorted.length/2)].toFixed(1)+'ms · worst '+Math.max(...gaps).toFixed(1)+'ms · '+numberChanges+' number changes');
+    }
     log(id+' ANIMATION');
     if(id==='iv') await animateIV(outcome);
     else if(id==='io') await animateDrill(outcome);

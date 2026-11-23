@@ -2173,6 +2173,7 @@ function showNewScenarioBtn() {
   wrap.appendChild(newBtn);
   wrap.appendChild(exportBtn);
   wrap.appendChild(debugBtn);
+  if (localTranscript?.debriefText) wrap.appendChild(debriefEmailButton(sessionId));
   output.appendChild(wrap);
   scrollBottom();
 }
@@ -3422,22 +3423,28 @@ async function animateDiceRoll(procedureId, roll, dc, outcome, target) {
     diceOutcomeEl.textContent = '';
     diceOutcomeEl.className = '';
     diceNumberEl.textContent = '?';
-    diceSvgEl.setAttribute('class', '');
     diceSvgEl.style.setProperty('--dice-roll-duration', `${dropAt}ms`);
     diceOverlay.classList.add('visible');
-    void diceSvgEl.getBoundingClientRect();
-    diceSvgEl.classList.add('rolling');
+    diceSvgEl.setAttribute('class', 'rolling');
 
     const startedAt = performance.now();
-    const ticker = setInterval(() => {
+    let numberStep = -1;
+    const tick = () => {
       // Follow the audio clock when audible; keep a timed visual fallback when
       // muted, interrupted, unavailable, or returning from the background.
       const elapsed = voice && !voice.paused && !voice.ended
         ? voice.currentTime * 1000 : performance.now() - startedAt;
       if (elapsed < dropAt) {
-        diceNumberEl.textContent = Math.floor(Math.random() * 20) + 1;
+        // Keep the spin on the compositor; changing SVG text repaints the die.
+        // Cycle at 20 Hz regardless of display refresh rate, without catching
+        // up missed numbers after a busy frame.
+        const step = Math.floor(elapsed / 50);
+        if (step !== numberStep) {
+          numberStep = step;
+          diceNumberEl.textContent = Math.floor(Math.random() * 20) + 1;
+        }
+        requestAnimationFrame(tick);
       } else {
-        clearInterval(ticker);
         diceNumberEl.textContent = roll;
         diceSvgEl.setAttribute('class', outcome);
         diceOutcomeEl.textContent = outcome;
@@ -3454,7 +3461,8 @@ async function animateDiceRoll(procedureId, roll, dc, outcome, target) {
           }, FADE_MS);
         }, HOLD_MS);
       }
-    }, 16);
+    };
+    requestAnimationFrame(tick);
   });
 }
 
@@ -3493,6 +3501,88 @@ eightball.addEventListener('animationend', () => eightball.classList.remove('sha
 
 function confirmDebugExport(onConfirm) {
   showConfirm({ title: 'DEBUG TRANSCRIPT', body: 'Caution: this transcript is messy and includes backend data, hidden scenario details, and engine logs. It is meant for sending to the developer for debugging purposes.', confirmLabel: 'DOWNLOAD DEBUG TRANSCRIPT', onConfirm });
+}
+
+function debriefEmailButton(id) {
+  const button = PracticeUI.el('button', 'Send debug debrief');
+  button.type = 'button';
+  button.className = 'export-btn';
+  button.addEventListener('click', () => openDebriefEmail(id, button));
+  return button;
+}
+
+async function openDebriefEmail(id, trigger) {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'debrief-email-dialog practice-review';
+  const titleId = `debrief-email-title-${newOperationId()}`;
+  const noteId = `debrief-email-note-${newOperationId()}`;
+  dialog.setAttribute('aria-labelledby', titleId);
+  const title = PracticeUI.el('h2', 'SEND DEBUG DEBRIEF');
+  title.id = titleId;
+  const description = PracticeUI.el('p', 'Send this call’s debug debrief directly to M. Trapp. It includes your conversation, hidden scenario details, and engine logs.');
+  const label = PracticeUI.el('label', 'Your message (optional)');
+  label.htmlFor = noteId;
+  const note = document.createElement('textarea');
+  note.id = noteId;
+  note.rows = 5;
+  note.maxLength = 5000;
+  note.placeholder = 'What happened? What should I look at?';
+  const count = PracticeUI.el('small', '0 / 5,000 characters');
+  const status = PracticeUI.el('p', 'Checking email availability…', 'debrief-email-status');
+  status.setAttribute('role', 'status');
+  const actions = PracticeUI.el('div', undefined, 'debrief-email-actions');
+  const send = PracticeUI.el('button', 'Send report');
+  send.type = 'submit';
+  send.disabled = true;
+  const close = PracticeUI.el('button', 'Cancel');
+  close.type = 'button';
+  close.addEventListener('click', () => dialog.close());
+  const form = document.createElement('form');
+  actions.append(send, close);
+  form.append(label, note, count, status, actions);
+  dialog.append(title, description, form);
+  document.body.append(dialog);
+  dialog.addEventListener('close', () => { dialog.remove(); trigger.focus(); }, { once: true });
+  note.addEventListener('input', () => { count.textContent = `${note.value.length.toLocaleString()} / 5,000 characters`; });
+  let sending = false;
+  dialog.addEventListener('cancel', event => { if (sending) event.preventDefault(); });
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (send.disabled || sending) return;
+    sending = true;
+    send.disabled = true;
+    close.disabled = true;
+    note.disabled = true;
+    send.textContent = 'Sending…';
+    status.textContent = 'Sending your message and debug debrief…';
+    try {
+      await apiPost(`/api/scenario/${encodeURIComponent(id)}/debrief/email`, { message: note.value });
+      status.textContent = 'Report submitted. Thank you for helping improve the simulator!';
+      send.textContent = 'Report submitted';
+      close.textContent = 'Done';
+    } catch (error) {
+      status.textContent = error.message;
+      send.disabled = error.code === 'email_unavailable';
+      send.textContent = 'Try again';
+      note.disabled = false;
+    } finally {
+      sending = false;
+      close.disabled = false;
+    }
+  });
+  dialog.showModal();
+  try {
+    const data = await apiGet('/api/scenario/debrief-email/status');
+    if (!dialog.open) return;
+    send.disabled = !data.available;
+    status.textContent = data.available ? 'The full debug debrief will be attached automatically.'
+      : 'Email reports are not available yet. You can still download the debug transcript.';
+  } catch {
+    if (dialog.open) {
+      send.disabled = false;
+      status.textContent = 'Could not check availability. You can try sending the report.';
+    }
+  }
 }
 
 async function exportTranscript(debug = false) {
@@ -4897,6 +4987,7 @@ async function showSavedCall(id) {
         downloadFile(`ems-debug-call-${id}.txt`, formatTranscript({ meta: { category: run.category, difficulty: run.difficulty, region: run.region, instructor_mode: run.instructorMode }, turns: run.transcript.map(t => ({ user: t.action, assistant: t.response, scene_minute: t.minute })) }, backend, { debug: true }));
       } catch (err) { libraryContent.append(PracticeUI.el('p', `Download failed: ${err.message}`)); }
     })));
+    if (run.debrief) libraryContent.append(debriefEmailButton(id));
     libraryDialog.scrollTop = 0;
   } catch (err) {
     if (request === libraryRequest && libraryDialog.open) libraryContent.replaceChildren(libraryButton('Back to calls', showCallLibrary), PracticeUI.el('p', `Could not open call: ${err.message}`));
