@@ -2175,7 +2175,14 @@ function showNewScenarioBtn() {
   wrap.appendChild(debugBtn);
   if (localTranscript?.debriefText) wrap.appendChild(debriefEmailButton(sessionId));
   output.appendChild(wrap);
+  if (localTranscript?.debriefText) output.appendChild(createSupportPanel());
   scrollBottom();
+}
+
+function createSupportPanel() {
+  const panel = document.getElementById('start-support').cloneNode(true);
+  panel.removeAttribute('id');
+  return panel;
 }
 
 function resetToStart(refresh = true) {
@@ -4987,7 +4994,7 @@ async function showSavedCall(id) {
         downloadFile(`ems-debug-call-${id}.txt`, formatTranscript({ meta: { category: run.category, difficulty: run.difficulty, region: run.region, instructor_mode: run.instructorMode }, turns: run.transcript.map(t => ({ user: t.action, assistant: t.response, scene_minute: t.minute })) }, backend, { debug: true }));
       } catch (err) { libraryContent.append(PracticeUI.el('p', `Download failed: ${err.message}`)); }
     })));
-    if (run.debrief) libraryContent.append(debriefEmailButton(id));
+    if (run.debrief) libraryContent.append(debriefEmailButton(id), createSupportPanel());
     libraryDialog.scrollTop = 0;
   } catch (err) {
     if (request === libraryRequest && libraryDialog.open) libraryContent.replaceChildren(libraryButton('Back to calls', showCallLibrary), PracticeUI.el('p', `Could not open call: ${err.message}`));
