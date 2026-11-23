@@ -37,8 +37,11 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ems-ui-'));
       assert.ok(ball.y >= 0 && ball.y + ball.height <= viewport.height, '8 ball stays in view');
       assert.ok(ball.x >= 0 && ball.x + ball.width <= viewport.width, '8 ball fits narrow screens');
       await page.locator('#eightball').click();
+      await page.waitForFunction(() => document.getElementById('eightball-dialog').classList.contains('is-revealed'));
       assert.ok((await page.locator('#eightball-response').textContent()).length > 0);
       await page.screenshot({ animations: 'disabled', path: path.join(output, `menu-${viewport.width}.png`) });
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => !document.getElementById('eightball-dialog').open);
       await page.evaluate(() => {
         const extra = document.createElement('div');
         extra.id = 'future-menu-section';

@@ -3476,29 +3476,149 @@ async function animateDiceRoll(procedureId, roll, dc, outcome, target) {
 // ── Magic 8-ball easter egg ───────────────────────────────────────────────
 
 const EIGHT_BALL = [
-  'IT IS CERTAIN', 'IT IS DECIDEDLY SO', 'WITHOUT A DOUBT',
-  'YES DEFINITELY', 'YOU MAY RELY ON IT', 'AS I SEE IT, YES',
-  'MOST LIKELY', 'OUTLOOK GOOD', 'YES', 'SIGNS POINT TO YES',
-  'REPLY HAZY', 'ASK AGAIN LATER', 'BETTER NOT TELL YOU NOW',
-  'CANNOT PREDICT NOW', 'CONCENTRATE AND ASK AGAIN',
-  "DON'T COUNT ON IT", 'MY REPLY IS NO', 'MY SOURCES SAY NO',
-  'OUTLOOK NOT SO GOOD', 'VERY DOUBTFUL',
+  'IT IS\nCERTAIN', 'IT IS\nDECIDEDLY\nSO', 'WITHOUT\nA DOUBT',
+  'YES\nDEFINITELY', 'YOU MAY\nRELY ON\nIT', 'AS I SEE\nIT, YES',
+  'MOST\nLIKELY', 'OUTLOOK\nGOOD', 'YES', 'SIGNS\nPOINT TO\nYES',
+  'REPLY\nHAZY', 'ASK\nAGAIN\nLATER', 'BETTER NOT\nTELL YOU\nNOW',
+  'CANNOT\nPREDICT\nNOW', 'CONCENTRATE\nAND ASK\nAGAIN',
+  "DON'T\nCOUNT ON\nIT", 'MY REPLY\nIS NO', 'MY SOURCES\nSAY NO',
+  'OUTLOOK\nNOT SO\nGOOD', 'VERY\nDOUBTFUL',
 ];
 
 const eightball         = document.getElementById('eightball');
 const eightballResponse = document.getElementById('eightball-response');
-let   eightballTimer    = null;
+const eightballDialog   = document.getElementById('eightball-dialog');
+const eightballShake    = document.getElementById('eightball-shake');
+const eightballHint     = document.getElementById('eightball-hint');
+const eightballTexture  = document.getElementById('eightball-texture');
+const eightballSource   = document.getElementById('eightball-source');
+const eightballAnswer   = document.getElementById('eightball-answer-art');
+const eightballTimers   = new Set();
+let lastEightballAnswer = null;
 
-eightball.addEventListener('click', () => {
+function renderEightballTexture() {
+  const context = eightballTexture.getContext?.('2d');
+  if (!context) {
+    eightballSource.hidden = false;
+    eightballTexture.hidden = true;
+    return;
+  }
+  const size = eightballTexture.width;
+  context.clearRect(0, 0, size, size);
+  context.drawImage(eightballSource, 0, 0, size, size);
+  const pixels = context.getImageData(0, 0, size, size);
+  // A modest source resolution and fine, fixed grain suggest an old web image.
+  // Keep the full shading range; the result should still look photographic.
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    if (!pixels.data[i + 3]) continue;
+    const grain = (((Math.imul(i + 8, 1103515245) >>> 16) & 255) / 255 - .5) * 4;
+    for (let channel = 0; channel < 3; channel++) {
+      pixels.data[i + channel] = Math.round((pixels.data[i + channel] + grain) / 2) * 2;
+    }
+  }
+  context.putImageData(pixels, 0, 0);
+}
+
+function renderEightballAnswer(answer) {
+  const context = eightballAnswer.getContext?.('2d');
+  if (!context) return;
+  const size = eightballAnswer.width;
+  context.clearRect(0, 0, size, size);
+  context.save();
+  context.scale(size / 100, size / 100);
+  const lines = answer.split('\n');
+  const fontSize = lines.length === 1 ? 18 : 15.5;
+  const firstBaseline = lines.length === 1 ? 45 : lines.length === 2 ? 36 : 31;
+  context.font = `700 ${fontSize}px PixelOperator, Arial, sans-serif`;
+  context.fillStyle = '#e9e3ff';
+  context.textAlign = 'center';
+  context.textBaseline = 'alphabetic';
+  lines.forEach((line, index) => {
+    const baseline = firstBaseline + index * 15.5;
+    // Fit the full letter height within the sloping sides at each baseline.
+    // A long line is condensed gently rather than making the whole answer tiny.
+    const availableWidth = 96 * (98 - (baseline + 2)) / 91 - 10;
+    context.fillText(line, 50, baseline, availableWidth);
+  });
+  context.restore();
+}
+
+eightballSource.addEventListener('load', renderEightballTexture);
+if (eightballSource.complete && eightballSource.naturalWidth) renderEightballTexture();
+document.fonts?.ready.then(() => {
+  if (lastEightballAnswer) renderEightballAnswer(lastEightballAnswer);
+});
+
+function clearEightballTimers() {
+  for (const timer of eightballTimers) clearTimeout(timer);
+  eightballTimers.clear();
+}
+
+function eightballAfter(delay, callback) {
+  const timer = setTimeout(() => { eightballTimers.delete(timer); callback(); }, delay);
+  eightballTimers.add(timer);
+}
+
+function closeEightball() {
+  if (!eightballDialog.open) return;
+  clearEightballTimers();
+  eightballDialog.classList.add('is-closing');
+  eightballAfter(240, () => eightballDialog.close());
+}
+
+function shakeEightball() {
+  clearEightballTimers();
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   eightball.classList.remove('shaking');
   void eightball.offsetWidth; // restart animation
   eightball.classList.add('shaking');
+  eightballDialog.classList.remove('is-closing', 'is-revealed', 'is-shaking', 'is-floating', 'is-settled');
+  eightballDialog.classList.toggle('is-reroll', eightballDialog.open);
+  eightballResponse.textContent = '';
+  renderEightballAnswer('');
+  eightballHint.textContent = 'Shaking…';
 
-  eightballResponse.textContent = EIGHT_BALL[Math.floor(Math.random() * EIGHT_BALL.length)];
-  eightballResponse.classList.add('visible');
+  const begin = () => {
+    if (!eightballDialog.open) eightballDialog.showModal();
+    void eightballShake.offsetWidth;
+    eightballDialog.classList.add('is-shaking', 'is-floating');
+    eightballShake.focus({ preventScroll: true });
+    eightballAfter(reduced ? 80 : 1050, () => {
+      // A second tap always produces a fresh answer, even after a rapid reroll.
+      const answers = EIGHT_BALL.filter(answer => answer !== lastEightballAnswer);
+      lastEightballAnswer = answers[Math.floor(Math.random() * answers.length)];
+      eightballResponse.textContent = lastEightballAnswer;
+      renderEightballAnswer(lastEightballAnswer);
+      eightballHint.textContent = reduced ? 'Tap the ball to ask again' : 'The answer is surfacing…';
+      eightballDialog.classList.remove('is-shaking');
+      eightballDialog.classList.add('is-revealed');
+      eightballAfter(reduced ? 0 : 1750, () => {
+        eightballDialog.classList.add('is-settled');
+        eightballHint.textContent = 'Tap the ball to ask again';
+        eightballAfter(4800, closeEightball);
+      });
+    });
+  };
+  // Let the little toolbar icon visibly shake before the full-screen entrance.
+  if (eightballDialog.open || reduced) begin();
+  else eightballAfter(280, begin);
+}
 
-  clearTimeout(eightballTimer);
-  eightballTimer = setTimeout(() => eightballResponse.classList.remove('visible'), 3000);
+eightball.addEventListener('click', shakeEightball);
+eightballShake.addEventListener('click', shakeEightball);
+eightballDialog.addEventListener('click', event => {
+  if (!event.target.closest('#eightball-shake')) closeEightball();
+});
+eightballDialog.addEventListener('cancel', event => {
+  event.preventDefault();
+  closeEightball();
+});
+eightballDialog.addEventListener('close', () => {
+  clearEightballTimers();
+  eightballDialog.classList.remove('is-closing', 'is-revealed', 'is-shaking', 'is-reroll', 'is-floating', 'is-settled');
+  eightballResponse.textContent = '';
+  eightball.classList.remove('shaking');
+  eightball.focus({ preventScroll: true });
 });
 
 eightball.addEventListener('animationend', () => eightball.classList.remove('shaking'));

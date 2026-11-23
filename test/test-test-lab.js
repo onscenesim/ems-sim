@@ -14,7 +14,7 @@ function fixture(overrides={}) {
     window:{setTimeout,setInterval,parent:{dispatchEvent(){}}},
     document:{createElement:node,head:{append(){}},querySelectorAll:()=>[]},
     performance:{now:()=>0}, PatientPrivacy:{start:()=>()=>{}},
-    eightball:node(),eightballResponse:node(),terminal:node(),
+    eightball:node(),eightballResponse:node(),eightballDialog:node(),terminal:node(),
     soundEnabled:false,cancelActiveShock:null,DRUG_CARDS:[],TwelveLead:require('../public/twelve-lead'),Event:class {},
     clearTimeout,clearInterval,...overrides,
   });

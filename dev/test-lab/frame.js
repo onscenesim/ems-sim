@@ -8,8 +8,8 @@
   soundEnabled = false;
   const ballOverlay = document.createElement('div');ballOverlay.id='eightball-overlay';ballOverlay.setAttribute('aria-hidden','true');
   ballOverlay.style.cssText='position:fixed;inset:0;align-items:center;justify-content:center;flex-direction:column;background:var(--bg)';
-  const ballStyle=document.createElement('style');ballStyle.textContent='#eightball-overlay{display:none}#eightball-overlay.visible{display:flex}#eightball-response{position:static;display:block;min-height:40px}';document.head.append(ballStyle);
-  ballOverlay.append(eightball,eightballResponse);terminal.append(ballOverlay);
+  const ballStyle=document.createElement('style');ballStyle.textContent='#eightball-overlay{display:none}#eightball-overlay.visible{display:flex}';document.head.append(ballStyle);
+  ballOverlay.append(eightball,eightballDialog);terminal.append(ballOverlay);
   const scenes = [];
   const add = (id, name, overlay, run, duration) => {
     const fixedPatient = overlay === 'glucometry' || (overlay === 'trauma' && !['collar', 'sling'].includes(id));
@@ -78,7 +78,11 @@
   add('niv','Noninvasive ventilation','niv',o => animateNIV({outcome:o.outcome}),3200);
   add('dice','D20 procedure roll','dice',o => animateDiceRoll('peripheral_iv',({SUCCESS:20,MARGINAL:12,FAILURE:5,COMPLICATION:1})[o.outcome],14,o.outcome),1180);
 
-  add('eightball','Magic 8-ball','eightball',()=>{ballOverlay.classList.add('visible');eightball.click();return new Promise(resolve=>setTimeout(()=>{ballOverlay.classList.remove('visible');resolve();},3000));},2900);
+  add('eightball','Magic 8-ball','eightball',()=>new Promise(resolve=>{
+    ballOverlay.classList.add('visible');
+    eightballDialog.addEventListener('close',()=>{ballOverlay.classList.remove('visible');resolve();},{once:true});
+    shakeEightball();
+  }),8120);
   const nativeTimeout = window.setTimeout.bind(window), nativeInterval = window.setInterval.bind(window);
   const timers = new Set(), intervals = new Set();
   let tracking = false, speed = 1, generation = 0, activeOverlay, followupObserver;
@@ -100,6 +104,8 @@
   function cancelTimers() { timers.forEach(clearTimeout); intervals.forEach(clearInterval); timers.clear(); intervals.clear(); }
   function stop() {
     generation++; tracking = false; cancelActiveShock?.(); cancelTimers(); stopAllSounds(); privacyStops.forEach(fn => fn()); privacyStops.clear();
+    if (typeof clearEightballTimers === 'function') clearEightballTimers();
+    if (eightballDialog.open) eightballDialog.close();
     followupObserver?.disconnect();
     document.getAnimations().forEach(a => a.cancel());
     document.querySelectorAll('[id$="-overlay"]').forEach(el => { el.classList.remove('visible','is-fading','fade-out'); el.style.removeProperty('opacity'); el.style.removeProperty('transition'); el.setAttribute('aria-hidden','true'); });

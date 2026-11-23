@@ -1031,6 +1031,12 @@ body.light-mode .brief-options-note { color: #536159; }
 .kofi-button:hover { color: #231e17; background: #eed6a9; }
 .kofi-button:active { border-color: #746044 #fff0ce #fff0ce #746044; box-shadow: none; }
 .kofi-button:focus-visible { outline: 2px solid #fff5d8; outline-offset: 3px; }
+.kofi-toolbar-button { display: none; }
+@media (min-width: 601px) {
+  #start-support { display: none; }
+  .kofi-toolbar-button { display: inline-flex; }
+  .kofi-toolbar-button:focus-visible { outline-color: #315b81; }
+}
 #output > .support-strip { max-width: 680px; margin: 16px auto 0; }
 #library-content > .support-strip { margin-top: 16px; }
 @media (max-width: 600px) {
@@ -1165,35 +1171,119 @@ body.light-mode .brief-options-note { color: #536159; }
   animation: shake 0.55s ease-in-out;
 }
 
-#eightball-response {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  font-family: var(--font-block);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  color: #e8e0ff;
-  background-color: #1a0a40;
-  background-image: var(--noise);
-  background-size: 160px 160px;
+#eightball-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 22px;
+  border: 0;
+  overflow: hidden;
+  color: #24262a;
+  background: radial-gradient(ellipse at 50% 40%, #d8dad6 0%, #afb3b2 70%, #8b9294);
+  background-image: var(--noise), radial-gradient(ellipse at 50% 40%, #d8dad6 0%, #afb3b2 70%, #8b9294);
   background-blend-mode: soft-light;
-  border: 2px solid;
-  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
-  padding: 9px 18px;
-  text-align: center;
-  width: max-content;
-  max-width: calc(100vw - 24px);
-  white-space: normal;
-  opacity: 0;
-  transition: opacity 0.3s, transform 0.3s;
-  pointer-events: none;
-  z-index: 9999;
+  font-family: var(--font-xp);
 }
-
-#eightball-response.visible {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
+#eightball-dialog[open] { display: grid; place-items: center; animation: eightball-screen-in .3s ease-out both; }
+#eightball-dialog::backdrop { background: #15151bcc; }
+#eightball-dialog.is-closing { animation: eightball-screen-out .24s ease-in both; pointer-events: none; }
+#eightball-close { position: absolute; right: max(16px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); z-index: 2; }
+.eightball-scene { display: flex; flex-direction: column; align-items: center; max-width: 100%; text-align: center; }
+.eightball-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+#eightball-shake {
+  position: relative;
+  display: block;
+  width: min(86vmin, 660px, calc(100dvh - 60px));
+  aspect-ratio: 1;
+  padding: 0;
+  margin: 0;
+  container-type: inline-size;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(8px 22px 10px #171b1c65);
+  touch-action: manipulation;
+}
+#eightball-shake:focus-visible { outline: none; }
+#eightball-shake:focus-visible .eightball-window { outline: 2px dotted #b1a0d2; outline-offset: 6px; }
+.eightball-shell { display: block; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; user-select: none; }
+.eightball-shell[hidden] { display: none; }
+.eightball-window { position: absolute; left: 25.8%; top: 27.8%; width: 48.4%; height: 48.4%; border-radius: 50%; overflow: hidden; pointer-events: none; }
+.eightball-window::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--noise); background-size: 90px; opacity: .18; mix-blend-mode: screen; }
+.eightball-die {
+  position: absolute;
+  inset: 6%;
+  display: block;
+  clip-path: polygon(2% 7%, 98% 7%, 50% 98%);
+  background: radial-gradient(ellipse at 50% 30%, #4725aa, #21106d 65%, #100d36);
+  opacity: 0;
+  transform: translateY(35%) rotate(-24deg) scale(.7);
+  filter: blur(7px);
+}
+#eightball-answer-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+#eightball-dialog.is-shaking #eightball-shake { animation: eightball-tumble 1.05s ease-out both; }
+#eightball-dialog.is-shaking.is-reroll #eightball-shake { animation-name: eightball-rattle; }
+#eightball-dialog.is-floating .eightball-die { animation: eightball-drift 2.8s linear both; }
+#eightball-dialog.is-floating #eightball-answer-art { animation: eightball-focus 2.8s linear both; }
+#eightball-dialog.is-revealed .eightball-die { opacity: 1; transform: translateY(0) rotate(-13deg) scale(1); filter: blur(.35px); }
+@keyframes eightball-screen-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes eightball-screen-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes eightball-tumble {
+  0% { transform: translateY(40vh) scale(.22) rotate(-32deg); }
+  24% { transform: translate(-12px,-8px) scale(1.02) rotate(12deg); }
+  43% { transform: translate(12px,8px) rotate(-11deg); }
+  60% { transform: translate(-7px,-4px) rotate(8deg); }
+  77% { transform: translate(4px,2px) rotate(-4deg); }
+  100% { transform: translate(0,0) scale(1) rotate(0deg); }
+}
+/* One timeline carries the die through agitation and damping: no transform
+   handoff from an animation to a transition when the shell stops shaking. */
+@keyframes eightball-drift {
+  0% { transform: translate(-35%, 28%) rotate(40deg) scale(.85); opacity: .75; filter: blur(3px); animation-timing-function: ease-in-out; }
+  9% { transform: translate(24%, -18%) rotate(-35deg) scale(.95); animation-timing-function: ease-in-out; }
+  18% { transform: translate(-25%, 12%) rotate(24deg) scale(.8); animation-timing-function: ease-in-out; }
+  28% { transform: translate(15%, -12%) rotate(-30deg) scale(.9); animation-timing-function: ease-in-out; }
+  38% { transform: translate(-9%, 16%) rotate(-2deg) scale(.83); opacity: .8; filter: blur(3px); animation-timing-function: ease-in-out; }
+  54% { transform: translate(5%, -6%) rotate(-20deg) scale(.95); opacity: .9; filter: blur(1.8px); animation-timing-function: ease-in-out; }
+  73% { transform: translate(-2%, 3%) rotate(-10deg) scale(.98); opacity: .97; filter: blur(.8px); animation-timing-function: ease-in-out; }
+  89% { transform: translate(1%, -1%) rotate(-14deg) scale(1); opacity: 1; filter: blur(.4px); animation-timing-function: ease-out; }
+  100% { transform: translateY(0) rotate(-13deg) scale(1); opacity: 1; filter: blur(.35px); }
+}
+@keyframes eightball-focus {
+  0%, 34% { opacity: 0; filter: blur(5px); }
+  42% { opacity: .15; filter: blur(4px); }
+  58% { opacity: .45; filter: blur(2.5px); }
+  78% { opacity: .85; filter: blur(1px); }
+  100% { opacity: 1; filter: blur(0); }
+}
+@keyframes eightball-rattle {
+  0%, 100% { transform: rotate(0deg); }
+  18%, 55% { transform: translate(-12px, 4px) rotate(-10deg); }
+  36%, 72% { transform: translate(12px, -4px) rotate(10deg); }
+  88% { transform: translate(-4px, 2px) rotate(-4deg); }
+}
+@media (max-width: 600px) {
+  #eightball-dialog { padding: 16px; }
+  #eightball-shake { width: min(96vw, calc(100dvh - 48px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .magic-8-ball.shaking, #eightball-dialog[open], #eightball-dialog.is-closing,
+  #eightball-dialog.is-shaking #eightball-shake,
+  #eightball-dialog.is-floating .eightball-die, #eightball-dialog.is-floating #eightball-answer-art { animation: none; }
 }
 
 /* ── Mobile ───────────────────────────────────────────────────────────── */
