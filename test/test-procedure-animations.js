@@ -626,7 +626,7 @@ test('CPR, LUCAS, shock and thump recordings survive their shorter overlays', as
       createBufferSource() { const node = { connect() { return { connect() {} }; }, start() { this.started = true; }, stop() { this.stopped = true; }, disconnect() {} }; nodes.push(node); return node; },
       createGain: () => ({ gain: {}, disconnect() {} }),
     }; };
-    Object.assign(f.context, { EventTarget, Event, soundEnabled: true, fetch: async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) }) });
+    Object.assign(f.context, { EventTarget, Event, soundEnabled: true, incidentAssignedSoundEnabled: true, fetch: async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) }) });
     vm.runInContext(source.slice(0, source.indexOf('const SURGICAL_PROCS')), f.context);
     vm.runInContext(source.slice(source.indexOf('function animateDefib('), source.indexOf('function animateIV(')), f.context);
     const done = f.context[fn](...args);

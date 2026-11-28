@@ -6,14 +6,15 @@ const { actionClause, SITE_PROCEDURES, procedureTargets, rollEntry } = require('
 const { medicationPresentationAt } = require('./medication-route');
 const { unavailableProcedure } = require('./equipment');
 const { SHOCK_PROC_IDS } = require('./shock');
+const { patientResolver } = require('./patient-records');
 const { MEDICATION_ALIASES } = require('../../public/medication-aliases');
+const { bestAccess, accessRemovals, removeAccess, addPlacement, needsAccess, heldMedication } = require('./vascular-access');
 const SPLINT_SITE_PATTERN = new RegExp(
   `\\b(?:(left|right)\\s+)?(?:(?:distal|proximal|mid[- ]shaft)\\s+)*(${Object.keys(SPLINT_SITES).join('|')})\\b`, 'i');
 const COLLAR_PATTERN = /\b(?:c[ -]collar|cervical collar|extrication collar)\b/i;
 const MEDICATION_NAMES = new Map(Object.entries(MEDICATION_ALIASES).flatMap(
   ([name, aliases]) => aliases.map(alias => [alias.toLowerCase(), name])));
 const { HARD_MODE_DC_PENALTY, BLACK_CLOUD_DC_PENALTY } = require('../data/config');
-const ACCESS_ROUTES = new Map([['peripheral_iv', 'IV'], ['io_access', 'IO']]);
 
 // ---------------------------------------------------------------------------
 // Build detection index at startup.
@@ -234,7 +235,7 @@ function normalizeForDetection(text) {
 // ---------------------------------------------------------------------------
 // Past-tense forms (gave, pushed, administered …) are intentionally excluded —
 // they indicate reporting ('we gave epi') rather than ordering ('give epi').
-const ADMIN_VERB_RE = /\b(transfus(?:e|ing)|appl(?:y|ying)|instill(?:s|ing)?|give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?(?:\s+the\s+\w+)?|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|retry(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|go(?:ing)?\s+for\s+(?:(?:a|an|the)\s+)?|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving|followed\s+by|in\s+addition\s+to|as\s+well\s+as|and\s+then|then\s+give|also\s+give|also\s+push|also\s+administer|along\s+with|begin(ning)?|titrat(e|ing)|connect(ing)?|run(ning)?|infus(e|ing)|drip(ping)?|bolus(ing)?|sedat(?:e|ing)|paralyz(?:e|ing)|premedicat(?:e|ing)|treat(?:ing)?\s+with|medicat(?:e|ing))\b/i;
+const ADMIN_VERB_RE = /\b(restart|reapply|reinsert|replace|resume|transfus(?:e|ing)|appl(?:y|ying)|instill(?:s|ing)?|give|giving|push(ing)?|administer(ing)?|inject(ing)?|insert(ing)?|hang(ing)?|start(ing)?(?:\s+the\s+\w+)?|dose|dosing|spray(ing)?|running?\s+the|hang(ing)?\s+the|attempt(ing)?|retry(ing)?|tr(?:y|ying)|plac(?:e|ing)|obtain(ing)?|establish(ing)?|get(ting)?|do(?:ing)?|perform(ing)?|set(ting)?\s+up|go(?:ing)?\s+for\s+(?:(?:a|an|the)\s+)?|I(?:'m| am)\s+going\s+to\s+give|I(?:'m| am)\s+giving|followed\s+by|in\s+addition\s+to|as\s+well\s+as|and\s+then|then\s+give|also\s+give|also\s+push|also\s+administer|along\s+with|begin(ning)?|titrat(e|ing)|connect(ing)?|run(ning)?|infus(e|ing)|drip(ping)?|bolus(ing)?|sedat(?:e|ing)|paralyz(?:e|ing)|premedicat(?:e|ing)|treat(?:ing)?\s+with|medicat(?:e|ing))\b/i;
 
 // Oxygen device changes are administration orders without a generic "give" verb.
 // Keep this gate local to oxygen so "switch" cannot authorize unrelated drugs.
@@ -281,11 +282,11 @@ function isSpecificSynonym(key) {
 // the bare "cpr" keyword and phantom-rolled a compression attempt. Safe to add:
 // the hemorrhage-control synonym is "control the bleeding", so "stop the bleeding"
 // does not collide here.
-const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?|stage(?:d|s|ing)?|prep(?:ped|ping)?|staging|standby|stand-by|remove(?:d|s|ing)?|remov(?:e|ing)|pull(?:ed|ing|s|ing\s+out)?|discontinue(?:d|s|ing)?|d\/c|stop(?:ped|ping)?|halt(?:ed|ing)?|cease(?:d|ing)?|paus(?:e|ed|ing)|quit(?:ting)?)\b/i;
+const NEGATION_RE = /\b(no|not|don'?t|doesn'?t|isn'?t|won'?t|wouldn'?t|without|lack(?:s|ing|ed)?|denies?|denied|skip(?:ped|ping)?|cancel(?:led|ling)?|hold(?:ing)?|avoid(?:ed|ing)?|stage(?:d|s|ing)?|prep(?:ped|ping)?|staging|standby|stand-by|remove(?:d|s|ing)?|remov(?:e|ing)|pull(?:ed|ing|s|ing\s+out)?|discontinue(?:d|s|ing)?|disconnect(?:ed|s|ing)?|d\/c|stop(?:ped|ping)?|halt(?:ed|ing)?|cease(?:d|ing)?|paus(?:e|ed|ing)|quit(?:ting)?)\b/i;
 
 // Route qualifier prepositions: when immediately preceding a device/access synonym,
 // the user is specifying an admin route ("push epi through the IO"), not placing new access.
-const ROUTE_QUALIFIER_RE = /\b(?:through|via|into|from|out\s+of)\s*(?:the\s+|an?\s+|my\s+)?(?:both\s+|bilateral\s+|bilat\s+)?$/i;
+const ROUTE_QUALIFIER_RE = /\b(?:through|via|into|from|out\s+of)\s*(?:(?:the|an?|my|both|bilateral|bilat|existing|established|patent|working|previously|placed|\d+|gauge|g)\s+)*$/i;
 
 // Contingent / hypothetical phrasing — the action is NOT a committed order this
 // turn. Rolling these produced phantom outcomes ("if respiratory depression, give
@@ -391,8 +392,7 @@ function isConditional(text, matchStart) {
  * user is specifying an administration route, not placing new access.
  */
 function isRouteQualifier(text, matchStart) {
-  // Look at up to 30 chars before the match for a route preposition
-  const tail = text.slice(Math.max(0, matchStart - 30), matchStart);
+  const tail = text.slice(Math.max(0, matchStart - 100), matchStart);
   return ROUTE_QUALIFIER_RE.test(tail);
 }
 
@@ -750,9 +750,10 @@ function traumaPresentationAt(text, start, length, procedure) {
   };
 }
 
-function detectAllProcedures(userText) {
+function detectAllProcedures(userText, patients = {}) {
   const normalized = normalizeForDetection(userText);
   const context = normalized.toLowerCase();
+  const resolvePatient = patientResolver(context, patients.focus, patients.records);
   let remaining = context;
   let found = [];
   const usedProcIds = new Set();
@@ -778,7 +779,6 @@ function detectAllProcedures(userText) {
     for (const { key, pattern, proc, specific, ecgProcedures } of DETECT_PATTERNS) {
       // Even a repeated pair must be consumed to keep its shared ECG noun
       // from falling through to a spurious standard 12-lead acquisition.
-      if (!ecgProcedures && usedProcIds.has(proc.id)) continue;
       const exec = pattern.exec(remaining);
       if (!exec) continue;
       // Bare paired shorthand is an order, but anatomical prose such as
@@ -818,7 +818,12 @@ function detectAllProcedures(userText) {
     const ioPush = bestMatch.proc.id === 'io_access'
       && /^io$/i.test(bestMatch.key)
       && /^\s+push\b/i.test(context.slice(bestMatchIndex + bestMatch.matchLen));
-    const routeQual = isRouteQualifier(context, bestMatchIndex) || ioPush;
+    const localBefore = context.slice(0, bestMatchIndex).split(/[;.!?,\n]|\b(?:and|then|also|but)\b/i).at(-1);
+    const clauseStart = bestMatchIndex - localBefore.length;
+    const medicationRoute = ['io_access', 'peripheral_iv'].includes(bestMatch.proc.id) && found.some(entry =>
+      entry.proc.id === 'medication_push' && entry.orderIndex >= clauseStart && entry.orderIndex < bestMatchIndex
+      && !/\b(?:place|start|establish|insert|drill|attempt|try|obtain)\b/i.test(context.slice(entry.orderIndex + entry.matchedKey.length, bestMatchIndex)));
+    const routeQual = isRouteQualifier(context, bestMatchIndex) || ioPush || medicationRoute;
 
     // Post-match staging guard: e.g. "LUCAS backboard" should not roll.
     const stagingPost = hasStagingPostContext(context, bestMatchIndex + bestMatch.matchLen);
@@ -840,15 +845,16 @@ function detectAllProcedures(userText) {
 
     if (!negated && !conditional && !routeQual && !stagingPost && !isTreatmentAssessment(context, bestMatchIndex, bestMatch.matchLen, bestMatch.proc, bestMatch.key) && !isPastContext(context, bestMatchIndex)) {
       for (const proc of bestMatch.ecgProcedures || [bestMatch.proc]) {
-        if (usedProcIds.has(proc.id)) continue;
+        const patient = resolvePatient(bestMatchIndex);
+        if (usedProcIds.has(`${patient}|${proc.id}`)) continue;
         const matchedKey = bestMatch.ecgProcedures
           ? (proc.id === 'right_sided_ecg' ? 'right sided ecg' : 'posterior ecg') : bestMatch.key;
         const medication = proc.id === 'medication_push' ? MEDICATION_NAMES.get(matchedKey) : null;
-        if (medication && usedMedications.has(medication)) continue;
-        if (medication) usedMedications.add(medication);
-        distinctEntries.add(procEntryKey(proc.id, medication || proc.id));
+        if (medication && usedMedications.has(`${patient}|${medication}`)) continue;
+        if (medication) usedMedications.add(`${patient}|${medication}`);
+        distinctEntries.add(`${patient}|${procEntryKey(proc.id, medication || proc.id)}`);
         found.push({
-          proc,
+          proc, patient,
           orderIndex: bestMatchIndex,
           ...(SITE_PROCEDURES.has(proc.id) ? { targets: procedureTargets(normalized, bestMatchIndex, bestMatch.matchLen, proc.id) } : {}),
           matchedKey,
@@ -864,7 +870,7 @@ function detectAllProcedures(userText) {
         // medication_push can fire multiple times in one message (once per drug).
         // Canonical medication identities also prevent brand/generic double rolls.
         if (proc.id !== 'medication_push' && !SITE_PROCEDURES.has(proc.id)) {
-          usedProcIds.add(proc.id);
+          usedProcIds.add(`${patient}|${proc.id}`);
         }
       }
     }
@@ -877,8 +883,9 @@ function detectAllProcedures(userText) {
   const siteEntries = new Map();
   found = found.filter(entry => {
     if (!SITE_PROCEDURES.has(entry.proc.id)) return true;
-    const previous = siteEntries.get(entry.proc.id);
-    if (!previous) { siteEntries.set(entry.proc.id, entry); return true; }
+    const identity = `${entry.patient}|${entry.proc.id}`;
+    const previous = siteEntries.get(identity);
+    if (!previous) { siteEntries.set(identity, entry); return true; }
     // Discussion about one site must not become an order just because a
     // different site was clearly ordered in the same message.
     if (previous.uncertain && !entry.uncertain) Object.assign(previous, entry);
@@ -891,7 +898,7 @@ function detectAllProcedures(userText) {
   // A generic bag/bolus description beside a named solution is the same order.
   const genericFluids = new Set(['IV Fluids (specify solution)', 'Blood Products (specify component)']);
   found = found.filter(entry => !genericFluids.has(entry.medication_name) || !found.some(other =>
-    other !== entry && other.sentence === entry.sentence && other.medication_kind
+    other !== entry && other.patient === entry.patient && other.sentence === entry.sentence && other.medication_kind
     && !genericFluids.has(other.medication_name)
     && (entry.medication_kind === 'fluid' || other.medication_kind === 'blood')));
 
@@ -915,6 +922,12 @@ function detectAllProcedures(userText) {
     const proc = INTERVENTIONS.find(p => p.id === id);
     found.push({ proc, orderIndex: context.indexOf(action.source.toLowerCase()), matchedKey:action.source.toLowerCase(), sentence:action.source,
       targets:procedureTargets(action.source,0,action.source.length,id), presentation:{hemorrhage_method:action.method}, uncertain:false, reason:null, key:procEntryKey(id,action.source.toLowerCase()) });
+  }
+  const sharedKeys = new Set(found.filter(entry => found.some(other => other !== entry && other.key === entry.key && other.patient !== entry.patient)).map(entry => entry.key));
+  for (const entry of found) {
+    if (sharedKeys.has(entry.key)) {
+      entry.key += `|${entry.patient}`;
+    }
   }
   return found;
 }
@@ -974,10 +987,9 @@ function detectAllAndRoll(userText, contextFlags = {}, difficulty = 'NORMAL') {
 function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMAL', overrides = {}, shock = {}) {
   const allow = new Set(overrides.allow || []);
   const deny  = new Set(overrides.deny  || []);
-  const entries = detectAllProcedures(userText).sort((a, b) => a.orderIndex - b.orderIndex);
-  const plannedRoutes = new Set(entries.map(entry => ACCESS_ROUTES.get(entry.proc.id)).filter(Boolean));
-  const existingRoutes = new Set((shock.access || []).filter(line => ['patent', 'marginal'].includes(line.status)).map(line => line.kind));
-  const usableRoutes = new Set(existingRoutes);
+  const entries = detectAllProcedures(userText, shock).sort((a, b) => a.orderIndex - b.orderIndex);
+  const stagedAccess = structuredClone(shock.access || []);
+  const removals = accessRemovals(userText, shock.focus, shock.records);
   // The benefit comes from suction being attempted in this turn, not from its
   // outcome. Respect confirmation choices so a rejected/uncertain suction
   // mention cannot lower an unrelated intubation roll.
@@ -988,6 +1000,7 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
   const rolls = [];
   const suppressed = [];
   for (const entry of entries) {
+    while (removals.length && removals[0].orderIndex <= entry.orderIndex) removeAccess(stagedAccess, removals.shift());
     const { proc, matchedKey, uncertain, reason, precharge, key } = entry;
     if (contextFlags.managed_hemorrhage && ['bleeding_control','tourniquet'].includes(proc.id)) continue;
     // Pre-charge is a forced suppression — deterministic, not overridable by a
@@ -1015,20 +1028,18 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
         outcome: 'SUCCESS', no_roll: true, dc: null, roll: null, orderIndex: entry.orderIndex });
       continue;
     }
-    const requiredRoute = shock.access && proc.id === 'medication_push' && plannedRoutes.has(entry.administration_route)
-      && !existingRoutes.has(entry.administration_route) ? entry.administration_route : null;
-    if (requiredRoute && !usableRoutes.has(requiredRoute)) {
-      suppressed.push({ procedure_id: proc.id, matchedKey, held: true,
-        reason: `${entry.medication_name || matchedKey} held pending usable ${entry.administration_route} access.` });
+    const patient = ongoing?.patient || shock.focus || 'patient_1';
+    const vascular = shock.access && needsAccess(entry);
+    const route = ['IV', 'IO'].includes(entry.administration_route) ? entry.administration_route : null;
+    const line = vascular ? bestAccess(stagedAccess, patient, route, entry.access_target) : null;
+    if (vascular && !line) {
+      suppressed.push(heldMedication(entry, patient, route));
       continue;
     }
     const suction_assisted = proc.id === 'intubation'
       && suctionEntries.some(suction => ongoingByEntry.get(suction)?.patient === ongoing?.patient);
     const results = rollEntry(entry, { ...contextFlags, suction_assisted }, difficulty, rollProcedure);
-    const placedRoute = ACCESS_ROUTES.get(proc.id);
-    if (placedRoute && results.some(result => ['SUCCESS', 'MARGINAL'].includes(result.outcome))) {
-      usableRoutes.add(placedRoute);
-    }
+    for (const result of results) addPlacement(stagedAccess, { ...result, patient });
     const result = results[0];
     if (proc.id === 'medication_push' && matchedKey) {
       result.matched_drug = matchedKey;
@@ -1037,9 +1048,11 @@ function detectWithConfirmation(userText, contextFlags = {}, difficulty = 'NORMA
       if (entry.medication_route_explicit) result.medication_route_explicit = true;
       if (entry.administration_route) result.administration_route = entry.administration_route;
       if (entry.medication_animation_route) result.medication_animation_route = entry.medication_animation_route;
+      if (entry.access_target) result.access_target = entry.access_target;
+      if (entry.vascular_required) result.vascular_required = true;
     }
     rolls.push(...results.map(result => ({ ...result, orderIndex: entry.orderIndex,
-      ...(ongoing ? { patient: ongoing.patient } : {}), ...(requiredRoute ? { requiredRoute } : {}) })));
+      ...(ongoing ? { patient } : {}), ...(line ? { access_route: line.kind } : {}) })));
   }
   return { rolls, suppressed };
 }

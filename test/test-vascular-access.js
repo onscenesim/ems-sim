@@ -37,7 +37,7 @@ test('placement outcomes add independent lines without damaging or reviving exis
       Session.prototype._updateAccess.call(session, [{ procedure_id, outcome }], 'The line has infiltrated.');
       const added = outcome === 'SUCCESS' ? 'patent' : outcome === 'MARGINAL' ? 'marginal'
         : kind === 'IV' && outcome === 'COMPLICATION' ? 'blown' : null;
-      assert.deepEqual(session.access, [...before, ...(added ? [{ kind, status: added }] : [])], `${kind} ${outcome}`);
+      assert.deepEqual(session.access, [...before, ...(added ? [{ kind, status: added, patient: 'patient_1' }] : [])], `${kind} ${outcome}`);
     }
   }
   const before = structuredClone(session.access);
@@ -66,7 +66,7 @@ test('reported placement narration preserves access through the next medication 
       const placed = await session.send('Obtain IV access. Obtain vital signs.');
       assert.equal(placed.rolls.find(r => r.procedure_id === 'peripheral_iv').outcome,
         status === 'marginal' ? 'MARGINAL' : 'SUCCESS');
-      assert.deepEqual(session.access, [{ kind: 'IV', status }]);
+      assert.deepEqual(session.access, [{ kind: 'IV', status, patient: 'patient_1' }]);
       phase = 'medication';
       Math.random = () => 0.675; // d20=14: successful medication push
       const given = await session.send('Give fentanyl 50mcg IVP.');
@@ -74,7 +74,7 @@ test('reported placement narration preserves access through the next medication 
       assert.match(given.reply, /administered through the left forearm IV/);
       assert.equal(session.turns.at(-1).rolls[0].procedure_id, 'medication_push');
       assert.ok(session.seed.events.some(e => e.procedure_id === 'medication_push' && e.outcome === 'SUCCESS'));
-      assert.deepEqual(session.access, [{ kind: 'IV', status }]);
+      assert.deepEqual(session.access, [{ kind: 'IV', status, patient: 'patient_1' }]);
     } finally {
       Math.random = originalRandom;
     }

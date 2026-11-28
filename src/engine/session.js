@@ -9,7 +9,10 @@ const { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination
 const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, splitCareCheckpoint, getProcedure, rollProcedure, PRECHARGE_RE } = require('./dice');
 const { careSeconds, clockStamp, hasBundledSuction } = require('./care-timing');
-const { ongoingCareFor } = require('./ongoing-care');
+const { ongoingCareFor, careEvents } = require('./ongoing-care');
+const { ordered, departureOrdered } = require('./command-intent');
+const { patientOf, addPlacement, accessRemovals, reconcileAccess, needsAccess } = require('./vascular-access');
+const { sceneAuthorityIssues } = require('./scene-authority');
 const { SHOCK_PROC_IDS } = require('./shock');
 const hemorrhage = require('./hemorrhage');
 const { evaluateObjectives } = require('./learning');
@@ -27,27 +30,6 @@ const { applyCapnography } = require('./capnography');
 const { hasCardiacMonitor } = require('./equipment');
 const { acquireTwelveLeads, referredTwelveLeads, isECGProcedure, stripTwelveLeadNarration, applyEctopy } = require('./twelve-lead');
 const { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords } = require('./patient-records');
-
-// Phrases that close the scenario and trigger debrief offer
-const DEBRIEF_TRIGGERS = [
-  'transfer of care',
-  'transfer care',          // providers routinely drop the "of"
-  'transferred care',
-  'transferring care',
-  'patient is in ed hands',
-  'patient is at the ed',
-  'we are clear from',
-  "we're clear from",
-  'pronounce the patient',
-  'call it here',
-  'time of death',
-  'terminate resuscitation',
-  'end scenario',
-  'end the scenario',
-  'end call',               // natural phrasing seen in play — close the call
-  'end the call',
-  'stop the scenario',
-];
 
 // ── Roll reconciliation ─────────────────────────────────────────────────────
 // The dice are rolled and injected BEFORE the model narrates, so the model can
@@ -92,9 +74,10 @@ function rollSearchTerms(r) {
 
 // A med-push could not have been delivered this turn (no route, blown line, or an
 // explicit "nothing was given"). Voids ALL med-push rolls for the turn.
-function medNotGiven(reply) {
-  return /\bno (?:medication|medications|meds|drugs?)\b[^.;!?]{0,40}\b(?:administered|given|pushed|on board)\b/i.test(reply)
-    || /\bno (?:iv access|line|patent line|patent iv|venous access|vascular access|iv route|route for)\b/i.test(reply)
+function medNotGiven(reply, roll) {
+  if (/\bno (?:medication|medications|meds|drugs?)\b[^.;!?]{0,40}\b(?:administered|given|pushed|on board)\b/i.test(reply)) return true;
+  if (!needsAccess(roll)) return false;
+  return /\bno (?:iv access|line|patent line|patent iv|venous access|vascular access|iv route|route for)\b/i.test(reply)
     || /\b(?:the )?(?:iv|line) (?:is|was|has)\b[^.;!?]{0,20}\b(?:no longer patent|blown|infiltrated|not patent|not in)\b/i.test(reply)
     || /\bcannot be (?:pushed|given|administered)\b/i.test(reply)
     || /\bhave (?:no|neither) (?:patent )?(?:line|route|iv access|venous access)\b/i.test(reply)
@@ -108,11 +91,10 @@ const MASSAGE_HELD_RE = /\b(?:held|withheld|deferred|not performed|not attempted
 function reconcileRolls(rolls, reply) {
   if (!rolls.length || !reply) return rolls;
   const sentences = reply.split(/(?<=[.;!?])\s+/);
-  const noMeds = medNotGiven(reply);
   return rolls.filter(r => {
     if ((r.no_roll && !r.continued && r.procedure_id !== 'fundal_massage') || typeof r.shock_sync === 'boolean') return true;
     const isMed = r.procedure_id === 'medication_push';
-    if (isMed && noMeds) return false;                // no route / nothing given
+    if (isMed && medNotGiven(reply, r)) return false;
     const terms = rollSearchTerms(r);
     for (const sent of sentences) {
       const sl = sent.toLowerCase();
@@ -175,8 +157,7 @@ function outcomeGuidance(procedureId, outcome) {
 }
 
 function isDebriefTrigger(text) {
-  const lower = text.toLowerCase();
-  return DEBRIEF_TRIGGERS.some(t => lower.includes(t));
+  return ordered(text, /\b(?:transfer(?:red|ring)? (?:of )?care|we(?: are|'re) clear from|pronounce the patient|call it here|time of death|terminate resuscitation|(?:end|stop) (?:the )?(?:scenario|call))\b/i);
 }
 
 // Numeric fields in the VITALS tag (everything else is treated as a string token)
@@ -382,7 +363,7 @@ function parseBackupTag(reply) {
 // backup triggers). Used to set backup status deterministically — the model does
 // not reliably emit [BACKUP:] when the provider asks, so the UI indicator was
 // never updating even though backup was narrated and arrived.
-const BACKUP_REQUEST_RE = /\b(?:(?:call(?:ing)?|send|request(?:ing)?|get\s+me|dispatch|need)\s+(?:me\s+|us\s+|for\s+|a\s+|an\s+|another\s+|additional\s+|the\s+|some\s+)*(?:backup|back-?up|second\s+(?:unit|medic|ambulance|crew)|another\s+(?:unit|medic|ambulance|crew)|additional\s+(?:units?|medics?|personnel|resources?)|engine\s*(?:company)?|fire(?:\s+department)?|rescue|mutual\s+aid)|\b(?:engine|ladder|truck|rescue)\s+company\b)/i;
+const BACKUP_REQUEST_RE = /\b(?:(?:call(?:ing)?|send|request(?:ing)?|get\s+me|dispatch|need)\s+(?:me\s+|us\s+|for\s+|a\s+|an\s+|another\s+|additional\s+|the\s+|some\s+)*(?:backup|back-?up|help|second\s+(?:unit|medic|ambulance|crew)|another\s+(?:unit|medic|ambulance|crew)|additional\s+(?:units?|medics?|personnel|resources?)|engine\s*(?:company)?|fire(?:\s+department)?|rescue|mutual\s+aid)|\b(?:engine|ladder|truck|rescue)\s+company\b)/i;
 
 // An unambiguous order to LOAD the patient into the ambulance — movement INTO
 // the vehicle, or a classic load idiom. Deliberately narrower than the
@@ -568,8 +549,9 @@ class Session {
   _accessSummary() {
     const counts = {};
     return this.access.map(a => {
-      counts[a.kind] = (counts[a.kind] || 0) + 1;
-      return `${a.kind} #${counts[a.kind]}${a.target ? ` (${a.target})` : ''}: ${a.status.toUpperCase()}`;
+      const key = `${patientOf(a)}|${a.kind}`;
+      counts[key] = (counts[key] || 0) + 1;
+      return `${patientOf(a)} ${a.kind} #${counts[key]}${a.target ? ` (${a.target})` : ''}: ${a.status.toUpperCase()}`;
     }).join(', ');
   }
 
@@ -579,17 +561,41 @@ class Session {
    * working lines blown, and invented failures must not change engine state.
    */
   _updateAccess(rolls) {
-    for (const r of rolls) {
-      if (r.no_roll) continue;
-      if (r.procedure_id === 'peripheral_iv') {
-        if (r.outcome === 'SUCCESS')       this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IV', status: 'patent' });
-        else if (r.outcome === 'MARGINAL') this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IV', status: 'marginal' });
-        else if (r.outcome === 'COMPLICATION') this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IV', status: 'blown' });
-        // FAILURE: no line placed
-      } else if (r.procedure_id === 'io_access') {
-        if (r.outcome === 'SUCCESS')       this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IO', status: 'patent' });
-        else if (r.outcome === 'MARGINAL') this.access.push({ ...(r.target ? { target: r.target } : {}), kind: 'IO', status: 'marginal' });
+    for (const roll of rolls) addPlacement(this.access, roll);
+  }
+
+  _syncBackup(userText = '', reportMode = false, skipMode = null, commitReply = false) {
+    if (!this.backupStatus) {
+      if (this.seed.backup_present_on_arrival) this.backupStatus = { status: 'on_scene', eta: 0 };
+      else if (this.seed.category === 'arrest' || /(?:two|multiple)_patients|multi_patient|\bmci\b/i.test(this.seed.special_flags || '') || this.secondPatientFound) {
+        const eta = this.seed.category === 'arrest' ? 8 : 6;
+        this.backupStatus = { status: 'en_route', eta };
+        this.backupArrivalMinute = this.secondPatientFound ? this.sceneMinute + eta : eta;
       }
+    }
+    if (!reportMode && !skipMode && (ordered(userText, BACKUP_REQUEST_RE) || ordered(userText, /^(?:backup|help)(?: please)?$/i))
+        && (!this.backupStatus || ['not_called', 'called', 'cancelled'].includes(this.backupStatus.status))) {
+      this.backupStatus = { status: 'en_route', eta: 8 };
+      this.backupArrivalMinute = this.sceneMinute + 8;
+    }
+    if (this.backupStatus?.status === 'en_route' && this.backupArrivalMinute !== null
+        && this.sceneMinute >= this.backupArrivalMinute
+        && (!this.moving || this.arrivedAtHospital)
+        && !(this.seed.catastrophe?.id === 'backup_crash' && !this.incident)) {
+      this.backupStatus = { ...this.backupStatus, status: 'on_scene', eta: 0 };
+      this.backupArrivalMinute = null;
+    }
+    if (this.backupStatus?.status === 'on_scene' && this.seed.crew_captain
+        && !['incapacitated', 'unavailable'].includes(this.crewStatus?.captain)) {
+      this.crewStatus = { partner: this.moving ? 'driving' : 'on_scene', ...this.crewStatus,
+        captain: this.moving ? 'in_back' : 'on_scene' };
+    }
+    if (commitReply && this.crewStatus) {
+      const last = this.messages.at(-1);
+      const tag = `[CREW_STATUS: partner=${this.crewStatus.partner} captain=${this.crewStatus.captain}${this.crewStatus.driver ? ' driver=' + this.crewStatus.driver : ''}]`;
+      if (last?.role === 'assistant') last.content = /\[CREW_STATUS:[^\]]*\]/i.test(last.content)
+        ? last.content.replace(/\[CREW_STATUS:[^\]]*\]/gi, tag)
+        : last.content.replace(/(?=\[(?:PATIENT_FOCUS|VITALS|TIME):)/i, tag + '\n');
     }
   }
 
@@ -645,6 +651,7 @@ class Session {
       ? { rolls: [], suppressed: [] }
       : detectWithConfirmation(userText, rollContext, this.seed.difficulty, procOverrides, {
         access: this.access, ongoingCare: this.ongoingCareFor(userText),
+        focus: this.patientFocus?.id || 'patient_1', records: this.patientRecords,
       });
     const rolls = detection.rolls;
     const suppressed = detection.suppressed;
@@ -709,6 +716,7 @@ class Session {
       };
     }
 
+    this._syncBackup(userText, reportMode, skipMode);
     const woundStartMinute = this.sceneMinute;
     const prepared = options.preparedCare
       ?? await this._prepareCare(userText, reportMode, skipMode, procOverrides, options);
@@ -722,6 +730,11 @@ class Session {
     // Inject all real roll results into the user message so Claude knows every outcome.
     // Claude must NOT generate its own [ROLL:] notation — only narrate consequences.
     let messageText = userText;
+    if (!reportMode && !skipMode) {
+      const plannedAccess = reconcileAccess(this.access, rolls,
+        accessRemovals(userText, this.patientFocus?.id || 'patient_1', this.patientRecords));
+      if (plannedAccess.removalNotes.length) messageText += '\n\n[SYSTEM NOTE: ' + plannedAccess.removalNotes.join(' ') + ']';
+    }
     if (checkpoint.pending) {
       messageText += '\n\n[SYSTEM NOTE: Resolve only the order above. Return the findings and state at the decision point, then pause for the provider.]';
     }
@@ -753,6 +766,7 @@ class Session {
     const arrestCheckIds = new Set(['pulse_check', 'rhythm_check']);
     const standaloneArrestCheck = this.seed.category === 'arrest'
       && rolls.length > 0
+      && !suppressed.some(item => item.held)
       && rolls.every(r => arrestCheckIds.has(r.procedure_id));
     if (standaloneArrestCheck) {
       messageText += '\n\n[SYSTEM NOTE: SCHEDULED ARREST CHECK — This turn contains only a pulse and/or rhythm check request. If a CPR cycle is currently active and its next 2-minute checkpoint has not arrived, keep the existing compressions uninterrupted, perform NO additional intervention, and advance the scene clock through the remaining interval to that checkpoint; then pause briefly and perform the requested check. Do not object that the request was early. If this is the initial pulse assessment before CPR, or the checkpoint is already due, perform the check now without adding time.]';
@@ -764,7 +778,7 @@ class Session {
     // The confirm panel surfaces this as a LOAD PATIENT ✓/✗ row (key 'load_patient|');
     // a player ✗ turns the load off for the turn.
     const loadOrdered = !reportMode && !skipMode && !this.hasLoaded && !this.moving
-      && LOAD_REQUEST_RE.test(userText) && !LOAD_QUESTION_RE.test(userText);
+      && ordered(userText, LOAD_REQUEST_RE) && !LOAD_QUESTION_RE.test(userText);
     const loadDenied = loadOrdered && (procOverrides.deny || []).includes('load_patient|');
     const wantsLoad = loadOrdered && !loadDenied;
     // In report mode, tell Claude this is a report/handoff turn — no procedure rolls.
@@ -782,10 +796,12 @@ class Session {
     const previousCrew = this.crewStatus;
     const wasArrived = this.arrivedAtHospital;
     const wasDriving = this.moving && !transportParked && !wasArrived;
-    const changesRoute = !reportMode && REROUTE_RE.test(userText);
+    const departureAuthorized = !reportMode && !loadDenied
+      && (Boolean(skipMode && skipMode !== 'to_ambulance') || departureOrdered(userText));
+    const changesRoute = departureAuthorized && REROUTE_RE.test(userText);
     const explicitDest = changesRoute ? orderedDestination(this.seed, userText) : null;
-    const stopping = wasDriving && !reportMode && !skipMode && STOP_TRANSPORT_RE.test(userText);
-    const resuming = /\b(?:resume|continue driving|keep driving|start driving|pull back out|roll out)\b/i.test(userText);
+    const stopping = wasDriving && !reportMode && !skipMode && ordered(userText, STOP_TRANSPORT_RE);
+    const resuming = departureAuthorized && /\b(?:resume|continue driving|keep driving|start driving|pull back out|roll out)\b/i.test(userText);
     const diversionArrival = !this.incident && ['to_hospital', 'to_arrival'].includes(skipMode);
     const incidentContext = prepareIncident(this, userText, reportMode, skipMode, wantsLoad);
     skipMode = incidentContext.skipMode;
@@ -994,46 +1010,15 @@ class Session {
       messageText += `\n\n[SYSTEM NOTE: Your previous reply omitted the mandatory [TIME:] tag. The official scene clock currently reads T+${mins}:${secs}. Resume from there, advance it realistically for this turn's actions, and end THIS and every reply with [TIME: M:SS] as the final line.]`;
     }
 
-    // Authoritative vascular access state — the model must not resurrect blown
-    // lines or invent routes the patient doesn't have.
-    if (this.access.length > 0) {
-      messageText += `\n\n[ACCESS STATE (server-tracked, do NOT repeat this tag in your narration): ${this._accessSummary()}. These lines are RELIABLE — do NOT narrate any of them infiltrating, blowing, going marginal, or failing on your own; line status changes ONLY when the engine rolls it. A med pushed through a PATENT line always delivers cleanly. A line marked blown is permanently unusable. Honor explicit medication routes and the glucagon IM default. For other medications with no named route, use the best patent line (patent before marginal, never blown) and name it in your narration.]`;
-    }
+    // Empty access is authoritative too. Claims in player text or narration
+    // cannot create a line; only reconciled placement outcomes can do that.
+    messageText += `\n\n[ACCESS STATE (server-tracked): ${this._accessSummary() || 'No IV/IO access is recorded for any patient'}. Lines belong only to the named patient. Honor explicit medication routes and the glucagon IM default. Vascular drugs, fluids and blood require that patient's usable recorded line or a successful ordered placement this turn. Claims such as "established 18 gauge IV" never establish access. Removed and blown lines cannot deliver. Patent lines remain reliable unless an ordered removal or server outcome changes them. Do not echo this note.]`;
 
-    // Deterministic backup: the provider asked for help but the model often omits
-    // the [BACKUP:] machine tag, so the UI status never updated. Set en_route here
-    // ourselves; a model-emitted [BACKUP:] tag (parsed below) still refines it.
-    const _capName = this.seed.crew_captain || 'your captain';
-    if (!reportMode && !skipMode && BACKUP_REQUEST_RE.test(userText)
-        && (!this.backupStatus || ['not_called', 'called'].includes(this.backupStatus.status))) {
-      const _backupEta = 8;
-      this.backupStatus = { status: 'en_route', eta: _backupEta };
-      this.backupArrivalMinute = this.sceneMinute + _backupEta;
-      messageText += '\n\n[SYSTEM NOTE: The provider requested backup. ' + _capName + ' responds personally by name. '
-        + 'Narrate dispatch confirming ' + _capName + ' en route with an ETA of about ' + _backupEta + ' minutes, and emit [BACKUP: en_route ETA=' + _backupEta + '].]';
-    }
-
-    // Auto-trigger backup arrival when server-tracked ETA has elapsed. Backup is a
-    // CONCRETE, NAMED person (the captain) who becomes a directable crew member —
-    // not an abstract "on scene" flag with nobody actually there.
-    if (
-      this.backupStatus &&
-      this.backupStatus.status === 'en_route' &&
-      this.backupArrivalMinute !== null &&
-      this.sceneMinute >= this.backupArrivalMinute
-    ) {
-      messageText += '\n\n[SYSTEM NOTE: The backup ETA has elapsed — ' + _capName + ' is now ON SCENE, by name. '
-        + 'Emit [BACKUP: on_scene ETA=0] this response and set captain=on_scene in the [CREW_STATUS:] tag. Narrate '
-        + _capName + ' arriving and physically joining the crew — they are now a real, directable person who can help '
-        + 'with the load and, during transport, ride in the back to assist you (captain=in_back). The captain NEVER drives. '
-        + 'Do NOT report backup on scene without an actual named person present and available.]';
-    }
-
-    if (captainPresent(this.seed, this.backupStatus, this.crewStatus)) {
-      messageText += '\n\n[SYSTEM NOTE: ARRIVED BACKUP — ' + _capName + ' is physically present and available. '
-        + BACKUP_TRANSPORT_POLICY + ' Keep captain=on_scene while parked; use captain=in_back once transport starts, '
-        + 'including transport time-skips. Narration and CREW_STATUS must agree. If the provider explicitly releases '
-        + 'this resource or assigns them elsewhere, acknowledge the instruction and emit [BACKUP: cancelled].]';
+    if (this.backupStatus) {
+      const name = this.seed.crew_captain || 'the responding captain';
+      const remaining = this.backupArrivalMinute === null ? 0 : Math.max(0, this.backupArrivalMinute - this.sceneMinute);
+      messageText += `\n\n[BACKUP STATE (server-tracked): ${name}: ${this.backupStatus.status}, ETA=${remaining}. Portray this named person's actual location and emit matching BACKUP and CREW_STATUS tags. `
+        + (this.backupStatus.status === 'on_scene' ? BACKUP_TRANSPORT_POLICY : 'Do not make an en-route or cancelled resource physically present.') + ']';
     }
 
     if (incidentContext.note) messageText += '\n\n' + incidentContext.note;
@@ -1041,6 +1026,27 @@ class Session {
 
     const modelStarted = performance.now();
     let rawReply = await sendTurn(this.systemPrompt, this.messages, options);
+    const authorityIssues = text => {
+      const checked = reconcileAccess(this.access, reconcileRolls(rolls, text),
+        reportMode || skipMode ? [] : accessRemovals(userText, this.patientFocus?.id || 'patient_1', this.patientRecords));
+      return sceneAuthorityIssues(text, {
+        // Active incidents have their own deterministic transport reconciler.
+        departureAllowed: departureAuthorized || (wasDriving && !stopping) || Boolean(this.incident && !this.incident.resolved),
+        loadingAllowed: wantsLoad || Boolean(skipMode) || departureAuthorized || this.hasLoaded || Boolean(this.incident && !this.incident.resolved),
+        destination: this.transportDest, routeChangeAllowed: changesRoute || Boolean(skipMode) || Boolean(this.incident),
+        suppressed: [...suppressed, ...checked.suppressed], access: checked.access, rolls: checked.rolls,
+      });
+    };
+    const authorityProblems = authorityIssues(rawReply);
+    if (authorityProblems.length) {
+      rawReply = await sendTurn(this.systemPrompt, [...this.messages,
+        { role: 'assistant', content: rawReply },
+        { role: 'user', content: '[SYSTEM NOTE: Regenerate this scene reply. It contradicted server authority: '
+          + authorityProblems.join(' ') + ' Preserve the actual ordered actions and recorded state. Retain the canonical footer.]' },
+      ], { ...options, timeoutMs: Math.max(1, (options.timeoutMs ?? REQUEST_TIMEOUT_MS) - (performance.now() - modelStarted)) });
+      if (authorityIssues(rawReply).length) throw operationError('invalid_scene_reply',
+        'The scene contradicted recorded access or transport orders. No changes were saved; please retry.', 502);
+    }
     const woundIssues = hemorrhage.narrationIssues(rawReply,this.wounds);
     if (woundIssues.length) {
       rawReply = await sendTurn(this.systemPrompt,[...this.messages,
@@ -1067,6 +1073,9 @@ class Session {
         throw operationError('invalid_scene_reply', 'The scene reply was malformed. Please retry your message.', 502);
       }
     }
+    // A later formatting/wound repair must not reintroduce a forbidden action.
+    if (authorityIssues(rawReply).length) throw operationError('invalid_scene_reply',
+      'The scene contradicted recorded access or transport orders. No changes were saved; please retry.', 502);
 
     options.signal?.throwIfAborted();
     rawReply = hemorrhage.discoverWounds(this.wounds,rawReply,this.seed);
@@ -1130,21 +1139,12 @@ class Session {
 
     // Reconcile dice against the narration: drop any roll the model declined or
     // showed didn't happen, so the debrief/log and client only see real events.
-    const completedPlacements = new Set();
-    const reconciledRolls = reconcileRolls(rolls.filter(r => !r.hemorrhage_managed), reply)
-      .filter(roll => {
-        if (roll.requiredRoute && !completedPlacements.has(roll.requiredRoute)) {
-          suppressed.push({ procedure_id: roll.procedure_id, matchedKey: roll.matched_drug, held: true,
-            reason: `${roll.medication_name || roll.matched_drug} held pending usable ${roll.requiredRoute} access.` });
-          return false;
-        }
-        if (['SUCCESS', 'MARGINAL'].includes(roll.outcome)) {
-          if (roll.procedure_id === 'peripheral_iv') completedPlacements.add('IV');
-          if (roll.procedure_id === 'io_access') completedPlacements.add('IO');
-        }
-        return true;
-      })
-      .concat(rolls.filter(r => r.hemorrhage_managed));
+    const accessResult = reconcileAccess(this.access,
+      reconcileRolls(rolls.filter(r => !r.hemorrhage_managed), reply),
+      reportMode || skipMode ? [] : accessRemovals(userText, previousId, this.patientRecords));
+    const reconciledRolls = accessResult.rolls.concat(rolls.filter(r => r.hemorrhage_managed));
+    suppressed.push(...accessResult.suppressed);
+    this.access = accessResult.access;
     const capnoVitals = applyCapnography(assessedVitals, priorPatientVitals, `${this.seed.scenario_id}|${patientId}`, {
       rolls: reconciledRolls.filter(r => (r.patient || previousId) === patientId),
       age: patientId === 'patient_1' ? this.seed.patient_age : this.patientRecords.find(p => p.id === patientId)?.age,
@@ -1164,6 +1164,8 @@ class Session {
       }
     }
     const elapsedCareSeconds = timeCare ? Math.max(minimumObservationSeconds, careSeconds(userText, reconciledRolls, timingCrew)) : 0;
+    const committedCareEvents = careEvents(reportMode || skipMode ? '' : userText, reconciledRolls,
+      previousId, this.patientRecords, reply);
     for (const roll of reconciledRolls) {
       delete roll.orderIndex;
       delete roll.requiredRoute;
@@ -1176,7 +1178,6 @@ class Session {
     if (unavailable.length) {
       reply = ['ECG acquisition was not performed: no cardiac monitor is available.', reply].filter(Boolean).join('\n');
     }
-    this._updateAccess(reconciledRolls);
     applyAccessAnimationRoutes(reconciledRolls, this.access);
     for (const roll of reconciledRolls) {
       logEvent(this.seed, roll.no_roll
@@ -1184,7 +1185,17 @@ class Session {
         : { event_type: 'procedure', procedure_id: roll.procedure_id, patient: roll.patient || 'primary', ...(roll.target ? { target: roll.target } : {}), dice_roll: roll.roll, dc_value: Array.isArray(roll.dc) ? roll.dc[0] : roll.dc, outcome: roll.outcome },
         this.sceneMinute);
     }
-    if (backup) {
+    const releaseBackup = !reportMode && ordered(userText,
+      /\b(?:cancel|release|dismiss|stand down)\b[^.!?]{0,30}\b(?:backup|captain|resource)|\bcaptain\b[^.!?]{0,35}\b(?:clear|leave|stand down)\b/i);
+    if (releaseBackup) {
+      this.backupStatus = { ...this.backupStatus, status: 'cancelled', eta: 0 };
+      this.backupArrivalMinute = null;
+      this.crewStatus = { ...this.crewStatus, captain: 'not_on_scene' };
+    }
+    if (backup && this.backupStatus && backup.status === this.backupStatus.status) {
+      for (const field of ['level', 'monitor']) if (Object.hasOwn(backup, field)) this.backupStatus[field] = backup[field];
+    }
+    if (backup && (!this.backupStatus || (releaseBackup && backup.status === 'cancelled'))) {
       // Track backup arrival minute when unit first goes en_route
       if (backup.status === 'en_route' && backup.eta !== null && this.backupArrivalMinute === null) {
         this.backupArrivalMinute = this.sceneMinute + backup.eta;
@@ -1255,11 +1266,11 @@ class Session {
     // Once we've arrived at the hospital, the rig can't "depart for the hospital"
     // again — without this guard, end-of-call narration like "the ambulance pulls
     // out of the ED bay, heading back to station" re-fired the departure animation.
-    if (!enRoute && !reportMode && !this.arrivedAtHospital) {
+    if (!enRoute && departureAuthorized && !this.arrivedAtHospital) {
       if (_hospitalRe.test(reply)) enRoute = true;
       else if (_motionRe.test(reply) && !_otherUnitRe.test(reply)) enRoute = true;
     }
-    if (wasArrived || (reportMode && !arrivalSkip) || (stopping && !resuming)
+    if ((!departureAuthorized && !wasDriving) || (skipMode === 'to_ambulance') || wasArrived || (reportMode && !arrivalSkip) || (stopping && !resuming)
         || (transportParked && !arrivalSkip && !changesRoute && !resuming)) enRoute = false;
     if (this.incident && !this.incident.resolved) {
       enRoute = false;
@@ -1289,6 +1300,7 @@ class Session {
     // into the rig this turn — fire loading even if the model narrated a deferral
     // or dropped [LOADING], so the load animation and destination panel appear.
     if (wantsLoad && !incidentBlocksLoad()) loading = true;
+    if (!loadOrdered && !skipMode && !enRoute) loading = false;
     if (loading) this.hasLoaded = true;
     if (enRoute) this.moving = true; // ambulance is rolling — CPR DC increases
 
@@ -1460,6 +1472,8 @@ class Session {
     }
     if (this.moving && !stillDriving && !this.arrivedAtHospital) this.moving = false;
 
+    this._syncBackup('', false, null, true);
+
     // Record the on-scene → transport boundary the first time the unit departs
     // (after the clock advance, so it carries this turn's departure timestamp).
     if (enRoute && this.departSceneMinute === null) {
@@ -1479,12 +1493,13 @@ class Session {
       user: originalOrder,
       assistant: reply,
       rolls: reconciledRolls,
+      careEvents: committedCareEvents,
       woundEvents: woundResult.events,
       twelveLeads: [
         ...referredTwelveLeads({ seed:this.seed, userText:reportMode ? '' : userText, reply:reportMode ? '' : reply,
           turns:this.turns, minute:this.sceneMinute, patientRecords:this.patientRecords, sessionId:this.sessionId || this.seed.scenario_id }),
         ...acquireTwelveLeads({ seed: this.seed, vitals: this.lastVitals, rolls: reconciledRolls,
-          patientId, ink:options.ecgInk, backup:monitorBackup, patientRecords: this.patientRecords, minute: this.sceneMinute, turn: this.turns.length, sessionId: this.sessionId || this.seed.scenario_id }),
+          patientId, patientVitals: this.patientVitals, ink:options.ecgInk, backup:monitorBackup, patientRecords: this.patientRecords, minute: this.sceneMinute, turn: this.turns.length, sessionId: this.sessionId || this.seed.scenario_id }),
       ],
       sceneMinute: this.sceneMinute,
       vitals: vitals || null,

@@ -34,7 +34,7 @@ function soundFixture({ delayed = false } = {}) {
       play() { return Promise.resolve(); }
       pause() {}
     },
-    document: { hidden: false }, soundEnabled: true,
+    document: { hidden: false }, soundEnabled: true, incidentAssignedSoundEnabled: true,
     fetch: async url => { requests.push(url); if (delayed) await new Promise(resolve => { releaseFetch = resolve; }); return { ok: true, arrayBuffer: async () => new ArrayBuffer(1) }; },
     console: { log() {}, warn() {} },
   });
@@ -113,6 +113,51 @@ test('disabled and hidden pages never request sounds; stop targets only the name
   f.context.stopSound('lucas');
   assert.equal(lucas.paused, true); assert.equal(healing.paused, false);
   f.context.stopAllSounds(); assert.equal(f.context.activeCount(), 0);
+});
+
+test('incident assigned preference silences every region and fallback while other effects still play', async () => {
+  const f = soundFixture();
+  const dispatchNames = vm.runInContext('[...INCIDENT_ASSIGNED_SOUNDS]', f.context);
+  assert.ok(dispatchNames.includes('dispatch') && dispatchNames.includes('dispatch_dense'));
+  for (const buffered of [true, false]) {
+    if (!buffered) f.context.window.AudioContext = undefined;
+    f.context.incidentAssignedSoundEnabled = false;
+    for (const name of dispatchNames) assert.equal(f.context.playSound(name), undefined, name);
+    assert.equal(f.requests.length, 0, 'disabled dispatch never loads');
+  }
+  f.context.window.AudioContext = function () { return f.ctx; };
+  const radio = f.context.playSound('radio'); await flush();
+  assert.equal(radio.paused, false);
+  f.context.incidentAssignedSoundEnabled = true;
+  const dispatch = f.context.playSound('dispatch_dense'); await flush();
+  assert.equal(dispatch.paused, false);
+  f.context.soundEnabled = false;
+  assert.equal(f.context.playSound('dispatch'), undefined, 'master mute still applies');
+});
+
+test('turning off incident assigned saves the preference and cancels active and pending dispatch only', async () => {
+  for (const delayed of [false, true]) {
+    const f = soundFixture({ delayed });
+    const toggle = new EventTarget();
+    const saved = new Map();
+    f.context.incidentAssignedSoundToggle = toggle;
+    f.context.localStorage = { setItem: (key, value) => saved.set(key, value) };
+    vm.runInContext(source.slice(source.indexOf('incidentAssignedSoundToggle.checked ='), source.indexOf('// ── Theme (light / dark) toggle')), f.context);
+    assert.equal(toggle.checked, true);
+    const dispatch = f.context.playSound('dispatch_rural');
+    if (!delayed) await flush();
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event('change'));
+    if (delayed) f.release();
+    await flush();
+    assert.equal(saved.get('ems_incident_assigned_sound'), 'off');
+    assert.equal(dispatch.paused, true);
+    assert.ok(f.nodes.every(node => node.stopped), 'no delayed dispatch can start');
+    assert.equal(f.context.soundEnabled, true, 'other effects retain their preference');
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event('change'));
+    assert.equal(saved.get('ems_incident_assigned_sound'), 'on');
+  }
 });
 
 test('scene completion never truncates an action; hidden scenes cancel unstarted cues', () => {
@@ -265,7 +310,7 @@ test('HTML fallback retains overlap and releases surplus decoders after stop', (
     removeAttribute() { this.src = ''; }
     load() {}
   }
-  const context = vm.createContext({ window: {}, Audio, document: { hidden: false }, soundEnabled: true, console: { log() {}, warn() {} } });
+  const context = vm.createContext({ window: {}, Audio, document: { hidden: false }, soundEnabled: true, incidentAssignedSoundEnabled: true, console: { log() {}, warn() {} } });
   vm.runInContext(audioSource, context);
   for (let i = 0; i < 3; i++) assert.ok(context.playSound('lucas'));
   assert.equal(voices.length, 3);

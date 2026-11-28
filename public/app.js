@@ -64,6 +64,10 @@ const SOUNDS = {
   sfx_depart:       '/sounds/AmbulanceDeparting.m4a',
   sfx_arrival:      '/sounds/EDArrival.wav',
 };
+const INCIDENT_ASSIGNED_SOUNDS = new Set(Object.keys(SOUNDS).filter(name => name === 'dispatch' || name.startsWith('dispatch_')));
+function canPlaySound(name) {
+  return soundEnabled && !document.hidden && (incidentAssignedSoundEnabled || !INCIDENT_ASSIGNED_SOUNDS.has(name));
+}
 // Match active audio (excluding quiet tails) near -27 to -29 dBFS for new cues.
 // Keep their original dynamics; do not peak-normalize the quiet dialog texture.
 const SOUND_LEVELS = { pacing_beep: .4, glovebox: .65, paper: .8, monitor_open: .2, monitor_reopen: 1, success: .42, fail: .56, oxygen_flow: 1, intubation: .42, chest_slap: .32, airway_gulp: .5, healing: 1, med_oral_action: .62, med_im_action: .55, med_in_action: .48, squelch: .65, collar_clip: .34, sfx_arrival: .7, signoff: .65, defib_ready: .65 };
@@ -156,7 +160,7 @@ function playBufferedSound(name, ctx, offset, loop = false) {
   const activating = soundResumePromise;
   loadSoundBuffer(name).then(async buffer => {
     if (ctx.state !== 'running' && activating) await activating;
-    if (voice.paused || document.hidden || !soundEnabled) { voice.pause(); return; }
+    if (voice.paused || !canPlaySound(name)) { voice.pause(); return; }
     // Never save a suspended cue to blast on the next tap.
     if (ctx.state !== 'running') { voice.pause(); return; }
     node = ctx.createBufferSource();
@@ -250,8 +254,7 @@ function getDispatchSound(regionId) {
 }
 
 function playSound(name, { offset = DICE_DROP_SECONDS[name] || 0, loop = false } = {}) {
-  if (!soundEnabled) return;
-  if (document.hidden) return;   // don't queue sounds while backgrounded — iOS flushes on return
+  if (!canPlaySound(name)) return; // don't queue muted or backgrounded cues
   const s = SOUNDS[name];
   if (s === undefined) { console.warn('[sound] unknown:', name); return; }
   if (s === null) return;  // known slot — file not yet assigned
@@ -316,7 +319,7 @@ function getProcedureSound(id, outcome) {
   const actionSounds = {
     medication_push: 'healing', peripheral_iv: 'healing',
     nasopharyngeal_airway: 'airway_gulp', foreign_body_removal: 'airway_gulp', abdominal_thrusts: 'airway_gulp',
-    pacing: 'pacing_beep', oxygen: 'oxygen_flow', cpap: 'oxygen_flow',
+    pacing: 'pacing_beep', oxygen: 'oxygen_flow', cpap: 'oxygen_flow', bipap: 'oxygen_flow',
     chest_seal: 'chest_slap', bleeding_control: 'squelch', tourniquet: 'squelch',
     intubation: 'intubation', rsi: 'intubation', suction: 'suction',
     supraglottic_airway: 'airway_gulp', oropharyngeal_airway: 'airway_gulp',
@@ -399,6 +402,7 @@ document.body.classList.toggle('detailed-colors', localStorage.getItem('ems_deta
 
 const soundToggleHdr = document.getElementById('sound-toggle-hdr');
 const soundToggleBtn = document.getElementById('sound-toggle');
+const incidentAssignedSoundToggle = document.getElementById('incident-assigned-sound-toggle');
 const reportBtn    = document.getElementById('report-btn');
 const skipBtn      = document.getElementById('skip-btn');
 const crewBtn      = document.getElementById('crew-btn');
@@ -427,6 +431,7 @@ let destinationShown      = false;   // guard so the destination binary is prese
 let prevBackupStatus  = null;   // tracks last backup status for arrival sound
 let firstVitalsPlayed = false;
 let soundEnabled      = localStorage.getItem('ems_sound') !== 'off';
+let incidentAssignedSoundEnabled = localStorage.getItem('ems_incident_assigned_sound') !== 'off';
 let lightMode         = localStorage.getItem('ems_theme') === 'light';
 let reportMode        = false;  // true = next send is a report, skips dice
 let localTranscript = null;   // built client-side so export never hits the server
@@ -1202,6 +1207,15 @@ soundToggleBtn.addEventListener('change', () => toggleSound());
 soundToggleHdr.addEventListener('click', () => toggleSound(true));
 updateSoundToggle();
 
+incidentAssignedSoundToggle.checked = incidentAssignedSoundEnabled;
+incidentAssignedSoundToggle.addEventListener('change', () => {
+  incidentAssignedSoundEnabled = incidentAssignedSoundToggle.checked;
+  localStorage.setItem('ems_incident_assigned_sound', incidentAssignedSoundEnabled ? 'on' : 'off');
+  if (!incidentAssignedSoundEnabled) {
+    for (const name of INCIDENT_ASSIGNED_SOUNDS) stopSound(name);
+  }
+});
+
 // ── Theme (light / dark) toggle ──────────────────────────────────────────
 const themeToggleHdr   = document.getElementById('theme-toggle-hdr');
 const themeToggleStart = document.getElementById('theme-toggle-start');
@@ -1399,7 +1413,7 @@ async function playTurnRolls(rolls, { manualShock = false } = {}) {
     if (r.procedure_id === 'pelvic_binder') await animateTraumaScene('binder', r);
     if (r.procedure_id === 'spinal_motion_restriction' && r.trauma_variant === 'collar') await animateTraumaScene('collar', r);
     if (r.procedure_id === 'bvm') await animateBVM(r.outcome);
-    if (r.procedure_id === 'cpap') await animateNIV(r);
+    if (['cpap', 'bipap'].includes(r.procedure_id)) await animateNIV(r);
     if (r.procedure_id === 'oxygen') await animateRouteMedication('oxygen', r.outcome, 3200);
     if (r.procedure_id === 'lucas') await animateLUCAS(r.outcome);
     if (r.procedure_id === 'suction') await animateSuction(r.outcome);
@@ -2825,7 +2839,7 @@ const PROCEDURE_TIMING = Object.freeze({
 });
 const PROCEDURE_FADE_MS = 220;
 function hasProcedureAnimationSound(id) {
-  return ECG_PROCS.has(id) || ['precordial_thump', 'medication_push', 'oxygen', 'cpap', 'peripheral_iv', 'needle_cricothyrotomy', 'io_access', 'cpr'].includes(id) || OBSTRUCTION_PROCS.has(id) || id === 'nasopharyngeal_airway' || DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
+  return ECG_PROCS.has(id) || ['precordial_thump', 'medication_push', 'oxygen', 'cpap', 'bipap', 'peripheral_iv', 'needle_cricothyrotomy', 'io_access', 'cpr'].includes(id) || OBSTRUCTION_PROCS.has(id) || id === 'nasopharyngeal_airway' || DEFIB_PROCS.has(id) || id === 'chest_seal' || id === 'pacing' || id === 'bleeding_control' || id === 'tourniquet' || id === 'needle_decompression' || id === 'suction' || id === 'bvm' || id === 'lucas' || id === 'supraglottic_airway' || id === 'oropharyngeal_airway' || SCALPEL_PROCS.has(id) || LARYNGOSCOPE_PROCS.has(id);
 }
 // Scene cleanup cancels unstarted cues, but lets a started recording finish.
 // Muting or backgrounding still stops all active and pending voices globally.
@@ -3212,6 +3226,8 @@ function animateRouteMedication(id, outcome, holdMs) {
 }
 
 function animateNIV(roll) {
+  const header = document.getElementById('niv-header');
+  if (header) header.textContent = roll.procedure_id === 'bipap' ? 'BiPAP' : 'CPAP';
   return animateRouteMedication('niv', roll.no_roll ? 'SUCCESS' : roll.outcome, 3200);
 }
 

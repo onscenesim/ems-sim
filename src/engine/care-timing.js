@@ -7,7 +7,7 @@ const PROCEDURE_SECONDS = {
   reassessment: 30, vitals_manual: 45, vitals_monitor: 30, physical_exam: 60,
   glucometry: 30, cardiac_monitor: 30, capnography_confirmation: 30,
   suction: 30, bvm: 30, oxygen: 30, medication_push: 30, cpr: 120,
-  peripheral_iv: 90, io_access: 60, intubation: 90,
+  peripheral_iv: 90, io_access: 60, intubation: 90, cpap: 60, bipap: 60, ventilator: 60,
 };
 const OVERLAP = /\b(?:while|simultaneously|in parallel|at the same time)\b/i;
 

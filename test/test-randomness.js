@@ -25,6 +25,7 @@
 const { rollScenario, specialCircumstanceEligible } = require('../src/engine/roller');
 const { TIME_OF_DAY, SPECIAL_CIRCUMSTANCES } = require('../src/data/modifiers');
 const { CATEGORY_WEIGHTS, HISTORY_WINDOWS } = require('../src/data/config');
+const { SCENARIO_POOLS } = require('../src/data/scenarios');
 const { CURVEBALLS } = require('../src/data/scenarios/curveballs');
 
 // ── Test harness ─────────────────────────────────────────────────────────────
@@ -293,20 +294,22 @@ console.log('\n=== 7. rollScenario field completeness ===');
   assert(['none', 'equipment_failure', 'unreliable_bystander', 'clinical_curveball', 'er_divert', 'catastrophic'].includes(seed.complication_type), `complication_type valid (got ${seed.complication_type})`);
 }
 
-// ── 8. EASY difficulty: no complications, always stable/slowly_det ───────────
+// ── 8. EASY defaults, with authored case trajectories preserved ───────────
 
 console.log('\n=== 8. EASY difficulty constraints ===');
 {
   const N = 200;
   let allNoneComplication = true;
-  let noRapidDeterioration = true;
+  let noUnseededRapidDeterioration = true;
+  const authoredRapid = new Set(Object.values(SCENARIO_POOLS).flat()
+    .filter(entry => entry.trajectory_override === 'rapidly_deteriorating').map(entry => entry.presentation));
   for (let i = 0; i < N; i++) {
     const seed = rollScenario({ difficulty: 'EASY', provider_level: 'ALS', region_id: 'SUBURBAN', history: {} });
     if (seed.complication_type !== 'none') { allNoneComplication = false; break; }
-    if (seed.trajectory === 'rapidly_deteriorating') { noRapidDeterioration = false; break; }
+    if (seed.trajectory === 'rapidly_deteriorating' && !authoredRapid.has(seed.presentation)) { noUnseededRapidDeterioration = false; break; }
   }
   assert(allNoneComplication, `EASY: complication_type always 'none' (${N} rolls)`);
-  assert(noRapidDeterioration, `EASY: trajectory never 'rapidly_deteriorating' (${N} rolls)`);
+  assert(noUnseededRapidDeterioration, `EASY: rapid deterioration only comes from an authored case override (${N} rolls)`);
 }
 
 // ── 9. HARD — complications are GUARANTEED (every call carries one) ──────────

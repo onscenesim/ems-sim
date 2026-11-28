@@ -7,7 +7,9 @@ require.cache[require.resolve('../src/engine/api')] = { exports: {
   sendDebrief: async () => '',
   sendTurn: async (_prompt, messages) => {
     sentOrder = messages.at(-1).content;
-    return 'Left IV placed. Right IV attempt failed. [TIME: 2:00]';
+    return /SYSTEM ROLL: peripheral_iv/.test(sentOrder)
+      ? 'Left IV placed. Right IV attempt failed. [TIME: 2:00]'
+      : 'The crew responds to the order. [TIME: 2:00]';
   },
 } };
 require.cache[require.resolve('../src/server/adminLogger')] = { exports: { logRun() {}, updateRunDebrief() {} } };
@@ -196,7 +198,7 @@ test('a real session sends separate outcome directives and persists each target'
   const session = new Session(rollScenario({ random_seed: 'bilateral-access-regression' }));
   const result = await withDice([18, 2], () => session.send('Start bilateral IVs'));
   assert.deepEqual(result.rolls.map(r => r.outcome), ['SUCCESS', 'FAILURE']);
-  assert.deepEqual(session.access, [{ kind: 'IV', status: 'patent', target: 'left side' }]);
+  assert.deepEqual(session.access, [{ kind: 'IV', status: 'patent', target: 'left side', patient: 'patient_1' }]);
   assert.match(sentOrder, /SYSTEM ROLL: peripheral_iv \[left side\].*SUCCESS/);
   assert.match(sentOrder, /SYSTEM ROLL: peripheral_iv \[right side\].*FAILURE/);
   assert.deepEqual(session.seed.events.filter(e => e.event_type === 'procedure').map(e => [e.target, e.outcome]),
@@ -226,6 +228,7 @@ test('session keeps the glucagon IM default in model instructions with patent ac
   assert.equal(result.rolls[0].administration_route, 'IM');
   assert.match(sentOrder, /Glucagon administration route: IM/);
   assert.match(sentOrder, /Honor explicit medication routes and the glucagon IM default/);
-  await s.send('Give glucagon IV');
-  assert.match(sentOrder, /Glucagon administration route: IV/);
+  const held = await s.send('Give glucagon IV');
+  assert.equal(held.rolls.length, 0);
+  assert.match(sentOrder, /Glucagon held: Patient 1 has no usable IV access/);
 });

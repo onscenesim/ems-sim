@@ -8,6 +8,7 @@ const ADVANCED_AIRWAYS = new Set(['intubation', 'supraglottic_airway', 'cricothy
 function applyCapnography(vitals,previous,identity='patient_1',{rolls=[],age,als=true}={}){
   const old=previous?.Capnography;
   const inline=als&&rolls.some(r=>ADVANCED_AIRWAYS.has(r.procedure_id)&&r.outcome==='SUCCESS'&&!r.continued);
+  const mechanical=rolls.some(r=>r.procedure_id==='ventilator'&&r.outcome==='SUCCESS');
   const bagging=rolls.some(r=>r.procedure_id==='bvm'&&r.outcome==='SUCCESS');
   if(!vitals&&!inline&&!(bagging&&old))return vitals;
   vitals ||= { ...previous };
@@ -15,7 +16,7 @@ function applyCapnography(vitals,previous,identity='patient_1',{rolls=[],age,als
   const measured=number(vitals.ETCO2,150),rr=number(vitals.RR,100);
   const source=choice('CapnoSource',Object.keys(Capno.sources))||(inline?'airway':old?.source||'unknown');
   const status=choice('CapnoStatus',['connected','disconnected','unplaced'])||(inline?'connected':old?.status==='disconnected'?'disconnected':measured!=null||vitals.CapnoSource?'connected':old?.status||'unplaced');
-  const ventilation=choice('CapnoVentilation',['manual','mechanical','paused','spontaneous'])
+  const ventilation=(mechanical?'mechanical':null)||choice('CapnoVentilation',['manual','mechanical','paused','spontaneous'])
     || (bagging||inline?'manual':old?.source===source?old.ventilation:null)
     || (source==='airway'?'manual':null);
   const result={...vitals};

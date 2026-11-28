@@ -3,12 +3,16 @@ const ECG = require('../../public/twelve-lead');
 const { hasCardiacMonitor } = require('./equipment');
 // Store snapshots with the turn: existing persistence, rollback and resume paths
 // already serialize turns. Reading an old acquisition never regenerates it.
-function acquireTwelveLeads({seed, vitals, rolls, patientId='patient_1', minute=0, turn=0, sessionId='', patientRecords=[],ink, backup=null}) {
+function acquireTwelveLeads({seed, vitals, rolls, patientId='patient_1', patientVitals={}, minute=0, turn=0, sessionId='', patientRecords=[],ink, backup=null}) {
   if (!hasCardiacMonitor(seed, backup)) return [];
-  return (rolls||[]).filter(r=>Object.hasOwn(ECG.catalog.procedureViews,r.procedure_id) && !r.no_roll).map((r,i)=> ECG.create({
-    view:ECG.catalog.procedureViews[r.procedure_id],ink,seed:patientId==='patient_1'?seed:{}, vitals:vitals||{}, outcome:r.outcome,
-    patientId, minute, patient:patientRecords.find(p=>p.id===patientId)||{}, id:`${sessionId}:${turn}:${i}:${patientId}`,
-  }));
+  return (rolls||[]).filter(r=>Object.hasOwn(ECG.catalog.procedureViews,r.procedure_id) && !r.no_roll).map((r,i)=> {
+    const target=/^patient_\d+$/.test(r.patient)?r.patient:patientId;
+    return ECG.create({
+      view:ECG.catalog.procedureViews[r.procedure_id],ink,seed:target==='patient_1'?seed:{},
+      vitals:(target===patientId?vitals:patientVitals[target])||{}, outcome:r.outcome,
+      patientId:target, minute, patient:patientRecords.find(p=>p.id===target)||{}, id:`${sessionId}:${turn}:${i}:${target}`,
+    });
+  });
 }
 const isECGProcedure=id=>Object.hasOwn(ECG.catalog.procedureViews,id);
 module.exports = {acquireTwelveLeads,isECGProcedure};

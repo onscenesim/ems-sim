@@ -25,7 +25,7 @@ const SAFETY_SETTINGS = [
 const EMS_SYSTEM_RULES = `For EMS Scenarios, in addition to provided instructions, I always want you to:
 1: Keep scenarios varied and unpredictable
 2: Keep narrator guidance off; named crew follow the CREW BEHAVIOR CONTRACT in the scenario seed
-3: Serious dispatches get an automatic engine backup, and benign sounding dispatches get just an ambulance.
+3: Backup status and arrival follow the server BACKUP STATE and scenario rules.
 4: Keep narrative updates brief, concise, and focused strictly on the immediate clinical scene.`;
 
 const { extractText } = require('./modelResponse');

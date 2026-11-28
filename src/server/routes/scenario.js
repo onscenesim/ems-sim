@@ -17,6 +17,7 @@ const { CREW } = require('../../data/crew');
 const { REGIONS } = require('../../data/regions');
 const { DIFFICULTY_POOL } = require('../../data/config');
 const { PLAYER_SELECTABLE_CATEGORIES, isMultiPatientSeed } = require('../../engine/roller');
+const { ordered } = require('../../engine/command-intent');
 const { detectAllProcedures, splitCareCheckpoint } = require('../../engine/dice');
 const { SHOCK_PROC_IDS, resolveShock } = require('../../engine/shock');
 const { hasCardiacMonitor, unavailableProcedure } = require('../../engine/equipment');
@@ -591,7 +592,7 @@ router.post('/:id/turn', async (req, res) => {
     const msg = splitCareCheckpoint(message.trim()).now;
     const managedWounds = session.wounds?.length > 0;
     const ongoingCare = session.ongoingCareFor(msg);
-    const items = detectAllProcedures(msg)
+    const items = detectAllProcedures(msg, { focus: session.patientFocus?.id, records: session.patientRecords })
       .filter(e => !e.proc.no_roll && !e.precharge && !(managedWounds && ['bleeding_control','tourniquet'].includes(e.proc.id)))
       .filter(e => e.uncertain || !ongoingCare(e)?.continued)
       .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -614,7 +615,7 @@ router.post('/:id/turn', async (req, res) => {
     // dice skill: surface a LOAD PATIENT row whenever the wording orders the
     // patient into the rig and the unit isn't already loaded or moving. The key
     // 'load_patient|' round-trips through proc_allow/proc_deny like any other.
-    if (LOAD_REQUEST_RE.test(msg) && !LOAD_QUESTION_RE.test(msg) && !session.hasLoaded && !session.moving) {
+    if (ordered(msg, LOAD_REQUEST_RE) && !LOAD_QUESTION_RE.test(msg) && !session.hasLoaded && !session.moving) {
       items.push({
         key:          'load_patient|',
         procedure_id: 'load_patient',

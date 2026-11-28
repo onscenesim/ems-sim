@@ -1,55 +1,105 @@
 'use strict';
 
 const { normalizeForDetection } = require('./dice');
-const { patientFor } = require('./patient-records');
+const { patientResolver, patientFor } = require('./patient-records');
+const { commandClauses } = require('./command-intent');
 
 const PROCEDURES = new Set([
   'cpr', 'bvm', 'lucas', 'intubation', 'suction', 'supraglottic_airway',
   'oropharyngeal_airway', 'nasopharyngeal_airway', 'spinal_motion_restriction',
-  'cpap', 'oxygen',
+  'cpap', 'bipap', 'ventilator', 'oxygen',
 ]);
+const DEVICES = [
+  ['intubation', /\b(?:ett|et tube|endotracheal tube|tube|extubat\w*)\b/i],
+  ['supraglottic_airway', /\b(?:sga|supraglottic|i[ -]?gel|king|lma)\b/i],
+  ['oropharyngeal_airway', /\b(?:opa|oral airway|oropharyngeal)\b/i],
+  ['nasopharyngeal_airway', /\b(?:npa|nasal airway|nasopharyngeal)\b/i],
+  ['lucas', /\b(?:lucas|autopulse|mechanical (?:cpr|compressions?))\b/i],
+  ['cpr', /\b(?:cpr|compressions?)\b/i],
+  ['bvm', /\b(?:bvm|bagging|manual (?:breaths|ventilation)|bag[ -]valve)\b/i],
+  ['suction', /\bsuction\w*\b/i],
+  ['bipap', /\b(?:bi[ -]?pap|bilevel|bi-level|niv)\b/i],
+  ['cpap', /\bcpap\b/i],
+  ['ventilator', /\b(?:ventilator|transport vent|the vent)\b/i],
+  ['oxygen', /\b(?:oxygen|o2|nrb|non[ -]?rebreather|nasal cannula)\b/i],
+  ['collar', /\b(?:c[ -]?collar|cervical collar)\b/i],
+  ['spinal_motion_restriction', /\b(?:spinal|c-spine|backboard)\b/i],
+];
+const STOP = /\b(?:remove|take off|pull out|extubate|stop|pause|disconnect|discontinue|turn off|d\/c)\b/i;
+const REPLACE = /\b(?:reintubat\w*|reinsert|replace|reapply|restart|redeploy|new (?:tube|airway|mask|device))\b/i;
 
-// Use committed turns so cancelled or refused procedures never establish
-// care. The same history is available after restoring older saved calls.
-function ongoingCareFor(turns, text, focus, records) {
-  const successes = new Set();
+function stopEvents(text, focus, records) {
+  const resolve = patientResolver(text, focus, records);
+  return commandClauses(text).flatMap(clause => {
+    if (!STOP.test(clause.text)) return [];
+    let devices = DEVICES.filter(([, pattern]) => pattern.test(clause.text));
+    if (!devices.length) {
+      const ids = /\bairway\b/i.test(clause.text) ? ['intubation', 'supraglottic_airway', 'oropharyngeal_airway', 'nasopharyngeal_airway']
+        : /\b(?:ventilations?|breaths)\b/i.test(clause.text) ? ['bvm', 'ventilator']
+        : /\bmask\b/i.test(clause.text) ? ['cpap', 'bipap', 'oxygen'] : [];
+      devices = ids.map(id => [id]);
+    }
+    return devices.map(([procedure_id]) => ({
+      procedure_id, patient: resolve(clause.index), active: false, orderIndex: clause.index,
+    }));
+  });
+}
+
+function faultEvents(reply, focus, records) {
+  return String(reply).replace(/\[[^\]]*\]/g, '').split(/[.;!?\n]|\b(?:and|but|while)\b/i).flatMap(sentence => {
+    if (/\b(?:no|not|without|never|if|risk|previously|earlier)\b/i.test(sentence)) return [];
+    return DEVICES.filter(([, pattern]) => pattern.test(sentence)
+      && /\b(?:stopped|stops|fails|failed|malfunction\w*|dislodged|disconnected|removed|switched off)\b/i.test(sentence))
+      .map(([procedure_id]) => ({ procedure_id, patient: patientFor(sentence, focus, records), active: false, orderIndex: Infinity }));
+  });
+}
+
+function careEvents(text, rolls, focus, records, reply = '') {
+  const events = stopEvents(text, focus, records);
+  for (const roll of rolls) {
+    if (!PROCEDURES.has(roll.procedure_id) || roll.continued) continue;
+    const patient = /^patient_\d+$/.test(roll.patient) ? roll.patient : focus || 'patient_1';
+    const active = roll.outcome === 'SUCCESS';
+    events.push({ procedure_id: roll.procedure_id, patient, active, orderIndex: roll.orderIndex ?? -1 });
+    if (roll.trauma_variant === 'collar') events.push({ procedure_id: 'collar', patient, active, orderIndex: roll.orderIndex ?? -1 });
+    if (active && ['cpap', 'bipap', 'ventilator', 'bvm'].includes(roll.procedure_id)) {
+      for (const id of ['cpap', 'bipap', 'ventilator', 'bvm'].filter(id => id !== roll.procedure_id)) {
+        events.push({ procedure_id: id, patient, active: false, orderIndex: roll.orderIndex ?? -1 });
+      }
+    }
+  }
+  events.push(...faultEvents(reply, focus, records));
+  return events.sort((a, b) => a.orderIndex - b.orderIndex)
+    .map(({ orderIndex, ...event }) => event);
+}
+
+function activeCare(turns, records) {
+  const active = new Set();
   for (const turn of turns) {
-    for (const roll of turn.rolls || []) {
-      if (roll.no_roll || roll.outcome !== 'SUCCESS' || !PROCEDURES.has(roll.procedure_id)) continue;
-      const patient = /^patient_\d+$/.test(roll.patient) ? roll.patient : turn.patientFocus?.id || 'patient_1';
-      successes.add(`${patient}|${roll.procedure_id}`);
-      if (roll.trauma_variant === 'collar') successes.add(`${patient}|collar`);
+    const focus = turn.patientFocus?.id || 'patient_1';
+    const events = turn.careEvents || careEvents(turn.report || turn.skip ? '' : turn.user || '', turn.rolls || [], focus, records, turn.assistant);
+    for (const event of events) {
+      const key = `${event.patient}|${event.procedure_id}`;
+      if (event.active) active.add(key); else active.delete(key);
     }
   }
+  return active;
+}
 
+function ongoingCareFor(turns, text, focus, records) {
+  const successes = activeCare(turns, records);
   const order = normalizeForDetection(text);
-  const boundaries = /([;.!?\n])|\b(?:and|then|while|also)\b/gi;
-  const clauses = [];
-  let sentence = [];
-  let start = 0;
-  let patientFocus = focus || 'patient_1';
-  for (const end of [...order.matchAll(boundaries), { index: order.length, 0: '', 1: true }]) {
-    const clause = order.slice(start, end.index);
-    const patient = patientFor(clause, null, records);
-    sentence.push({ end: end.index, patient, focus: patientFocus });
-    if (patient && /^\s*(?:focus on|switch to|turn to|move to)\b/i.test(clause)) patientFocus = patient;
-    if (end[1]) {
-      // A single stated patient can qualify a linked order such as
-      // "suction and intubate patient 2". Explicitly split targets still win.
-      const targets = new Set(sentence.map(part => part.patient).filter(Boolean));
-      const shared = targets.size === 1 ? [...targets][0] : null;
-      for (const part of sentence) clauses.push({ end: part.end, patient: part.patient || shared || part.focus });
-      sentence = [];
-    }
-    start = end.index + end[0].length;
-  }
+  const resolve = patientResolver(order, focus, records);
+  const stops = stopEvents(order, focus, records);
   return entry => {
     const id = entry.proc.id;
-    if (!PROCEDURES.has(id) && id !== 'glucometry') return null;
-    const patient = clauses.find(clause => entry.orderIndex < clause.end)?.patient || patientFocus;
+    const patient = resolve(entry.orderIndex);
     const care = entry.presentation?.trauma_variant === 'collar' ? 'collar' : id;
-    return { patient, continued: successes.has(`${patient}|${care}`) };
+    const stopped = stops.some(event => event.patient === patient && event.procedure_id === care && event.orderIndex <= entry.orderIndex);
+    const clause = commandClauses(order).find(clause => clause.index <= entry.orderIndex
+      && entry.orderIndex <= clause.index + clause.text.length + 2)?.text || entry.sentence || '';
+    return { patient, continued: PROCEDURES.has(id) && !stopped && !REPLACE.test(clause) && successes.has(`${patient}|${care}`) };
   };
 }
 
-module.exports = { ongoingCareFor };
+module.exports = { ongoingCareFor, careEvents, stopEvents, activeCare };

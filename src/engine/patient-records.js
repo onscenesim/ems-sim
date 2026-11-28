@@ -69,4 +69,26 @@ function patientFor(source, focus = 'patient_1', records = []) {
   return matched.length === 1 ? matched[0].id : focus;
 }
 
-module.exports = { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords, patientFor };
+// Resolve every detected action, including access and medication, against the
+// same patient clauses. A final focus tag must not reassign an earlier action.
+function patientResolver(text, focus = 'patient_1', records = []) {
+  const boundaries = /([;.!?\n])|\b(?:and|then|while|also)\b/gi;
+  const clauses = [];
+  let sentence = [], start = 0, patientFocus = focus || 'patient_1';
+  for (const end of [...text.matchAll(boundaries), { index: text.length, 0: '', 1: true }]) {
+    const clause = text.slice(start, end.index);
+    const patient = patientFor(clause, null, records);
+    sentence.push({ end: end.index, patient, focus: patientFocus });
+    if (patient && /^\s*(?:focus on|switch to|turn to|move to)\b/i.test(clause)) patientFocus = patient;
+    if (end[1]) {
+      const targets = new Set(sentence.map(part => part.patient).filter(Boolean));
+      const shared = targets.size === 1 ? [...targets][0] : null;
+      for (const part of sentence) clauses.push({ end: part.end, patient: part.patient || shared || part.focus });
+      sentence = [];
+    }
+    start = end.index + end[0].length;
+  }
+  return index => clauses.find(clause => index < clause.end)?.patient || patientFocus;
+}
+
+module.exports = { initialPatientRecords, ensurePatientRecord, parsePatientRecords, updatePatientRecords, patientFor, patientResolver };
