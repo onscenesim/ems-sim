@@ -7,7 +7,13 @@ function visibleVitals(vitals) {
   for (const key of ['HR', 'BP', 'SpO2', 'EtCO2', 'ETCO2', 'RR', 'Temp', 'Glucose', 'BGL', 'GCS', 'Pain', 'CapRefill', 'Rhythm']) {
     if (vitals?.[key] !== undefined) result[key] = vitals[key];
   }
-  if (vitals?.PulseOx) result.Pleth = vitals.PulseOx.quality;
+  if (vitals?.PulseOx) {
+    result.Pleth = vitals.PulseOx.quality;
+    if (['good', 'poor'].includes(vitals.PulseOx.quality)
+        && Number.isFinite(vitals.PulseOx.pulseRate) && vitals.PulseOx.pulseRate > 0) {
+      result.PR = vitals.PulseOx.pulseRate;
+    }
+  }
   return result;
 }
 

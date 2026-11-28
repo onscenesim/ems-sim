@@ -3,7 +3,7 @@
 const { CREW } = require('../data/crew');
 const { captainPresent } = require('./prompts/transport');
 const { logEvent } = require('./logger');
-const { orderedDestination, roadNetwork, origin, travelSeconds } = require('./transport');
+const { orderedDestination, correctedDestination, destinationDepartureOrdered, hospitalReportDestination, roadNetwork, origin, travelSeconds } = require('./transport');
 
 const CATASTROPHE_RATES = Object.freeze({ EASY: 0, NORMAL: 0, HARD: 0.01, BLACK_CLOUD: 0.10 });
 const CATASTROPHES = Object.freeze([
@@ -85,6 +85,7 @@ function prepareIncident(session, userText, reportMode, skipMode, wantsLoad) {
   const arrival = ['to_hospital', 'to_arrival'].includes(skipMode)
     || (session.moving && session.transportPosition && session._remainingTransportMinutes() === 0);
   const ordered = orderedDestination(session.seed, userText);
+  const reportDest = hospitalReportDestination(session, userText, reportMode);
   const departure = !reportMode && (DEPART_RE.test(userText)
     || (ordered && /\b(?:depart|drive|transport|head|go|leave|take)\b/i.test(userText))
     || ['to_hospital', 'to_arrival'].includes(skipMode));
@@ -96,7 +97,8 @@ function prepareIncident(session, userText, reportMode, skipMode, wantsLoad) {
     || (event.stage === 'depart' && departure)
     || (event.stage === 'transport' && !reportMode && (session.moving || departure))
     || (event.stage === 'arrival' && arrival)
-    || (event.stage === 'diversion' && ((reportMode && (session.moving || session.hasLoaded) && !/medical control|backup|dispatch/i.test(userText)) || arrival))
+    || (event.stage === 'diversion' && ((reportDest && (session.moving || session.hasLoaded)
+      && reportDest === (session.transportDest || 'nearest')) || arrival))
     || (event.stage === 'crew' && !reportMode && session.turns.length > 0 && session.sceneMinute >= 2
       && (session.seed.catastrophe.role === 'partner' || captainHere || backupDue))
     || (event.stage === 'backup' && (backupDue || (session.seed.backup_present_on_arrival && session.turns.length > 0)))
@@ -137,7 +139,32 @@ function prepareIncident(session, userText, reportMode, skipMode, wantsLoad) {
   }
   if (state.resolved) note += ' Recovery is already established. Do not retrigger this incident; normal care and transport with the replacement resources may continue. Original unavailable or incapacitated crew never resume duties.';
   note += ']';
-  return { skipMode, note, event, wasActive, blocked, advanceLimit };
+  const rerouteDest = !reportMode && (destinationDepartureOrdered(session.seed, userText) || correctedDestination(session, userText))
+    ? ordered : null;
+  return { skipMode, note, event, wasActive, blocked, advanceLimit, rerouteDest };
+}
+
+// A usable, provider-directed reroute is an actual recovery even if the narrator
+// forgets its bookkeeping tag. Questions/reports and unavailable routes cannot
+// clear the incident. This is also used to validate a draft before committing it.
+function diversionReroute(session, rawReply, context, transportDest) {
+  const state = session.incident;
+  const dest = context.rerouteDest;
+  if (state?.id !== 'er_divert' || state.resolved || !context.wasActive
+      || !dest || dest === state.divertedDest || !roadNetwork(session.seed).ground[dest]) return null;
+  if (transportDest && transportDest !== dest) return null;
+  const prose = rawReply.replace(/\[[^\]]*\]/g, '');
+  const sentences = prose.split(/[.!?\n]/);
+  if (sentences.some(sentence => (orderedDestination(session.seed, sentence) === dest
+      || (!orderedDestination(session.seed, sentence) && /\b(?:route|road|pass)\b/i.test(sentence)))
+      && /\b(?:closed|inaccessible|blocked|unavailable|cannot accept|can't accept|refus\w*|declin\w*)\b/i.test(sentence))) return null;
+  const acknowledged = /\[INCIDENT_RECOVERY:\s*alternate_destination\s*\]/i.test(rawReply)
+    || (/\[EN_ROUTE\b/i.test(rawReply) && (!transportDest || transportDest === dest))
+    || sentences.some(sentence => !/\b(?:not|never|cannot|can't|waiting|await|before|once|if|until)\b/i.test(sentence)
+      && ((!orderedDestination(session.seed, sentence) || orderedDestination(session.seed, sentence) === dest)
+        && /\bshifts? into drive\b|\b(?:ambulance|rig|unit|medic\s*\d+)\b.{0,80}\b(?:departs?|redirects?|pulls? away|rolls?|heads?|eases?)\b/i.test(sentence)
+        || (orderedDestination(session.seed, sentence) === dest && /\b(?:accepts?|accepted|standing by|ready to receive)\b/i.test(sentence))));
+  return acknowledged ? dest : null;
 }
 
 function reconcileIncident(session, rawReply, context, transportDest, userText, timeMinutes) {
@@ -149,6 +176,13 @@ function reconcileIncident(session, rawReply, context, transportDest, userText, 
       // A model cannot grant itself forty minutes in a one-minute care turn.
       const limit = session.sceneMinute + context.advanceLimit;
       if (Math.min(timeMinutes ?? session.sceneMinute, limit) >= state.bedAvailableMinute) state.resolved = true;
+    } else if (event.id === 'er_divert') {
+      const dest = diversionReroute(session, rawReply, context, transportDest);
+      if (dest) {
+        state.resolved = true;
+        context.recoveredDestination = dest;
+        logEvent(session.seed, { event_type: 'complication', detail: `${state.id}: ${event.recovery} completed` }, session.sceneMinute);
+      }
     } else if (tags.includes(event.recovery)) {
       const providerResponse = /\b(?:request|call|arrange|send|wait|transfer|reassess|repackage|reload|reroute|redirect|divert|depart|transport|drive|go|head|continue)\b/i.test(userText);
       if (providerResponse && (event.id !== 'er_divert' || (transportDest && transportDest !== state.divertedDest))) {
@@ -186,5 +220,5 @@ function enforceIncidentState(session) {
   }
 }
 
-module.exports = { CATASTROPHE_RATES, CATASTROPHES, crewMedicalProfile, rollCatastrophe, complicationContract,
+module.exports = { CATASTROPHE_RATES, CATASTROPHES, crewMedicalProfile, rollCatastrophe, complicationContract, diversionReroute,
   prepareIncident, reconcileIncident, enforceIncidentState };

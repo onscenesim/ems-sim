@@ -200,7 +200,7 @@ test('diversion stays hidden until call-ahead, otherwise appears on arrival, and
     assert.equal(s.incident.id, 'er_divert');
     assert.equal(s.arrivedAtHospital, false);
     reply('Continue to the same hospital.', '10:00', '[INCIDENT_RECOVERY: alternate_destination]\n[EN_ROUTE:nearest]');
-    await s.send('Depart for the nearest hospital.');
+    await assert.rejects(s.send('Depart for the nearest hospital.'), /No changes were saved/);
     assert.equal(s.incident.resolved, false);
     reply('The major hospital accepts the report; the ambulance redirects.', '12:00', '[INCIDENT_RECOVERY: alternate_destination]\n[EN_ROUTE:major]');
     await s.send('Redirect transport to the major hospital.');

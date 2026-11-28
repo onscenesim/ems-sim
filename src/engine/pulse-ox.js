@@ -66,7 +66,7 @@ function derivePulseOx(vitals, previous = null, seed = {}) {
   // saturation is not a sensor failure; disconnection, dropout and absent
   // perfusion are represented explicitly below.
   const hasReading = trueSpO2 !== null;
-  const pulseRate = Number(valueOf(vitals.PulseRate) ?? valueOf(vitals.HR));
+  const pulseRate = Number(valueOf(vitals.PulseRate) ?? valueOf(vitals.HR) ?? previous?.pulseRate);
   let quality = 'good', reason = 'reliable';
   if (probe !== 'connected') { quality = 'absent'; reason = probe; }
   else if (perfusion === 'absent') { quality = 'absent'; reason = 'no_perfusion'; }
@@ -84,7 +84,7 @@ function derivePulseOx(vitals, previous = null, seed = {}) {
   return {
     trueSpO2, displayedSpO2, quality, reliable: quality === 'good', reason,
     probe, perfusion, artifact,
-    pulseRate: quality === 'absent' ? 0 : Number.isFinite(pulseRate) && pulseRate > 0 ? Math.min(300, pulseRate) : 75,
+    pulseRate: quality === 'absent' ? 0 : Number.isFinite(pulseRate) && pulseRate > 0 ? Math.min(300, pulseRate) : null,
   };
 }
 

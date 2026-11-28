@@ -8,6 +8,15 @@ const PlethWaveform = require('../public/pleth');
 const normal = { HR: 80, SpO2: 98, BP: { value: '120/80', t: 'T+1:00' }, Rhythm: 'sinus' };
 const equipment = { complication_type: 'equipment_failure' };
 
+test('pulse rate persists independently of ECG and unknown measurements do not become 75 bpm', () => {
+  const measured = applyPulseOx({ TrueSpO2: 98, PulseOxProbe: 'connected', PulseRate: 82, Perfusion: 'normal' });
+  assert.equal(measured.HR, undefined);
+  assert.equal(measured.Rhythm, undefined);
+  assert.equal(measured.PulseOx.pulseRate, 82);
+  assert.equal(applyPulseOx({ TrueSpO2: 98 }, measured).PulseOx.pulseRate, 82);
+  assert.equal(applyPulseOx({ TrueSpO2: 98, PulseOxProbe: 'connected' }).PulseOx.pulseRate, null);
+});
+
 test('explicit central pulse findings reconcile missing perfusion without changing ordinary retention', () => {
   const before = applyPulseOx({ ...normal, SpO2: 91, Perfusion: 'poor' });
   for (const narrative of [

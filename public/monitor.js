@@ -3,6 +3,37 @@
   else root.MonitorUI = factory();
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
+  const valueOf = raw => raw && typeof raw === 'object' ? raw.value : raw;
+  function rateReading(vitals) {
+    const raw = valueOf(vitals?.HR);
+    const hr = raw !== null && raw !== undefined && raw !== '' && Number.isFinite(Number(raw)) ? Number(raw) : null;
+    if (valueOf(vitals?.Rhythm)) return { label: 'HR', source: 'ecg', value: hr };
+    const ox = vitals?.PulseOx;
+    if (['good', 'poor'].includes(ox?.quality) && Number.isFinite(ox.pulseRate) && ox.pulseRate > 0) {
+      return { label: 'PR', source: 'pulse_ox', value: ox.pulseRate };
+    }
+    if (hr === null && ox && ox.probe !== 'unplaced') return { label: 'PR', source: 'pulse_ox', value: null };
+    return { label: 'HR', source: hr !== null ? 'manual' : 'none', value: hr };
+  }
+  function updateRate(doc, vitals) {
+    const reading = rateReading(vitals);
+    const pulseOx = reading.source === 'pulse_ox';
+    for (const label of doc.querySelectorAll('[data-rate-label]')) label.textContent = reading.label;
+    for (const el of doc.querySelectorAll('[data-vital="HR"]')) {
+      el.dataset.rateSource = reading.source;
+      el.title = pulseOx ? 'Pulse rate from the pulse oximeter' : reading.source === 'ecg' ? 'ECG heart rate' : 'Manually assessed pulse rate';
+      // The ECG's beat detector owns its live numeric readout. A pulse-only
+      // measurement must never place ECG leads or start an electrical trace.
+      if (reading.source !== 'ecg') el.textContent = reading.value === null ? '\u2014\u2014' : String(reading.value);
+    }
+    for (const cell of doc.querySelectorAll('[data-rate-cell]')) {
+      cell.dataset.waveformSelect = pulseOx ? 'pleth' : 'ecg';
+      const label = pulseOx ? 'Show SpO₂ waveform' : 'Show ECG waveform';
+      cell.setAttribute('aria-label', label);
+      cell.title = label;
+    }
+    return reading;
+  }
   const BP_INTERVALS = [0, 1, 2, 3, 5, 10, 15];
   function createBPSchedule() {
     const patients = new Map();
@@ -264,5 +295,5 @@
       },
     };
   }
-  return { createBPHistory, createBPSchedule, trendSVG, mount };
+  return { rateReading, updateRate, createBPHistory, createBPSchedule, trendSVG, mount };
 });

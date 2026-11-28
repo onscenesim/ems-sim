@@ -6,6 +6,21 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { evaluateObjectives, decisionTimeline } = require('../src/engine/learning');
 
+test('the review and text export include measured pulse-ox rate without inventing an ECG HR', () => {
+  const ox = { quality: 'good', probe: 'connected', pulseRate: 82, trueSpO2: 98 };
+  const review = evaluateObjectives({}, [{ user: 'Fix the sat probe.', sceneMinute: 3.1667, vitals: { SpO2: 98, PulseOx: ox } }]);
+  assert.deepEqual(review.timeline[0].vitals, { SpO2: 98, Pleth: 'good', PR: 82 });
+  const source = fs.readFileSync(path.join(__dirname, '../public/practice.js'), 'utf8');
+  const exportText = vm.runInNewContext(`${source}\nPracticeUI.exportText`, {});
+  const result = exportText(review);
+  assert.match(result, /PR: 82/);
+  assert.doesNotMatch(result, /HR: 82|trueSpO2/);
+  for (const quality of ['absent', 'unreliable']) {
+    const hidden = evaluateObjectives({}, [{ vitals: { PulseOx: { ...ox, quality } } }]);
+    assert.equal(hidden.timeline[0].vitals.PR, undefined);
+  }
+});
+
 test('review preserves the call record without manufacturing objectives or questions', () => {
   const review = evaluateObjectives({ category: 'arrest', learning_objectives: ['initial_approach', 'interventions', 'handoff'] }, [
     { user: 'Go inside and lay eyes on the patient', assistant: 'The patient is unresponsive.', sceneMinute: 1, vitals: { GCS: 3, PulseOx: { quality: 'absent', trueSpO2: 45 } } },

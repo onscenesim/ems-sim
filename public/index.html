@@ -769,8 +769,8 @@
           <canvas id="capno-strip" role="img" aria-label="CO₂ waveform: not connected"></canvas>
         </div>
       </div>
-      <div class="vital-cell vital-hr" role="button" tabindex="0" data-waveform-select="ecg" aria-label="Show ECG waveform" title="Show ECG waveform">
-        <div class="vital-label">HR</div>
+      <div class="vital-cell vital-hr" role="button" tabindex="0" data-rate-cell data-waveform-select="ecg" aria-label="Show ECG waveform" title="Show ECG waveform">
+        <div class="vital-label" data-rate-label>HR</div>
         <div class="vital-value" data-vital="HR">&mdash;&mdash;</div>
       </div>
       <div class="vital-cell vital-bp" id="nibp-cell" title="Tap to cycle NIBP">
@@ -3460,7 +3460,7 @@
       <div class="monitor-live">
         <section class="monitor-channel monitor-ecg" aria-label="ECG">
           <div class="monitor-trace" data-monitor-trace="ecg-waveform"></div>
-          <div class="monitor-number"><span>HR</span><strong data-vital="HR">——</strong><small>bpm</small></div>
+          <div class="monitor-number"><span data-rate-label>HR</span><strong data-vital="HR">——</strong><small>bpm</small></div>
         </section>
         <section class="monitor-channel monitor-pleth" aria-label="SpO₂">
           <div class="monitor-trace" data-monitor-trace="pleth-waveform"></div>
@@ -3484,9 +3484,9 @@
       </section>
     </div>
   </dialog>
-  <script src="monitor.js?v=5"></script>
+  <script src="monitor.js?v=6"></script>
   <script src="airway-scenes.js?v=3"></script>
-  <script src="app.js?v=155"></script>
+  <script src="app.js?v=156"></script>
   <script src="tutorial.js?v=1"></script>
   <script src="cosmetics-catalog.js?v=4"></script>
   <script src="pen-kit.js?v=9"></script>

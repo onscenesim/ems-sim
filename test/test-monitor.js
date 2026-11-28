@@ -3,6 +3,40 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { createBPHistory, createBPSchedule, trendSVG } = require('../public/monitor');
+const { rateReading, updateRate } = require('../public/monitor');
+
+test('pulse-only measurements render on both rate readouts without creating ECG data', () => {
+  const vitals = { SpO2: 98, PulseOx: { quality: 'good', probe: 'connected', pulseRate: 82 } };
+  const before = structuredClone(vitals);
+  const labels = [{}, {}], values = [{ dataset: {} }, { dataset: {} }];
+  const cell = { dataset: {}, setAttribute(key, value) { this[key] = value; } };
+  const doc = { querySelectorAll: selector => ({ '[data-rate-label]': labels, '[data-vital="HR"]': values, '[data-rate-cell]': [cell] })[selector] };
+  assert.deepEqual(updateRate(doc, vitals), { label: 'PR', source: 'pulse_ox', value: 82 });
+  assert.ok(labels.every(label => label.textContent === 'PR'));
+  assert.ok(values.every(value => value.textContent === '82'));
+  assert.equal(cell.dataset.waveformSelect, 'pleth');
+  assert.deepEqual(vitals, before, 'display fallback must not invent HR or place ECG leads');
+
+  updateRate(doc, { PulseOx: { quality: 'absent', probe: 'disconnected', pulseRate: 0 } });
+  assert.ok(values.every(value => value.textContent === '——'));
+  updateRate(doc, vitals);
+  assert.ok(values.every(value => value.textContent === '82'), 'reseating the probe restores the rate');
+  updateRate(doc, null);
+  assert.ok(labels.every(label => label.textContent === 'HR'));
+  assert.ok(values.every(value => value.textContent === '——'));
+});
+
+test('ECG and manual heart rates retain their sources while bad pulse-ox signals cannot invent a rate', () => {
+  const ox = { quality: 'good', probe: 'connected', pulseRate: 82 };
+  assert.deepEqual(rateReading({ HR: 96, Rhythm: 'sinus', PulseOx: ox }), { label: 'HR', source: 'ecg', value: 96 });
+  assert.deepEqual(rateReading({ HR: { value: 76 } }), { label: 'HR', source: 'manual', value: 76 });
+  for (const quality of ['unreliable', 'absent']) assert.equal(rateReading({ PulseOx: { ...ox, quality } }).value, null);
+  assert.equal(rateReading({ PulseOx: { ...ox, pulseRate: null } }).value, null);
+  assert.equal(rateReading({ PulseOx: { ...ox, quality: 'poor' } }).value, 82);
+  const value = { textContent: '101', dataset: {} };
+  updateRate({ querySelectorAll: selector => selector === '[data-vital="HR"]' ? [value] : [] }, { HR: 96, Rhythm: 'sinus', PulseOx: ox });
+  assert.equal(value.textContent, '101', 'the ECG beat detector continues to own its live number');
+});
 
 test('monitor startup cue is first-open only, repeated opens are silent while visible, and a new call resets it', () => {
   const nodes = new Map(), opens = [];

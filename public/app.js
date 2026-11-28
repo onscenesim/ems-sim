@@ -3815,7 +3815,7 @@ function formatBackendSection(t, backend) {
       lines.push(`      suppressed: ${turn.suppressed.map(s => (s.matchedKey || s.procedure_id)).join(', ')}`);
     }
     if (turn.vitals) {
-      const v = Object.entries(turn.vitals).map(([k, raw]) => `${k}=${raw && typeof raw === 'object' ? raw.value : raw}`).join(' ');
+      const v = Object.entries(turn.vitals).map(([k, raw]) => `${k}=${raw && typeof raw === 'object' ? ('value' in raw ? raw.value : JSON.stringify(raw)) : raw}`).join(' ');
       lines.push(`      vitals: ${v}`);
     }
   }
@@ -4649,6 +4649,7 @@ function applyVitals(vitals) {
   updateRhythmStrip(currentVitals);
   updatePlethStrip(currentVitals);
   updateCapnography(currentVitals);
+  MonitorUI.updateRate(document, currentVitals);
   monitorView.update(currentVitals, monitorSceneMinute);
 }
 
@@ -4782,6 +4783,7 @@ function resetVitals() {
   rhythmStrip.motionMix=0;
   updatePlethStrip(null);
   updateCapnography(null);
+  MonitorUI.updateRate(document, null);
   selectMonitorWaveform('ecg');
   for (const name of VITAL_FIELDS) {
     for (const el of document.querySelectorAll(`[data-vital="${name}"]`)) {

@@ -2,15 +2,17 @@
 
 const { assembleSeedBlock, buildDebriefContext } = require('./assembler');
 const { DESTINATION_DIALOGUE_POLICY, BACKUP_TRANSPORT_POLICY, captainPresent } = require('./prompts/transport');
-const { prepareIncident, reconcileIncident, enforceIncidentState } = require('./catastrophes');
+const { prepareIncident, reconcileIncident, enforceIncidentState, diversionReroute } = require('./catastrophes');
 const { reviewText } = require('./instructor');
 const { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, typedTransportSkip,
-  monitoringTransport, hospitalArrival, significantTransportChange, transportStatus } = require('./transport');
+  monitoringTransport, hospitalArrival, significantTransportChange, transportStatus,
+  correctedDestination, destinationDepartureOrdered, transportContext } = require('./transport');
+const { transportNarrationIssues } = require('./transport-authority');
 const { logEvent, closeScenario } = require('./logger');
 const { detectWithConfirmation, splitCareCheckpoint, getProcedure, rollProcedure, PRECHARGE_RE } = require('./dice');
 const { careSeconds, clockStamp, hasBundledSuction } = require('./care-timing');
 const { ongoingCareFor, careEvents } = require('./ongoing-care');
-const { ordered, departureOrdered } = require('./command-intent');
+const { ordered } = require('./command-intent');
 const { patientOf, addPlacement, accessRemovals, reconcileAccess, needsAccess } = require('./vascular-access');
 const { sceneAuthorityIssues } = require('./scene-authority');
 const { SHOCK_PROC_IDS } = require('./shock');
@@ -691,6 +693,8 @@ class Session {
     const originalOrder = userText;
     const checkpoint = reportMode || skipMode ? { now: userText, pending: '' } : splitCareCheckpoint(userText);
     userText = checkpoint.now;
+    const blockedHandoff = () => this.incident && !this.incident.resolved
+      && /\btransfer(?:red|ring)? (?:of )?care\b/i.test(userText);
 
     // CLOSE COMMAND — no model turn. The END CALL button (and typed close phrases
     // like "end scenario") end the call directly. If we let the model respond to
@@ -700,6 +704,7 @@ class Session {
     // NOT short-circuited here — they still get the ED's acknowledgment and close
     // via the post-reply check below.)
     if (!reportMode && !skipMode && isDebriefTrigger(userText)
+        && !blockedHandoff()
         && !(this.incident?.bedAvailableMinute && !this.incident.resolved
           && !/\b(?:end|stop) (?:the )?(?:call|scenario)\b/i.test(userText))) {
       const unit = this.seed.unit_name || 'Unit';
@@ -796,14 +801,15 @@ class Session {
     const previousCrew = this.crewStatus;
     const wasArrived = this.arrivedAtHospital;
     const wasDriving = this.moving && !transportParked && !wasArrived;
+    const correctedDest = !reportMode && correctedDestination(this, userText);
     const departureAuthorized = !reportMode && !loadDenied
-      && (Boolean(skipMode && skipMode !== 'to_ambulance') || departureOrdered(userText));
-    const changesRoute = departureAuthorized && REROUTE_RE.test(userText);
+      && (Boolean(skipMode && skipMode !== 'to_ambulance') || destinationDepartureOrdered(this.seed, userText) || Boolean(correctedDest));
+    const changesRoute = departureAuthorized && (REROUTE_RE.test(userText) || Boolean(correctedDest));
     const explicitDest = changesRoute ? orderedDestination(this.seed, userText) : null;
     const stopping = wasDriving && !reportMode && !skipMode && ordered(userText, STOP_TRANSPORT_RE);
     const resuming = departureAuthorized && /\b(?:resume|continue driving|keep driving|start driving|pull back out|roll out)\b/i.test(userText);
-    const diversionArrival = !this.incident && ['to_hospital', 'to_arrival'].includes(skipMode);
-    const incidentContext = prepareIncident(this, userText, reportMode, skipMode, wantsLoad);
+    let diversionArrival = !this.incident && ['to_hospital', 'to_arrival'].includes(skipMode);
+    let incidentContext = prepareIncident(this, userText, reportMode, skipMode, wantsLoad);
     skipMode = incidentContext.skipMode;
     const arrivalSkip = ['to_hospital', 'to_arrival'].includes(skipMode);
     const remainingBefore = this._remainingTransportMinutes();
@@ -920,6 +926,8 @@ class Session {
         messageText += `\n\n[CAD: Ground time from this position: ${choices.join('; ')}. If starting or resuming ground transport, end with the rig just departing. Let CAD track arrival.]`;
       }
     }
+    const cadContext = transportContext(this);
+    if (cadContext) messageText += '\n\n' + cadContext;
     // Deterministic load directive — force the model to resolve loading atomically
     // this turn instead of deferring it, so narration and the [LOADING] tag agree.
     if (wantsLoad && !incidentBlocksLoad()) {
@@ -1026,18 +1034,45 @@ class Session {
 
     const modelStarted = performance.now();
     let rawReply = await sendTurn(this.systemPrompt, this.messages, options);
+    // A model turn can reach the hospital without an explicit skip. Stage the
+    // arrival incident BEFORE saving its prose, rather than appending a refusal
+    // after a contradictory welcome/transfer has already happened in the story.
+    let arrivalRepair = '';
+    if (!this.incident && wasDriving && network.ground[previousDest] && this.transportPosition
+        && (hospitalArrival(this.seed, rawReply) || parseTimeTag(rawReply).timeMinutes >= expectedArrival)) {
+      const arrivalContext = prepareIncident(this, userText, reportMode, 'to_arrival', false);
+      if (arrivalContext.blocked) {
+        incidentContext = arrivalContext;
+        diversionArrival = true;
+        const arrivalPosition = drive(network, this.transportPosition, previousDest, remainingBefore);
+        arrivalRepair = `The ambulance reaches the recorded destination at T+${clockStamp(expectedArrival)}, where the receiving incident activates. End at that arrival with the crew retaining care. ${arrivalContext.note}\n${transportContext({ ...this, transportPosition: arrivalPosition, sceneMinute: expectedArrival })}`;
+        this.messages.at(-1).content += '\n\n' + arrivalRepair;
+      }
+    }
     const authorityIssues = text => {
       const checked = reconcileAccess(this.access, reconcileRolls(rolls, text),
         reportMode || skipMode ? [] : accessRemovals(userText, this.patientFocus?.id || 'patient_1', this.patientRecords));
-      return sceneAuthorityIssues(text, {
+      const rerouteDest = diversionReroute(this, text, incidentContext, parseEventTags(text).transportDest);
+      const diversionBlocked = this.incident?.id === 'er_divert' && !this.incident.resolved;
+      const issues = sceneAuthorityIssues(text, {
         // Active incidents have their own deterministic transport reconciler.
-        departureAllowed: departureAuthorized || (wasDriving && !stopping) || Boolean(this.incident && !this.incident.resolved),
+        departureAllowed: diversionBlocked ? Boolean(rerouteDest)
+          : departureAuthorized || (wasDriving && !stopping) || Boolean(this.incident && !this.incident.resolved),
         loadingAllowed: wantsLoad || Boolean(skipMode) || departureAuthorized || this.hasLoaded || Boolean(this.incident && !this.incident.resolved),
-        destination: this.transportDest, routeChangeAllowed: changesRoute || Boolean(skipMode) || Boolean(this.incident),
+        destination: this.transportDest, routeChangeAllowed: changesRoute || Boolean(skipMode) || Boolean(this.incident && !diversionBlocked),
         suppressed: [...suppressed, ...checked.suppressed], access: checked.access, rolls: checked.rolls,
       });
+      issues.push(...transportNarrationIssues(this, text, {
+        position: diversionArrival && incidentContext.blocked && network.ground[previousDest]
+          ? drive(network, this.transportPosition || origin(), previousDest, remainingBefore) : this.transportPosition,
+        rerouteDest: rerouteDest || (changesRoute && !incidentContext.blocked ? explicitDest : null),
+        elapsedMinutes: Math.max(0, (parseTimeTag(text).timeMinutes ?? incidentTurnStart) - incidentTurnStart),
+        blocked: Boolean(incidentContext.blocked), arriving: diversionArrival,
+      }));
+      return issues;
     };
     const authorityProblems = authorityIssues(rawReply);
+    if (arrivalRepair) authorityProblems.push(arrivalRepair);
     if (authorityProblems.length) {
       rawReply = await sendTurn(this.systemPrompt, [...this.messages,
         { role: 'assistant', content: rawReply },
@@ -1086,6 +1121,12 @@ class Session {
     }
 
     rawReply = reconcileIncident(this, rawReply, incidentContext, parseEventTags(rawReply).transportDest, userText, parseTimeTag(rawReply).timeMinutes);
+    if (incidentContext.recoveredDestination) {
+      const routeTag = `[EN_ROUTE:${incidentContext.recoveredDestination}]`;
+      rawReply = /\[EN_ROUTE[^\]]*\]/i.test(rawReply)
+        ? rawReply.replace(/\[EN_ROUTE[^\]]*\]/gi, routeTag)
+        : rawReply.replace(/(?=\[(?:CREW_STATUS|PATIENT_FOCUS|VITALS|TIME):)/, routeTag + '\n');
+    }
     const narratedArrival = wasDriving && !stopping && hospitalArrival(this.seed, rawReply);
     const transportEvent = monitoringDrive && !narratedArrival
       && significantTransportChange(this.lastVitals, parseVitalsTag(rawReply).vitals, rawReply);
@@ -1121,6 +1162,10 @@ class Session {
     // declaring it `const` threw "Assignment to constant variable" and 500'd every
     // depart-without-separate-load turn (e.g. skip-to-hospital straight from scene).
     let { cleanedReply: eventClean, loading, enRoute, transportDest } = parseEventTags(timeClean);
+    if (incidentContext.recoveredDestination) {
+      enRoute = true;
+      transportDest = incidentContext.recoveredDestination;
+    }
     const { cleanedReply: baseClean, baseContact } = parseBaseContactTag(eventClean);
     // [ACCESS STATE ...] / [ACCESS ...] is a server-only ledger tag injected into
     // the model's message; the model sometimes echoes it (or invents its own
@@ -1303,6 +1348,11 @@ class Session {
     if (!loadOrdered && !skipMode && !enRoute) loading = false;
     if (loading) this.hasLoaded = true;
     if (enRoute) this.moving = true; // ambulance is rolling — CPR DC increases
+    if (incidentContext.recoveredDestination) {
+      const separateDriver = this.crewStatus?.driver === 'anonymous'
+        || (this.seed.crew_transport_driver && this.seed.crew_transport_driver !== this.seed.crew_partner);
+      this.crewStatus = { ...this.crewStatus, partner: separateDriver ? 'in_back' : 'driving' };
+    }
 
     // Arrived backup travels with the patient. Stale/missing crew tags must not
     // strand the captain on scene, including normal departures and resumed runs.
@@ -1427,6 +1477,16 @@ class Session {
         this.departSceneMinute ??= incidentTurnStart;
         if (!this.hasLoaded) loading = this.hasLoaded = true;
         finalizeClock(incidentTurnStart + travel);
+        this.incident.startedMinute = this.sceneMinute;
+        const trigger = this.seed.events.findLast(event => event.event_type === 'complication'
+          && event.detail === 'er_divert triggered');
+        if (trigger) trigger.scene_minute = this.sceneMinute;
+        if (!/\b(?:divert|diversion)\b/i.test(reply)) {
+          const notice = 'The ambulance reaches the ED. The receiving ER is on diversion; choose another destination.';
+          reply += '\n' + notice;
+          const message = this.messages.at(-1);
+          message.content = message.content.replace(/(?=\[(?:CREW_STATUS|PATIENT_FOCUS|VITALS|TIME):)/, notice + '\n');
+        }
       }
     } else if (!wasArrived && wasDriving && blocked && this.incident?.bedAvailableMinute) {
       if (this.transportPosition && ground) {
@@ -1511,7 +1571,8 @@ class Session {
     // Close only on an explicit user signal (transfer of care, end scenario, etc.).
     // Time-skips — including skip-to-hospital — arrive but leave the scenario OPEN so
     // the provider still gets to give their handoff report before the call ends.
-    if (isDebriefTrigger(userText) && !(this.incident?.bedAvailableMinute && !this.incident.resolved)) {
+    if (isDebriefTrigger(userText) && !blockedHandoff()
+        && !(this.incident?.bedAvailableMinute && !this.incident.resolved)) {
       closeScenario(this.seed, this.sceneMinute);
       this.closed = true;
       logRun(this.sessionId, this.seed, this.messages);

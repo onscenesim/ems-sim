@@ -1,6 +1,7 @@
 'use strict';
 
 const { REGIONS } = require('../data/regions');
+const { ordered, departureOrdered, commandClauses } = require('./command-intent');
 
 // Fictional road network: a common outbound road with two branches. Calibrate
 // each region to its existing clear-road ETA ranges and typical road speeds.
@@ -65,13 +66,57 @@ function orderedDestination(seed, text) {
   const region = REGIONS.find(r => r.id === seed.region);
   const hospitals = seed.hospitals || region?.hospitals;
   const order = text.toLowerCase();
-  const matches = ['nearest', 'major'].filter(key => hospitals?.[key]?.name
-    && order.includes(hospitals[key].name.toLowerCase()));
+  const matches = ['nearest', 'major'].filter(key => {
+    const name = hospitals?.[key]?.name?.toLowerCase();
+    if (!name) return false;
+    if (order.includes(name)) return true;
+    // Players commonly use "Lakeview" rather than the full CAD name. Only
+    // accept a distinctive whole first word; ambiguous names stay ambiguous.
+    const first = name.split(/\s+/)[0];
+    return first.length >= 4 && !['saint', 'mount', 'medical', 'general'].includes(first)
+      && new RegExp(`\\b${first.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text);
+  });
   if (matches.length === 1) return matches[0];
   if (matches.length > 1) return null;
   const near = /\b(?:nearest|closer|community|local)\s+(?:hospital|ed|er|facility)\b/i.test(text);
   const far = /\b(?:major|farther|referral)\s+(?:hospital|ed|er|facility)\b/i.test(text);
   return near === far ? null : near ? 'nearest' : 'major';
+}
+
+function correctedDestination(session, text) {
+  if (!session.transportDest || session.arrivedAtHospital) return null;
+  return ordered(text, /^(?:i\s+)?meant(?:\s+to\s+(?:type|say))?\b|^correction\b/i)
+    ? orderedDestination(session.seed, text) : null;
+}
+
+function destinationDepartureOrdered(seed, text) {
+  return departureOrdered(text) || commandClauses(text).some(clause => orderedDestination(seed, clause.text)
+    && /^(?:please\s+)?(?:let'?s\s+)?(?:redirect|reroute|divert|switch|change|depart|drive|transport|head|go|leave|roll|take (?:him|her|them|the patient))\b/i.test(clause.text));
+}
+
+function hospitalReportDestination(session, text, reportMode) {
+  if (/\b(?:medical control|dispatch|backup)\b/i.test(text)) return null;
+  const dest = orderedDestination(session.seed, text);
+  if (reportMode) return dest || session.transportDest || 'nearest';
+  const contact = ordered(text, /\b(?:call|contact|radio|patch|notify)\b/i);
+  const receiving = /\b(?:hospital|receiving|call ahead|report|university|uni)\b/i.test(text);
+  return contact && (dest || receiving) ? dest || session.transportDest || 'nearest' : null;
+}
+
+function transportContext(session) {
+  if (!session.hasLoaded && !session.transportDest) return '';
+  const network = roadNetwork(session.seed);
+  const position = session.transportPosition || origin();
+  const at = ['nearest', 'major'].find(key => network.ground[key]
+    && position.road === key && travelSeconds(network, position, key) === 0);
+  const hospitals = session.seed.hospitals || REGIONS.find(r => r.id === session.seed.region)?.hospitals;
+  const routes = ['nearest', 'major'].filter(key => network.ground[key]).map(key => {
+    const seconds = travelSeconds(network, position, key);
+    return { key, name: hospitals?.[key]?.name || key, seconds };
+  });
+  const location = at ? `at ${hospitals?.[at]?.name || at}` : 'on the established road network';
+  const choices = routes.map(r => `${r.key} / ${r.name}: ${Math.floor(r.seconds / 60)}:${String(r.seconds % 60).padStart(2, '0')}`).join('; ');
+  return `[CAD ROUTE STATE: T+${session.sceneMinute.toFixed(2)}; location=${location}; selected=${session.transportDest || 'none'}; moving=${session.moving}; arrived=${session.arrivedAtHospital}. Ground travel from this exact position (minutes:seconds): ${choices}. These times include the current road/weather conditions and any backtracking between hospitals. Use them for every ETA, comparison and reroute, including during a diversion. Hospital availability does not change distance. Do not invent a shortcut, reset to the scene, or arrive/transfer care before the drive is complete.]`;
 }
 
 function typedTransportSkip(session, text) {
@@ -158,5 +203,6 @@ function transportStatus(session) {
   };
 }
 
-module.exports = { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, typedTransportSkip,
+module.exports = { roadNetwork, origin, drive, travelSeconds, legacyEta, orderedDestination, correctedDestination,
+  destinationDepartureOrdered, hospitalReportDestination, transportContext, typedTransportSkip,
   monitoringTransport, hospitalArrival, significantTransportChange, transportStatus };
